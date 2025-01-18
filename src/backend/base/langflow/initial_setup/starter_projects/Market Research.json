@@ -1,5 +1,172 @@
 {
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-qEjqV",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "StructuredOutputComponent-Fk5AM",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-qEjqV{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-qEjqVœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-Fk5AM{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-qEjqV",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-qEjqVœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutputComponent-Fk5AM",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputComponent-Fk5AMœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "StructuredOutputComponent",
+            "id": "StructuredOutputComponent-Fk5AM",
+            "name": "structured_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-zFzM6",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-StructuredOutputComponent-Fk5AM{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-zFzM6{œfieldNameœ:œdataœ,œidœ:œParseData-zFzM6œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutputComponent-Fk5AM",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputComponentœ, œidœ: œStructuredOutputComponent-Fk5AMœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-zFzM6",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-zFzM6œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-zFzM6",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-NJfzg",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ParseData-zFzM6{œdataTypeœ:œParseDataœ,œidœ:œParseData-zFzM6œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-NJfzg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NJfzgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-zFzM6",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-zFzM6œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-NJfzg",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NJfzgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-N6esY",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-axUVK",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-N6esY{œdataTypeœ:œChatInputœ,œidœ:œChatInput-N6esYœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-axUVK{œfieldNameœ:œinput_valueœ,œidœ:œAgent-axUVKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-N6esY",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-N6esYœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-axUVK",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-axUVKœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-axUVK",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "StructuredOutputComponent-Fk5AM",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-axUVK{œdataTypeœ:œAgentœ,œidœ:œAgent-axUVKœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-Fk5AM{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-axUVK",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-axUVKœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutputComponent-Fk5AM",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputComponent-Fk5AMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-J0fu0",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-axUVK",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__TavilySearchComponent-J0fu0{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-J0fu0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-axUVK{œfieldNameœ:œtoolsœ,œidœ:œAgent-axUVKœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-J0fu0",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-J0fu0œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-axUVK",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-axUVKœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -278,6 +445,10 @@
         "dragging": false,
         "height": 234,
         "id": "ChatInput-N6esY",
+        "measured": {
+          "height": 234,
+          "width": 360
+        },
         "position": {
           "x": 472.38251755471583,
           "y": 889.8398446936101
@@ -288,11 +459,7 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320,
-        "measured": {
-          "width": 360,
-          "height": 234
-        }
+        "width": 320
       },
       {
         "data": {
@@ -559,6 +726,10 @@
         "dragging": false,
         "height": 234,
         "id": "ChatOutput-NJfzg",
+        "measured": {
+          "height": 234,
+          "width": 360
+        },
         "position": {
           "x": 2518.282039019285,
           "y": 855.3686932779933
@@ -569,11 +740,7 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320,
-        "measured": {
-          "width": 360,
-          "height": 234
-        }
+        "width": 320
       },
       {
         "data": {
@@ -591,6 +758,10 @@
         "dragging": false,
         "height": 403,
         "id": "note-40RoE",
+        "measured": {
+          "height": 403,
+          "width": 328
+        },
         "position": {
           "x": 2089.5869930853464,
           "y": 311.41660832449514
@@ -606,11 +777,7 @@
           "width": 461
         },
         "type": "noteNode",
-        "width": 461,
-        "measured": {
-          "width": 328,
-          "height": 403
-        }
+        "width": 461
       },
       {
         "data": {
@@ -628,6 +795,10 @@
         "dragging": false,
         "height": 382,
         "id": "note-hgOqR",
+        "measured": {
+          "height": 382,
+          "width": 328
+        },
         "position": {
           "x": 1237.6627823432912,
           "y": 111.53860932079613
@@ -643,11 +814,7 @@
           "width": 398
         },
         "type": "noteNode",
-        "width": 398,
-        "measured": {
-          "width": 328,
-          "height": 382
-        }
+        "width": 398
       },
       {
         "data": {
@@ -665,6 +832,10 @@
         "dragging": false,
         "height": 513,
         "id": "note-ifPGq",
+        "measured": {
+          "height": 513,
+          "width": 328
+        },
         "position": {
           "x": 244.92297036777086,
           "y": 340.99805740871204
@@ -680,11 +851,7 @@
           "width": 567
         },
         "type": "noteNode",
-        "width": 567,
-        "measured": {
-          "width": 328,
-          "height": 513
-        }
+        "width": 567
       },
       {
         "data": {
@@ -951,6 +1118,10 @@
         "dragging": false,
         "height": 541,
         "id": "StructuredOutputComponent-Fk5AM",
+        "measured": {
+          "height": 541,
+          "width": 360
+        },
         "position": {
           "x": 1716.7237308033855,
           "y": 459.2476214962564
@@ -961,11 +1132,7 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320,
-        "measured": {
-          "width": 360,
-          "height": 541
-        }
+        "width": 320
       },
       {
         "data": {
@@ -1267,6 +1434,10 @@
         "dragging": false,
         "height": 543,
         "id": "OpenAIModel-qEjqV",
+        "measured": {
+          "height": 543,
+          "width": 360
+        },
         "position": {
           "x": 1696.6021757625274,
           "y": 1053.2300549755305
@@ -1277,11 +1448,7 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320,
-        "measured": {
-          "width": 360,
-          "height": 543
-        }
+        "width": 320
       },
       {
         "data": {
@@ -1421,6 +1588,10 @@
         "dragging": false,
         "height": 302,
         "id": "ParseData-zFzM6",
+        "measured": {
+          "height": 302,
+          "width": 360
+        },
         "position": {
           "x": 2139.05558520377,
           "y": 780.6849187394922
@@ -1431,11 +1602,7 @@
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320,
-        "measured": {
-          "width": 360,
-          "height": 302
-        }
+        "width": 320
       },
       {
         "data": {
@@ -2001,17 +2168,17 @@
         "dragging": false,
         "height": 650,
         "id": "Agent-axUVK",
+        "measured": {
+          "height": 650,
+          "width": 360
+        },
         "position": {
           "x": 1287.5681517817056,
           "y": 519.8701526087884
         },
         "selected": false,
         "type": "genericNode",
-        "width": 320,
-        "measured": {
-          "width": 360,
-          "height": 650
-        }
+        "width": 320
       },
       {
         "data": {
@@ -2029,6 +2196,10 @@
         "dragging": false,
         "height": 325,
         "id": "note-NrsCo",
+        "measured": {
+          "height": 325,
+          "width": 328
+        },
         "position": {
           "x": 878.7898510090017,
           "y": 640.2524241641511
@@ -2039,312 +2210,24 @@
         },
         "selected": false,
         "type": "noteNode",
-        "width": 325,
-        "measured": {
-          "width": 328,
-          "height": 325
-        }
+        "width": 325
       },
       {
-        "id": "TavilySearchComponent-J0fu0",
-        "type": "genericNode",
-        "position": {
-          "x": 875.7686789989679,
-          "y": 798.478848045035
-        },
         "data": {
+          "id": "TavilySearchComponent-J0fu0",
           "node": {
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "load_from_db": false,
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "api_key",
-                "value": "",
-                "display_name": "Tavily API Key",
-                "advanced": false,
-                "input_types": [
-                  "Message"
-                ],
-                "dynamic": false,
-                "info": "Your Tavily API Key.",
-                "title_case": false,
-                "password": true,
-                "type": "str",
-                "_input_type": "SecretStrInput"
-              },
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily AI Search\"\n    description = \"\"\"**Tavily AI** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n            }\n\n            with httpx.Client() as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                data_results.append(\n                    Data(\n                        text=content,\n                        data={\n                            \"title\": result.get(\"title\"),\n                            \"url\": result.get(\"url\"),\n                            \"content\": content,\n                            \"score\": result.get(\"score\"),\n                        },\n                    )\n                )\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "include_answer": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "list": false,
-                "list_add_label": "Add More",
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "include_answer",
-                "value": true,
-                "display_name": "Include Answer",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Include a short answer to original query.",
-                "title_case": false,
-                "type": "bool",
-                "_input_type": "BoolInput"
-              },
-              "include_images": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "list": false,
-                "list_add_label": "Add More",
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "include_images",
-                "value": true,
-                "display_name": "Include Images",
-                "advanced": true,
-                "dynamic": false,
-                "info": "Include a list of query-related images in the response.",
-                "title_case": false,
-                "type": "bool",
-                "_input_type": "BoolInput"
-              },
-              "max_results": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "list": false,
-                "list_add_label": "Add More",
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "max_results",
-                "value": 5,
-                "display_name": "Max Results",
-                "advanced": true,
-                "dynamic": false,
-                "info": "The maximum number of search results to return.",
-                "title_case": false,
-                "type": "int",
-                "_input_type": "IntInput"
-              },
-              "query": {
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "list_add_label": "Add More",
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "query",
-                "value": "",
-                "display_name": "Search Query",
-                "advanced": false,
-                "input_types": [
-                  "Message"
-                ],
-                "dynamic": false,
-                "info": "The search query you want to execute with Tavily.",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "MessageTextInput"
-              },
-              "search_depth": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "options": [
-                  "basic",
-                  "advanced"
-                ],
-                "combobox": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "search_depth",
-                "value": "advanced",
-                "display_name": "Search Depth",
-                "advanced": true,
-                "dynamic": false,
-                "info": "The depth of the search.",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "DropdownInput"
-              },
-              "topic": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "options": [
-                  "general",
-                  "news"
-                ],
-                "combobox": false,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "topic",
-                "value": "general",
-                "display_name": "Search Topic",
-                "advanced": true,
-                "dynamic": false,
-                "info": "The category of the search.",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "DropdownInput"
-              },
-              "tools_metadata": {
-                "tool_mode": false,
-                "is_list": true,
-                "list_add_label": "Add More",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "name": "name",
-                      "display_name": "Tool Name",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "description",
-                      "display_name": "Tool Description",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "popover",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "tags",
-                      "display_name": "Tool Identifiers",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "commands",
-                      "display_name": "Commands",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    }
-                  ]
-                },
-                "trigger_text": "",
-                "trigger_icon": "Hammer",
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_sort": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "hide_options": true,
-                  "field_parsers": {
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ],
-                    "commands": "commands"
-                  },
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
-                },
-                "trace_as_metadata": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "tools_metadata",
-                "value": [
-                  {
-                    "name": "None-fetch_content",
-                    "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "tags": [
-                      "None-fetch_content"
-                    ]
-                  },
-                  {
-                    "name": "None-fetch_content_text",
-                    "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "tags": [
-                      "None-fetch_content_text"
-                    ]
-                  }
-                ],
-                "display_name": "Edit tools",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "real_time_refresh": true,
-                "title_case": false,
-                "type": "table",
-                "_input_type": "TableInput"
-              }
-            },
-            "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-            "icon": "TavilyIcon",
             "base_classes": [
               "Data",
               "Message"
             ],
+            "beta": false,
+            "category": "tools",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
             "display_name": "Tavily AI Search",
             "documentation": "",
-            "minimized": false,
-            "custom_fields": {},
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
-            "frozen": false,
-            "outputs": [
-              {
-                "types": [
-                  "Tool"
-                ],
-                "selected": "Tool",
-                "name": "component_as_tool",
-                "hidden": null,
-                "display_name": "Toolset",
-                "method": "to_toolkit",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": null
-              }
-            ],
+            "edited": false,
             "field_order": [
               "api_key",
               "query",
@@ -2354,191 +2237,308 @@
               "include_images",
               "include_answer"
             ],
-            "beta": false,
-            "legacy": false,
-            "edited": false,
-            "metadata": {},
-            "category": "tools",
+            "frozen": false,
+            "icon": "TavilyIcon",
             "key": "TavilySearchComponent",
-            "score": 0.0075846556637275304
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.0075846556637275304,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Tavily API Key",
+                "dynamic": false,
+                "info": "Your Tavily API Key.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily AI Search\"\n    description = \"\"\"**Tavily AI** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n            }\n\n            with httpx.Client() as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                data_results.append(\n                    Data(\n                        text=content,\n                        data={\n                            \"title\": result.get(\"title\"),\n                            \"url\": result.get(\"url\"),\n                            \"content\": content,\n                            \"score\": result.get(\"score\"),\n                        },\n                    )\n                )\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
+              },
+              "include_answer": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include Answer",
+                "dynamic": false,
+                "info": "Include a short answer to original query.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_answer",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "include_images": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Include Images",
+                "dynamic": false,
+                "info": "Include a list of query-related images in the response.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "include_images",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "max_results": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Results",
+                "dynamic": false,
+                "info": "The maximum number of search results to return.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_results",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
+              "query": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Search Query",
+                "dynamic": false,
+                "info": "The search query you want to execute with Tavily.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "query",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "search_depth": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "display_name": "Search Depth",
+                "dynamic": false,
+                "info": "The depth of the search.",
+                "name": "search_depth",
+                "options": [
+                  "basic",
+                  "advanced"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "advanced"
+              },
+              "tools_metadata": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
+                      "disable_edit": false,
+                      "display_name": "Commands",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "commands",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "name": "None-fetch_content",
+                    "tags": [
+                      "None-fetch_content"
+                    ]
+                  },
+                  {
+                    "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
+                    "name": "None-fetch_content_text",
+                    "tags": [
+                      "None-fetch_content_text"
+                    ]
+                  }
+                ]
+              },
+              "topic": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "display_name": "Search Topic",
+                "dynamic": false,
+                "info": "The category of the search.",
+                "name": "topic",
+                "options": [
+                  "general",
+                  "news"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "general"
+              }
+            }
           },
           "showNode": true,
-          "type": "TavilySearchComponent",
-          "id": "TavilySearchComponent-J0fu0"
+          "type": "TavilySearchComponent"
+        },
+        "dragging": false,
+        "id": "TavilySearchComponent-J0fu0",
+        "measured": {
+          "height": 489,
+          "width": 360
+        },
+        "position": {
+          "x": 875.7686789989679,
+          "y": 798.478848045035
         },
         "selected": true,
-        "measured": {
-          "width": 360,
-          "height": 489
-        },
-        "dragging": false
-      }
-    ],
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-qEjqV",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "StructuredOutputComponent-Fk5AM",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-qEjqV{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-qEjqVœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-Fk5AM{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "OpenAIModel-qEjqV",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-qEjqVœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "StructuredOutputComponent-Fk5AM",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "StructuredOutputComponent",
-            "id": "StructuredOutputComponent-Fk5AM",
-            "name": "structured_output",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "ParseData-zFzM6",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-StructuredOutputComponent-Fk5AM{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-zFzM6{œfieldNameœ:œdataœ,œidœ:œParseData-zFzM6œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutputComponent-Fk5AM",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
-        "target": "ParseData-zFzM6",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-zFzM6œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParseData",
-            "id": "ParseData-zFzM6",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-NJfzg",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ParseData-zFzM6{œdataTypeœ:œParseDataœ,œidœ:œParseData-zFzM6œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-NJfzg{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NJfzgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ParseData-zFzM6",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-zFzM6œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-NJfzg",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NJfzgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-N6esY",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-axUVK",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-N6esY{œdataTypeœ:œChatInputœ,œidœ:œChatInput-N6esYœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-axUVK{œfieldNameœ:œinput_valueœ,œidœ:œAgent-axUVKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-N6esY",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-N6esYœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-axUVK",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-axUVKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-axUVK",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "StructuredOutputComponent-Fk5AM",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-axUVK{œdataTypeœ:œAgentœ,œidœ:œAgent-axUVKœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-Fk5AM{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-axUVK",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-axUVKœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "StructuredOutputComponent-Fk5AM",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Fk5AMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "TavilySearchComponent-J0fu0",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-J0fu0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-axUVK",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-axUVKœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-axUVK",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          },
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-J0fu0",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          }
-        },
-        "id": "xy-edge__TavilySearchComponent-J0fu0{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-J0fu0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-axUVK{œfieldNameœ:œtoolsœ,œidœ:œAgent-axUVKœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "type": "genericNode"
       }
     ],
     "viewport": {
