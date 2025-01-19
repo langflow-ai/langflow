@@ -181,6 +181,8 @@ class Settings(BaseSettings):
     """The maximum number of transactions to keep in the database."""
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
+    max_vertex_builds_per_vertex: int = 2
+    """The maximum number of builds to keep per vertex. Older builds will be deleted."""
 
     # MCP Server
     mcp_server_enabled: bool = True
