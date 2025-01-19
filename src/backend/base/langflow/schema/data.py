@@ -230,8 +230,8 @@ class Data(BaseModel):
 
 def custom_serializer(obj):
     if isinstance(obj, datetime):
-        date = obj.replace(tzinfo=timezone.utc)
-        return date.strftime("%Y-%m-%d %H:%M:%S %Z")
+        utc_date = obj.replace(tzinfo=timezone.utc)
+        return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
     if isinstance(obj, Decimal):
         return float(obj)
     if isinstance(obj, UUID):
