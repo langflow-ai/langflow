@@ -209,73 +209,66 @@ async def test_log_vertex_build_with_different_limits(
     async_session: AsyncSession, vertex_build_data, max_global: int, max_per_vertex: int, timestamp_generator
 ):
     """Test build logging with different limit configurations."""
-    settings = Settings(
-        max_vertex_builds_to_keep=max_global,
-        max_vertex_builds_per_vertex=max_per_vertex,
-        max_transactions_to_keep=3000,
-        vertex_builds_storage_enabled=True,
-    )
-    with patch("langflow.services.database.models.vertex_builds.crud.get_settings_service") as mock_settings_service:
-        mock_settings_service.return_value.settings = settings
-
-        # Create builds with different vertex IDs
-        builds = []
-        for i in range(max_global + 2):
-            build = VertexBuildBase(
-                id=str(uuid4()),  # Different vertex ID each time
-                flow_id=vertex_build_data.flow_id,
-                timestamp=timestamp_generator(i),
-                artifacts={},
-                valid=True,
-            )
-            builds.append(build)
-
-        # Sort builds by timestamp (newest first)
-        sorted_builds = sorted(builds, key=lambda x: x.timestamp, reverse=True)
-
-        # Keep only the newest max_global builds
-        builds_to_insert = sorted_builds[:max_global]
-
-        # Insert builds one by one
-        for build in builds_to_insert:
-            await log_vertex_build(async_session, build)
-            await async_session.commit()
-
-        # Verify the total count
-        count = await async_session.scalar(select(func.count()).select_from(VertexBuildTable))
-        assert count <= max_global
-
-        # Test per-vertex limit
-        vertex_id = str(uuid4())
-        vertex_builds = []
-        for i in range(max_per_vertex + 2):
-            build = VertexBuildBase(
-                id=vertex_id,  # Same vertex ID
-                flow_id=vertex_build_data.flow_id,
-                timestamp=timestamp_generator(i),
-                artifacts={},
-                valid=True,
-            )
-            vertex_builds.append(build)
-
-        # Sort vertex builds by timestamp (newest first)
-        sorted_vertex_builds = sorted(vertex_builds, key=lambda x: x.timestamp, reverse=True)
-
-        # Keep only the newest max_per_vertex builds
-        vertex_builds_to_insert = sorted_vertex_builds[:max_per_vertex]
-
-        # Insert vertex builds one by one
-        for build in vertex_builds_to_insert:
-            await log_vertex_build(async_session, build)
-            await async_session.commit()
-
-        # Verify per-vertex count
-        vertex_count = await async_session.scalar(
-            select(func.count())
-            .select_from(VertexBuildTable)
-            .where(VertexBuildTable.flow_id == vertex_build_data.flow_id, VertexBuildTable.id == vertex_id)
+    # Create builds with different vertex IDs
+    builds = []
+    for i in range(max_global + 2):
+        build = VertexBuildBase(
+            id=str(uuid4()),  # Different vertex ID each time
+            flow_id=vertex_build_data.flow_id,
+            timestamp=timestamp_generator(i),
+            artifacts={},
+            valid=True,
         )
-        assert vertex_count <= max_per_vertex
+        builds.append(build)
+
+    # Sort builds by timestamp (newest first)
+    sorted_builds = sorted(builds, key=lambda x: x.timestamp, reverse=True)
+
+    # Keep only the newest max_global builds
+    builds_to_insert = sorted_builds[:max_global]
+
+    # Insert builds one by one
+    for build in builds_to_insert:
+        await log_vertex_build(
+            async_session, build, max_builds_to_keep=max_global, max_builds_per_vertex=max_per_vertex
+        )
+        await async_session.commit()
+
+    # Verify the total count
+    count = await async_session.scalar(select(func.count()).select_from(VertexBuildTable))
+    assert count <= max_global
+
+    # Test per-vertex limit
+    vertex_id = str(uuid4())
+    vertex_builds = []
+    for i in range(max_per_vertex + 2):
+        build = VertexBuildBase(
+            id=vertex_id,  # Same vertex ID
+            flow_id=vertex_build_data.flow_id,
+            timestamp=timestamp_generator(i),
+            artifacts={},
+            valid=True,
+        )
+        vertex_builds.append(build)
+
+    # Sort vertex builds by timestamp (newest first)
+    sorted_vertex_builds = sorted(vertex_builds, key=lambda x: x.timestamp, reverse=True)
+
+    # Keep only the newest max_per_vertex builds
+    vertex_builds_to_insert = sorted_vertex_builds[:max_per_vertex]
+
+    # Insert vertex builds one by one
+    for build in vertex_builds_to_insert:
+        await log_vertex_build(async_session, build)
+        await async_session.commit()
+
+    # Verify per-vertex count
+    vertex_count = await async_session.scalar(
+        select(func.count())
+        .select_from(VertexBuildTable)
+        .where(VertexBuildTable.flow_id == vertex_build_data.flow_id, VertexBuildTable.id == vertex_id)
+    )
+    assert vertex_count <= max_per_vertex
 
 
 @pytest.mark.asyncio
