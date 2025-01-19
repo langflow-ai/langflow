@@ -1515,11 +1515,10 @@ class Graph:
         to_process = deque(first_layer)
         layer_index = 0
         chat_service = get_chat_service()
-        run_id = uuid.uuid4()
-        self.set_run_id(run_id)
+        self.set_run_id()
         self.set_run_name()
         await self.initialize_run()
-        lock = chat_service.async_cache_locks[self.run_id]
+        lock = asyncio.Lock()
         while to_process:
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
