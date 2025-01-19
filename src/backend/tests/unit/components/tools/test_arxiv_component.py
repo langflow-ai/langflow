@@ -58,7 +58,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
             {
                 "version": "1.0.0",  # Versão inicial do componente
                 "module": "tools.arxiv",
-                "file_name": "ArXivComponent"
+                "file_name": "ArXivComponent",
             }
         ]
 
