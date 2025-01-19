@@ -24,7 +24,6 @@ class URLComponent(Component):
             tool_mode=True,
             placeholder="Enter a URL...",
             list_add_label="Add URL",
-            required=True,
         ),
         DropdownInput(
             name="format",
