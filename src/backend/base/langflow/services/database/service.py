@@ -102,15 +102,18 @@ class DatabaseService(Service):
         )
 
     def _get_connect_args(self):
-        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
-            "sqlite"
-        ):
+        url = self.settings_service.settings.database_url
+        if not url:
+            return {}
+
+        connect_args = {}
+        if url.startswith("postgresql://"):
+            connect_args = {"options": "-c timezone=UTC"}
+        elif url.startswith("sqlite://"):
             connect_args = {
                 "check_same_thread": False,
                 "timeout": self.settings_service.settings.db_connect_timeout,
             }
-        else:
-            connect_args = {}
         return connect_args
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
