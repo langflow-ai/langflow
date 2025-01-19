@@ -17,12 +17,12 @@ class TestArXivComponent(ComponentTestBaseWithClient):
     def test_component_versions(self, default_kwargs, file_names_mapping):
         """Test component compatibility across versions."""
         from src.backend.base.langflow.components.tools.arxiv import ArXivComponent
-        
+
         # Test current version
         component = ArXivComponent(**default_kwargs)
         frontend_node = component.to_frontend_node()
         assert frontend_node is not None
-        
+
         # Test backward compatibility
         for mapping in file_names_mapping:
             try:
@@ -35,7 +35,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
                 frontend_node = component.to_frontend_node()
                 assert frontend_node is not None
             except (ImportError, AttributeError) as e:
-                pytest.fail(f"Failed to load component version {mapping['version']}: {str(e)}")
+                pytest.fail(f"Failed to load component version {mapping['version']}: {e!s}")
 
     @pytest.fixture
     def component_class(self):
@@ -57,7 +57,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
         return [
             {
                 "version": "1.0.0",  # Versão inicial do componente
-                "module": "tools.arxiv", 
+                "module": "tools.arxiv",
                 "file_name": "ArXivComponent"
             }
         ]
