@@ -7,10 +7,11 @@ from langflow.schema import Data
 
 
 class GoogleSerperAPIComponent(LCToolComponent):
-    display_name = "Google Serper API"
+    display_name = "Google Serper API [DEPRECATED]"
     description = "Call the Serper.dev Google Search API."
     name = "GoogleSerperAPI"
     icon = "Google"
+    legacy = True
     inputs = [
         SecretStrInput(name="serper_api_key", display_name="Serper API Key", required=True),
         MultilineInput(

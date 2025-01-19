@@ -3193,15 +3193,17 @@
                 "dynamic": false,
                 "info": "Name of the new collection to create.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "collection_name_new",
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "vector_store_rag_demo"
+                "value": ""
               },
               "content_field": {
                 "_input_type": "StrInput",
@@ -3624,15 +3626,17 @@
                 "dynamic": false,
                 "info": "Name of the new collection to create.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "collection_name_new",
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "vector_store_rag_demo"
+                "value": ""
               },
               "content_field": {
                 "_input_type": "StrInput",
