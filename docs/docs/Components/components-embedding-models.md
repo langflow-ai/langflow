@@ -21,16 +21,14 @@ This embeddings component uses an OpenAI API key for authentication. Refer to yo
 
 This component generates embeddings using the [AI/ML API](https://docs.aimlapi.com/api-overview/embeddings).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
 | model_name | String | The name of the AI/ML embedding model to use |
 | aiml_api_key | SecretString | API key for authenticating with the AI/ML service |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -40,9 +38,7 @@ This component generates embeddings using the [AI/ML API](https://docs.aimlapi.c
 
 This component is used to load embedding models from [Amazon Bedrock](https://aws.amazon.com/bedrock/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -51,7 +47,7 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 | endpoint_url | String | URL to set a specific service endpoint other than the default AWS endpoint |
 | region_name | String | AWS region to use, e.g., `us-west-2`. Falls back to `AWS_DEFAULT_REGION` environment variable or region specified in ~/.aws/config if not provided |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -64,9 +60,7 @@ Connect this component to the **Embeddings** port of the [Astra DB vector store 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
 For more information and instructions, see [Embedding Generation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -76,7 +70,7 @@ For more information and instructions, see [Embedding Generation](https://docs.d
 | provider_api_key | Provider API Key | As an alternative to `authentication`, directly provide your embedding provider credentials. |
 | model_parameters | Model Parameters | Additional model parameters |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -86,9 +80,7 @@ For more information and instructions, see [Embedding Generation](https://docs.d
 
 This component generates embeddings using Azure OpenAI models.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -98,7 +90,7 @@ This component generates embeddings using Azure OpenAI models.
 | API Version | String | The API version to use, options include various dates |
 | API Key | String | The API key to access the Azure OpenAI service |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -108,9 +100,7 @@ This component generates embeddings using Azure OpenAI models.
 
 This component is used to load embedding models from [Cohere](https://cohere.com/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -118,7 +108,7 @@ This component is used to load embedding models from [Cohere](https://cohere.com
 | model | String | Language model used for embedding text documents and performing queries (default: `embed-english-v2.0`) |
 | truncate | Boolean | Whether to truncate the input text to fit within the model's constraints (default: `False`) |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -128,16 +118,14 @@ This component is used to load embedding models from [Cohere](https://cohere.com
 
 This component computes selected forms of similarity between two embedding vectors.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | embedding_vectors | Embedding Vectors | A list containing exactly two data objects with embedding vectors to compare. |
 | similarity_metric | Similarity Metric | Select the similarity metric to use. Options: "Cosine Similarity", "Euclidean Distance", "Manhattan Distance". |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -147,16 +135,14 @@ This component computes selected forms of similarity between two embedding vecto
 
 This component connects to Google's generative AI embedding service using the GoogleGenerativeAIEmbeddings class from the `langchain-google-genai` package.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | api_key | API Key | Secret API key for accessing Google's generative AI service (required) |
 | model_name | Model Name | Name of the embedding model to use (default: "models/text-embedding-004") |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -173,9 +159,7 @@ This component loads embedding models from HuggingFace.
 
 Use this component to generate embeddings using locally downloaded Hugging Face models. Ensure you have sufficient computational resources to run the models.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -191,9 +175,7 @@ This component generates embeddings using Hugging Face Inference API models.
 
 Use this component to create embeddings with Hugging Face's hosted models. Ensure you have a valid Hugging Face API key.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -209,9 +191,7 @@ Use this component to create embeddings with Hugging Face's hosted models. Ensur
 
 This component generates embeddings using MistralAI models.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -222,7 +202,7 @@ This component generates embeddings using MistralAI models.
 | timeout | Integer | Request timeout in seconds (default: 120) |
 | endpoint | String | Custom API endpoint URL (default: `https://api.mistral.ai/v1/`) |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -232,9 +212,7 @@ This component generates embeddings using MistralAI models.
 
 This component generates embeddings using NVIDIA models.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -243,7 +221,7 @@ This component generates embeddings using NVIDIA models.
 | nvidia_api_key | SecretString | API key for authenticating with NVIDIA's service |
 | temperature | Float | Model temperature for embedding generation (default: `0.1`) |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -253,9 +231,7 @@ This component generates embeddings using NVIDIA models.
 
 This component generates embeddings using Ollama models.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -263,7 +239,7 @@ This component generates embeddings using Ollama models.
 | Ollama Base URL | String | Base URL of the Ollama API (default: `http://localhost:11434`) |
 | Model Temperature | Float | Temperature parameter for the model. Adjusts the randomness in the generated embeddings |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -273,9 +249,7 @@ This component generates embeddings using Ollama models.
 
 This component is used to load embedding models from [OpenAI](https://openai.com/).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -302,7 +276,7 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 | TikToken Enable | Boolean | Whether to enable TikToken (default: `True`) |
 | TikToken Model Name | String | Name of the TikToken model |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -312,16 +286,14 @@ This component is used to load embedding models from [OpenAI](https://openai.com
 
 This component generates embeddings for a given message using a specified embedding model.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | embedding_model | Embedding Model | The embedding model to use for generating embeddings. |
 | message | Message | The message for which to generate embeddings. |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -331,9 +303,7 @@ This component generates embeddings for a given message using a specified embedd
 
 This component is a wrapper around [Google Vertex AI](https://cloud.google.com/vertex-ai) [Embeddings API](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings).
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -349,7 +319,7 @@ This component is a wrapper around [Google Vertex AI](https://cloud.google.com/v
 | tuned_model_name | String | The name of a tuned model. If provided, `model_name` is ignored |
 | verbose | Boolean | This parameter controls the level of detail in the output. When set to `True`, it prints internal states of the chain to help debug (default: `False`) |
 
-#### Outputs
+### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
