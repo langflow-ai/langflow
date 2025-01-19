@@ -3161,8 +3161,15 @@
   },
   "description": " Create engaging Instagram posts with AI-generated content and image prompts, streamlining social media content creation.",
   "endpoint_name": null,
-  "id": "b20d6b1d-ecf0-4fea-bc75-73067dfb272f",
+  "gradient": "0",
+  "icon": "InstagramIcon",
+  "id": "4bb309e6-42b4-4565-b960-8bd0f7e431f2",
   "is_component": false,
-  "last_tested_version": "1.1.1",
-  "name": "Instagram Copywriter (1)"
+  "last_tested_version": "1.0.19.post2",
+  "name": "Instagram Copywriter",
+  "tags": [
+    "content-generation",
+    "chatbots",
+    "agents"
+  ]
 }
