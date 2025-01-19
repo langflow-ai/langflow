@@ -115,7 +115,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   );
   const onConnect = useFlowStore((state) => state.onConnect);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const updateCurrentFlow = useFlowStore((state) => state.updateCurrentFlow);
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
