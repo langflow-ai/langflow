@@ -105,7 +105,6 @@ class DatabaseService(Service):
         url = self.settings_service.settings.database_url
         if not url:
             return {}
-
         connect_args = {}
         if url.startswith("postgresql://"):
             connect_args = {"options": "-c timezone=UTC"}
