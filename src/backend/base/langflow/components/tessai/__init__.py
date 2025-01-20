@@ -1,5 +1,5 @@
 from .execute_agent import TessAIExecuteAgentComponent
-from .file_upload import TessAIUploadFileComponent
+from .upload_file import TessAIUploadFileComponent
 
 __all__ = [
     "TessAIExecuteAgentComponent",
