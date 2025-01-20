@@ -40,10 +40,7 @@ class TransactionBase(SQLModel):
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        truncated_data = truncate_json(data)
-        if isinstance(truncated_data, dict):
-            return truncated_data
-        return {"content": truncated_data}
+        return truncate_json(data)
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
