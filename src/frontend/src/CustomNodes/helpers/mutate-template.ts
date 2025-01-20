@@ -32,7 +32,7 @@ export const mutateTemplate = debounce(
       if (newTemplate) {
         newNode.template = newTemplate.template;
         newNode.outputs = newTemplate.outputs;
-        newNode.tool_mode = toolMode;
+        newNode.tool_mode = toolMode ?? node.tool_mode;
       }
       setNodeClass(newNode);
       callback?.();
