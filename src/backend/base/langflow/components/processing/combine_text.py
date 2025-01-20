@@ -14,11 +14,13 @@ class CombineTextComponent(Component):
             name="text1",
             display_name="First Text",
             info="The first text input to concatenate.",
+            required=True,
         ),
         MessageTextInput(
             name="text2",
             display_name="Second Text",
             info="The second text input to concatenate.",
+            required=True,
         ),
         MessageTextInput(
             name="delimiter",

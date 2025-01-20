@@ -23,13 +23,15 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             name="collection_name",
             display_name="Collection Name",
             value="langflow",
+            required=True,
         ),
         StrInput(
             name="persist_directory",
             display_name="Persist Directory",
+            required=True,
         ),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         StrInput(
             name="chroma_server_cors_allow_origins",
             display_name="Server CORS Allow Origins",

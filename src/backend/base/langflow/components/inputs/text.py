@@ -14,6 +14,7 @@ class TextInputComponent(TextComponent):
             name="input_value",
             display_name="Text",
             info="Text to be passed as input.",
+            required=True,
         ),
     ]
     outputs = [

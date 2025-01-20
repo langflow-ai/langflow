@@ -38,7 +38,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="content_payload_key", display_name="Content Payload Key", value="page_content", advanced=True),
         StrInput(name="metadata_payload_key", display_name="Metadata Payload Key", value="metadata", advanced=True),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

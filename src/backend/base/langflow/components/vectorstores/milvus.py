@@ -22,18 +22,20 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
     icon = "Milvus"
 
     inputs = [
-        StrInput(name="collection_name", display_name="Collection Name", value="langflow"),
+        StrInput(name="collection_name", display_name="Collection Name", value="langflow", required=True),
         StrInput(name="collection_description", display_name="Collection Description", value=""),
         StrInput(
             name="uri",
             display_name="Connection URI",
             value="http://localhost:19530",
+            required=True,
         ),
         SecretStrInput(
             name="password",
             display_name="Token",
             value="",
             info="Ignore this field if no token is required to make connection.",
+            required=True,
         ),
         DictInput(name="connection_args", display_name="Other Connection Arguments", advanced=True),
         StrInput(name="primary_field", display_name="Primary Field Name", value="pk"),
@@ -51,7 +53,7 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
         BoolInput(name="drop_old", display_name="Drop Old Collection", value=False, advanced=True),
         FloatInput(name="timeout", display_name="Timeout", advanced=True),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",

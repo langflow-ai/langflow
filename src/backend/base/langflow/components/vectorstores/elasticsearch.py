@@ -48,6 +48,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             name="username",
             display_name="Username",
             value="",
+            required=True,
             advanced=False,
             info=(
                 "Elasticsearch username (e.g., 'elastic'). "
@@ -58,6 +59,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             name="password",
             display_name="Password",
             value="",
+            required=True,
             advanced=False,
             info=(
                 "Elasticsearch password for the specified user. "
@@ -68,6 +70,7 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
             name="embedding",
             display_name="Embedding",
             input_types=["Embeddings"],
+            required=True,
         ),
         DropdownInput(
             name="search_type",

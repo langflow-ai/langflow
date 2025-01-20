@@ -32,6 +32,7 @@ class AddContentToPage(LCToolComponent):
             name="block_id",
             display_name="Page/Block ID",
             info="The ID of the page/block to add the content.",
+            required=True,
         ),
         SecretStrInput(
             name="notion_secret",
