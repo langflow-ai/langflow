@@ -23,7 +23,7 @@ test(
       timeout: 1000,
     });
 
-    await zoomOut(page, 4);
+    await zoomOut(page, 3);
 
     await page
       .getByTestId("dataURL")
