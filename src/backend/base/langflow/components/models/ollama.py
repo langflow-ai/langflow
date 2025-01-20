@@ -182,10 +182,10 @@ class ChatOllamaComponent(LCModelComponent):
 
         return output
 
-    def is_valid_ollama_url(self, url: str) -> bool:
+    async def is_valid_ollama_url(self, url: str) -> bool:
         try:
-            with httpx.Client() as client:
-                return client.get(f"{url}/api/tags").status_code == HTTP_STATUS_OK
+            async with httpx.AsyncClient() as client:
+                return (await client.get(f"{url}/api/tags")).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
@@ -208,15 +208,19 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url", "model_name"} and not self.is_valid_ollama_url(field_value):
+        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(field_value):
             # Check if any URL in the list is valid
-            valid_url = next((url for url in URL_LIST if self.is_valid_ollama_url(url)), "")
+            valid_url = ""
+            for url in URL_LIST:
+                if await self.is_valid_ollama_url(url):
+                    valid_url = url
+                    break
             build_config["base_url"]["value"] = valid_url
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
-            if self.is_valid_ollama_url(self.base_url):
+            if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_model(self.base_url, tool_model_enabled)
-            elif self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
+            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
                 build_config["model_name"]["options"] = await self.get_model(
                     build_config["base_url"].get("value", ""), tool_model_enabled

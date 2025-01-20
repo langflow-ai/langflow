@@ -54,14 +54,18 @@ class OllamaEmbeddingsComponent(LCModelComponent):
         return output
 
     async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
-        if field_name in {"base_url", "model_name"} and not self.is_valid_ollama_url(field_value):
+        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(field_value):
             # Check if any URL in the list is valid
-            valid_url = next((url for url in URL_LIST if self.is_valid_ollama_url(url)), "")
+            valid_url = ""
+            for url in URL_LIST:
+                if await self.is_valid_ollama_url(url):
+                    valid_url = url
+                    break
             build_config["base_url"]["value"] = valid_url
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
-            if self.is_valid_ollama_url(self.base_url):
+            if await self.is_valid_ollama_url(self.base_url):
                 build_config["model_name"]["options"] = await self.get_model(self.base_url)
-            elif self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
+            elif await self.is_valid_ollama_url(build_config["base_url"].get("value", "")):
                 build_config["model_name"]["options"] = await self.get_model(build_config["base_url"].get("value", ""))
             else:
                 build_config["model_name"]["options"] = []
@@ -94,9 +98,9 @@ class OllamaEmbeddingsComponent(LCModelComponent):
 
         return model_ids
 
-    def is_valid_ollama_url(self, url: str) -> bool:
+    async def is_valid_ollama_url(self, url: str) -> bool:
         try:
-            with httpx.Client() as client:
-                return client.get(f"{url}/api/tags").status_code == HTTP_STATUS_OK
+            async with httpx.AsyncClient() as client:
+                return (await client.get(f"{url}/api/tags")).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
