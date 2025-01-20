@@ -3,6 +3,7 @@ from .combine_text import CombineTextComponent
 from .create_data import CreateDataComponent
 from .filter_data import FilterDataComponent
 from .json_cleaner import JSONCleaner
+from .llm_router import LLMRouterComponent
 from .merge_data import MergeDataComponent
 from .message_to_data import MessageToDataComponent
 from .parse_data import ParseDataComponent
@@ -16,9 +17,12 @@ __all__ = [
     "CreateDataComponent",
     "FilterDataComponent",
     "JSONCleaner",
+    "LLMRouterComponent",
     "MergeDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
+    "ParseDataFrameComponent",
+    "ParseJSONDataComponent",
     "SelectDataComponent",
     "SplitTextComponent",
     "UpdateDataComponent",

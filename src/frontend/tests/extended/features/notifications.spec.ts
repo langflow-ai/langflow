@@ -13,16 +13,16 @@ test(
     });
 
     await page.getByTestId("disclosure-inputs").click();
-    await page.waitForSelector('[data-testid="inputsChat Input"]', {
+    await page.waitForSelector('[data-testid="inputsText Input"]', {
       timeout: 3000,
       state: "visible",
     });
     await page
-      .getByTestId("inputsChat Input")
+      .getByTestId("inputsText Input")
       .hover()
       .then(async () => {
-        await page.getByTestId("add-component-button-chat-input").click();
-        await page.getByTestId("button_run_chat input").click();
+        await page.getByTestId("add-component-button-text-input").click();
+        await page.getByTestId("button_run_text input").click();
       });
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
@@ -58,7 +58,7 @@ test(
     await expect(runningComponentsText).toBeVisible();
 
     const builtSuccessfullyText = page
-      .getByText("Chat Input built successfully", { exact: true })
+      .getByText("Text Input built successfully", { exact: true })
       .last();
     await expect(builtSuccessfullyText).toBeVisible();
   },

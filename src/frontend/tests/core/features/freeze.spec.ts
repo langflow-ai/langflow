@@ -83,6 +83,12 @@ test(
         targetPosition: { x: 600, y: 200 },
       });
 
+    await page.getByTestId("div-generic-node").nth(4).click();
+
+    await page.getByTestId("more-options-modal").click();
+
+    await page.getByTestId("expand-button-modal").click();
+
     await page.getByTestId("fit_view").click();
 
     let outdatedComponents = await page

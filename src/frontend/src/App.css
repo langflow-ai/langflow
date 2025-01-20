@@ -19,7 +19,7 @@ body {
 }
 
 .react-flow__node {
-  width: auto;
+  width: fit-content !important;
   height: auto;
   border-radius: auto;
   min-width: inherit;
@@ -208,4 +208,15 @@ code {
 .ag-large-text-input.ag-text-area.ag-input-field textarea {
   resize: none !important;
   height: 100% !important;
+}
+
+.cell-disable-edit {
+  cursor: not-allowed;
+}
+
+.cell-disable-edit.ag-cell-focus {
+  outline: none !important;
+  border: 0px !important;
+  box-shadow: none !important;
+  border-radius: 0px !important;
 }

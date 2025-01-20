@@ -22,7 +22,7 @@ class OpenRouterComponent(LCModelComponent):
 
     display_name = "OpenRouter"
     description = (
-        "OpenRouter provides unified access to multiple AI models " "from different providers through a single API."
+        "OpenRouter provides unified access to multiple AI models from different providers through a single API."
     )
     icon = "OpenRouter"
 
@@ -50,6 +50,7 @@ class OpenRouterComponent(LCModelComponent):
             options=["Loading providers..."],
             value="Loading providers...",
             real_time_refresh=True,
+            required=True,
         ),
         DropdownInput(
             name="model_name",
@@ -58,9 +59,14 @@ class OpenRouterComponent(LCModelComponent):
             options=["Select a provider first"],
             value="Select a provider first",
             real_time_refresh=True,
+            required=True,
         ),
         SliderInput(
-            name="temperature", display_name="Temperature", value=0.7, range_spec=RangeSpec(min=0, max=2, step=0.01)
+            name="temperature",
+            display_name="Temperature",
+            value=0.7,
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
         ),
         IntInput(
             name="max_tokens",
@@ -180,9 +186,7 @@ class OpenRouterComponent(LCModelComponent):
                     build_config["model_name"]["value"] = models[0]["id"]
 
                 tooltips = {
-                    model["id"]: (
-                        f"{model['name']}\n" f"Context Length: {model['context_length']}\n" f"{model['description']}"
-                    )
+                    model["id"]: (f"{model['name']}\nContext Length: {model['context_length']}\n{model['description']}")
                     for model in models
                 }
                 build_config["model_name"]["tooltips"] = tooltips
