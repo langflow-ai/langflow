@@ -115,3 +115,52 @@ This component splits text into chunks of a specified length.
 | max_chunk_size | Max Chunk Size | The maximum length, in characters, of each chunk. |
 | chunk_overlap | Chunk Overlap | The amount of character overlap between chunks. |
 | recursive | Recursive | Whether to split recursively. |
+
+## Docling Workflows
+
+This section describes workflows utilizing the Docling library for document conversion and AI integration.
+
+### Document Conversion
+
+The following example demonstrates how to use Docling to convert a PDF document to HTML:
+
+```python
+from docling import Docling
+
+# Initialize Docling with configuration
+docling = Docling()
+
+# Parse the PDF document
+document = docling.parse("path/to/document.pdf")
+
+# Export the document to HTML
+html_content = docling.export(document, format="html")
+
+print(html_content)
+```
+
+### AI Integration
+
+The following example demonstrates how to use Docling in an AI workflow to extract text from a DOCX document and use it as input for an AI model:
+
+```python
+from docling import Docling
+from some_ai_library import AIModel
+
+# Initialize Docling with configuration
+docling = Docling()
+
+# Parse the DOCX document
+document = docling.parse("path/to/document.docx")
+
+# Extract text from the document
+text_content = docling.extract_text(document)
+
+# Initialize AI model
+ai_model = AIModel()
+
+# Use the extracted text as input for the AI model
+ai_response = ai_model.process(text_content)
+
+print(ai_response)
+```

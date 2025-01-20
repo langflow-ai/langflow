@@ -1,4 +1,5 @@
 from langchain_unstructured import UnstructuredLoader
+from docling import Docling
 
 from langflow.base.data import BaseFileComponent
 from langflow.inputs import DropdownInput, MessageTextInput, NestedDictInput, SecretStrInput
@@ -80,6 +81,12 @@ class UnstructuredComponent(BaseFileComponent):
                 "See https://docs.unstructured.io/api-reference/api-services/api-parameters for more information."
             ),
         ),
+        NestedDictInput(
+            name="docling_config",
+            display_name="Docling Configuration",
+            required=False,
+            info="Configuration for Docling library.",
+        ),
     ]
 
     outputs = [
@@ -118,4 +125,9 @@ class UnstructuredComponent(BaseFileComponent):
             if data and "source" in data.data:
                 data.data[self.SERVER_FILE_PATH_FIELDNAME] = data.data.pop("source")
 
-        return self.rollup_data(file_list, processed_data)
+        # Use Docling for document parsing
+        docling_config = self.docling_config or {}
+        docling = Docling(**docling_config)
+        parsed_documents = [docling.parse(doc) for doc in documents]
+
+        return self.rollup_data(file_list, parsed_documents)
