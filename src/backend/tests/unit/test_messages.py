@@ -195,7 +195,7 @@ async def test_aupdate_multiple_messages(created_messages):
 
 
 @pytest.mark.usefixtures("client")
-async def test_aupdate_nonexistent_message():
+async def test_aupdate_nonexistent_message_generates_a_new_message():
     # Create a message with a non-existent UUID
     message = MessageRead(
         id=uuid4(),  # Generate a random UUID that won't exist in the database
@@ -207,7 +207,7 @@ async def test_aupdate_nonexistent_message():
     )
 
     updated = await aupdate_messages(message)
-    assert len(updated) == 0
+    assert len(updated) == 1
 
 
 @pytest.mark.usefixtures("client")
