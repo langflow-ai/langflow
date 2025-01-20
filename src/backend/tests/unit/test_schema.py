@@ -133,7 +133,7 @@ class TestOutput:
     def test_output_to_dict(self):
         output_obj = Output(name="test_output")
         assert output_obj.to_dict() == {
-            "allow_loop": False,
+            "allows_loop": False,
             "types": [],
             "name": "test_output",
             "display_name": "test_output",
