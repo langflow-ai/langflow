@@ -57,12 +57,12 @@ test(
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector('[data-testid="processingParse Data"]', {
+    await page.waitForSelector('[data-testid="processingParse DataFrame"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingParse DataFrame")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
@@ -138,19 +138,19 @@ test(
 
     //connection 3
     const splitTextOutput = await page
-      .getByTestId("handle-splittext-shownode-chunks-right")
+      .getByTestId("handle-splittext-shownode-dataframe-right")
       .nth(0);
     await splitTextOutput.hover();
     await page.mouse.down();
     const parseDataInput = await page.getByTestId(
-      "handle-parsedata-shownode-data-left",
+      "handle-parsedataframe-shownode-dataframe-left",
     );
     await parseDataInput.hover();
     await page.mouse.up();
 
     //connection 4
     const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedataframe-shownode-text-right")
       .nth(0);
     await parseDataOutput.hover();
     await page.mouse.down();
