@@ -213,7 +213,6 @@ class ApifyRunActorComponent(LCToolComponent):
         for item in properties:
             for k, v in properties[item].items():
                 if not v:
-                    #del properties[item][k]
                     to_delete.append((item, k))
         for item, k in to_delete:
             del properties[item][k]
