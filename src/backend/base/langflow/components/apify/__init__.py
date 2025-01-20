@@ -1,4 +1,4 @@
-from .run_actor import ApifyRunActorComponent
+from .apify_actor import ApifyRunActorComponent
 
 __all__ = [
     "ApifyRunActorComponent",
