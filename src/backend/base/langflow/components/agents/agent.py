@@ -3,6 +3,7 @@ from langchain_core.tools import StructuredTool
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
+    MODEL_DYNAMIC_UPDATE_FIELDS,
     MODEL_PROVIDERS_DICT,
 )
 from langflow.base.models.model_utils import get_model_name
@@ -85,7 +86,8 @@ class AgentComponent(ToolCallingAgentComponent):
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
                 # Convert CurrentDateComponent to a StructuredTool
-                current_date_tool = CurrentDateComponent().to_toolkit()[0]
+                current_date_tool = (await CurrentDateComponent().to_toolkit()).pop(0)
+                # current_date_tool = CurrentDateComponent().to_toolkit()[0]
                 if isinstance(current_date_tool, StructuredTool):
                     self.tools.append(current_date_tool)
                 else:
@@ -144,6 +146,16 @@ class AgentComponent(ToolCallingAgentComponent):
         model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
         return component.set(**model_kwargs).build_model()
 
+    def set_component_params(self, component):
+        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
+        if provider_info:
+            inputs = provider_info.get("inputs")
+            prefix = provider_info.get("prefix")
+            model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
+
+            return component.set(**model_kwargs)
+        return component
+
     def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:
         """Delete specified fields from build_config."""
         for field in fields:
@@ -164,7 +176,7 @@ class AgentComponent(ToolCallingAgentComponent):
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
-        if field_name == "agent_llm":
+        if field_name in ("agent_llm",):
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
             if provider_info:
                 component_class = provider_info.get("component_class")
@@ -233,10 +245,15 @@ class AgentComponent(ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
-        if isinstance(self.agent_llm, str) and self.agent_llm in MODEL_PROVIDERS_DICT:
+        if (
+            isinstance(self.agent_llm, str)
+            and self.agent_llm in MODEL_PROVIDERS_DICT
+            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS
+        ):
             provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
             if provider_info:
                 component_class = provider_info.get("component_class")
+                component_class = self.set_component_params(component_class)
                 prefix = provider_info.get("prefix")
                 if component_class and hasattr(component_class, "update_build_config"):
                     # Call each component class's update_build_config method
@@ -246,5 +263,4 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config = await update_component_build_config(
                         component_class, build_config, field_value, field_name
                     )
-
         return build_config

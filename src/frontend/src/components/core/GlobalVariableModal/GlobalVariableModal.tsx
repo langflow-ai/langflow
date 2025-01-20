@@ -7,17 +7,10 @@ import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavai
 import { GlobalVariable } from "@/types/global_variables";
 import { useEffect, useState } from "react";
 
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
@@ -134,88 +127,89 @@ export default function GlobalVariableModal({
       onSubmit={submitForm}
       disable={disabled}
     >
-      <BaseModal.Header
-        description={
-          "This variable will be available for you to use in any of your projects."
-        }
-      >
-        <span className="pr-2">
-          {" "}
-          {initialData ? "Update" : "Create"} Variable{" "}
-        </span>
+      <BaseModal.Header description="This variable will be available for use across your flows.">
         <ForwardedIconComponent
           name="Globe"
-          className="h-6 w-6 pl-1 text-primary"
+          className="h-6 w-6 pr-1 text-primary"
           aria-hidden="true"
         />
+        {initialData ? "Update Variable" : "Create Variable"}
       </BaseModal.Header>
       <BaseModal.Trigger disable={disabled} asChild={asChild}>
         {children}
       </BaseModal.Trigger>
       <BaseModal.Content>
-        <div className="flex h-full w-full flex-col gap-4 align-middle">
-          <Label>Variable Name</Label>
-          <Input
-            value={key}
-            onChange={(e) => {
-              setKey(e.target.value);
-            }}
-            placeholder="Insert a name for the variable..."
-          ></Input>
-          <Label>Type (optional)</Label>
-
-          <Select
-            disabled={disabled}
-            onValueChange={setType}
-            value={type}
-            defaultValue={type}
-          >
-            <SelectTrigger
-              className="h-full w-full"
-              data-testid="select-type-global-variables"
+        <div className="flex h-full w-full flex-col gap-4">
+          <div className="space-y-2">
+            <Label>Type*</Label>
+            <Tabs
+              defaultValue={type}
+              onValueChange={setType}
+              className="w-full"
             >
-              <SelectValue placeholder="Choose a type for the variable..." />
-            </SelectTrigger>
-            <SelectContent id="type-global-variables">
-              {["Generic", "Credential"].map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger
+                  disabled={!!initialData?.type}
+                  data-testid="credential-tab"
+                  value="Credential"
+                >
+                  Credential
+                </TabsTrigger>
+                <TabsTrigger
+                  disabled={!!initialData?.type}
+                  data-testid="generic-tab"
+                  value="Generic"
+                >
+                  Generic
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-          <Label>Value</Label>
-          {type === "Credential" ? (
+          <div className="space-y-2">
+            <Label>Name*</Label>
+            <Input
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="Enter a name for the variable..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Value*</Label>
+            {type === "Credential" ? (
+              <InputComponent
+                password
+                value={value}
+                onChange={(e) => setValue(e)}
+                placeholder="Enter a value for the variable..."
+                nodeStyle
+              />
+            ) : (
+              <Input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="Enter a value for the variable..."
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Apply to fields</Label>
             <InputComponent
-              password
-              value={value}
-              onChange={(e) => {
-                setValue(e);
-              }}
-              placeholder="Insert a value for the variable..."
-              nodeStyle
+              setSelectedOptions={(value) => setFields(value)}
+              selectedOptions={fields}
+              options={availableFields}
+              password={false}
+              placeholder="Choose a field for the variable..."
+              id="apply-to-fields"
+              popoverWidth="29rem"
+              optionsPlaceholder="Fields"
             />
-          ) : (
-            <Textarea
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-              }}
-              placeholder="Insert a value for the variable..."
-              className="w-full resize-none custom-scroll"
-            />
-          )}
-
-          <Label>Apply To Fields (optional)</Label>
-          <InputComponent
-            setSelectedOptions={(value) => setFields(value)}
-            selectedOptions={fields}
-            options={availableFields}
-            password={false}
-            placeholder="Choose a field for the variable..."
-            id={"apply-to-fields"}
-          ></InputComponent>
+            <div className="text-xs text-muted-foreground">
+              Selected fields will auto-apply the variable as a default value.
+            </div>
+          </div>
         </div>
       </BaseModal.Content>
       <BaseModal.Footer
