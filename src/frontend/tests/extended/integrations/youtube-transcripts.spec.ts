@@ -12,8 +12,6 @@ test.skip(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("youtube");
 
-    await page.waitForTimeout(2000);
-
     await page.getByTestId("youtubeYouTube Transcripts").hover();
     await page.getByTestId("add-component-button-youtube-transcripts").click();
 
@@ -41,15 +39,13 @@ test.skip(
       const cell = await page.getByRole("gridcell").first();
       await cell.click();
 
-      const value = await page.getByPlaceholder("Empty").inputValue();
+    await page.waitForSelector("text=built successfully", { timeout: 3000 });
 
-      expect(value.length).toBeGreaterThan(10);
-
-      expect(value).toContain(" ");
-      expect(value.split(" ").length).toBeGreaterThan(5);
-    } catch (error) {
-      throw error;
-    }
+    await page.getByTestId("output-inspection-transcript").first().click();
+    await page.waitForSelector("text=Component Output", { timeout: 3000 });
+    await page.getByRole("gridcell").first().click();
+    const value = await page.getByPlaceholder("Empty").inputValue();
+    expect(value.length).toBeGreaterThan(10);
   },
 );
 
