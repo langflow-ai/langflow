@@ -867,7 +867,7 @@ def get_sorted_vertices(
 
     # Sort chat inputs first and sort each layer by dependencies
     all_layers = [first_layer, *remaining_layers]
-    if get_vertex_predecessors is not None:
+    if get_vertex_predecessors is not None and start_component_id is None:
         all_layers = sort_chat_inputs_first(all_layers, get_vertex_predecessors)
     if get_vertex_successors is not None:
         all_layers = sort_layer_by_dependency(all_layers, get_vertex_successors)
