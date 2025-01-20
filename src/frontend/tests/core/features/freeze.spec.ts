@@ -177,13 +177,19 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
-    await page.getByRole("gridcell").nth(0).click();
+    await page.getByRole("gridcell").nth(4).click();
 
     const firstRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
@@ -203,13 +209,19 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
-    await page.getByRole("gridcell").nth(0).click();
+    await page.getByRole("gridcell").nth(4).click();
 
     const secondRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
@@ -253,13 +265,19 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
-    await page.getByRole("gridcell").nth(0).click();
+    await page.getByRole("gridcell").nth(4).click();
 
     const firstTextFreezed = await page.getByPlaceholder("Empty").textContent();
 
@@ -292,13 +310,19 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
-    await page.getByRole("gridcell").nth(0).click();
+    await page.getByRole("gridcell").nth(4).click();
 
     const thirdTextWithoutFreezing = await page
       .getByPlaceholder("Empty")
