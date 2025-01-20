@@ -16,6 +16,7 @@ from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
 from .python_repl_core import PythonREPLComponent
+from .search import SearchComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp import SerpComponent
@@ -25,6 +26,7 @@ from .tavily_search import TavilySearchToolComponent
 from .wikidata_api import WikidataAPIComponent
 from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
+from .yahoo import YfinanceComponent
 from .yahoo_finance import YfinanceToolComponent
 from .youtube_transcripts import YouTubeTranscriptsComponent
 
@@ -52,6 +54,7 @@ __all__ = [
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
+    "SearchComponent",
     "SerpAPIComponent",
     "SerpComponent",
     "TavilySearchComponent",
@@ -59,6 +62,7 @@ __all__ = [
     "WikidataAPIComponent",
     "WikipediaAPIComponent",
     "WolframAlphaAPIComponent",
+    "YfinanceComponent",
     "YfinanceToolComponent",
     "YouTubeTranscriptsComponent",
 ]
