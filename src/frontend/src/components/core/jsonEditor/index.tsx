@@ -1,4 +1,3 @@
-import { useDarkStore } from "@/stores/darkStore";
 import { useEffect, useRef } from "react";
 import {
   Content,
@@ -64,8 +63,6 @@ const JsonEditor = ({
       jsonEditorRef.current.set({ json: data } as Content);
     }
   }, [data]);
-
-  const dark = useDarkStore((state) => state.dark);
 
   return <div ref={containerRef} style={{ width, height }} />;
 };
