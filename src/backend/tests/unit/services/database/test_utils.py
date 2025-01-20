@@ -1,7 +1,6 @@
 import json
 
 import pytest
-
 from langflow.services.database.utils import truncate_json
 
 
