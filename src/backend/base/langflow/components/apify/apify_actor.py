@@ -36,7 +36,8 @@ class ApifyRunActorComponent(LCToolComponent):
         StrInput(
             name="actor_id",
             display_name="Actor",
-            info="Actor name from Apify store to run. For example 'apify/website-content-crawler'.",
+            info=("Actor name from Apify store to run. For example 'apify/website-content-crawler' "
+                "to use the Website Content Crawler Actor (see https://apify.com/apify/website-content-crawler)."),
             required=True,
         ),
         # multiline input is more pleasant to use than the nested dict input
