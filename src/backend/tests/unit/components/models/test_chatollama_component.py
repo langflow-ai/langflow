@@ -90,7 +90,7 @@ async def test_update_build_config_model_name(mock_get, component):
 
     updated_config = await component.update_build_config(build_config, field_value, field_name)
 
-    assert updated_config["model_name"]["options"] == []
+    assert updated_config["model_name"]["options"] == ["model1", "model2"]
 
 
 async def test_update_build_config_keep_alive(component):
