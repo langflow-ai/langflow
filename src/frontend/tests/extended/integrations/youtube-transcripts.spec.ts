@@ -11,15 +11,19 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("youtube");
 
-    await page.waitForSelector('[id="toolsYouTube Transcripts"]', {
+    await page.waitForSelector('[id="youtubeYouTube Transcripts"]', {
       timeout: 3000,
     });
 
     await page
-      .locator('//*[@id="toolsYouTube Transcripts"]')
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .getByTestId("youtubeYouTube Transcripts")
+      .hover()
+      .then(async () => {
+        await page
+          .getByTestId("add-component-button-youtube-transcripts")
+          .click();
+      });
+
     await page.getByTestId("fit_view").click();
 
     let outdatedComponents = await page
@@ -35,11 +39,13 @@ test(
       .getByTestId("textarea_str_url")
       .fill("https://www.youtube.com/watch?v=VqhCQZaH4Vs");
 
+    await page.getByTestId("fit_view").click();
+
     await page.getByTestId("button_run_youtube transcripts").click();
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByTestId("output-inspection-transcription").first().click();
+    await page.getByTestId("output-inspection-transcript").first().click();
 
     await page.waitForSelector("text=Component Output", { timeout: 30000 });
 
