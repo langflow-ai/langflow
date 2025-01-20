@@ -38,6 +38,7 @@ class AnthropicModelComponent(LCModelComponent):
             display_name="Anthropic API Key",
             info="Your Anthropic API key.",
             value=None,
+            required=True,
             real_time_refresh=True,
         ),
         SliderInput(
