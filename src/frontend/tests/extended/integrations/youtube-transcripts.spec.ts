@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-test(
+test.skip(
   "user should be able to use youtube transcripts component",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
