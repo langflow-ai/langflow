@@ -562,8 +562,8 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
         if (col.edit_mode === "popover") {
-          newCol.wrapText = true;
-          newCol.autoHeight = true;
+          newCol.wrapText = false;
+          newCol.autoHeight = false;
           newCol.cellEditor = "agLargeTextCellEditor";
           newCol.cellEditorPopup = true;
           newCol.cellEditorParams = {
