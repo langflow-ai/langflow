@@ -34,6 +34,7 @@ const JsonEditor = ({
       target: containerRef.current,
       props: {
         ...options,
+        navigationBar: false,
         content: data,
 
         onChange: (content) => {
