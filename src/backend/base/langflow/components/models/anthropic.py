@@ -31,7 +31,6 @@ class AnthropicModelComponent(LCModelComponent):
             display_name="Model Name",
             options=[],
             refresh_button=True,
-            real_time_refresh=True,
         ),
         SecretStrInput(
             name="api_key",
