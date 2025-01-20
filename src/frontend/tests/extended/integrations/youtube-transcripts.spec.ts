@@ -11,6 +11,8 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("youtube");
 
+    await page.waitForTimeout(2000);
+
     await page.getByTestId("youtubeYouTube Transcripts").hover();
     await page.getByTestId("add-component-button-youtube-transcripts").click();
 
