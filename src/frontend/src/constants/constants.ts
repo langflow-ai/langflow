@@ -998,7 +998,7 @@ export const GRADIENT_CLASS =
 
 export const RECEIVING_INPUT_VALUE = "Receiving input";
 
-export const ICON_STROKE_WIDTH = 1.25;
+export const ICON_STROKE_WIDTH = 1.5;
 
 export const DEFAULT_PLACEHOLDER = "Type something...";
 

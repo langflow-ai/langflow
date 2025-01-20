@@ -33,6 +33,7 @@ class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
             display_name="Input",
             info="The text data to be split.",
             input_types=["Document", "Data"],
+            required=True,
         ),
         MessageTextInput(
             name="separator",
