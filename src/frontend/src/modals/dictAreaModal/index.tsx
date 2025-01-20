@@ -24,14 +24,14 @@ export default function DictAreaModal({
 
   useEffect(() => {
     if (jsonEditorRef.current) {
-      jsonEditorRef.current.set({ json: value ?? {} });
+      jsonEditorRef.current.set({ json: value || {} });
     }
   }, [value, open]);
 
   const handleSubmit = () => {
     if (onChange) {
       try {
-        const componentValue = jsonEditorRef.current?.getValue();
+        const componentValue = jsonEditorRef.current?.get() ?? { json: {} };
         const jsonValue =
           "json" in componentValue
             ? JSON.parse(JSON.stringify(componentValue.json))
@@ -119,6 +119,7 @@ export default function DictAreaModal({
       open={open}
       disable={disabled}
       setOpen={setOpen}
+      className="overflow-visible"
       onSubmit={onChange ? handleSubmit : undefined}
     >
       <BaseModal.Trigger className="h-full" asChild>
