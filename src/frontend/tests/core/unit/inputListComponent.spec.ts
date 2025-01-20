@@ -54,20 +54,16 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("input-list-dropdown-menu-0-edit").click();
-
-    await page.getByTestId("input-list-dropdown-menu-0-delete").click();
+    await page.getByTestId("input-list-delete-btn-edit_urls-0").click();
 
     expect(
-      await page.getByTestId("input-list-dropdown-menu-2-edit").count(),
+      await page.getByTestId("input-list-delete-btn-edit_urls-2").count(),
     ).toBe(0);
 
-    await page.getByTestId("input-list-dropdown-menu-1-edit").click();
-
-    await page.getByTestId("input-list-dropdown-menu-1-delete").click();
+    await page.getByTestId("input-list-delete-btn-edit_urls-1").click();
 
     expect(
-      await page.getByTestId("input-list-dropdown-menu-1-edit").count(),
+      await page.getByTestId("input-list-delete-btn-edit_urls-1").count(),
     ).toBe(0);
 
     await page.getByText("Close").last().click();
@@ -76,35 +72,32 @@ test(
     await page.getByTestId("input-list-plus-btn_urls-0").click();
     await page.getByTestId("input-list-plus-btn_urls-0").click();
 
-    expect(
-      await page.getByTestId("input-list-dropdown-menu-0-view").count(),
-    ).toBe(1);
+    expect(await page.getByTestId("input-list-delete-btn_urls-0").count()).toBe(
+      1,
+    );
 
-    expect(
-      await page.getByTestId("input-list-dropdown-menu-1-view").count(),
-    ).toBe(1);
+    expect(await page.getByTestId("input-list-delete-btn_urls-1").count()).toBe(
+      1,
+    );
 
-    expect(
-      await page.getByTestId("input-list-dropdown-menu-2-view").count(),
-    ).toBe(1);
+    expect(await page.getByTestId("input-list-delete-btn_urls-2").count()).toBe(
+      1,
+    );
 
-    expect(
-      await page.getByTestId("input-list-dropdown-menu-3-view").count(),
-    ).toBe(1);
+    expect(await page.getByTestId("input-list-delete-btn_urls-3").count()).toBe(
+      1,
+    );
 
-    expect(
-      await page.getByTestId("input-list-dropdown-menu-4-view").count(),
-    ).toBe(0);
-
-    await page.getByTestId("input-list-dropdown-menu-0-view").click();
-    await page.getByTestId("input-list-dropdown-menu-0-duplicate").click();
+    expect(await page.getByTestId("input-list-delete-btn_urls-4").count()).toBe(
+      0,
+    );
 
     expect(await page.getByTestId("inputlist_str_urls_0").inputValue()).toBe(
       "test1 test1 test1 test1",
     );
 
     expect(await page.getByTestId("inputlist_str_urls_1").inputValue()).toBe(
-      "test1 test1 test1 test1",
+      "",
     );
 
     await page.getByTestId("edit-button-modal").click();
@@ -115,22 +108,6 @@ test(
 
     expect(
       await page.getByTestId("inputlist_str_edit_urls_1").inputValue(),
-    ).toBe("test1 test1 test1 test1");
-
-    await page.getByTestId("input-list-dropdown-menu-1-edit").click();
-
-    await page.getByTestId("input-list-dropdown-menu-1-duplicate").click();
-
-    expect(
-      await page.getByTestId("inputlist_str_edit_urls_0").inputValue(),
-    ).toBe("test1 test1 test1 test1");
-
-    expect(
-      await page.getByTestId("inputlist_str_edit_urls_1").inputValue(),
-    ).toBe("test1 test1 test1 test1");
-
-    expect(
-      await page.getByTestId("inputlist_str_edit_urls_2").inputValue(),
-    ).toBe("test1 test1 test1 test1");
+    ).toBe("");
   },
 );
