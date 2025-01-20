@@ -201,29 +201,17 @@ class ApifyRunActorComponent(LCToolComponent):
         properties = input_schema.get("properties", {})
         required = input_schema.get("required", [])
 
-        properties = {
-            key: {
-                "description": (value.get("description", "")[:max_description_len] + "...")
-                if len(value.get("description", "")) > max_description_len
-                else value.get("description", ""),
-                "type": value.get("type"),
-                "default": value.get("default"),
-                "prefill": value.get("prefill"),
-                "enum": value.get("enum"),
-            }
-            for key, value in properties.items()
-        }
+        properties_out = {}
+        for item, meta in properties.items():
+            properties_out[item] = {}
+            if desc := meta.get("description"):
+                properties_out[item]["description"] = desc[:max_description_len] + "..."\
+                                                        if len(desc) > max_description_len else desc
+            for key_name in ("type", "default", "prefill", "enum"):
+                if value := meta.get(key_name):
+                    properties_out[item][key_name] = value
 
-        # properties remove empty and None values
-        to_delete = []
-        for item in properties:
-            for k, v in properties[item].items():
-                if not v:
-                    to_delete.append((item, k))
-        for item, k in to_delete:
-            del properties[item][k]
-
-        return properties, required
+        return properties_out, required
 
     def _get_run_dataset_id(self, run_id: str) -> str:
         """Get the dataset id from the run id."""
