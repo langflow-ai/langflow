@@ -6,7 +6,7 @@ from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
-from langflow.components.models.openai import OpenAIModelComponent
+from langflow.components.models.openai_chat_model import OpenAIModelComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 
 
@@ -44,7 +44,7 @@ def create_input_fields_dict(inputs, prefix):
 
 def _get_openai_inputs_and_fields():
     try:
-        from langflow.components.models.openai import OpenAIModelComponent
+        from langflow.components.models.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
