@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_serializer, field_validator
-from sqlalchemy import Text, event
+from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.services.database.utils import truncate_json
@@ -44,12 +44,18 @@ class VertexBuildBase(SQLModel):
         return value
 
     @field_serializer("data")
-    def serialize_data(self, data: dict) -> dict:
-        return truncate_long_strings(data)
+    def serialize_data(self, data) -> dict:
+        truncated_data = truncate_json(data)
+        if isinstance(truncated_data, dict):
+            return truncated_data
+        return {"content": truncated_data}
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        return truncate_long_strings(data)
+        truncated_data = truncate_json(data)
+        if isinstance(truncated_data, dict):
+            return truncated_data
+        return {"content": truncated_data}
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
@@ -73,12 +79,3 @@ class VertexBuildMapModel(BaseModel):
                 vertex_build_map[vertex_build.id] = []
             vertex_build_map[vertex_build.id].append(vertex_build)
         return cls(vertex_builds=vertex_build_map)
-
-
-def truncate_json_fields(mapper, connection, target):  # noqa: ARG001
-    target.data = truncate_json(target.data)
-    target.artifacts = truncate_json(target.artifacts)
-
-
-event.listen(VertexBuildTable, "before_insert", truncate_json_fields)
-event.listen(VertexBuildTable, "before_update", truncate_json_fields)

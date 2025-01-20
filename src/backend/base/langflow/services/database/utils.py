@@ -46,7 +46,13 @@ def truncate_json(data, *, max_size: int = constants.MAX_TEXT_LENGTH):
 
         return data
 
-    if calculate_size(data) <= max_size:
+    try:
+        json.dumps(data)
+        is_serialized = True
+    except Exception:  # noqa: BLE001
+        is_serialized = False
+
+    if calculate_size(data) <= max_size or not is_serialized:
         return data
 
     return shrink_to_size(data, max_size)

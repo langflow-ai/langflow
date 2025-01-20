@@ -3,15 +3,12 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import field_serializer, field_validator
-from sqlalchemy import event
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.services.database.utils import truncate_json
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
-
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class TransactionBase(SQLModel):
@@ -37,9 +34,19 @@ class TransactionBase(SQLModel):
             value = UUID(value)
         return value
 
+    @field_serializer("inputs")
+    def serialize_inputs(self, data) -> dict:
+        truncated_data = truncate_json(data)
+        if isinstance(truncated_data, dict):
+            return truncated_data
+        return {"content": truncated_data}
+
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        return truncate_long_strings(data)
+        truncated_data = truncate_json(data)
+        if isinstance(truncated_data, dict):
+            return truncated_data
+        return {"content": truncated_data}
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
@@ -51,12 +58,3 @@ class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
 class TransactionReadResponse(TransactionBase):
     id: UUID = Field(alias="transaction_id")
     flow_id: UUID
-
-
-def truncate_json_fields(mapper, connection, target):  # noqa: ARG001
-    target.inputs = truncate_json(target.inputs)
-    target.outputs = truncate_json(target.outputs)
-
-
-event.listen(TransactionTable, "before_insert", truncate_json_fields)
-event.listen(TransactionTable, "before_update", truncate_json_fields)
