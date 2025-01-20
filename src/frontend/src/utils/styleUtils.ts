@@ -281,6 +281,7 @@ import { MongoDBIcon } from "../icons/MongoDB";
 import { NeedleIcon } from "../icons/Needle";
 import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
+import { NovitaIcon } from "../icons/Novita";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
@@ -535,6 +536,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
+  { display_name: "Youtube", name: "youtube", icon: "Youtube" },
 ];
 
 export const categoryIcons = {
@@ -667,6 +669,8 @@ export const nodeIconsLucide: iconsType = {
   notion: NotionIcon,
   Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
+  novita: NovitaIcon,
+  Novita: NovitaIcon,
   Needle: NeedleIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
