@@ -86,7 +86,8 @@ class AgentComponent(ToolCallingAgentComponent):
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
                 # Convert CurrentDateComponent to a StructuredTool
-                current_date_tool = CurrentDateComponent().to_toolkit()[0]
+                current_date_tool = (await CurrentDateComponent().to_toolkit()).pop(0)
+                # current_date_tool = CurrentDateComponent().to_toolkit()[0]
                 if isinstance(current_date_tool, StructuredTool):
                     self.tools.append(current_date_tool)
                 else:

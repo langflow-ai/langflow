@@ -12,10 +12,10 @@ from langflow.schema import Data, dotdict
 
 
 class SubFlowComponent(Component):
-    display_name = "Sub Flow"
+    display_name = "Sub Flow [Deprecated]"
     description = "Generates a Component from a Flow, with all of its inputs, and "
     name = "SubFlow"
-    beta: bool = True
+    legacy: bool = True
     icon = "Workflow"
 
     async def get_flow_names(self) -> list[str]:
