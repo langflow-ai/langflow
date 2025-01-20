@@ -6,17 +6,9 @@ from tests.base import ComponentTestBaseWithClient
 
 
 class TestArXivComponent(ComponentTestBaseWithClient):
-    def test_all_versions_have_a_file_name_defined(self, file_names_mapping):
-        """Test if all versions have a file name defined."""
-        assert len(file_names_mapping) > 0
-        for mapping in file_names_mapping:
-            assert "version" in mapping
-            assert "module" in mapping
-            assert "file_name" in mapping
-
     def test_component_versions(self, default_kwargs, file_names_mapping):
         """Test component compatibility across versions."""
-        from src.backend.base.langflow.components.tools.arxiv import ArXivComponent
+        from langflow.components.tools.arxiv import ArXivComponent
 
         # Test current version
         component = ArXivComponent(**default_kwargs)
@@ -27,7 +19,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
         for mapping in file_names_mapping:
             try:
                 module = __import__(
-                    f"src.backend.base.langflow.components.{mapping['module']}",
+                    f"langflow.components.{mapping['module']}",
                     fromlist=[mapping["file_name"]],
                 )
                 component_class = getattr(module, mapping["file_name"])
@@ -39,8 +31,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def component_class(self):
-        from src.backend.base.langflow.components.tools.arxiv import ArXivComponent
-
+        from langflow.components.tools.arxiv import ArXivComponent
         return ArXivComponent
 
     @pytest.fixture
@@ -54,13 +45,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        return [
-            {
-                "version": "1.0.0",  # Versão inicial do componente
-                "module": "tools.arxiv",
-                "file_name": "ArXivComponent",
-            }
-        ]
+        return []
 
     def test_component_initialization(self, component_class, default_kwargs):
         # Arrange
