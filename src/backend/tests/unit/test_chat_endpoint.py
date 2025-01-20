@@ -73,7 +73,7 @@ async def consume_and_assert_stream(r):
             assert parsed["event"] == "vertices_sorted"
             ids = parsed["data"]["ids"]
             ids.sort()
-            assert ids == ["ChatInput-CIGht", "Memory-amN4Z"]
+            assert ids == ["ChatInput-CIGht"]
 
             to_run = parsed["data"]["to_run"]
             to_run.sort()

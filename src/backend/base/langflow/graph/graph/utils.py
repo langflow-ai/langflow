@@ -743,13 +743,15 @@ def sort_chat_inputs_first(
 
     if not chat_input:
         return vertices_layers
-
     # If chat input already in first layer, just move it to index 0
     if chat_input_layer_idx == 0:
-        first_layer = vertices_layers[0]
-        first_layer.remove(chat_input)
-        first_layer.insert(0, chat_input)
-        return vertices_layers
+        # If chat input is alone in first layer, keep as-is
+        if len(vertices_layers[0]) == 1:
+            return vertices_layers
+
+        # Otherwise move chat input to its own layer at the start
+        vertices_layers[0].remove(chat_input)
+        return [[chat_input], *vertices_layers]
 
     # Otherwise create new layers with chat input first
     result_layers = []
@@ -865,7 +867,7 @@ def get_sorted_vertices(
 
     # Sort chat inputs first and sort each layer by dependencies
     all_layers = [first_layer, *remaining_layers]
-    if get_vertex_predecessors is not None:
+    if get_vertex_predecessors is not None and start_component_id is None:
         all_layers = sort_chat_inputs_first(all_layers, get_vertex_predecessors)
     if get_vertex_successors is not None:
         all_layers = sort_layer_by_dependency(all_layers, get_vertex_successors)

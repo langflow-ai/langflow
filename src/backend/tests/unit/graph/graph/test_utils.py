@@ -483,10 +483,11 @@ def test_chat_inputs_at_start():
         return []
 
     result = utils.sort_chat_inputs_first(vertices_layers, get_vertex_predecessors)
-    assert len(result) == 3  # [chat_input] + original 3 layers
-    assert result[0] == ["ChatInput1", "B"]
-    assert result[1] == ["C"]  # Original second layer
-    assert result[2] == ["D"]  # Original third layer
+    assert len(result) == 4  # [chat_input] + original 3 layers
+    assert result[0] == ["ChatInput1"]  # First layer contains only ChatInput1
+    assert result[1] == ["B"]  # Second layer contains B
+    assert result[2] == ["C"]  # Original second layer
+    assert result[3] == ["D"]  # Original third layer
 
     # Test that multiple chat inputs raise an error
     vertices_layers_multiple = [["ChatInput1", "B"], ["ChatInput2", "C"], ["D"]]
