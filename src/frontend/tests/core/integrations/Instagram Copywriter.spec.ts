@@ -1,14 +1,9 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { addNewApiKeys } from "../../utils/add-new-api-keys";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
-import { selectGptModel } from "../../utils/select-gpt-model";
-import { updateOldComponents } from "../../utils/update-old-components";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 
 test(
@@ -41,9 +36,11 @@ test(
 
     await initialGPTsetup(page);
 
+    // We have to get the rf__node because there are more components with popover-anchor-input-api_key
     await page
+      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
       .getByTestId("popover-anchor-input-api_key")
-      .nth(2)
+      .nth(0)
       .fill(process.env.TAVILY_API_KEY ?? "");
 
     await page.getByTestId("button_run_chat output").click();

@@ -2,7 +2,7 @@ from urllib.parse import urlparse
 
 import requests
 from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
-from pydantic.v1.types import SecretStr
+from pydantic import SecretStr
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
@@ -36,6 +36,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             display_name="Model Name",
             value="BAAI/bge-large-en-v1.5",
             info="The name of the model to use for text embeddings.",
+            required=True,
         ),
     ]
 
