@@ -11,7 +11,7 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="flow_name"]', {
+    await page.waitForSelector('[data-testid="input-flow-name"]', {
       timeout: 3000,
     });
 
