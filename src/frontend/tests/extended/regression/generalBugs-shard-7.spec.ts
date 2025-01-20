@@ -32,7 +32,12 @@ test(
 
     await page
       .getByTestId("embeddingsOllama Embeddings")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+      .hover()
+      .then(async () => {
+        await page
+          .getByTestId("add-component-button-ollama-embeddings")
+          .click();
+      });
 
     await page.getByTestId("fit_view").click();
     await zoomOut(page, 3);
@@ -52,11 +57,11 @@ test(
 
     await page
       .getByPlaceholder("Type something...")
-      .nth(2)
+      .first()
       .fill("ollama_test_ctrl_a_first_input");
     let value = await page
       .getByPlaceholder("Type something...")
-      .nth(2)
+      .first()
       .inputValue();
     expect(value).toBe("ollama_test_ctrl_a_first_input");
 
@@ -76,7 +81,7 @@ test(
 
     await page.keyboard.press("ControlOrMeta+c");
 
-    await page.getByPlaceholder("Type something...").nth(2).click();
+    await page.getByPlaceholder("Type something...").first().click();
 
     await page.keyboard.press("ControlOrMeta+a");
 
@@ -84,7 +89,7 @@ test(
 
     value = await page
       .getByPlaceholder("Type something...")
-      .nth(2)
+      .first()
       .inputValue();
     expect(value).toBe("ollama_test_ctrl_a_second_input");
   },
