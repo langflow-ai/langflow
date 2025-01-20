@@ -45,7 +45,7 @@ export default function DictComponent({
                 "hover:bg-mute w-full font-medium text-primary",
                 editNode ? "h-fit px-3 py-0.5" : "",
               )}
-              data-testid="dict-input"
+              data-testid={editNode ? `edit_${id}` : `${id}`}
             >
               <ForwardedIconComponent
                 strokeWidth={ICON_STROKE_WIDTH}
