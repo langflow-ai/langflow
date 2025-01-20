@@ -1,9 +1,9 @@
 import Loading from "@/components/ui/loading";
-import useFlowStore from "@/stores/flowStore";
 import { Button } from "@/components/ui/button";
 import { Case } from "@/shared/components/caseComponent";
 import { FilePreviewType } from "./types";
 import { cn } from "src/utils/style";
+import { usePlaygroundStore } from "src/stores/playgroundStore";
 
 const BUTTON_STATES = {
   NO_INPUT: "bg-high-indigo text-background",
@@ -29,9 +29,8 @@ const ButtonSendWrapper = ({
   chatValue,
   files,
 }: ButtonSendWrapperProps) => {
-  const stopBuilding = useFlowStore((state) => state.stopBuilding);
+  const stopBuilding = usePlaygroundStore((state) => state.stopBuilding);
 
-  const isBuilding = useFlowStore((state) => state.isBuilding);
   const showStopButton = lockChat || files.some((file) => file.loading);
   const showSendButton =
     !(lockChat || files.some((file) => file.loading)) && !noInput;
@@ -47,7 +46,7 @@ const ButtonSendWrapper = ({
   const buttonClasses = cn("form-modal-send-button", getButtonState());
 
   const handleClick = () => {
-    if (showStopButton && isBuilding) {
+    if (showStopButton && lockChat) {
       stopBuilding();
     } else if (!showStopButton) {
       send();
@@ -57,7 +56,7 @@ const ButtonSendWrapper = ({
   return (
     <Button
       className={buttonClasses}
-      disabled={lockChat && !isBuilding}
+      disabled={lockChat}
       onClick={handleClick}
       unstyled
       data-testid={showStopButton ? "button-stop" : "button-send"}

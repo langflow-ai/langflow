@@ -11,3 +11,5 @@ export * from './ui/popover';
 export * from './ui/tooltip';
 
 export * from './core/lfIcon/chat-logo-icon';
+
+export type { Node } from '@xyflow/react';

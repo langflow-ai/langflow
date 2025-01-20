@@ -22,6 +22,8 @@ interface PlaygroundStore {
   setMaxFileSizeUpload: (maxFileSizeUpload: number) => void;
   baseUrl: string;
   setBaseUrl: (url: string) => void;
+  stopBuilding: () => void;
+  setStopBuilding: (callback: () => void) => void;
   buildFlow: ({
     startNodeId,
     stopNodeId,
@@ -71,6 +73,10 @@ export const usePlaygroundStore = create<PlaygroundStore>((set) => ({
   setOnFileUploadError: (callback) => set({ onFileUploadError: callback }),
   setChatValueStore: (value: string) => set({ chatValueStore: value }),
   setCurrentFlowId: (id) => set({ currentFlowId: id }),
+  stopBuilding: () => {
+    console.log("Stop building flow");
+  },
+  setStopBuilding: (callback) => set({ stopBuilding: callback }),
   buildFlow: async ({
     startNodeId,
     stopNodeId,
