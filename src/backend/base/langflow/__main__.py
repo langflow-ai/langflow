@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import os
 import platform
 import signal
 import socket
@@ -167,6 +168,11 @@ def run(
     set_var_for_macos_issue()
     settings_service = get_settings_service()
 
+    for key, value in os.environ.items():
+        new_key = key.replace("LANGFLOW_", "")
+        if hasattr(settings_service.auth_settings, new_key):
+            setattr(settings_service.auth_settings, new_key, value)
+
     frame = inspect.currentframe()
     valid_args: list = []
     values: dict = {}
@@ -179,6 +185,8 @@ def run(
             settings_service.settings.update_settings(components_path=components_path)
         elif hasattr(settings_service.settings, arg):
             settings_service.set(arg, values[arg])
+        elif hasattr(settings_service.auth_settings, arg):
+            settings_service.auth_settings.set(arg, values[arg])
         logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
     host = settings_service.settings.host
