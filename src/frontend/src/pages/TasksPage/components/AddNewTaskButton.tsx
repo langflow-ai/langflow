@@ -1,5 +1,5 @@
-import Dropdown from "@/components/dropdownComponent";
-import IconComponent from "@/components/genericIconComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import Dropdown from "@/components/core/dropdownComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -92,7 +92,7 @@ export default function AddNewTaskButton({
     >
       <BaseModal.Header description="Create a new task to manage your workflow.">
         <span className="pr-2">Create Task</span>
-        <IconComponent
+        <ForwardedIconComponent
           name="SquareCheckBig"
           className="h-6 w-6 pl-1 text-primary"
           aria-hidden="true"

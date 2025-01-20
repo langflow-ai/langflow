@@ -1,6 +1,7 @@
-import IconComponent from "@/components/genericIconComponent";
-import LoadingComponent from "@/components/loadingComponent";
-import PageLayout from "@/components/pageLayout";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import LoadingComponent from "@/components/common/loadingComponent";
+import PageLayout from "@/components/common/pageLayout";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,6 @@ import { Task } from "@/types/Task";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { ColDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
-import TableComponent from "../../components/tableComponent";
 import AddNewTaskButton from "./components/AddNewTaskButton";
 
 const POLLING_INTERVAL = 5000; // 5 seconds
@@ -130,7 +130,7 @@ export default function TaskPage() {
           <div className="flex gap-2">
             <AddNewTaskButton asChild>
               <Button variant="primary">
-                <IconComponent name="Plus" className="w-4" />
+                <ForwardedIconComponent name="Plus" className="w-4" />
                 Add New Task
               </Button>
             </AddNewTaskButton>
@@ -146,7 +146,7 @@ export default function TaskPage() {
                 onChange={(e) => handleFilterTasks(e.target.value)}
               />
               {inputValue && (
-                <IconComponent
+                <ForwardedIconComponent
                   name="X"
                   className="cursor-pointer"
                   onClick={() => handleFilterTasks("")}

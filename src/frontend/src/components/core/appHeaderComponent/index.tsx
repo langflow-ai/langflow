@@ -138,6 +138,22 @@ export default function AppHeader(): JSX.Element {
           </ShadTooltip>
         </AlertDropdown>
         {!ENABLE_DATASTAX_LANGFLOW && (
+          <ShadTooltip content="Go to Tasks" side="bottom" styleClasses="z-10">
+            <Button
+              variant="ghost"
+              className={`${location.pathname.includes("/tasks") ? "bg-accent text-accent-foreground" : ""}`}
+              onClick={() => navigate("/tasks")}
+              data-testid="button-tasks-page"
+            >
+              <ForwardedIconComponent
+                name="SquareCheckBig"
+                className="side-bar-button-size h-[18px] w-[18px]"
+              />
+              <span className="hidden whitespace-nowrap 2xl:inline">Tasks</span>
+            </Button>
+          </ShadTooltip>
+        )}
+        {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <ShadTooltip
               content="Go to LangflowStore"
