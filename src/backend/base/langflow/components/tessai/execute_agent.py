@@ -1,6 +1,6 @@
 import requests
 from langflow.custom import Component
-from langflow.inputs import DictInput, SecretStrInput, StrInput
+from langflow.inputs import DictInput, MessageInput, SecretStrInput
 from langflow.io import Output
 
 class TessAIExecuteAgentComponent(Component):
@@ -16,7 +16,7 @@ class TessAIExecuteAgentComponent(Component):
             info="The API key to use for TessAI.",
             advanced=False,
         ),
-        StrInput(
+        MessageInput(
             name="agent_id",
             display_name="Agent ID",
             required=True,
