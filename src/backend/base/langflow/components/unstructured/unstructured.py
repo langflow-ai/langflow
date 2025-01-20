@@ -1,5 +1,5 @@
-from langchain_unstructured import UnstructuredLoader
 from docling import Docling
+from langchain_unstructured import UnstructuredLoader
 
 from langflow.base.data import BaseFileComponent
 from langflow.inputs import DropdownInput, MessageTextInput, NestedDictInput, SecretStrInput

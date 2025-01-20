@@ -1,7 +1,9 @@
+from docling import Docling
+
 from langflow.custom import Component
 from langflow.io import Output
 from langflow.schema import Data
-from docling import Docling
+
 
 class DoclingLoaderComponent(Component):
     display_name = "Docling Document Loader"
@@ -16,15 +18,15 @@ class DoclingLoaderComponent(Component):
             "display_name": "File Path",
             "type": "str",
             "required": True,
-            "info": "Path to the document file to be loaded."
+            "info": "Path to the document file to be loaded.",
         },
         {
             "name": "config",
             "display_name": "Docling Configuration",
             "type": "dict",
             "required": False,
-            "info": "Configuration for Docling library."
-        }
+            "info": "Configuration for Docling library.",
+        },
     ]
 
     outputs = [
