@@ -17,7 +17,7 @@ from langflow.schema import Data
 class ApifyRunActorComponent(LCToolComponent):
     display_name = "Apify Actors"
     description = (
-        "Use Apify actors in your flow to accomplish various tasks. "
+        "Use Apify Actors in your flow to accomplish various tasks. "
         "This component can be used in a flow to retrieve data or as a tool with an agent."
     )
     documentation: str = "http://docs.langflow.org/components/apify/run-actor"
@@ -43,7 +43,7 @@ class ApifyRunActorComponent(LCToolComponent):
         MultilineInput(
             name="actor_input",
             display_name="Actor input",
-            info="The JSON input for the actor.",
+            info="The JSON input for the Actor.",
             value="{}",
             required=True,
         ),
@@ -81,7 +81,7 @@ class ApifyRunActorComponent(LCToolComponent):
         self._apify_client: ApifyClient | None = None
 
     def run_model(self) -> list[Data]:
-        """Run the actor and return node output."""
+        """Run the Actor and return node output."""
         _input = json.loads(self.actor_input)
         fields = self._parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
         res = self._run_actor(self.actor_id, _input, fields=fields)
@@ -93,7 +93,7 @@ class ApifyRunActorComponent(LCToolComponent):
         return data
 
     def build_tool(self) -> Tool:
-        """Build a tool for agent that runs the Apify actor."""
+        """Build a tool for agent that runs the Apify Actor."""
         actor_id = self.actor_id
 
         build = self._get_actor_latest_build(actor_id)
@@ -121,22 +121,22 @@ class ApifyRunActorComponent(LCToolComponent):
     def _create_tool_class(
         self, parent: "ApifyRunActorComponent", readme: str, input_model: type[BaseModel], actor_id: str
     ) -> type[BaseTool]:
-        """Create a tool class that runs an Apify actor."""
+        """Create a tool class that runs an Apify Actor."""
 
         class ApifyActorRun(BaseTool):
-            """Tool that runs Apify actors."""
+            """Tool that runs Apify Actors."""
 
             name: str = f"apify_actor_{parent._toolify_actor_id_str(actor_id)}"
             description: str = (
-                "Run an Apify actor with the given input."
-                "Here is part of the currently loaded actor README:\n\n"
+                "Run an Apify Actor with the given input."
+                "Here is part of the currently loaded Actor README:\n\n"
                 f"{readme}\n\n"
             )
 
             args_schema: type[BaseModel] = input_model
 
             def _run(self, actor_input: str | dict) -> str:
-                """Use the Apify actor."""
+                """Use the Apify Actor."""
                 input_dict = json.loads(actor_input) if isinstance(actor_input, str) else actor_input
 
                 # retrieve if nested, just in case
@@ -148,7 +148,7 @@ class ApifyRunActorComponent(LCToolComponent):
         return ApifyActorRun
 
     def _create_input_model_class(self, description: str) -> type[BaseModel]:
-        """Create a Pydantic model class for the actor input."""
+        """Create a Pydantic model class for the Actor input."""
 
         class ActorInput(BaseModel):
             """Input for the Apify Actor tool."""
@@ -168,7 +168,7 @@ class ApifyRunActorComponent(LCToolComponent):
         return self._apify_client
 
     def _get_actor_latest_build(self, actor_id: str) -> dict:
-        """Get the latest build of an actor from default build tag."""
+        """Get the latest build of an Actor from default build tag."""
         client = self._get_apify_client()
         actor = client.actor(actor_id=actor_id)
         if not (actor_info := actor.get()):
@@ -185,7 +185,7 @@ class ApifyRunActorComponent(LCToolComponent):
         return build
 
     def _get_actor_input_schema_from_build(self, build: dict) -> tuple[dict, list[str]]:
-        """Get the input schema from the actor build.
+        """Get the input schema from the Actor build.
 
         Trim the description to 250 characters.
         """
@@ -251,10 +251,10 @@ class ApifyRunActorComponent(LCToolComponent):
         return "".join(char if char in valid_chars else "_" for char in actor_id)
 
     def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:
-        """Run an Apify actor and return the output dataset.
+        """Run an Apify Actor and return the output dataset.
 
         :param actor_id: Actor name from Apify store to run.
-        :param run_input: JSON input for the actor.
+        :param run_input: JSON input for the Actor.
         :param fields: List of fields to extract from the dataset. Other fields will be ignored.
         """
         client = self._get_apify_client()
