@@ -180,9 +180,9 @@ def test_process_flow_vector_store_grouped(vector_store_grouped_json_flow):
 
     for idx, expected_keyword in enumerate(expected_keywords):
         for key, value in expected_keyword.items():
-            assert (
-                value in edges[idx][key].split("-")[0]
-            ), f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
+            assert value in edges[idx][key].split("-")[0], (
+                f"Edge {idx}, key {key} expected to contain {value} but got {edges[idx][key]}"
+            )
 
 
 def test_update_template(sample_template, sample_nodes):

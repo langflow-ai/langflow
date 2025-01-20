@@ -38,7 +38,7 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             value="text-embedding-3-small",
         ),
         DictInput(name="model_kwargs", display_name="Model Kwargs", advanced=True),
-        SecretStrInput(name="openai_api_key", display_name="OpenAI API Key", value="OPENAI_API_KEY"),
+        SecretStrInput(name="openai_api_key", display_name="OpenAI API Key", value="OPENAI_API_KEY", required=True),
         MessageTextInput(name="openai_api_base", display_name="OpenAI API Base", advanced=True),
         MessageTextInput(name="openai_api_type", display_name="OpenAI API Type", advanced=True),
         MessageTextInput(name="openai_api_version", display_name="OpenAI API Version", advanced=True),

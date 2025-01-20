@@ -252,6 +252,7 @@ import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
+import { DeepSeekIcon } from "../icons/DeepSeek";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -294,6 +295,7 @@ import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
 import { SambaNovaIcon } from "../icons/SambaNova";
 import { SearxIcon } from "../icons/Searx";
+import { SerperIcon } from "../icons/Serper";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
@@ -673,6 +675,7 @@ export const nodeIconsLucide: iconsType = {
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
+  DeepSeek: DeepSeekIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
@@ -943,4 +946,5 @@ export const nodeIconsLucide: iconsType = {
   ThumbsDown,
   ThumbDownIconCustom,
   ThumbUpIconCustom,
+  Serper: SerperIcon,
 };
