@@ -11,18 +11,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("youtube");
 
-    await page.waitForSelector('[id="youtubeYouTube Transcripts"]', {
-      timeout: 3000,
-    });
-
     await page
       .getByTestId("youtubeYouTube Transcripts")
-      .hover()
-      .then(async () => {
-        await page
-          .getByTestId("add-component-button-youtube-transcripts")
-          .click();
-      });
+      .hover();
+    await page
+      .getByTestId("add-component-button-youtube-transcripts")
+      .click();
 
     await page.getByTestId("fit_view").click();
 
@@ -41,15 +35,9 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await page.waitForTimeout(500);
-
     await page.getByTestId("button_run_youtube transcripts").click();
 
-    await page.waitForTimeout(500);
-
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.waitForTimeout(500);
 
     await page.getByTestId("output-inspection-transcript").first().click();
     await page.waitForSelector("text=Component Output", { timeout: 30000 });
