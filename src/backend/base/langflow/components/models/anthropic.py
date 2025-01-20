@@ -26,13 +26,6 @@ class AnthropicModelComponent(LCModelComponent):
             value=4096,
             info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
-        DropdownInput(
-            name="model_name",
-            display_name="Model Name",
-            options=[],
-            refresh_button=True,
-            real_time_refresh=True,
-        ),
         SecretStrInput(
             name="api_key",
             display_name="Anthropic API Key",
@@ -40,6 +33,15 @@ class AnthropicModelComponent(LCModelComponent):
             value=None,
             required=True,
             real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="model_name",
+            display_name="Model Name",
+            info="If model name is not visible, provide the accurate api key and  "
+            "hit refresh next to the model name field.",
+            options=[],
+            refresh_button=True,
+            combobox=True,
         ),
         SliderInput(
             name="temperature",

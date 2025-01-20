@@ -30,9 +30,9 @@ class ChatOllamaComponent(LCModelComponent):
             name="model_name",
             display_name="Model Name",
             options=[],
-            info="Refer to https://ollama.com/library for more models.",
+            info="If model name is not visible, provide the accurate base url and  "
+            "hit refresh next to the model name field.",
             refresh_button=True,
-            real_time_refresh=True,
         ),
         SliderInput(
             name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)

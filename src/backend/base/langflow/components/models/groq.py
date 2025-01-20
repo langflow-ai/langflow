@@ -28,6 +28,15 @@ class GroqModel(LCModelComponent):
             value="https://api.groq.com",
             real_time_refresh=True,
         ),
+        DropdownInput(
+            name="model_name",
+            display_name="Model Name",
+            info="If model name is not visible, provide the accurate api key and  "
+            "hit refresh next to the model name field.",
+            options=[],
+            refresh_button=True,
+            combobox=True,
+        ),
         IntInput(
             name="max_tokens",
             display_name="Max Output Tokens",
@@ -53,14 +62,6 @@ class GroqModel(LCModelComponent):
             info="Number of chat completions to generate for each prompt. "
             "Note that the API may not return the full n completions if duplicates are generated.",
             advanced=True,
-        ),
-        DropdownInput(
-            name="model_name",
-            display_name="Model",
-            info="The name of the model to use.",
-            options=[],
-            refresh_button=True,
-            real_time_refresh=True,
         ),
         BoolInput(
             name="tool_model_enabled",
