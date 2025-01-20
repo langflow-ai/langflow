@@ -48,9 +48,7 @@ test(
     await page.getByTestId("output-inspection-transcript").first().click();
 
     await page.waitForSelector("text=Component Output", { timeout: 30000 });
-
     await page.getByRole("gridcell").first().click();
-
     const value = await page.getByPlaceholder("Empty").inputValue();
     expect(value.length).toBeGreaterThan(10);
   },
