@@ -52,7 +52,7 @@ class TelemetryService(Service):
             try:
                 await func(payload, path)
             except Exception:  # noqa: BLE001
-                logger.exception("Error sending telemetry data")
+                logger.error("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 

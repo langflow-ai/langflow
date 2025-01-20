@@ -630,6 +630,8 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              // Prevent shadow-box from showing unexpectedly during initial renders
+              display: "none",
             }}
           ></div>
         </div>
