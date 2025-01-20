@@ -6,22 +6,25 @@ import {
 } from "vanilla-jsoneditor";
 
 interface JsonEditorProps {
-  data?: object;
-  onChange?: (data: object) => void;
+  data?: Content;
+  onChange?: (data: Content) => void;
   options?: any;
+  jsonRef?: React.MutableRefObject<VanillaJsonEditor | null>;
   width?: string;
   height?: string;
 }
 
 const JsonEditor = ({
-  data = {},
+  data = { json: {} },
   onChange,
+  jsonRef,
   options = {},
   width = "100%",
   height = "400px",
 }: JsonEditorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
+  const newRef = jsonRef ?? jsonEditorRef;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,36 +36,22 @@ const JsonEditor = ({
         ...options,
         content: data,
 
-        onChange: () => {
-          try {
-            const content = editor.get();
-            // Extract the json value from the content
-            const jsonValue = (content as { json: object }).json;
-            onChange?.(jsonValue);
-          } catch (error) {
-            console.error("Error getting JSON:", error);
-          }
+        onChange: (content) => {
+          onChange?.(content);
         },
       },
     });
 
     // Store editor instance
-    jsonEditorRef.current = editor;
+    newRef.current = editor;
 
     // Cleanup
     return () => {
-      if (jsonEditorRef.current) {
-        jsonEditorRef.current.destroy();
+      if (newRef.current) {
+        newRef.current.destroy();
       }
     };
   }, []); // Empty dependency array since we only want to initialize once
-
-  // Update data when prop changes
-  useEffect(() => {
-    if (jsonEditorRef.current) {
-      jsonEditorRef.current.set({ json: data } as Content);
-    }
-  }, [data]);
 
   return <div ref={containerRef} style={{ width, height }} />;
 };
