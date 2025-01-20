@@ -483,7 +483,7 @@ class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
 
 
-DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
+DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
 
 
 class DefaultPromptField(Input):

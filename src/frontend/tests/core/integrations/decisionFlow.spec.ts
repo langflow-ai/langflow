@@ -255,7 +255,7 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0)
       .click();
     //quebrando aqui
@@ -264,7 +264,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(2)
       .click();
     await page
@@ -288,7 +288,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-text-right")
+      .getByTestId("handle-openaimodel-shownode-message-right")
       .nth(0)
       .click();
     await page

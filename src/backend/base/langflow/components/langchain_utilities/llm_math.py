@@ -28,7 +28,7 @@ class LLMMathChainComponent(LCChainComponent):
         ),
     ]
 
-    outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
+    outputs = [Output(display_name="Message", name="text", method="invoke_chain")]
 
     def invoke_chain(self) -> Message:
         chain = LLMMathChain.from_llm(llm=self.llm)

@@ -25,7 +25,7 @@ class ParseDataComponent(Component):
 
     outputs = [
         Output(
-            display_name="Text",
+            display_name="Message",
             name="text",
             info="Data as a single Message, with each input Data separated by Separator",
             method="parse_data",

@@ -88,13 +88,13 @@ test(
     await elementCombineTextOutput0.click();
 
     const blockedHandle = page
-      .getByTestId("div-handle-textinput-shownode-text-right")
+      .getByTestId("div-handle-textinput-shownode-message-right")
       .first();
     const secondBlockedHandle = page
       .getByTestId("div-handle-combinetext-shownode-combined text-right")
       .nth(3);
     const thirdBlockedHandle = page
-      .getByTestId("div-handle-textoutput-shownode-text-right")
+      .getByTestId("div-handle-textoutput-shownode-message-right")
       .first();
 
     const hasGradient = await blockedHandle?.evaluate((el) => {
@@ -170,7 +170,7 @@ test(
     await page
       .getByTestId("title-Combine Text")
       .first()
-      .click({ modifiers: ["Control"] });
+      .click({ modifiers: ["ControlOrMeta"] });
 
     await page.waitForSelector('[data-testid="group-node"]', {
       timeout: 3000,
@@ -181,7 +181,7 @@ test(
 
     //connection 1
     const elementTextOutput0 = page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-message-right")
       .nth(0);
     await elementTextOutput0.click();
     const elementGroupInput0 = page.getByTestId(
@@ -191,7 +191,7 @@ test(
 
     //connection 2
     const elementTextOutput1 = page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-message-right")
       .nth(4);
     await elementTextOutput1.click();
     const elementGroupInput1 = page
@@ -201,7 +201,7 @@ test(
 
     //connection 3
     const elementTextOutput2 = page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-message-right")
       .nth(2);
     await elementTextOutput2.click();
 
@@ -243,9 +243,14 @@ test(
     });
 
     expect(
-      await page.getByTestId("output-inspection-combined text").first(),
+      await page
+        .getByTestId("output-inspection-combined text-groupnode")
+        .first(),
     ).not.toBeDisabled();
-    await page.getByTestId("output-inspection-combined text").first().click();
+    await page
+      .getByTestId("output-inspection-combined text-groupnode")
+      .first()
+      .click();
 
     await page.getByText("Component Output").isVisible();
 

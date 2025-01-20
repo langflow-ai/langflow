@@ -36,7 +36,7 @@ class URLComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Text", name="text", method="fetch_content_text"),
+        Output(display_name="Message", name="text", method="fetch_content_text"),
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 

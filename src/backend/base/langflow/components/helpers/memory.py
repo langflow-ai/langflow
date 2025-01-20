@@ -69,7 +69,7 @@ class MemoryComponent(Component):
 
     outputs = [
         Output(display_name="Data", name="messages", method="retrieve_messages"),
-        Output(display_name="Text", name="messages_text", method="retrieve_messages_as_text"),
+        Output(display_name="Message", name="messages_text", method="retrieve_messages_as_text"),
     ]
 
     async def retrieve_messages(self) -> Data:
