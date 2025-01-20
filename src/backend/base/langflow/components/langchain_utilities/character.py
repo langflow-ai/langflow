@@ -32,6 +32,7 @@ class CharacterTextSplitterComponent(LCTextSplitterComponent):
             display_name="Input",
             info="The texts to split.",
             input_types=["Document", "Data"],
+            required=True,
         ),
         MessageTextInput(
             name="separator",
