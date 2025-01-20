@@ -126,7 +126,7 @@ test(
 
     //connection 2
     const textOutput = await page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-message-right")
       .nth(0);
     await textOutput.hover();
     await page.mouse.down();
@@ -150,7 +150,7 @@ test(
 
     //connection 4
     const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0);
     await parseDataOutput.hover();
     await page.mouse.down();
@@ -183,7 +183,7 @@ test(
 
     await page.getByTestId("output-inspection-message").first().click();
 
-    await page.getByRole("gridcell").nth(4).click();
+    await page.getByRole("gridcell").nth(0).click();
 
     const firstRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
@@ -209,7 +209,7 @@ test(
 
     await page.getByTestId("output-inspection-message").first().click();
 
-    await page.getByRole("gridcell").nth(4).click();
+    await page.getByRole("gridcell").nth(0).click();
 
     const secondRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
@@ -259,7 +259,7 @@ test(
 
     await page.getByTestId("output-inspection-message").first().click();
 
-    await page.getByRole("gridcell").nth(4).click();
+    await page.getByRole("gridcell").nth(0).click();
 
     const firstTextFreezed = await page.getByPlaceholder("Empty").textContent();
 
@@ -298,7 +298,7 @@ test(
 
     await page.getByTestId("output-inspection-message").first().click();
 
-    await page.getByRole("gridcell").nth(4).click();
+    await page.getByRole("gridcell").nth(0).click();
 
     const thirdTextWithoutFreezing = await page
       .getByPlaceholder("Empty")
