@@ -3,12 +3,16 @@ from typing import Any
 from langchain_community.llms.huggingface_endpoint import HuggingFaceEndpoint
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-# TODO: langchain_community.llms.huggingface_endpoint is depreciated.
-#  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
+
+# TODO: langchain_community.llms.huggingface_endpoint is depreciated.
+#  Need to update to langchain_huggingface, but have dependency with langchain_core 0.3.0
+
+# Constants
+DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
 
 
 class HuggingFaceEndpointsComponent(LCModelComponent):
@@ -19,7 +23,32 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
     inputs = [
         *LCModelComponent._base_inputs,
-        StrInput(name="model_id", display_name="Model ID", value="openai-community/gpt2", required=True),
+        DropdownInput(
+            name="model_id",
+            display_name="Model ID",
+            info="Select a model from HuggingFace Hub",
+            options=[
+                DEFAULT_MODEL,
+                "mistralai/Mixtral-8x7B-Instruct-v0.1",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+                "meta-llama/Llama-3.1-8B-Instruct",
+                "Qwen/Qwen2.5-Coder-32B-Instruct",
+                "Qwen/QwQ-32B-Preview",
+                "openai-community/gpt2",
+                "custom",
+            ],
+            value=DEFAULT_MODEL,
+            required=True,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="custom_model",
+            display_name="Custom Model ID",
+            info="Enter a custom model ID from HuggingFace Hub",
+            value="",
+            show=False,
+            required=True,
+        ),
         IntInput(
             name="max_new_tokens", display_name="Max New Tokens", value=512, info="Maximum number of generated tokens"
         ),
@@ -71,6 +100,7 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             name="task",
             display_name="Task",
             options=["text2text-generation", "text-generation", "summarization", "translation"],
+            value="text-generation",
             advanced=True,
             info="The task to call the model with. Should be a task that returns `generated_text` or `summary_text`.",
         ),
@@ -81,8 +111,29 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
 
     def get_api_url(self) -> str:
         if "huggingface" in self.inference_endpoint.lower():
+            if self.model_id == "custom":
+                if not self.custom_model:
+                    error_msg = "Custom model ID is required when 'custom' is selected"
+                    raise ValueError(error_msg)
+                return f"{self.inference_endpoint}{self.custom_model}"
             return f"{self.inference_endpoint}{self.model_id}"
         return self.inference_endpoint
+
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        """Update build configuration based on field updates."""
+        try:
+            if field_name is None or field_name == "model_id":
+                # If model_id is custom, show custom model field
+                if field_value == "custom":
+                    build_config["custom_model"]["show"] = True
+                    build_config["custom_model"]["required"] = True
+                else:
+                    build_config["custom_model"]["show"] = False
+                    build_config["custom_model"]["value"] = ""
+
+        except (KeyError, AttributeError) as e:
+            self.log(f"Error updating build config: {e!s}")
+        return build_config
 
     def create_huggingface_endpoint(
         self,
