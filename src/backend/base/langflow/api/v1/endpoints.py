@@ -748,7 +748,7 @@ async def custom_component_update(
         )
         component_node["template"] = updated_build_config
         if isinstance(cc_instance, Component):
-            cc_instance.run_and_validate_update_outputs(
+            await cc_instance.run_and_validate_update_outputs(
                 frontend_node=component_node,
                 field_name=code_request.field,
                 field_value=code_request.field_value,
