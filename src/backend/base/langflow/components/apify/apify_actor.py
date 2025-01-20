@@ -86,10 +86,10 @@ class ApifyRunActorComponent(LCToolComponent):
     def run_model(self) -> list[Data]:
         """Run the Actor and return node output."""
         _input = json.loads(self.run_input)
-        fields = ApifyRunActorComponent._parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
+        fields = ApifyRunActorComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
         res = self._run_actor(self.actor_id, _input, fields=fields)
         if self.do_flatten_dataset:
-            res = [ApifyRunActorComponent._flatten(item) for item in res]
+            res = [ApifyRunActorComponent.flatten(item) for item in res]
         data = [Data(data=item) for item in res]
 
         self.status = data
@@ -101,7 +101,7 @@ class ApifyRunActorComponent(LCToolComponent):
 
         build = self._get_actor_latest_build(actor_id)
         readme = build.get("readme", "")[:250] + "..."
-        properties, required = ApifyRunActorComponent._get_actor_input_schema_from_build(build)
+        properties, required = ApifyRunActorComponent.get_actor_input_schema_from_build(build)
         properties = {"run_input": properties}
 
         # works from input schema
@@ -116,13 +116,13 @@ class ApifyRunActorComponent(LCToolComponent):
 
         info = "".join(_info)
 
-        input_model_cls = ApifyRunActorComponent._create_input_model_class(info)
-        tool_cls = ApifyRunActorComponent._create_tool_class(self, readme, input_model_cls, actor_id)
+        input_model_cls = ApifyRunActorComponent.create_input_model_class(info)
+        tool_cls = ApifyRunActorComponent.create_tool_class(self, readme, input_model_cls, actor_id)
 
         return cast("Tool", tool_cls())
 
     @staticmethod
-    def _create_tool_class(
+    def create_tool_class(
         parent: "ApifyRunActorComponent", readme: str, input_model: type[BaseModel], actor_id: str
     ) -> type[BaseTool]:
         """Create a tool class that runs an Apify Actor."""
@@ -130,7 +130,7 @@ class ApifyRunActorComponent(LCToolComponent):
         class ApifyActorRun(BaseTool):
             """Tool that runs Apify Actors."""
 
-            name: str = f"apify_actor_{ApifyRunActorComponent._toolify_actor_id_str(actor_id)}"
+            name: str = f"apify_actor_{ApifyRunActorComponent.toolify_actor_id_str(actor_id)}"
             description: str = (
                 "Run an Apify Actor with the given input."
                 "Here is part of the currently loaded Actor README:\n\n"
@@ -147,12 +147,12 @@ class ApifyRunActorComponent(LCToolComponent):
                 input_dict = input_dict.get("run_input", input_dict)
 
                 res = parent._run_actor(actor_id, input_dict)
-                return "\n\n".join([ApifyRunActorComponent._dict_to_json_str(item) for item in res])
+                return "\n\n".join([ApifyRunActorComponent.dict_to_json_str(item) for item in res])
 
         return ApifyActorRun
 
     @staticmethod
-    def _create_input_model_class(description: str) -> type[BaseModel]:
+    def create_input_model_class(description: str) -> type[BaseModel]:
         """Create a Pydantic model class for the Actor input."""
 
         class ActorInput(BaseModel):
@@ -190,7 +190,7 @@ class ApifyRunActorComponent(LCToolComponent):
         return build
 
     @staticmethod
-    def _get_actor_input_schema_from_build(build: dict) -> tuple[dict, list[str]]:
+    def get_actor_input_schema_from_build(build: dict) -> tuple[dict, list[str]]:
         """Get the input schema from the Actor build.
 
         Trim the description to 250 characters.
@@ -232,12 +232,12 @@ class ApifyRunActorComponent(LCToolComponent):
         return did
 
     @staticmethod
-    def _dict_to_json_str(d: dict) -> str:
+    def dict_to_json_str(d: dict) -> str:
         """Convert a dictionary to a JSON string."""
         return json.dumps(d, separators=(",", ":"), default=lambda _: "<n/a>")
 
     @staticmethod
-    def _toolify_actor_id_str(actor_id: str) -> str:
+    def toolify_actor_id_str(actor_id: str) -> str:
         """Turn actor_id into a valid tool name.
 
         Tool name must only contain letters, numbers, underscores, dashes,
@@ -267,12 +267,12 @@ class ApifyRunActorComponent(LCToolComponent):
             dataset_id=dataset_id,
             dataset_mapping_function=lambda item: item
             if not fields
-            else {k.replace(".", "_"): ApifyRunActorComponent._get_nested_value(item, k) for k in fields},
+            else {k.replace(".", "_"): ApifyRunActorComponent.get_nested_value(item, k) for k in fields},
         )
         return loader.load()
 
     @staticmethod
-    def _get_nested_value(data: dict[str, Any], key: str) -> Any:
+    def get_nested_value(data: dict[str, Any], key: str) -> Any:
         """Get a nested value from a dictionary."""
         keys = key.split(".")
         value = data
@@ -283,19 +283,19 @@ class ApifyRunActorComponent(LCToolComponent):
         return value
 
     @staticmethod
-    def _parse_dataset_fields(dataset_fields: str) -> list[str]:
+    def parse_dataset_fields(dataset_fields: str) -> list[str]:
         """Convert a string of comma-separated fields into a list of fields."""
         dataset_fields = dataset_fields.replace("'", "").replace('"', "").replace("`", "")
         return [field.strip() for field in dataset_fields.split(",")]
 
     @staticmethod
-    def _flatten(d: dict) -> dict:
+    def flatten(d: dict) -> dict:
         """Flatten a nested dictionary."""
 
         def items():
             for key, value in d.items():
                 if isinstance(value, dict):
-                    for subkey, subvalue in ApifyRunActorComponent._flatten(value).items():
+                    for subkey, subvalue in ApifyRunActorComponent.flatten(value).items():
                         yield key + "_" + subkey, subvalue
                 else:
                     yield key, value

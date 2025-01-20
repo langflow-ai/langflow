@@ -41,13 +41,13 @@ This component allows you to run an Apify Actor to perform various automation ta
 - **Input**:
     - Apify Token: Your API key.
     - Actor: The Apify Actor to run. Example: `apify/website-content-crawler`.
-    - Actor Input: The JSON input for configuring the Actor.
+    - Run Input: The JSON input for configuring the Actor run.
 
 - **Output**:
     - Actor Run Result: The JSON response containing the output of the Actor run.
 
 - **Manual Usage**:
-    - Input the Apify Token, an Actor ID, and configure the Actor Input JSON.
+    - Input the Apify Token, an Actor ID, and configure the Run Input JSON.
       - Example input can be obtained from the Actor documentation Input section in the JSON Example tab. See [Website Content Crawler](https://apify.com/apify/website-content-crawler/input-schema).
     - Run the component manually to retrieve data.
 
