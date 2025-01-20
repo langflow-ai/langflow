@@ -1,9 +1,8 @@
-import { cloneDeep } from "lodash";
-import { useEffect, useState } from "react";
+import useAlertStore from "@/stores/alertStore";
+import { useEffect, useRef, useState } from "react";
+import { JsonEditor as VanillaJsonEditor } from "vanilla-jsoneditor";
 import IconComponent from "../../components/common/genericIconComponent";
 import JsonEditor from "../../components/core/jsonEditor";
-import { CODE_DICT_DIALOG_SUBTITLE } from "../../constants/constants";
-import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
 
 export default function DictAreaModal({
@@ -18,33 +17,53 @@ export default function DictAreaModal({
   disabled?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-  const isDark = useDarkStore((state) => state.dark);
-  const [componentValue, setComponentValue] = useState(value);
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  ("");
+  const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
 
   useEffect(() => {
-    setComponentValue(value);
+    if (jsonEditorRef.current) {
+      jsonEditorRef.current.set({ json: value ?? {} });
+    }
   }, [value, open]);
 
   const handleSubmit = () => {
     if (onChange) {
-      onChange(componentValue);
-      setOpen(false);
+      try {
+        const componentValue = jsonEditorRef.current?.getValue();
+        const jsonValue =
+          "json" in componentValue
+            ? JSON.parse(JSON.stringify(componentValue.json))
+            : JSON.parse(componentValue.text!);
+
+        onChange(jsonValue);
+        setOpen(false);
+      } catch (error) {
+        console.error("Error getting JSON:", error);
+        setErrorData({
+          title: "Error getting dictionary",
+          list: ["Check your dictionary format"],
+        });
+      }
     }
   };
 
   const handleChangeType = (type: "array" | "object") => {
-    setComponentValue((value) => {
-      if (type === "array") {
-        if (value && Object.keys(value).length > 0) {
-          return [value];
-        }
-        return [];
+    jsonEditorRef?.current?.set(typeChanged(type));
+  };
+
+  const typeChanged = (type: "array" | "object") => {
+    if (type === "array") {
+      if (value && Object.keys(value).length > 0) {
+        return { json: [value] };
       }
-      if (value && Array.isArray(value) && value.length > 0) {
-        return value[0];
-      }
-      return {};
-    });
+      return { json: [] };
+    }
+    if (value && Array.isArray(value) && value.length > 0) {
+      return { json: value[0] };
+    }
+    return { json: {} };
   };
 
   const IteractiveReader = () => {
@@ -86,17 +105,8 @@ export default function DictAreaModal({
     <BaseModal.Content>
       <div className="flex h-full w-full flex-col transition-all">
         <JsonEditor
-          data={cloneDeep(componentValue)}
-          onChange={onChange ? (data) => setComponentValue(data) : undefined}
-          options={{
-            mode: "tree",
-            modes: ["tree", "code", "form", "text"],
-            search: true,
-            navigationBar: true,
-            statusBar: true,
-            mainMenuBar: true,
-            readOnly: !onChange,
-          }}
+          data={{ json: value }}
+          jsonRef={jsonEditorRef}
           height="400px"
         />
       </div>
