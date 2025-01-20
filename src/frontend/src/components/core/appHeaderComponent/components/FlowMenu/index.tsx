@@ -216,6 +216,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
     isInvalidName,
   ]);
 
+  useEffect(() => {
+    if (currentFlow && !editingName) {
+      setFlowName(currentFlow.name);
+    }
+  }, [currentFlow, editingName]);
+
+  useEffect(() => {
+    if (measureRef.current) {
+      setInputWidth(measureRef.current.offsetWidth + 10);
+    }
+  }, [flowName]);
+
   return currentFlow && onFlowPage ? (
     <div
       className="flex items-center justify-center gap-2 truncate"
@@ -229,7 +241,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -262,46 +274,40 @@ export const MenuBar = ({}: {}): JSX.Element => {
             className="header-menu-flow-name-2 truncate"
             data-testid="flow-configuration-button"
           >
-            <span
-              ref={measureRef}
-              className="invisible absolute font-semibold"
-              style={{ whiteSpace: "pre" }}
+            <div
+              className="relative inline-flex"
+              style={{ width: Math.max(10, inputWidth) }}
             >
-              {flowName}
-            </span>
-            {editingName ? (
-              <>
-                <Input
-                  className={cn(
-                    "h-6 px-0 font-semibold focus:border-0",
-                    isInvalidName &&
-                      "border-status-red focus-visible:ring-status-red",
-                  )}
-                  style={{ width: `${inputWidth + 1}px` }}
-                  onChange={handleEditName}
-                  maxLength={38}
-                  ref={nameInputRef}
-                  onKeyDown={handleKeyDown}
-                  autoFocus={true}
-                  onBlur={handleNameSubmit}
-                  value={flowName}
-                  id="input-flow-name"
-                  data-testid="input-flow-name"
-                />
-              </>
-            ) : (
-              <div
-                className="truncate font-semibold text-primary"
-                data-testid="flow_name"
-                id="flow_name"
-                onClick={() => {
+              <Input
+                className={cn(
+                  "h-6 w-full cursor-text font-semibold",
+                  "bg-transparent pl-1 pr-0 transition-colors duration-200",
+                  "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
+                  !editingName && "text-primary hover:opacity-80",
+                  isInvalidName && "text-status-red",
+                )}
+                onChange={handleEditName}
+                maxLength={38}
+                ref={nameInputRef}
+                onKeyDown={handleKeyDown}
+                onFocus={() => {
                   setEditingName(true);
                   setFlowName(currentFlow.name);
                 }}
+                onBlur={handleNameSubmit}
+                value={flowName}
+                id="input-flow-name"
+                data-testid="input-flow-name"
+              />
+              <span
+                ref={measureRef}
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre pl-1 font-semibold"
+                aria-hidden="true"
+                data-testid="flow_name"
               >
-                {currentFlow.name}
-              </div>
-            )}
+                {flowName}
+              </span>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger

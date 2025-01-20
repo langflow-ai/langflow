@@ -15,13 +15,13 @@ test(
 
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.getByTestId("flow_name").click();
+    await page.getByTestId("input-flow-name").click();
 
     await page.getByTestId("input-flow-name").fill(randomName);
 
     await page.keyboard.press("Enter");
 
-    let flowName = await page.getByTestId("flow_name").textContent();
+    let flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName);
 
@@ -40,13 +40,13 @@ test(
 
     await page.getByText(randomName).click();
 
-    await page.getByTestId("flow_name").click();
+    await page.getByTestId("input-flow-name").click();
 
     await page.getByTestId("input-flow-name").fill(randomName2);
 
     await page.keyboard.press("Enter");
 
-    flowName = await page.getByTestId("flow_name").textContent();
+    flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName2);
 
@@ -80,13 +80,13 @@ test(
 
     await page.getByText(randomName3).click();
 
-    await page.getByTestId("flow_name").click();
+    await page.getByTestId("input-flow-name").click();
 
     await page.getByTestId("input-flow-name").fill(randomName4);
 
     await page.keyboard.press("Enter");
 
-    flowName = await page.getByTestId("flow_name").textContent();
+    flowName = await page.getByTestId("input-flow-name").inputValue();
 
     expect(flowName).toBe(randomName4);
 
