@@ -216,6 +216,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
     isInvalidName,
   ]);
 
+  useEffect(() => {
+    if (currentFlow && !editingName) {
+      setFlowName(currentFlow.name);
+    }
+  }, [currentFlow, editingName]);
+
   return currentFlow && onFlowPage ? (
     <div
       className="flex items-center justify-center gap-2 truncate"
