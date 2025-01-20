@@ -15,6 +15,7 @@ from .google_serper_api_core import GoogleSerperAPICore
 from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
+from .python_repl_core import PythonREPLComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp import SerpComponent
@@ -47,6 +48,7 @@ __all__ = [
     "GoogleSerperAPICore",
     "MCPStdio",
     "PythonCodeStructuredTool",
+    "PythonREPLComponent",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
