@@ -222,6 +222,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
     }
   }, [currentFlow, editingName]);
 
+  useEffect(() => {
+    if (measureRef.current) {
+      setInputWidth(measureRef.current.offsetWidth + 10);
+    }
+  }, [flowName]);
+
   return currentFlow && onFlowPage ? (
     <div
       className="flex items-center justify-center gap-2 truncate"
@@ -268,25 +274,18 @@ export const MenuBar = ({}: {}): JSX.Element => {
             className="header-menu-flow-name-2 truncate"
             data-testid="flow-configuration-button"
           >
-            <span
-              ref={measureRef}
-              className="invisible absolute font-semibold"
-              style={{ whiteSpace: "pre" }}
+            <div
+              className="relative inline-flex"
+              style={{ width: Math.max(10, inputWidth) }}
             >
-              {flowName}
-            </span>
-            <div className="relative inline-flex w-fit">
               <Input
                 className={cn(
-                  "h-6 cursor-text font-semibold",
+                  "h-6 w-full cursor-text font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
                   "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
                   isInvalidName && "text-status-red",
                 )}
-                style={{
-                  width: `${Math.max(inputWidth, 24)}px`,
-                }}
                 onChange={handleEditName}
                 maxLength={38}
                 ref={nameInputRef}
@@ -302,7 +301,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 whitespace-pre pl-1 font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre pl-1 font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
