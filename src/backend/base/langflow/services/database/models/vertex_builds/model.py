@@ -6,6 +6,8 @@ from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+from langflow.services.database.utils import truncate_json
+
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
@@ -42,12 +44,12 @@ class VertexBuildBase(SQLModel):
         return value
 
     @field_serializer("data")
-    def serialize_data(self, data: dict) -> dict:
-        return truncate_long_strings(data)
+    def serialize_data(self, data) -> dict:
+        return truncate_json(data)
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        return truncate_long_strings(data)
+        return truncate_json(data)
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
