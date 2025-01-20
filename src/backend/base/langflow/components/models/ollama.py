@@ -256,7 +256,7 @@ class ChatOllamaComponent(LCModelComponent):
                 )
             ]
 
-        except (ImportError, ValueError, httpx.RequestError) as e:
+        except (ImportError, ValueError, httpx.RequestError, Exception) as e:
             msg = "Could not get model names from Ollama."
             raise ValueError(msg) from e
         return (
