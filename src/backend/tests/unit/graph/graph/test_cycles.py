@@ -22,7 +22,7 @@ class Concatenate(Component):
         MessageTextInput(name="text", display_name="Text", required=True),
     ]
     outputs = [
-        Output(display_name="Text", name="some_text", method="concatenate"),
+        Output(display_name="Message", name="some_text", method="concatenate"),
     ]
 
     def concatenate(self) -> Message:
