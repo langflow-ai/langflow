@@ -1,25 +1,25 @@
 import json
 import string
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 from apify_client import ApifyClient
 from langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader
-from langchain_core.callbacks import CallbackManagerForToolRun
 from langchain_core.tools import BaseTool
-from langflow.inputs.inputs import BoolInput
 from pydantic import BaseModel, Field
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
-from langflow.io import MultilineInput, SecretStrInput, StrInput, Output
-from langflow.schema import Data, dotdict
-from langchain_core.documents import Document
+from langflow.inputs.inputs import BoolInput
+from langflow.io import MultilineInput, Output, SecretStrInput, StrInput
+from langflow.schema import Data
 
 
 class ApifyRunActorComponent(LCToolComponent):
     display_name = "Apify Actors"
-    description = ("Use Apify actors in your flow to accomplish various tasks. "
-        "This component can be used in a flow to retrieve data or as a tool with an agent.")
+    description = (
+        "Use Apify actors in your flow to accomplish various tasks. "
+        "This component can be used in a flow to retrieve data or as a tool with an agent."
+    )
     documentation: str = "http://docs.langflow.org/components/apify/run-actor"
     icon = "Apify"
     name = "ApifyRunActor"
@@ -50,20 +50,24 @@ class ApifyRunActorComponent(LCToolComponent):
         MultilineInput(
             name="dataset_fields",
             display_name="Output fields",
-            info=("Fields to extract from the dataset, split by commas. "
+            info=(
+                "Fields to extract from the dataset, split by commas. "
                 "Other fields will be ignored. Dots in nested structure will be replaced by undescrore. "
                 "Sample input: 'field1, metadata.field2'. "
                 "Sample output: {'field1': 1, 'metadata_field2': 2}. "
                 "For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, "
-                "which is the content of the website in markdown format."),
+                "which is the content of the website in markdown format."
+            ),
         ),
         BoolInput(
             name="do_flatten_dataset",
             display_name="Flatten output?",
-            info=("The output dataset will be converted from a nested format to a flat structure. "
+            info=(
+                "The output dataset will be converted from a nested format to a flat structure. "
                 "Dot in nested structure will be replaced by underscore. "
                 "This is useful for further processing the of the Data object. "
-                "For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}."),
+                "For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}."
+            ),
         ),
     ]
 
@@ -78,9 +82,9 @@ class ApifyRunActorComponent(LCToolComponent):
 
     def run_model(self) -> list[Data]:
         """Run the actor and return node output."""
-        input = json.loads(self.actor_input)
+        _input = json.loads(self.actor_input)
         fields = self._parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
-        res = self._run_actor(self.actor_id, input, fields=fields)
+        res = self._run_actor(self.actor_id, _input, fields=fields)
         if self.do_flatten_dataset:
             res = [self._flatten(item) for item in res]
         data = [Data(data=item) for item in res]
@@ -90,9 +94,7 @@ class ApifyRunActorComponent(LCToolComponent):
 
     def build_tool(self) -> Tool:
         """Build a tool for agent that runs the Apify actor."""
-        client = self._get_apify_client()
         actor_id = self.actor_id
-        _run_actor = lambda actor_id, input: self._run_actor(actor_id, input)
 
         build = self._get_actor_latest_build(actor_id)
         readme = build.get("readme", "")[:250] + "..."
@@ -100,10 +102,12 @@ class ApifyRunActorComponent(LCToolComponent):
         properties = {"actor_input": properties}
 
         # works from input schema
-        _info = [(
-            "JSON encoded as string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\n\n"
-            f"{json.dumps(properties, separators=(',', ":"))}"
-        )]
+        _info = [
+            (
+                "JSON encoded as string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\n\n"
+                f"{json.dumps(properties, separators=(',', ':'))}"
+            )
+        ]
         if required:
             _info.append("\n\nRequired fields:\n" + "\n".join(required))
 
@@ -114,9 +118,11 @@ class ApifyRunActorComponent(LCToolComponent):
 
         return cast("Tool", tool_cls())
 
-    def _create_tool_class(self, parent: 'ApifyRunActorComponent', readme: str,
-                            input_model: type[BaseModel], actor_id: str) -> type[BaseTool]:
+    def _create_tool_class(
+        self, parent: "ApifyRunActorComponent", readme: str, input_model: type[BaseModel], actor_id: str
+    ) -> type[BaseTool]:
         """Create a tool class that runs an Apify actor."""
+
         class ApifyActorRun(BaseTool):
             """Tool that runs Apify actors."""
 
@@ -129,27 +135,21 @@ class ApifyRunActorComponent(LCToolComponent):
 
             args_schema: type[BaseModel] = input_model
 
-            def _run(
-                self,
-                actor_input: str | dict,
-                run_manager: CallbackManagerForToolRun | None = None,
-            ) -> str:
+            def _run(self, actor_input: str | dict) -> str:
                 """Use the Apify actor."""
-                if isinstance(actor_input, str):
-                    input_dict = json.loads(actor_input)
-                else:
-                    input_dict = actor_input
+                input_dict = json.loads(actor_input) if isinstance(actor_input, str) else actor_input
 
                 # retrieve if nested, just in case
                 input_dict = input_dict.get("actor_input", input_dict)
 
                 res = parent._run_actor(actor_id, input_dict)
-                return '\n\n'.join([parent._dict_to_json_str(item) for item in res])
+                return "\n\n".join([parent._dict_to_json_str(item) for item in res])
 
         return ApifyActorRun
 
     def _create_input_model_class(self, description: str) -> type[BaseModel]:
         """Create a Pydantic model class for the actor input."""
+
         class ActorInput(BaseModel):
             """Input for the Apify Actor tool."""
 
@@ -160,7 +160,8 @@ class ApifyRunActorComponent(LCToolComponent):
     def _get_apify_client(self) -> ApifyClient:
         """Get the Apify client. Is created if not exists or token changes."""
         if not self.apify_token:
-            raise ValueError("API token is required.")
+            msg = "API token is required."
+            raise ValueError(msg)
         # when token changes, create a new client
         if self._apify_client is None or self._apify_client.token != self.apify_token:
             self._apify_client = ApifyClient(self.apify_token)
@@ -171,13 +172,15 @@ class ApifyRunActorComponent(LCToolComponent):
         client = self._get_apify_client()
         actor = client.actor(actor_id=actor_id)
         if not (actor_info := actor.get()):
-            raise ValueError("Actor not found")
+            msg = f"Actor {actor_id} not found."
+            raise ValueError(msg)
 
         default_build_tag = actor_info.get("defaultRunOptions", {}).get("build")
         latest_build_id = actor_info.get("taggedBuilds", {}).get(default_build_tag, {}).get("buildId")
 
         if (build := client.build(latest_build_id).get()) is None:
-            raise ValueError("Build not found")
+            msg = f"Build {latest_build_id} not found."
+            raise ValueError(msg)
 
         return build
 
@@ -187,19 +190,21 @@ class ApifyRunActorComponent(LCToolComponent):
         Trim the description to 250 characters.
         """
         if (input_schema_str := build.get("inputSchema")) is None:
-            raise ValueError("Input schema not found")
+            msg = "Input schema not found"
+            raise ValueError(msg)
 
         input_schema = json.loads(input_schema_str)
 
-        MAX_DESCRIPTION_LEN = 250
+        max_description_len = 250
 
         properties = input_schema.get("properties", {})
         required = input_schema.get("required", [])
 
         properties = {
             key: {
-                "description": (value.get("description", "")[:MAX_DESCRIPTION_LEN] + "...")\
-                                if len(value.get("description", "")) > MAX_DESCRIPTION_LEN else value.get("description", ""),
+                "description": (value.get("description", "")[:max_description_len] + "...")
+                if len(value.get("description", "")) > max_description_len
+                else value.get("description", ""),
                 "type": value.get("type"),
                 "default": value.get("default"),
                 "prefill": value.get("prefill"),
@@ -224,67 +229,69 @@ class ApifyRunActorComponent(LCToolComponent):
         client = self._get_apify_client()
         run = client.run(run_id=run_id)
         if (dataset := run.dataset().get()) is None:
-            raise ValueError("Dataset not found")
+            msg = "Dataset not found"
+            raise ValueError(msg)
         if (did := dataset.get("id")) is None:
-            raise ValueError("Dataset not found")
+            msg = "Dataset id not found"
+            raise ValueError(msg)
         return did
 
     def _dict_to_json_str(self, d: dict) -> str:
         """Convert a dictionary to a JSON string."""
-        return json.dumps(d, separators=(',', ":"), default=lambda o: '<n/a>')
+        return json.dumps(d, separators=(",", ":"), default=lambda _: "<n/a>")
 
     def _toolify_actor_id_str(self, actor_id: str) -> str:
-        """
-        Turn actor_id into a valid tool name.
+        """Turn actor_id into a valid tool name.
 
         Tool name must only contain letters, numbers, underscores, dashes,
         and cannot contain spaces.
         """
         allowed_special_chars = "_-"
         valid_chars = string.ascii_letters + string.digits + allowed_special_chars
-        return ''.join(char if char in valid_chars else '_' for char in actor_id)
+        return "".join(char if char in valid_chars else "_" for char in actor_id)
 
-    def _run_actor(self, actor_id: str, input: dict,
-        fields: list[str] | None = None) -> list[dict]:
-        """
-        Run an Apify actor and return the output dataset.
+    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:
+        """Run an Apify actor and return the output dataset.
 
         :param actor_id: Actor name from Apify store to run.
-        :param input: JSON input for the actor.
+        :param run_input: JSON input for the actor.
         :param fields: List of fields to extract from the dataset. Other fields will be ignored.
         """
         client = self._get_apify_client()
-        if (details := client.actor(actor_id=actor_id).call(run_input=input)) is None:
-            raise ValueError("Actor run details not found")
-        if (run_id := details.get('id')) is None:
-            raise ValueError("Run id not found")
+        if (details := client.actor(actor_id=actor_id).call(run_input=run_input)) is None:
+            msg = "Actor run details not found"
+            raise ValueError(msg)
+        if (run_id := details.get("id")) is None:
+            msg = "Run id not found"
+            raise ValueError(msg)
         dataset_id = self._get_run_dataset_id(run_id)
 
         loader = ApifyDatasetLoader(
             dataset_id=dataset_id,
-            dataset_mapping_function=lambda item: item if not fields else {
-                k.replace(".", "_"): self._get_nested_value(item, k) for k in fields
-            }
+            dataset_mapping_function=lambda item: item
+            if not fields
+            else {k.replace(".", "_"): self._get_nested_value(item, k) for k in fields},
         )
         return loader.load()
 
     def _get_nested_value(self, data: dict[str, Any], key: str) -> Any:
         """Get a nested value from a dictionary."""
-        keys = key.split('.')
+        keys = key.split(".")
         value = data
-        for key in keys:
-            if not isinstance(value, dict) or key not in value:
+        for k in keys:
+            if not isinstance(value, dict) or k not in value:
                 return None
-            value = value[key]
+            value = value[k]
         return value
 
     def _parse_dataset_fields(self, dataset_fields: str) -> list[str]:
         """Convert a string of comma-separated fields into a list of fields."""
-        dataset_fields = dataset_fields.replace('\'', '').replace('"', '').replace('`', '')
+        dataset_fields = dataset_fields.replace("'", "").replace('"', "").replace("`", "")
         return [field.strip() for field in dataset_fields.split(",")]
 
     def _flatten(self, d: dict) -> dict:
         """Flatten a nested dictionary."""
+
         def items():
             for key, value in d.items():
                 if isinstance(value, dict):
@@ -292,4 +299,5 @@ class ApifyRunActorComponent(LCToolComponent):
                         yield key + "_" + subkey, subvalue
                 else:
                     yield key, value
+
         return dict(items())
