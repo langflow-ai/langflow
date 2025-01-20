@@ -17,7 +17,7 @@ from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
-from langflow.utils.constants import MAX_TEXT_LENGTH
+from langflow.utils.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.utils.util_strings import truncate_long_strings
 
 
@@ -312,6 +312,11 @@ class ResultDataResponse(BaseModel):
         if isinstance(obj, dict):
             return {k: ResultDataResponse._serialize_and_truncate(v, max_length=max_length) for k, v in obj.items()}
         if isinstance(obj, list | tuple):
+            # If list is too long, truncate it
+            if len(obj) > MAX_ITEMS_LENGTH:
+                truncated_list = list(obj)[:MAX_ITEMS_LENGTH]
+                truncated_list.append(f"... [truncated {len(obj) - MAX_ITEMS_LENGTH} items]")
+                obj = truncated_list
             return [ResultDataResponse._serialize_and_truncate(item, max_length=max_length) for item in obj]
         return obj
 
