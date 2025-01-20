@@ -19,6 +19,7 @@ class AssemblyAITranscriptionJobCreator(Component):
             name="api_key",
             display_name="Assembly API Key",
             info="Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+            required=True,
         ),
         FileInput(
             name="audio_file",
@@ -65,6 +66,7 @@ class AssemblyAITranscriptionJobCreator(Component):
                 "mxf",
             ],
             info="The audio file to transcribe",
+            required=True,
         ),
         MessageTextInput(
             name="audio_file_url",
