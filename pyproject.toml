@@ -119,6 +119,7 @@ dependencies = [
     "uv>=0.5.7",
     "ag2",
     "pydantic-ai>=0.0.12",
+    "dashscope>=1.20.14",
 ]
 
 [project.urls]
