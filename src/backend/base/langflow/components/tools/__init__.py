@@ -16,6 +16,7 @@ from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
 from .python_repl_core import PythonREPLComponent
+from .search import SearchComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp import SerpComponent
@@ -53,6 +54,7 @@ __all__ = [
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
+    "SearchComponent",
     "SerpAPIComponent",
     "SerpComponent",
     "TavilySearchComponent",
