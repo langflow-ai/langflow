@@ -100,14 +100,14 @@ class ApifyRunActorComponent(LCToolComponent):
         properties = {"actor_input": properties}
 
         # works from input schema
-        info = [(
+        _info = [(
             "JSON encoded as string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\n\n"
             f"{json.dumps(properties, separators=(',', ":"))}"
         )]
         if required:
-            info.append("\n\nRequired fields:\n" + "\n".join(required))
+            _info.append("\n\nRequired fields:\n" + "\n".join(required))
 
-        info = "".join(info)
+        info = "".join(_info)
 
         input_model_cls = self._create_input_model_class(info)
         tool_cls = self._create_tool_class(self, readme, input_model_cls, actor_id)
