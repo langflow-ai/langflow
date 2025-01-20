@@ -13,10 +13,11 @@ from langflow.schema import Data
 
 
 class PythonREPLToolComponent(LCToolComponent):
-    display_name = "Python REPL"
+    display_name = "Python REPL [DEPRECATED]"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
     icon = "Python"
+    legacy = True
 
     inputs = [
         StrInput(
