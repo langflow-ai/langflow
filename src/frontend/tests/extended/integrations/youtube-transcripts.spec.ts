@@ -11,8 +11,6 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("youtube");
 
-    await page.waitForTimeout(2000);
-
     await page.getByTestId("youtubeYouTube Transcripts").hover();
     await page.getByTestId("add-component-button-youtube-transcripts").click();
 
@@ -35,10 +33,10 @@ test(
 
     await page.getByTestId("button_run_youtube transcripts").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 300000 });
+    await page.waitForSelector("text=built successfully", { timeout: 3000 });
 
     await page.getByTestId("output-inspection-transcript").first().click();
-    await page.waitForSelector("text=Component Output", { timeout: 30000 });
+    await page.waitForSelector("text=Component Output", { timeout: 3000 });
     await page.getByRole("gridcell").first().click();
     const value = await page.getByPlaceholder("Empty").inputValue();
     expect(value.length).toBeGreaterThan(10);
