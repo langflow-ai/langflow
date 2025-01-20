@@ -880,7 +880,7 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
