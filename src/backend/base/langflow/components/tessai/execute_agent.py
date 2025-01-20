@@ -4,17 +4,9 @@ from langflow.inputs import DictInput, SecretStrInput, StrInput
 from langflow.io import Output
 
 class TessAIExecuteAgentComponent(Component):
-    """Component for creating a TessAI agent.
-
-    This component allows you to execute a TessAI agent with the specified ID and data.
-
-    Returns:
-        str: Output from the TessAI agent execution.
-    """
-
     display_name = "Execute Agent"
     description = "Executes a TessAI agent."
-    documentation = "https://docs.tessai.com/"
+    documentation = "https://docs.tess.pareto.io/"
     icon = "TessAI"
 
     inputs = [
