@@ -27,6 +27,7 @@ test.skip(
     await page.getByTestId("fit_view").click();
 
     await page.getByTestId("button_run_youtube transcripts").click();
+
     try {
       await Promise.race([
         page.waitForSelector("text=built successfully", { timeout: 60000 }),
@@ -42,9 +43,7 @@ test.skip(
       await cell.click();
 
       const value = await page.getByPlaceholder("Empty").inputValue();
-
       expect(value.length).toBeGreaterThan(10);
-
       expect(value).toContain(" ");
       expect(value.split(" ").length).toBeGreaterThan(5);
     } catch (error) {
