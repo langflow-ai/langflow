@@ -879,10 +879,10 @@
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
-                "combobox": false,
+                "combobox": true,
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "",
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -1455,10 +1455,10 @@
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
-                "combobox": false,
+                "combobox": true,
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "",
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -3344,10 +3344,10 @@
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
-                "combobox": false,
+                "combobox": true,
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "",
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
