@@ -28,7 +28,6 @@ from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
 from .yahoo import YfinanceComponent
 from .yahoo_finance import YfinanceToolComponent
-from .youtube_transcripts import YouTubeTranscriptsComponent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
@@ -64,5 +63,4 @@ __all__ = [
     "WolframAlphaAPIComponent",
     "YfinanceComponent",
     "YfinanceToolComponent",
-    "YouTubeTranscriptsComponent",
 ]
