@@ -69,9 +69,9 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     List of embeddings, one for each text.
                 """
-                if output_dimensionality < MIN_DIMENSION:
+                if output_dimensionality is not None and output_dimensionality < MIN_DIMENSION:
                     raise ValueError(MIN_DIMENSION_ERROR)
-                if output_dimensionality > MAX_DIMENSION:
+                if output_dimensionality is not None and output_dimensionality > MAX_DIMENSION:
                     error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
                     raise ValueError(error_msg)
 
@@ -124,9 +124,9 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     Embedding for the text.
                 """
-                if output_dimensionality < MIN_DIMENSION:
+                if output_dimensionality is not None and output_dimensionality < MIN_DIMENSION:
                     raise ValueError(MIN_DIMENSION_ERROR)
-                if output_dimensionality > MAX_DIMENSION:
+                if output_dimensionality is not None and output_dimensionality > MAX_DIMENSION:
                     error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
                     raise ValueError(error_msg)
 
