@@ -36,7 +36,11 @@ test.skip(
         }),
       ]);
 
-      await page.getByTestId("output-inspection-transcript").first().click();
+      await page
+        .getByTestId("output-inspection-transcript-youtube-transcripts")
+        .first()
+        .click();
+
       await page.waitForSelector("text=Component Output", { timeout: 30000 });
 
       const cell = await page.getByRole("gridcell").first();
