@@ -29,7 +29,6 @@ const JsonEditor = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Initialize the editor with proper types
     const editor = createJSONEditor({
       target: containerRef.current,
       props: {
@@ -46,16 +45,14 @@ const JsonEditor = ({
 
     setTimeout(() => editor.focus(), 100);
 
-    // Store editor instance
     newRef.current = editor;
 
-    // Cleanup
     return () => {
       if (newRef.current) {
         newRef.current.destroy();
       }
     };
-  }, []); // Empty dependency array since we only want to initialize once
+  }, []);
 
   return <div ref={containerRef} style={{ width, height }} />;
 };
