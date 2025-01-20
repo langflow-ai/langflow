@@ -197,24 +197,25 @@ async def test_aupdate_multiple_messages(created_messages):
 @pytest.mark.usefixtures("client")
 async def test_aupdate_nonexistent_message_generates_a_new_message():
     # Create a message with a non-existent UUID
+    nonexistent_uuid = uuid4()
     message = MessageRead(
-        id=uuid4(),  # Generate a random UUID that won't exist in the database
+        id=nonexistent_uuid,  # Generate a random UUID that won't exist in the database
         text="Test message",
         sender="User",
         sender_name="User",
         session_id="session_id",
         flow_id=uuid4(),
     )
-
-    updated = await aupdate_messages(message)
-    assert len(updated) == 1
+    with pytest.raises(ValueError, match=f"Message with id {nonexistent_uuid} not found"):
+        await aupdate_messages(message)
 
 
 @pytest.mark.usefixtures("client")
 async def test_aupdate_mixed_messages(created_messages):
     # Create a mix of existing and non-existing messages
+    nonexistent_uuid = uuid4()
     nonexistent_message = MessageRead(
-        id=uuid4(),  # Generate a random UUID that won't exist in the database
+        id=nonexistent_uuid,  # Generate a random UUID that won't exist in the database
         text="Test message",
         sender="User",
         sender_name="User",
@@ -225,7 +226,11 @@ async def test_aupdate_mixed_messages(created_messages):
     messages_to_update = created_messages[:1] + [nonexistent_message]
     created_messages[0].text = "Updated existing message"
 
-    updated = await aupdate_messages(messages_to_update)
+    with pytest.raises(ValueError, match=f"Message with id {nonexistent_uuid} not found"):
+        await aupdate_messages(messages_to_update)
+
+    # Update just the existing message
+    updated = await aupdate_messages(created_messages[:1])
 
     assert len(updated) == 1
     assert updated[0].text == "Updated existing message"
