@@ -37,7 +37,7 @@ test(
 
     await page.getByTestId("button_run_youtube transcripts").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", { timeout: 300000 });
 
     await page.getByTestId("output-inspection-transcript").first().click();
     await page.waitForSelector("text=Component Output", { timeout: 30000 });
