@@ -1439,7 +1439,7 @@
   "icon": "calculator",
   "id": "9357f72e-2121-4541-8e7d-74b7ba2ada2b",
   "is_component": false,
-  "last_tested_version": "1.0.19.post2",
+  "last_tested_version": "1.1.1",
   "name": "SaaS Pricing",
   "tags": [
     "agents",
