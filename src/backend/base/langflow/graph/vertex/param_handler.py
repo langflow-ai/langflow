@@ -110,6 +110,9 @@ class ParameterHandler:
                 params, load_from_db_fields = self._process_direct_type_field(
                     field_name, field, params, load_from_db_fields
                 )
+            else:
+                msg = f"Field {field_name} in {self.vertex.display_name} is not a valid field type: {field.get('type')}"
+                raise ValueError(msg)
 
             self.handle_optional_field(field_name, field, params)
 
