@@ -45,17 +45,11 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("data")
     def serialize_data(self, data) -> dict:
-        truncated_data = truncate_json(data)
-        if isinstance(truncated_data, dict):
-            return truncated_data
-        return {"content": truncated_data}
+        return truncate_json(data)
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        truncated_data = truncate_json(data)
-        if isinstance(truncated_data, dict):
-            return truncated_data
-        return {"content": truncated_data}
+        return truncate_json(data)
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
