@@ -9,13 +9,17 @@ from .duck_duck_go_search_run import DuckDuckGoSearchComponent
 from .exa_search import ExaSearchToolkit
 from .glean_search_api import GleanSearchAPIComponent
 from .google_search_api import GoogleSearchAPIComponent
+from .google_search_api_core import GoogleSearchAPICore
 from .google_serper_api import GoogleSerperAPIComponent
+from .google_serper_api_core import GoogleSerperAPICore
 from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
 from .search import SearchComponent
+from .python_repl_core import PythonREPLComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
+from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
 from .tavily import TavilySearchComponent
 from .tavily_search import TavilySearchToolComponent
@@ -40,14 +44,18 @@ __all__ = [
     "ExaSearchToolkit",
     "GleanSearchAPIComponent",
     "GoogleSearchAPIComponent",
+    "GoogleSearchAPICore",
     "GoogleSerperAPIComponent",
+    "GoogleSerperAPICore",
     "MCPStdio",
     "PythonCodeStructuredTool",
+    "PythonREPLComponent",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
     "SearchComponent",
     "SerpAPIComponent",
+    "SerpComponent",
     "TavilySearchComponent",
     "TavilySearchToolComponent",
     "WikidataAPIComponent",
