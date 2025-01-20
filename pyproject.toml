@@ -84,7 +84,7 @@ dependencies = [
     "jq==1.8.0",
     "pydantic-settings==2.4.0",
     "ragstack-ai-knowledge-store==0.2.1",
-    "duckduckgo_search==6.3.7",
+    "duckduckgo_search==7.2.1",
     "opensearch-py==2.8.0",
     "langchain-google-genai==2.0.6",
     "langchain-cohere==0.3.3",
