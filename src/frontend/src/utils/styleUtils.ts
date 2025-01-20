@@ -36,6 +36,7 @@ import {
   Boxes,
   Braces,
   BrainCircuit,
+  ChartNetwork,
   Check,
   CheckCheck,
   CheckCircle2,
@@ -251,6 +252,7 @@ import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
+import { DeepSeekIcon } from "../icons/DeepSeek";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -282,6 +284,7 @@ import { NotionIcon } from "../icons/Notion";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
+import { OpenRouterIcon } from "../icons/OpenRouter";
 import { OpenSearch } from "../icons/OpenSearch";
 import { PineconeIcon } from "../icons/Pinecone";
 import { PostgresIcon } from "../icons/Postgres";
@@ -291,6 +294,7 @@ import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
 import { SambaNovaIcon } from "../icons/SambaNova";
 import { SearxIcon } from "../icons/Searx";
+import { SerperIcon } from "../icons/Serper";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
@@ -429,6 +433,7 @@ export const nodeColors: { [char: string]: string } = {
 };
 
 export const nodeColorsName: { [char: string]: string } = {
+  // custom_components: "#ab11ab",
   inputs: "emerald",
   outputs: "red",
   data: "sky",
@@ -450,17 +455,16 @@ export const nodeColorsName: { [char: string]: string } = {
   vectorsearch: "yellow",
   textsplitters: "fuchsia",
   toolkits: "red",
-  wrappers: "pink",
+  wrappers: "rose",
   notion: "slate",
   Notion: "slate",
   AssemblyAI: "blue",
   assemblyai: "blue",
   helpers: "cyan",
-  prototypes: "pink",
+  prototypes: "rose",
   astra_assistants: "indigo",
   langchain_utilities: "sky",
   output_parsers: "yellow",
-  // custom_components: "#ab11ab",
   retrievers: "yellow",
   str: "indigo",
   Text: "indigo",
@@ -477,6 +481,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
   Memory: "orange",
+  DataFrame: "pink",
 };
 
 export const SIDEBAR_CATEGORIES = [
@@ -666,6 +671,8 @@ export const nodeIconsLucide: iconsType = {
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
+  OpenRouter: OpenRouterIcon,
+  DeepSeek: DeepSeekIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
@@ -917,6 +924,7 @@ export const nodeIconsLucide: iconsType = {
   CornerDownLeft,
   ChevronsDownUp,
   OptionIcon,
+  ChartNetwork,
   Option: OptionIcon,
   FreezeAll: freezeAllIcon,
   Table,
@@ -935,4 +943,5 @@ export const nodeIconsLucide: iconsType = {
   ThumbsDown,
   ThumbDownIconCustom,
   ThumbUpIconCustom,
+  Serper: SerperIcon,
 };

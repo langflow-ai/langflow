@@ -4,6 +4,7 @@ from .anthropic import AnthropicModelComponent
 from .azure_openai import AzureChatOpenAIComponent
 from .baidu_qianfan_chat import QianfanChatEndpointComponent
 from .cohere import CohereComponent
+from .deepseek import DeepSeekModelComponent
 from .google_generative_ai import GoogleGenerativeAIComponent
 from .groq import GroqModel
 from .huggingface import HuggingFaceEndpointsComponent
@@ -13,6 +14,7 @@ from .mistral import MistralAIModelComponent
 from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
 from .openai import OpenAIModelComponent
+from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
@@ -25,6 +27,7 @@ __all__ = [
     "ChatOllamaComponent",
     "ChatVertexAIComponent",
     "CohereComponent",
+    "DeepSeekModelComponent",
     "GoogleGenerativeAIComponent",
     "GroqModel",
     "HuggingFaceEndpointsComponent",
@@ -33,6 +36,7 @@ __all__ = [
     "MistralAIModelComponent",
     "NVIDIAModelComponent",
     "OpenAIModelComponent",
+    "OpenRouterComponent",
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
     "SambaNovaComponent",

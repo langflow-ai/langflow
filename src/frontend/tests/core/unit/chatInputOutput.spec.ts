@@ -50,7 +50,7 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("zoom_out").click();
 
   const elementsChatInput = await page
-    .locator('[data-testid="handle-chatinput-shownode-message-right"]')
+    .locator('[data-testid="handle-chatinput-noshownode-message-source"]')
     .all();
 
   let visibleElementHandle;
@@ -69,7 +69,7 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   // Move to the second element
 
   const elementsChatOutput = await page
-    .getByTestId("handle-chatoutput-shownode-text-left")
+    .getByTestId("handle-chatoutput-noshownode-text-target")
     .all();
 
   for (const element of elementsChatOutput) {
@@ -92,6 +92,9 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByTestId("button-send").first().click();
-  const chat_input = page.getByTestId("chat-message-User-teste");
-  await expect(chat_input).toHaveText("teste", { timeout: 10000 });
+  const chat_input = await page
+    .getByTestId("chat-message-User-teste")
+    .textContent();
+
+  expect(chat_input).toBe("teste");
 });

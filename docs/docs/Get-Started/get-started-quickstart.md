@@ -1,6 +1,5 @@
 ---
 title: Quickstart
-sidebar_position: 2
 slug: /get-started-quickstart
 ---
 
@@ -52,7 +51,7 @@ With no connections between them, the components won't interact with each other.
 You want data to flow from **Chat Input** to **Chat Output** via the connectors between the components.
 Each component accepts inputs on its left side, and sends outputs on its right side.
 Hover over the connection ports to see the data types that the component accepts.
-For more on component inputs and outputs, see [Components overview](/components-overview).
+For more on component inputs and outputs, see [Components overview](/concepts-components).
 
 5. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
 6. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
@@ -121,9 +120,9 @@ The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) com
 3. Click **Data**, select the **File** component, and then drag it to the canvas.
 The [File](/components-data#file) component loads files from your local machine.
 3. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
-The [Split Text](/components-helpers#split-text) component splits the loaded text into smaller chunks.
+The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
 4. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
-The [Parse Data](/components-helpers#parse-data) component converts the data from the **Astra DB** component into plain text.
+The [Parse Data](/components-processing#parse-data) component converts the data from the **Astra DB** component into plain text.
 5. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
 6. Connect the new components into the existing flow, so your flow looks like this:
@@ -170,6 +169,6 @@ This example used movie data, but the RAG pattern can be used with any data you 
 
 Make the **Astra DB** database the brain that [Agents](/agents-overview) use to make decisions.
 
-Expose this flow as an [API](/workspace-api) and call it from your external applications.
+Expose this flow as an [API](/concepts-api) and call it from your external applications.
 
 For more on the **Astra DB** component, see [Astra DB vector store](/components-vector-stores#astra-db-vector-store).

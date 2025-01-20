@@ -1,8 +1,26 @@
 ---
 title: Data
-sidebar_position: 3
 slug: /components-data
 ---
+
+# Data components in Langflow
+
+Data components load data from a source into your flow.
+
+They may perform some processing or type checking, like converting raw HTML data into text, or ensuring your loaded file is of an acceptable type.
+
+## Use a data component in a flow
+
+The **URL** data component loads content from a list of URLs.
+
+In the component's **URLs** field, enter a comma-separated list of URLs you want to load. Alternatively, connect a component that outputs the `Message` type, like the **Chat Input** component, to supply your URLs with a component.
+
+To output a `Data` type, in the **Output Format** dropdown, select **Raw HTML**.
+To output a `Message` type, in the **Output Format** dropdown, select **Text**. This option applies postprocessing with the `data_to_text` helper function.
+
+In this example of a document ingestion pipeline, the URL component outputs raw HTML to a text splitter, which splits the raw content into chunks for a vector database to ingest.
+
+![URL component in a data ingestion pipeline](/img/url-component.png)
 
 ## API Request
 
@@ -10,9 +28,7 @@ This component sends HTTP requests to the specified URLs.
 
 Use this component to interact with external APIs or services and retrieve data. Ensure that the URLs are valid and that you configure the method, headers, body, and timeout correctly.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name    | Display Name | Info                                                                       |
 | ------- | ------------ | -------------------------------------------------------------------------- |
@@ -27,7 +43,7 @@ Use this component to interact with external APIs or services and retrieve data.
 
 This component recursively loads files from a directory, with options for file types, depth, and concurrency.
 
-### Parameters
+### Inputs
 
 | Input              | Type             | Description                                        |
 | ------------------ | ---------------- | -------------------------------------------------- |
@@ -40,6 +56,9 @@ This component recursively loads files from a directory, with options for file t
 | silent_errors      | BoolInput        | If true, errors will not raise an exception        |
 | use_multithreading | BoolInput        | If true, multithreading will be used               |
 
+
+### Outputs
+
 | Output | Type       | Description                         |
 | ------ | ---------- | ----------------------------------- |
 | data   | List[Data] | Loaded file data from the directory |
@@ -48,16 +67,14 @@ This component recursively loads files from a directory, with options for file t
 
 The FileComponent is a class that loads and parses text files of various supported formats, converting the content into a Data object. It supports multiple file types and provides an option for silent error handling.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name          | Display Name  | Info                                         |
 | ------------- | ------------- | -------------------------------------------- |
 | path          | Path          | File path to load.                           |
 | silent_errors | Silent Errors | If true, errors will not raise an exception. |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info                                         |
 | ---- | ------------ | -------------------------------------------- |
@@ -67,15 +84,13 @@ The FileComponent is a class that loads and parses text files of various support
 
 The URLComponent is a class that fetches content from one or more URLs, processes the content, and returns it as a list of Data objects. It ensures that the provided URLs are valid and uses WebBaseLoader to fetch the content.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Display Name | Info                   |
 | ---- | ------------ | ---------------------- |
 | urls | URLs         | Enter one or more URLs |
 
-#### Outputs
+### Outputs
 
 | Name | Display Name | Info                                                         |
 | ---- | ------------ | ------------------------------------------------------------ |
@@ -87,13 +102,15 @@ This component loads emails from Gmail using provided credentials and filters.
 
 For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
 
-### Parameters
+### Inputs
 
 | Input       | Type             | Description                                                                          |
 | ----------- | ---------------- | ------------------------------------------------------------------------------------ |
 | json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
 | label_ids   | MessageTextInput | Comma-separated list of label IDs to filter emails                                   |
 | max_results | MessageTextInput | Maximum number of emails to load                                                     |
+
+### Outputs
 
 | Output | Type | Description       |
 | ------ | ---- | ----------------- |
@@ -105,12 +122,14 @@ This component loads documents from Google Drive using provided credentials and 
 
 For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
 
-### Parameters
+### Inputs
 
 | Input       | Type             | Description                                                                          |
 | ----------- | ---------------- | ------------------------------------------------------------------------------------ |
 | json_string | SecretStrInput   | JSON string containing OAuth 2.0 access token information for service account access |
 | document_id | MessageTextInput | Single Google Drive document ID                                                      |
+
+### Outputs
 
 | Output | Type | Description          |
 | ------ | ---- | -------------------- |
@@ -122,7 +141,7 @@ This component searches Google Drive files using provided credentials and query 
 
 For more on creating a service account JSON, see [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account).
 
-### Parameters
+### Inputs
 
 | Input          | Type             | Description                                                                          |
 | -------------- | ---------------- | ------------------------------------------------------------------------------------ |
@@ -131,6 +150,8 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | valid_operator | DropdownInput    | Operator to use in the query                                                         |
 | search_term    | MessageTextInput | The value to search for in the specified query item                                  |
 | query_string   | MessageTextInput | The query string used for searching (can be edited manually)                         |
+
+### Outputs
 
 | Output     | Type      | Description                                     |
 | ---------- | --------- | ----------------------------------------------- |
@@ -145,15 +166,13 @@ This component defines a webhook input for the flow. The flow can be triggered b
 
 If the input is not valid JSON, the component will wrap it in a "payload" field. The component's status will reflect any errors or the processed data.
 
-### Parameters
-
-#### Inputs
+### Inputs
 
 | Name | Type   | Description                                    |
 | ---- | ------ | ---------------------------------------------- |
 | data | String | JSON payload for testing the webhook component |
 
-#### Outputs
+### Outputs
 
 | Name        | Type | Description                           |
 | ----------- | ---- | ------------------------------------- |

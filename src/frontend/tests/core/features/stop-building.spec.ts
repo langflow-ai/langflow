@@ -54,7 +54,7 @@ test(
     await page
       .getByTestId("processingParse Data")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 400 },
+        targetPosition: { x: 100, y: 500 },
       });
 
     //fifth component
@@ -118,7 +118,7 @@ test(
     await parseDataOutput.hover();
     await page.mouse.down();
     const chatOutputInput = await page.getByTestId(
-      "handle-chatoutput-shownode-text-left",
+      "handle-chatoutput-noshownode-text-target",
     );
     await chatOutputInput.hover();
     await page.mouse.up();
