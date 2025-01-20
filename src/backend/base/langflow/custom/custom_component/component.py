@@ -547,8 +547,7 @@ class Component(CustomComponent):
         if len(matching_pairs) > 1:
             matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
             msg = self.build_component_error_message(
-                f"There are multiple outputs from {value.display_name} "
-                f"that can connect to inputs: {matching_pairs_str}"
+                f"There are multiple outputs from {value.display_name} that can connect to inputs: {matching_pairs_str}"
             )
             raise ValueError(msg)
         # If no matches are found, raise an error indicating no suitable output
