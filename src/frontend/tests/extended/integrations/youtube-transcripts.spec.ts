@@ -41,9 +41,15 @@ test(
 
     await page.getByTestId("fit_view").click();
 
+    await page.waitForTimeout(500);
+
     await page.getByTestId("button_run_youtube transcripts").click();
 
+    await page.waitForTimeout(500);
+
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
+
+    await page.waitForTimeout(500);
 
     await page.getByTestId("output-inspection-transcript").first().click();
     await page.waitForSelector("text=Component Output", { timeout: 30000 });
