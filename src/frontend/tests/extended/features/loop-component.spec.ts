@@ -70,6 +70,7 @@ test(
         targetPosition: { x: 700, y: 100 },
       });
 
+    //This one is for testing the wrong loop message
     await page
       .getByTestId("processingParse Data")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -83,6 +84,8 @@ test(
     const loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
       .first();
+
+    // Connecting the second parse data to the loop item to test the wrong loop message
 
     await secondParseDataOutput.hover();
     await page.mouse.down();
@@ -106,7 +109,8 @@ test(
 
     await zoomOut(page, 2);
 
-    // First test invalid loop connection
+    // Loop Item -> Update Data
+
     const loopItemHandle = await page
       .getByTestId("handle-loopcomponent-shownode-item-right")
       .first();
@@ -119,6 +123,7 @@ test(
     await updateDataInput.hover();
     await page.mouse.up();
 
+    // URL -> Loop Data
     const urlOutput = await page
       .getByTestId("handle-url-shownode-data-right")
       .first();
@@ -181,7 +186,7 @@ test(
     await page.getByTestId("keypair0").fill("text");
     await page.getByTestId("keypair100").fill("modified_value");
 
-    // Build and run
+    // Build and run, expect the wrong loop message
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=The flow has an incomplete loop.", {
       timeout: 30000,
@@ -189,6 +194,8 @@ test(
     await page.getByText("The flow has an incomplete loop.").last().click({
       timeout: 15000,
     });
+
+    // Delete the second parse data used to test
 
     await page.getByTestId("div-generic-node").nth(4).click();
 
