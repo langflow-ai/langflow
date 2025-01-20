@@ -42,9 +42,9 @@ class ApifyRunActorComponent(LCToolComponent):
         ),
         # multiline input is more pleasant to use than the nested dict input
         MultilineInput(
-            name="actor_input",
-            display_name="Actor input",
-            info="The JSON input for the Actor.",
+            name="run_input",
+            display_name="Actor run input",
+            info="The JSON input for the Actor run.",
             value="{}",
             required=True,
         ),
@@ -83,7 +83,7 @@ class ApifyRunActorComponent(LCToolComponent):
 
     def run_model(self) -> list[Data]:
         """Run the Actor and return node output."""
-        _input = json.loads(self.actor_input)
+        _input = json.loads(self.run_input)
         fields = self._parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
         res = self._run_actor(self.actor_id, _input, fields=fields)
         if self.do_flatten_dataset:
@@ -100,7 +100,7 @@ class ApifyRunActorComponent(LCToolComponent):
         build = self._get_actor_latest_build(actor_id)
         readme = build.get("readme", "")[:250] + "..."
         properties, required = self._get_actor_input_schema_from_build(build)
-        properties = {"actor_input": properties}
+        properties = {"run_input": properties}
 
         # works from input schema
         _info = [
@@ -136,12 +136,12 @@ class ApifyRunActorComponent(LCToolComponent):
 
             args_schema: type[BaseModel] = input_model
 
-            def _run(self, actor_input: str | dict) -> str:
+            def _run(self, run_input: str | dict) -> str:
                 """Use the Apify Actor."""
-                input_dict = json.loads(actor_input) if isinstance(actor_input, str) else actor_input
+                input_dict = json.loads(run_input) if isinstance(run_input, str) else run_input
 
                 # retrieve if nested, just in case
-                input_dict = input_dict.get("actor_input", input_dict)
+                input_dict = input_dict.get("run_input", input_dict)
 
                 res = parent._run_actor(actor_id, input_dict)
                 return "\n\n".join([parent._dict_to_json_str(item) for item in res])
@@ -154,7 +154,7 @@ class ApifyRunActorComponent(LCToolComponent):
         class ActorInput(BaseModel):
             """Input for the Apify Actor tool."""
 
-            actor_input: str = Field(..., description=description)
+            run_input: str = Field(..., description=description)
 
         return ActorInput
 
