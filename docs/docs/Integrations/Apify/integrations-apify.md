@@ -7,12 +7,12 @@ slug: /integrations-apify
 
 [Apify](https://apify.com/) is a platform that enables you to automate web scraping, data extraction, and other tasks using Apify Actors.
 
-The Apify components allow you to run Apify Actors to accomplish various web scraping and automation tasks in your flow, such as:
+The Apify components allow you to run Apify Actors to extract data from hundreds of places quickly in your flow, such as:
 
 - Crawling websites and extracting text content
 - Scraping social media platforms like Instagram and Facebook
 - Extracting data from Google Maps
-- Insert into a PostgreSQL/MySQL/MSSQL database
+- Inserting data into a PostgreSQL/MySQL/MSSQL database
 - Running various other automation tasks
 
 More info about Apify:
@@ -23,7 +23,7 @@ More info about Apify:
 
 ## Prerequisites
 
-You need an **Apify API token**. You can create a free account on Apify and generate your API key in the dashboard. [Get a Free API key here](https://docs.apify.com/platform/integrations/api).
+You need an **Apify API token**. You can create a free account on Apify and generate your API key in the Apify Console. [Get a Free API key here](https://docs.apify.com/platform/integrations/api).
 
 Enter the key in the *Apify Token* field in all components that require the key.
 
@@ -36,7 +36,7 @@ This example flow demonstrates the use of multiple Apify Actors to complete a co
 
 ### Apify Run Actor
 
-This component allows you to run an Apify Actor to perform various automation tasks. It can be used manually by providing user input or integrated as a tool for an AI Agent. When used with an AI Agent, the Agent can leverage different Apify Actors to accomplish various tasks.
+This component allows you to run an Apify Actor to extract data from hundreds of sources quickly. It can be used manually by providing user input or integrated as a tool for an AI Agent. When used with an AI Agent, the Agent can leverage different Apify Actors to perform various data extraction tasks efficiently.
 
 - **Input**:
     - Apify Token: Your API key.
