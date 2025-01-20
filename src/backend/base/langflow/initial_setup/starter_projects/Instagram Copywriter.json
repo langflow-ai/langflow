@@ -1709,6 +1709,7 @@
                   "Groq",
                   "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "placeholder": "",

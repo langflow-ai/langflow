@@ -117,6 +117,31 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
+    async def fallback_non_streaming(self, runnable, input_dict, config):
+        # Fallback to non-streaming mode
+        result = await runnable.ainvoke(input_dict, config=config)
+        return [{"event": "on_chain_end", "data": {"output": result}}]
+
+    async def handle_stream_with_fallback(self, runnable, input_dict, config, agent_message, send_message):
+        try:
+            return await process_agent_events(
+                runnable.astream_events(
+                    input_dict,
+                    config=config,
+                    version="v2",
+                ),
+                agent_message,
+                send_message,
+            )
+        except RuntimeError:
+            print("Error: Tool use is not compatible with streaming. Falling back to non-streaming mode.")
+            fallback_events = await self.fallback_non_streaming(runnable, input_dict, config)
+            return await process_agent_events(
+                fallback_events,
+                agent_message,
+                send_message,
+            )
+
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
@@ -158,14 +183,12 @@ class LCAgentComponent(Component):
             session_id=session_id,
         )
         try:
-            result = await process_agent_events(
-                runnable.astream_events(
-                    input_dict,
-                    config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
-                    version="v2",
-                ),
-                agent_message,
-                cast("SendMessageFunctionType", self.send_message),
+            result = await self.handle_stream_with_fallback(
+                runnable=runnable,
+                input_dict=input_dict,
+                config={"callbacks": [AgentAsyncHandler(self.log), *self.get_langchain_callbacks()]},
+                agent_message=agent_message,
+                send_message=cast("SendMessageFunctionType", self.send_message),
             )
         except ExceptionWithMessageError as e:
             msg_id = e.agent_message.id
