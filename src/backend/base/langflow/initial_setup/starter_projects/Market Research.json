@@ -2553,8 +2553,14 @@
   },
   "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",
   "endpoint_name": null,
-  "id": "2b5680e5-a393-42d1-9e5e-1602c95a6468",
+  "gradient": "1",
+  "icon": "PieChart",
+  "id": "153a05e5-86bd-4de8-b159-2cb4f9f94de5",
   "is_component": false,
   "last_tested_version": "1.1.1",
-  "name": "Market Research"
+  "name": "Market Research",
+  "tags": [
+    "assistants",
+    "agents"
+  ]
 }
