@@ -35,6 +35,7 @@ const JsonEditor = ({
       props: {
         ...options,
         navigationBar: false,
+        mode: "text",
         content: data,
 
         onChange: (content) => {
@@ -42,6 +43,8 @@ const JsonEditor = ({
         },
       },
     });
+
+    setTimeout(() => editor.focus(), 100);
 
     // Store editor instance
     newRef.current = editor;
