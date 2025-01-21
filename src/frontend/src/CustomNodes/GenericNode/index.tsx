@@ -429,7 +429,7 @@ function GenericNode({
           {showNode && <div>{renderDescription()}</div>}
         </div>
         {showNode && (
-          <div className="relative">
+          <div className="nopan nodelete nodrag noflow relative cursor-auto">
             <>
               {renderInputParameters()}
               <div

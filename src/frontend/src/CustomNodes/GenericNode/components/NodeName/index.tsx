@@ -81,10 +81,10 @@ export default function NodeName({
           showNode ? "cursor-text" : "cursor-default",
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex cursor-grab items-center gap-2">
           <span
             className={cn(
-              "max-w-44 truncate text-[14px]",
+              "nodrag max-w-44 cursor-text truncate text-[14px]",
               validationStatus?.data?.duration && "max-w-36",
               beta && "max-w-36",
               validationStatus?.data?.duration && beta && "max-w-20",
