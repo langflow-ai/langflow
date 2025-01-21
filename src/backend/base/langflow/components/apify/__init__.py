@@ -1,5 +1,5 @@
-from .apify_actor import ApifyRunActorComponent
+from .apify_actor import ApifyActorsComponent
 
 __all__ = [
-    "ApifyRunActorComponent",
+    "ApifyActorsComponent",
 ]
