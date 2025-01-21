@@ -157,7 +157,7 @@ test(
 
     // Parse Data -> Chat Output
     const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .first();
 
     const chatOutputInput = await page
@@ -221,10 +221,16 @@ test(
     });
 
     // Verify output
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
-    await page.getByTestId("output-inspection-message").first().click();
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
     await page.getByRole("gridcell").nth(4).click();
 
     const output = await page.getByPlaceholder("Empty").textContent();
