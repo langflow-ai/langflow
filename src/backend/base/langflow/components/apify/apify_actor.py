@@ -13,6 +13,8 @@ from langflow.inputs.inputs import BoolInput
 from langflow.io import MultilineInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
+MAX_DESCRIPTION_LEN = 250
+
 
 class ApifyActorsComponent(LCToolComponent):
     display_name = "Apify Actors"
@@ -46,7 +48,10 @@ class ApifyActorsComponent(LCToolComponent):
         MultilineInput(
             name="run_input",
             display_name="Run input",
-            info="The JSON input for the Actor run.",
+            info=(
+                'The JSON input for the Actor run. For example for the "apify/website-content-crawler" Actor: '
+                '{"startUrls":[{"url":"https://docs.apify.com/academy/web-scraping-for-beginners"}],"maxCrawlDepth":0}'
+            ),
             value="{}",
             required=True,
         ),
@@ -55,15 +60,15 @@ class ApifyActorsComponent(LCToolComponent):
             display_name="Output fields",
             info=(
                 "Fields to extract from the dataset, split by commas. "
-                "Other fields will be ignored. Dots in nested structure will be replaced by underscore. "
-                "Sample input: 'field1, metadata.field2'. "
-                "Sample output: {'field1': 1, 'metadata_field2': 2}. "
+                "Other fields will be ignored. Dots in nested structures will be replaced by underscores. "
+                "Sample input: 'text, metadata.title'. "
+                "Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. "
                 "For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, "
                 "which is the content of the website in markdown format."
             ),
         ),
         BoolInput(
-            name="do_flatten_dataset",
+            name="flatten_dataset",
             display_name="Flatten output?",
             info=(
                 "The output dataset will be converted from a nested format to a flat structure. "
@@ -88,7 +93,7 @@ class ApifyActorsComponent(LCToolComponent):
         _input = json.loads(self.run_input)
         fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
         res = self._run_actor(self.actor_id, _input, fields=fields)
-        if self.do_flatten_dataset:
+        if self.flatten_dataset:
             res = [ApifyActorsComponent.flatten(item) for item in res]
         data = [Data(data=item) for item in res]
 
@@ -201,8 +206,6 @@ class ApifyActorsComponent(LCToolComponent):
 
         input_schema = json.loads(input_schema_str)
 
-        max_description_len = 250
-
         properties = input_schema.get("properties", {})
         required = input_schema.get("required", [])
 
@@ -211,7 +214,7 @@ class ApifyActorsComponent(LCToolComponent):
             properties_out[item] = {}
             if desc := meta.get("description"):
                 properties_out[item]["description"] = (
-                    desc[:max_description_len] + "..." if len(desc) > max_description_len else desc
+                    desc[:MAX_DESCRIPTION_LEN] + "..." if len(desc) > MAX_DESCRIPTION_LEN else desc
                 )
             for key_name in ("type", "default", "prefill", "enum"):
                 if value := meta.get(key_name):
@@ -243,8 +246,7 @@ class ApifyActorsComponent(LCToolComponent):
         Tool name must only contain letters, numbers, underscores, dashes,
         and cannot contain spaces.
         """
-        allowed_special_chars = "_-"
-        valid_chars = string.ascii_letters + string.digits + allowed_special_chars
+        valid_chars = string.ascii_letters + string.digits + "_-"
         return "".join(char if char in valid_chars else "_" for char in actor_id)
 
     def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:
