@@ -1,5 +1,114 @@
 {
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-GnVa9",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-3ilRg",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-GnVa9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-GnVa9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-3ilRg{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-GnVa9",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-GnVa9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-3ilRg",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3ilRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-3ilRg",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-KeRVx",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-3ilRg{œdataTypeœ:œAgentœ,œidœ:œAgent-3ilRgœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KeRVx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KeRVxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-3ilRg",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3ilRgœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-KeRVx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-KeRVxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorComponent",
+            "id": "CalculatorComponent-sh2uy",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-3ilRg",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CalculatorComponent-sh2uy{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-sh2uyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3ilRg{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-sh2uy",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-sh2uyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-3ilRg",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3ilRgœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-fbsLh",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-3ilRg",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__URL-fbsLh{œdataTypeœ:œURLœ,œidœ:œURL-fbsLhœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3ilRg{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "URL-fbsLh",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-fbsLhœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-3ilRg",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3ilRgœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -1446,17 +1555,17 @@
             "output_types": [],
             "outputs": [
               {
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
                 "types": [
                   "Tool"
                 ],
-                "selected": "Tool",
-                "name": "component_as_tool",
-                "hidden": null,
-                "display_name": "Toolset",
-                "method": "to_toolkit",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": null
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -1505,72 +1614,80 @@
                 "value": ""
               },
               "tools_metadata": {
-                "tool_mode": false,
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
                 "is_list": true,
                 "list_add_label": "Add More",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "name": "name",
-                      "display_name": "Tool Name",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "description",
-                      "display_name": "Tool Description",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "popover",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "tags",
-                      "display_name": "Tool Identifiers",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    }
-                  ]
-                },
-                "trigger_text": "",
-                "trigger_icon": "Hammer",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
-                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "hide_options": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
+                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ],
-                    "commands": "commands"
+                    ]
                   },
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  "hide_options": true
                 },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "tools_metadata",
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
                 "value": [
                   {
                     "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
@@ -1579,15 +1696,7 @@
                       "None-evaluate_expression"
                     ]
                   }
-                ],
-                "display_name": "Edit tools",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "real_time_refresh": true,
-                "title_case": false,
-                "type": "table",
-                "_input_type": "TableInput"
+                ]
               }
             },
             "tool_mode": true
@@ -1607,115 +1716,6 @@
         },
         "selected": false,
         "type": "genericNode"
-      }
-    ],
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-GnVa9",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-3ilRg",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-GnVa9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-GnVa9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-3ilRg{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-GnVa9",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-GnVa9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-3ilRg",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-3ilRg",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-KeRVx",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-3ilRg{œdataTypeœ:œAgentœ,œidœ:œAgent-3ilRgœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KeRVx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KeRVxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-3ilRg",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-3ilRgœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-KeRVx",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KeRVxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-sh2uy",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-3ilRg",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorComponent-sh2uy{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-sh2uyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3ilRg{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-sh2uy",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-sh2uyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-3ilRg",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "source": "URL-fbsLh",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-fbsLhœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-3ilRg",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-3ilRg",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          },
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-fbsLh",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          }
-        },
-        "id": "xy-edge__URL-fbsLh{œdataTypeœ:œURLœ,œidœ:œURL-fbsLhœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3ilRg{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       }
     ],
     "viewport": {
