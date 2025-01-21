@@ -710,7 +710,11 @@ class Component(CustomComponent):
                     name, f"Input is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 )
                 raise ValueError(msg)
-            self._inputs[name].value = value
+            try:
+                self._inputs[name].value = value
+            except Exception as e:
+                msg = f"Error setting input value for {name}: {e}"
+                raise ValueError(msg) from e
             if hasattr(self._inputs[name], "load_from_db"):
                 self._inputs[name].load_from_db = False
         else:
