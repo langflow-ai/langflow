@@ -12,6 +12,7 @@ import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
 import ErrorOutput from "./components";
+import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 // Define the props type
 interface SwitchOutputViewProps {
   nodeId: string;
@@ -34,7 +35,8 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
       : flowPoolNode?.data?.logs[outputName]) ?? {};
   const resultType = results?.type;
   let resultMessage = results?.message ?? {};
-  const RECORD_TYPES = ["data", "object", "array", "message"];
+  const RECORD_TYPES = ["array", "message"];
+  const JSON_TYPES = ["data","object"];
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }
@@ -46,7 +48,6 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     ) {
       resultMessage = `${resultMessage.substring(0, MAX_TEXT_LENGTH)}...`;
     }
-
     if (Array.isArray(resultMessage)) {
       resultMessage = resultMessage.map((item) => {
         if (item && typeof item.data === "object") {
@@ -96,6 +97,9 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
           pagination={true}
           columnMode="union"
         />
+      </Case>
+      <Case condition={JSON_TYPES.includes(resultType)}>
+        <JsonOutputViewComponent data={resultMessageMemoized} />
       </Case>
 
       <Case condition={resultType === "stream"}>
