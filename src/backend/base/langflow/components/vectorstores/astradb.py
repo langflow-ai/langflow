@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -354,25 +356,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        return self.keyspace.strip() if self.keyspace else None
 
     def get_database_object(self):
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
-
             return client.get_database(
                 api_endpoint=self.get_api_endpoint(),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.log(f"Error getting database: {e}")
-
             return None
 
     def collection_exists(self):
@@ -392,21 +387,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
+            database = database or self.get_database_object()
             if not database:
-                client = DataAPIClient(token=self.token, environment=self.environment)
-
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
-
+                return None
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
-
             return collection.estimated_document_count()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.log(f"Error checking collection data: {e}")
-
             return None
 
     def get_vectorize_providers(self):
@@ -453,28 +440,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         try:
             collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
-
-            return [
-                {
+            options = []
+            for col in collection_list:
+                col_data = {
                     "name": col.name,
                     "records": self.collection_data(collection_name=col.name, database=database),
-                    "provider": (
-                        col.options.vector.service.provider
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
+                    "provider": None,
                     "icon": "",
-                    "model": (
-                        col.options.vector.service.model_name
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
+                    "model": None,
                 }
-                for col in collection_list
-            ]
-        except Exception as e:  # noqa: BLE001
+                if col.options.vector and col.options.vector.service:
+                    col_data["provider"] = col.options.vector.service.provider
+                    col_data["model"] = col.options.vector.service.model_name
+                options.append(col_data)
+            return options
+        except Exception as e:
             self.log(f"Error fetching collections: {e}")
-
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):

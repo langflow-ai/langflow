@@ -1028,8 +1028,7 @@ class Component(CustomComponent):
             self._tracing_service.add_log(trace_name=self.trace_name, log=log)
         if self._event_manager is not None and self._current_output:
             data = log.model_dump()
-            data["output"] = self._current_output
-            data["component_id"] = self._id
+            data.update({"output": self._current_output, "component_id": self._id})
             self._event_manager.on_log(data=data)
 
     def _append_tool_output(self) -> None:
