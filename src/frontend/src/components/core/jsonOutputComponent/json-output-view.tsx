@@ -20,6 +20,7 @@ const JsonOutputViewComponent: React.FC<JsonOutputViewComponentProps> = ({
       readOnly={true}
       width={width}
       height={height}
+      className=" border border-border rounded"
     />
   );
 };

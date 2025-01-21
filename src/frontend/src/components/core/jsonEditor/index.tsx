@@ -13,6 +13,7 @@ interface JsonEditorProps {
   jsonRef?: React.MutableRefObject<VanillaJsonEditor | null>;
   width?: string;
   height?: string;
+  className?: string;
 }
 
 const JsonEditor = ({
@@ -23,6 +24,7 @@ const JsonEditor = ({
   options = {},
   width = "100%",
   height = "400px",
+  className,
 }: JsonEditorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
@@ -57,7 +59,7 @@ const JsonEditor = ({
     };
   }, []);
 
-  return <div ref={containerRef} style={{ width, height }} />;
+  return <div ref={containerRef} style={{ width, height }} className={className} />;
 };
 
 export default JsonEditor;
