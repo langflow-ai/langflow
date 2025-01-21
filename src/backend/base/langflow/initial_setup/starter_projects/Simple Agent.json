@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Hr2If",
+            "id": "ChatInput-GnVa9",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-BStBJ",
+            "id": "Agent-3ilRg",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Hr2If{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Hr2Ifœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-BStBJ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-BStBJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-GnVa9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-GnVa9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-3ilRg{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Hr2If",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Hr2Ifœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-BStBJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-BStBJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-GnVa9",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-GnVa9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-3ilRg",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3ilRgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-BStBJ",
+            "id": "Agent-3ilRg",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,26 +43,26 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-c2K0x",
+            "id": "ChatOutput-KeRVx",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-BStBJ{œdataTypeœ:œAgentœ,œidœ:œAgent-BStBJœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-c2K0x{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-c2K0xœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-3ilRg{œdataTypeœ:œAgentœ,œidœ:œAgent-3ilRgœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KeRVx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KeRVxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-BStBJ",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-BStBJœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-c2K0x",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-c2K0xœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-3ilRg",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3ilRgœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-KeRVx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-KeRVxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-RGZ02",
+            "id": "CalculatorComponent-sh2uy",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -70,18 +70,43 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-BStBJ",
+            "id": "Agent-3ilRg",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-RGZ02{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-RGZ02œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-BStBJ{œfieldNameœ:œtoolsœ,œidœ:œAgent-BStBJœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-RGZ02",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-RGZ02œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-BStBJ",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-BStBJœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorComponent-sh2uy{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-sh2uyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3ilRg{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-sh2uy",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-sh2uyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-3ilRg",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3ilRgœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-fbsLh",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-3ilRg",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__URL-fbsLh{œdataTypeœ:œURLœ,œidœ:œURL-fbsLhœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3ilRg{œfieldNameœ:œtoolsœ,œidœ:œAgent-3ilRgœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "URL-fbsLh",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-fbsLhœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-3ilRg",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3ilRgœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -89,7 +114,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-BStBJ",
+          "id": "Agent-3ilRg",
           "node": {
             "base_classes": [
               "Message"
@@ -648,10 +673,10 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-BStBJ",
+        "id": "Agent-3ilRg",
         "measured": {
-          "height": 621,
-          "width": 320
+          "height": 698,
+          "width": 360
         },
         "position": {
           "x": 1652.2479633316434,
@@ -662,7 +687,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-Hr2If",
+          "id": "ChatInput-GnVa9",
           "node": {
             "base_classes": [
               "Message"
@@ -942,10 +967,10 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-Hr2If",
+        "id": "ChatInput-GnVa9",
         "measured": {
-          "height": 229,
-          "width": 320
+          "height": 257,
+          "width": 360
         },
         "position": {
           "x": 1241.9566260691947,
@@ -958,7 +983,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-c2K0x",
+          "id": "ChatOutput-KeRVx",
           "node": {
             "base_classes": [
               "Message"
@@ -1217,10 +1242,10 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-c2K0x",
+        "id": "ChatOutput-KeRVx",
         "measured": {
-          "height": 229,
-          "width": 320
+          "height": 257,
+          "width": 360
         },
         "position": {
           "x": 2029.726227044409,
@@ -1233,7 +1258,7 @@
         "data": {
           "description": "Load and retrive data from specified URLs.",
           "display_name": "URL",
-          "id": "URL-Cns6P",
+          "id": "URL-fbsLh",
           "node": {
             "base_classes": [
               "Data",
@@ -1442,21 +1467,21 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-Cns6P",
+        "id": "URL-fbsLh",
         "measured": {
-          "height": 403,
-          "width": 320
+          "height": 453,
+          "width": 360
         },
         "position": {
           "x": 1225.8773509111968,
           "y": 27.333577318641687
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "note-gIi2r",
+          "id": "note-159PR",
           "node": {
             "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
             "display_name": "",
@@ -1468,10 +1493,10 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-gIi2r",
+        "id": "note-159PR",
         "measured": {
-          "height": 325,
-          "width": 325
+          "height": 328,
+          "width": 328
         },
         "position": {
           "x": 775.5268622081468,
@@ -1482,7 +1507,7 @@
       },
       {
         "data": {
-          "id": "note-E1ls9",
+          "id": "note-ELRXf",
           "node": {
             "description": "### 💡 Add your OpenAI API key here👇",
             "display_name": "",
@@ -1493,10 +1518,10 @@
           },
           "type": "note"
         },
-        "id": "note-E1ls9",
+        "id": "note-ELRXf",
         "measured": {
-          "height": 324,
-          "width": 324
+          "height": 326,
+          "width": 326
         },
         "position": {
           "x": 1648.6876745095624,
@@ -1507,7 +1532,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-RGZ02",
+          "id": "CalculatorComponent-sh2uy",
           "node": {
             "base_classes": [
               "Data"
@@ -1683,10 +1708,10 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-RGZ02",
+        "id": "CalculatorComponent-sh2uy",
         "measured": {
-          "height": 333,
-          "width": 320
+          "height": 374,
+          "width": 360
         },
         "position": {
           "x": 1233.166256931297,
@@ -1697,9 +1722,9 @@
       }
     ],
     "viewport": {
-      "x": -573.0285266811966,
-      "y": 96.72381189311284,
-      "zoom": 0.8223516559988604
+      "x": -311.5761975342741,
+      "y": 21.53149314357762,
+      "zoom": 0.7039413065053529
     }
   },
   "description": "A simple but powerful starter agent.",
