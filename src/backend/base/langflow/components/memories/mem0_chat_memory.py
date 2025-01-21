@@ -1,20 +1,10 @@
-import logging
-import os
+from loguru import logger
 
-from mem0 import Memory, MemoryClient
-
+from langflow.base.memory.mem0 import Mem0LCMemory
 from langflow.base.memory.model import LCChatMemoryComponent
-from langflow.inputs import (
-    DictInput,
-    HandleInput,
-    MessageTextInput,
-    NestedDictInput,
-    SecretStrInput,
-)
+from langflow.inputs import DictInput, HandleInput, MessageTextInput, NestedDictInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data
-
-logger = logging.getLogger(__name__)
 
 
 class Mem0MemoryComponent(LCChatMemoryComponent):
@@ -53,7 +43,10 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
             info="Optional existing Mem0 memory instance. If not provided, a new instance will be created.",
         ),
         MessageTextInput(
-            name="user_id", display_name="User ID", info="Identifier for the user associated with the messages."
+            name="mem0_user_id",
+            display_name="User ID",
+            info="Identifier for the user associated with the messages.",
+            required=True,
         ),
         MessageTextInput(
             name="search_query", display_name="Search Query", info="Input text for searching related memories in Mem0."
@@ -78,67 +71,50 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
     ]
 
     outputs = [
-        Output(name="memory", display_name="Mem0 Memory", method="ingest_data"),
-        Output(
-            name="search_results",
-            display_name="Search Results",
-            method="build_search_results",
-        ),
+        Output(name="memory", display_name="Mem0 Memory", method="build_memory"),
+        Output(name="search_results", display_name="Search Results", method="build_search_results"),
     ]
 
-    def build_mem0(self) -> Memory:
-        """Initializes a Mem0 memory instance based on provided configuration and API keys."""
-        if self.openai_api_key:
-            os.environ["OPENAI_API_KEY"] = self.openai_api_key
+    def build_memory(self) -> Mem0LCMemory:
+        """Build or return an existing Mem0 memory instance."""
+        if not self.mem0_user_id:
+            msg = "user_id is required"
+            raise ValueError(msg)
 
-        try:
-            if not self.mem0_api_key:
-                return Memory.from_config(config_dict=dict(self.mem0_config)) if self.mem0_config else Memory()
-            if self.mem0_config:
-                return MemoryClient.from_config(api_key=self.mem0_api_key, config_dict=dict(self.mem0_config))
-            return MemoryClient(api_key=self.mem0_api_key)
-        except ImportError as e:
-            msg = "Mem0 is not properly installed. Please install it with 'pip install -U mem0ai'."
-            raise ImportError(msg) from e
+        if self.existing_memory and isinstance(self.existing_memory, Mem0LCMemory):
+            logger.info("Using existing Mem0 memory instance")
+            return self.existing_memory
 
-    def ingest_data(self) -> Memory:
-        """Ingests a new message into Mem0 memory and returns the updated memory instance."""
-        mem0_memory = self.existing_memory or self.build_mem0()
+        memory = Mem0LCMemory(
+            user_id=self.mem0_user_id,
+            api_key=self.mem0_api_key,
+            config=self.mem0_config,
+        )
 
-        if not self.ingest_message or not self.user_id:
-            logger.warning("Missing 'ingest_message' or 'user_id'; cannot ingest data.")
-            return mem0_memory
+        if self.ingest_message:
+            from langchain_core.messages import HumanMessage
 
-        metadata = self.metadata or {}
+            logger.info("Ingesting initial message")
+            memory.add_message(HumanMessage(content=self.ingest_message))
 
-        logger.info("Ingesting message for user_id: %s", self.user_id)
-
-        try:
-            mem0_memory.add(self.ingest_message, user_id=self.user_id, metadata=metadata)
-        except Exception:
-            logger.exception("Failed to add message to Mem0 memory.")
-            raise
-
-        return mem0_memory
+        return memory
 
     def build_search_results(self) -> Data:
-        """Searches the Mem0 memory for related messages based on the search query and returns the results."""
-        mem0_memory = self.ingest_data()
-        search_query = self.search_query
-        user_id = self.user_id
+        """Search for related memories using the provided query."""
+        memory = self.build_memory()
 
-        logger.info("Search query: %s", search_query)
+        if not self.search_query:
+            logger.warning("No search query provided")
+            return []
 
         try:
-            if search_query:
-                logger.info("Performing search with query.")
-                related_memories = mem0_memory.search(query=search_query, user_id=user_id)
-            else:
-                logger.info("Retrieving all memories for user_id: %s", user_id)
-                related_memories = mem0_memory.get_all(user_id=user_id)
-        except Exception:
-            logger.exception("Failed to retrieve related memories from Mem0.")
+            # Use the underlying Mem0 client for search
+            results = memory.client.search(
+                query=self.search_query,
+                user_id=self.mem0_user_id,
+            )
+            logger.info(f"Found {len(results)} related memories")
+        except Exception as e:
+            logger.error(f"Error searching memories: {e}")
             raise
-
-        logger.info("Related memories retrieved: %s", related_memories)
-        return related_memories
+        return results
