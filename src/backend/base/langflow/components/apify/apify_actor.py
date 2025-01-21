@@ -106,7 +106,11 @@ class ApifyActorsComponent(LCToolComponent):
 
         build = self._get_actor_latest_build(actor_id)
         readme = build.get("readme", "")[:250] + "..."
-        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(build)
+        if not (input_schema_str := build.get("inputSchema")):
+            msg = "Input schema not found"
+            raise ValueError(msg)
+        input_schema = json.loads(input_schema_str)
+        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(input_schema)
         properties = {"run_input": properties}
 
         # works from input schema
@@ -195,17 +199,11 @@ class ApifyActorsComponent(LCToolComponent):
         return build
 
     @staticmethod
-    def get_actor_input_schema_from_build(build: dict) -> tuple[dict, list[str]]:
+    def get_actor_input_schema_from_build(input_schema: dict) -> tuple[dict, list[str]]:
         """Get the input schema from the Actor build.
 
         Trim the description to 250 characters.
         """
-        if (input_schema_str := build.get("inputSchema")) is None:
-            msg = "Input schema not found"
-            raise ValueError(msg)
-
-        input_schema = json.loads(input_schema_str)
-
         properties = input_schema.get("properties", {})
         required = input_schema.get("required", [])
 
