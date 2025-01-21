@@ -1,6 +1,7 @@
+import json
 import requests
 from langflow.custom import Component
-from langflow.inputs import DictInput, MessageInput, SecretStrInput
+from langflow.inputs import DictInput, SecretStrInput, StrInput
 from langflow.io import Output
 
 class TessAIExecuteAgentComponent(Component):
@@ -16,7 +17,7 @@ class TessAIExecuteAgentComponent(Component):
             info="The API key to use for TessAI.",
             advanced=False,
         ),
-        MessageInput(
+        StrInput(
             name="agent_id",
             display_name="Agent ID",
             required=True,
@@ -49,7 +50,7 @@ class TessAIExecuteAgentComponent(Component):
             if execution_data['responses'][0]['status'] not in ['succeeded', 'failed', 'error']:
                 raise ValueError(f"Unexpected status: {execution_data.get('status', None)}")
 
-            response_id = execution_data['responses'][0]['id']
+            response_id = execution_data['responses'][0]['id']    
             return self._get_agent_response(headers, response_id)
         except requests.RequestException as e:
             raise RuntimeError(f"Error executing agent: {str(e)}") from e
