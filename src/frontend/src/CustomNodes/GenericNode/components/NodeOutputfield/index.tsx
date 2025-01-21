@@ -101,6 +101,7 @@ const InspectButton = memo(
     isToolMode,
     title,
     onClick,
+    id,
   }: {
     disabled: boolean | undefined;
     displayOutputPreview: boolean;
@@ -109,10 +110,11 @@ const InspectButton = memo(
     isToolMode: boolean;
     title: string;
     onClick: () => void;
+    id: string;
   }) => (
     <Button
       disabled={disabled}
-      data-testid={`output-inspection-${title.toLowerCase()}`}
+      data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
       unstyled
       onClick={onClick}
     >
@@ -338,6 +340,7 @@ function NodeOutputField({
                   onClick={() => {
                     //just to trigger the memoization
                   }}
+                  id={data?.type}
                 />
               </OutputModal>
             </div>
