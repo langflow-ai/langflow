@@ -105,6 +105,9 @@ class Vertex:
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
         self.log_transaction_tasks: set[asyncio.Task] = set()
+        self.output_names: list[str] = [
+            output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
+        ]
 
     def set_input_value(self, name: str, value: Any) -> None:
         if self.custom_component is None:
@@ -262,19 +265,18 @@ class Vertex:
                     self.base_type = base_type
                     break
 
+    def get_value_from_output_names(self, key: str):
+        if key in self.output_names:
+            return self.graph.get_vertex(key)
+        return None
+
     def get_value_from_template_dict(self, key: str):
         template_dict = self.data.get("node", {}).get("template", {})
+
         if key not in template_dict:
             msg = f"Key {key} not found in template dict"
             raise ValueError(msg)
         return template_dict.get(key, {}).get("value")
-
-    def get_task(self):
-        # using the task_id, get the task from celery
-        # and return it
-        from celery.result import AsyncResult
-
-        return AsyncResult(self.task_id)
 
     def _set_params_from_normal_edge(self, params: dict, edge: Edge, template_dict: dict):
         param_key = edge.target_param
@@ -299,6 +301,8 @@ class Vertex:
 
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
+        elif param_key in self.output_names:
+            params[param_key] = self.graph.get_vertex(edge.source_id)
         return params
 
     def build_params(self) -> None:
