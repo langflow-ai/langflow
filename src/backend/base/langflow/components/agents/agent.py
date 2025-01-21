@@ -9,9 +9,7 @@ from langflow.base.models.model_input_constants import (
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.langchain_utilities.tool_calling import (
-    ToolCallingAgentComponent,
-)
+from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.custom.utils import update_component_build_config
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.logging import logger
@@ -121,6 +119,8 @@ class AgentComponent(ToolCallingAgentComponent):
         memory_kwargs = {
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
+        # filter out empty values
+        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
 
         return await MemoryComponent().set(**memory_kwargs).retrieve_messages()
 
