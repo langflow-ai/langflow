@@ -53,7 +53,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("parse data");
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 300, y: 400 },

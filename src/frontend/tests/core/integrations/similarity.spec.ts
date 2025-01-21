@@ -74,7 +74,7 @@ test(
     });
 
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 100 },
       });
