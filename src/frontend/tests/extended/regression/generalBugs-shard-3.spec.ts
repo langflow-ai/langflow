@@ -109,7 +109,7 @@ test(
     await page.mouse.up();
 
     const elementsOpenAiOutput = await page
-      .locator('[data-testid="handle-openaimodel-shownode-text-right"]')
+      .locator('[data-testid="handle-openaimodel-shownode-message-right"]')
       .all();
 
     for (const element of elementsOpenAiOutput) {

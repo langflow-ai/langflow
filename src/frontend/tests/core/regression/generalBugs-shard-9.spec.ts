@@ -95,7 +95,7 @@ AI:
 
     //connection 1
     const elementChatMemoryOutput = await page
-      .getByTestId("handle-memory-shownode-text-right")
+      .getByTestId("handle-memory-shownode-message-right")
       .first();
     await elementChatMemoryOutput.hover();
     await page.mouse.down();
