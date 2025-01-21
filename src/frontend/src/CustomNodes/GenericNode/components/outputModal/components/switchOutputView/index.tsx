@@ -1,3 +1,4 @@
+import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
 import { LogsLogType, OutputLogType } from "@/types/api";
 import { useMemo } from "react";
@@ -12,7 +13,6 @@ import { Case } from "../../../../../../shared/components/caseComponent";
 import TextOutputView from "../../../../../../shared/components/textOutputView";
 import useFlowStore from "../../../../../../stores/flowStore";
 import ErrorOutput from "./components";
-import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 // Define the props type
 interface SwitchOutputViewProps {
   nodeId: string;
@@ -36,7 +36,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   const resultType = results?.type;
   let resultMessage = results?.message ?? {};
   const RECORD_TYPES = ["array", "message"];
-  const JSON_TYPES = ["data","object"];
+  const JSON_TYPES = ["data", "object"];
   if (resultMessage?.raw) {
     resultMessage = resultMessage.raw;
   }

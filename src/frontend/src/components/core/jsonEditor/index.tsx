@@ -59,7 +59,9 @@ const JsonEditor = ({
     };
   }, []);
 
-  return <div ref={containerRef} style={{ width, height }} className={className} />;
+  return (
+    <div ref={containerRef} style={{ width, height }} className={className} />
+  );
 };
 
 export default JsonEditor;
