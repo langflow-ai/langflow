@@ -72,7 +72,7 @@ class ApifyActorsComponent(LCToolComponent):
             display_name="Flatten output?",
             info=(
                 "The output dataset will be converted from a nested format to a flat structure. "
-                "Dot in nested structure will be replaced by underscore. "
+                "Dots in nested structure will be replaced by underscores. "
                 "This is useful for further processing of the Data object. "
                 "For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}."
             ),
