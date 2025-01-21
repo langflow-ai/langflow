@@ -29,8 +29,9 @@ class AnthropicModelComponent(LCModelComponent):
         DropdownInput(
             name="model_name",
             display_name="Model Name",
-            options=[],
+            options=ANTHROPIC_MODELS,
             refresh_button=True,
+            value=ANTHROPIC_MODELS[0],
         ),
         SecretStrInput(
             name="api_key",
@@ -138,14 +139,16 @@ class AnthropicModelComponent(LCModelComponent):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
             try:
-                if len(self.api_key) != 0:
+                if len(self.api_key) == 0:
+                    ids = ANTHROPIC_MODELS
+                else:
                     try:
                         ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
                     except (ImportError, ValueError, requests.exceptions.RequestException) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = ANTHROPIC_MODELS
-                    build_config["model_name"]["options"] = ids
-                    build_config["model_name"]["value"] = ids[0]
+                build_config["model_name"]["options"] = ids
+                build_config["model_name"]["value"] = ids[0]
             except Exception as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e

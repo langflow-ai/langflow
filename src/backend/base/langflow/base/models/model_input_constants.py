@@ -8,6 +8,7 @@ from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
+from langflow.template.field.base import Input
 
 
 class ModelProvidersDict(TypedDict):
@@ -24,7 +25,7 @@ def get_filtered_inputs(component_class):
     return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
 
 
-def process_inputs(component_data):
+def process_inputs(component_data: Input):
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
@@ -61,8 +62,8 @@ def add_combobox_true(component_input):
     return component_input
 
 
-def create_input_fields_dict(inputs, prefix):
-    return {f"{prefix}{input_.name}": input_ for input_ in inputs}
+def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Input]:
+    return {f"{prefix}{input_.name}": input_.to_dict() for input_ in inputs}
 
 
 def _get_openai_inputs_and_fields():
@@ -73,7 +74,7 @@ def _get_openai_inputs_and_fields():
     except ImportError as e:
         msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
         raise ImportError(msg) from e
-    return openai_inputs, {input_.name: input_ for input_ in openai_inputs}
+    return openai_inputs, create_input_fields_dict(openai_inputs, "")
 
 
 def _get_azure_inputs_and_fields():
@@ -204,10 +205,4 @@ except ImportError:
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
 
-MODEL_DYNAMIC_UPDATE_FIELDS = [
-    "api_key",
-    "model",
-    "tool_model_enabled",
-    "base_url",
-    "model_name",
-]
+MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
