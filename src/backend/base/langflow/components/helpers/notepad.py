@@ -101,8 +101,6 @@ def edit_value(notepad: DataFrame, value: str, position: int | None = None) -> D
     return notepad
 
 
-
-
 NOTEPAD_OPERATIONS: dict[str, DfOperation] = {
     "add": add_value,
     "remove": remove_value,
