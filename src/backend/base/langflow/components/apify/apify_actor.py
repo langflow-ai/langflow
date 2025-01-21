@@ -38,7 +38,7 @@ class ApifyRunActorComponent(LCToolComponent):
             display_name="Actor",
             info=(
                 "Actor name from Apify store to run. For example 'apify/website-content-crawler' "
-                "to use the Website Content Crawler Actor (see https://apify.com/apify/website-content-crawler)."
+                "to use the Website Content Crawler Actor."
             ),
             required=True,
         ),
