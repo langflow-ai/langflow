@@ -673,27 +673,43 @@ class Component(CustomComponent):
         return await self.build_results()
 
     def __getattr__(self, name: str) -> Any:
-        if "_attributes" in self.__dict__ and name in self.__dict__["_attributes"]:
-            return self.__dict__["_attributes"][name]
-        if "_inputs" in self.__dict__ and name in self.__dict__["_inputs"]:
-            return self.__dict__["_inputs"][name].value
-        if "_outputs_map" in self.__dict__ and name in self.__dict__["_outputs_map"]:
-            return self.__dict__["_outputs_map"][name]
+        # Use self.__dict__ directly to speed up attribute retrieval
+        _dict = self.__dict__
+
+        # Check for _attributes, _inputs, and _outputs_map in a single step
+        if "_attributes" in _dict:
+            _attributes = _dict["_attributes"]
+            if name in _attributes:
+                return _attributes[name]
+
+        if "_inputs" in _dict:
+            _inputs = _dict["_inputs"]
+            if name in _inputs:
+                return _inputs[name].value
+
+        if "_outputs_map" in _dict:
+            _outputs_map = _dict["_outputs_map"]
+            if name in _outputs_map:
+                return _outputs_map[name]
+
+        # Allow retrieval of backwards-compatible attributes
         if name in BACKWARDS_COMPATIBLE_ATTRIBUTES:
-            return self.__dict__[f"_{name}"]
+            return _dict.get(f"_{name}")
+
         if name.startswith("_") and name[1:] in BACKWARDS_COMPATIBLE_ATTRIBUTES:
-            return self.__dict__[name]
+            return _dict.get(name)
+
+        # Handle specific 'graph' attribute case
         if name == "graph":
-            # If it got up to here it means it was going to raise
-            session_id = self._session_id if hasattr(self, "_session_id") else None
-            user_id = self._user_id if hasattr(self, "_user_id") else None
-            flow_name = self._flow_name if hasattr(self, "_flow_name") else None
-            flow_id = self._flow_id if hasattr(self, "_flow_id") else None
+            session_id = getattr(self, "_session_id", None)
+            user_id = getattr(self, "_user_id", None)
+            flow_name = getattr(self, "_flow_name", None)
+            flow_id = getattr(self, "_flow_id", None)
             return PlaceholderGraph(
                 flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
             )
-        msg = f"Attribute {name} not found in {self.__class__.__name__}"
-        raise AttributeError(msg)
+
+        raise AttributeError(f"Attribute {name} not found in {self.__class__.__name__}")
 
     def _set_input_value(self, name: str, value: Any) -> None:
         if name in self._inputs:
