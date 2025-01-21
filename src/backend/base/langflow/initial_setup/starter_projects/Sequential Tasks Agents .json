@@ -1,308 +1,11 @@
 {
   "data": {
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-h73y0",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_prompt",
-            "id": "Agent-uuZ76",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-h73y0{œdataTypeœ:œPromptœ,œidœ:œPrompt-h73y0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-uuZ76{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-uuZ76œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-h73y0",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-h73y0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-uuZ76",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-uuZ76œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-kaNRB",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_prompt",
-            "id": "Agent-9kiKa",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-kaNRB{œdataTypeœ:œPromptœ,œidœ:œPrompt-kaNRBœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-9kiKa{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-9kiKaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-kaNRB",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-kaNRBœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-9kiKa",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-9kiKaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-uuZ76",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-r9E97",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-uuZ76{œdataTypeœ:œAgentœ,œidœ:œAgent-uuZ76œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-r9E97{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-r9E97œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-uuZ76",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-uuZ76œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-r9E97",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-r9E97œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-9kiKa",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "finance_agent_output",
-            "id": "Prompt-h73y0",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-9kiKa{œdataTypeœ:œAgentœ,œidœ:œAgent-9kiKaœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-h73y0{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-h73y0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-9kiKa",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-9kiKaœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-h73y0",
-        "targetHandle": "{œfieldNameœ: œfinance_agent_outputœ, œidœ: œPrompt-h73y0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-udfr5",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-i5i7H",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-udfr5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-udfr5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-i5i7H{œfieldNameœ:œinput_valueœ,œidœ:œAgent-i5i7Hœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-udfr5",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-udfr5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-i5i7H",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-i5i7Hœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-62kjh",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_prompt",
-            "id": "Agent-i5i7H",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-62kjh{œdataTypeœ:œPromptœ,œidœ:œPrompt-62kjhœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-i5i7H{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-i5i7Hœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-62kjh",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-62kjhœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-i5i7H",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-i5i7Hœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-i5i7H",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-9kiKa",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-i5i7H{œdataTypeœ:œAgentœ,œidœ:œAgent-i5i7Hœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-9kiKa{œfieldNameœ:œinput_valueœ,œidœ:œAgent-9kiKaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-i5i7H",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-i5i7Hœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-9kiKa",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-9kiKaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-i5i7H",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "research_agent_output",
-            "id": "Prompt-h73y0",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-i5i7H{œdataTypeœ:œAgentœ,œidœ:œAgent-i5i7Hœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-h73y0{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-h73y0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-i5i7H",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-i5i7Hœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-h73y0",
-        "targetHandle": "{œfieldNameœ: œresearch_agent_outputœ, œidœ: œPrompt-h73y0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-RNHql",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-uuZ76",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorComponent-RNHql{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-RNHqlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uuZ76{œfieldNameœ:œtoolsœ,œidœ:œAgent-uuZ76œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-RNHql",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-RNHqlœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-uuZ76",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uuZ76œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-FS7QO",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-9kiKa",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-YfinanceComponent-FS7QO{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-FS7QOœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9kiKa{œfieldNameœ:œtoolsœ,œidœ:œAgent-9kiKaœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "YfinanceComponent-FS7QO",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-FS7QOœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-9kiKa",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9kiKaœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-uLUDV",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-i5i7H",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__TavilySearchComponent-uLUDV{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-uLUDVœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-i5i7H{œfieldNameœ:œtoolsœ,œidœ:œAgent-i5i7Hœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-uLUDV",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-uLUDVœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-i5i7H",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-i5i7Hœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-r9E97",
+          "id": "ChatOutput-DqyyQ",
           "node": {
             "base_classes": [
               "Message"
@@ -563,7 +266,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-r9E97",
+        "id": "ChatOutput-DqyyQ",
         "measured": {
           "height": 234,
           "width": 360
@@ -584,7 +287,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Finance Agent",
-          "id": "Agent-9kiKa",
+          "id": "Agent-RmOB2",
           "node": {
             "base_classes": [
               "Message"
@@ -724,7 +427,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1145,7 +848,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-9kiKa",
+        "id": "Agent-RmOB2",
         "measured": {
           "height": 650,
           "width": 360
@@ -1166,7 +869,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Analysis & Editor Agent",
-          "id": "Agent-uuZ76",
+          "id": "Agent-9YXRo",
           "node": {
             "base_classes": [
               "Message"
@@ -1727,7 +1430,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-uuZ76",
+        "id": "Agent-9YXRo",
         "measured": {
           "height": 650,
           "width": 360
@@ -1748,7 +1451,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-62kjh",
+          "id": "Prompt-3fyqW",
           "node": {
             "base_classes": [
               "Message"
@@ -1859,7 +1562,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-62kjh",
+        "id": "Prompt-3fyqW",
         "measured": {
           "height": 260,
           "width": 360
@@ -1880,7 +1583,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-kaNRB",
+          "id": "Prompt-f4paU",
           "node": {
             "base_classes": [
               "Message"
@@ -1991,7 +1694,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-kaNRB",
+        "id": "Prompt-f4paU",
         "measured": {
           "height": 260,
           "width": 360
@@ -2012,7 +1715,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-h73y0",
+          "id": "Prompt-xirI8",
           "node": {
             "base_classes": [
               "Message"
@@ -2172,7 +1875,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-h73y0",
+        "id": "Prompt-xirI8",
         "measured": {
           "height": 433,
           "width": 360
@@ -2191,7 +1894,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-udfr5",
+          "id": "ChatInput-TQ1li",
           "node": {
             "base_classes": [
               "Message"
@@ -2472,7 +2175,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-udfr5",
+        "id": "ChatInput-TQ1li",
         "measured": {
           "height": 234,
           "width": 360
@@ -2491,7 +2194,7 @@
       },
       {
         "data": {
-          "id": "note-rwLko",
+          "id": "note-j0zav",
           "node": {
             "description": "# Sequential Tasks Agents\n\n## Overview\nThis flow demonstrates how to chain multiple AI agents for comprehensive research and analysis. Each agent specializes in different aspects of the research process, building upon the previous agent's work.\n\n## How to Use the Flow\n\n1. **Input Your Query** 🎯\n   - Be specific and clear\n   - Include key aspects you want analyzed\n   - Examples:\n     ```\n     Good: \"Should I invest in Tesla (TSLA)? Focus on AI development impact\"\n     Bad: \"Tell me about Tesla\"\n     ```\n\n2. **Research Agent Process** 🔍\n   - Utilizes Tavily Search for comprehensive research\n\n\n3. **Specialized Analysis** 📊\n   - Each agent adds unique value:\n     ```\n     Research Agent → Deep Research & Context\n         ↓\n     Finance Agent → Data Analysis & Metrics\n         ↓\n     Editor Agent → Final Synthesis & Report\n     ```\n\n4. **Output Format** 📝\n   - Structured report\n   - Embedded images and charts\n   - Data-backed insights\n   - Clear recommendations\n\n## Pro Tips\n\n### Query Construction\n- Include specific points of interest\n- Mention required metrics or data points\n- Specify time frames if relevant\n\n### Flow Customization\n- Modify agent prompts for different use cases\n- Add or remove tools as needed\n\n## Common Applications\n- Investment Research\n- Market Analysis\n- Competitive Intelligence\n- Industry Reports\n- Technology Impact Studies\n\n⚡ **Best Practice**: Start with a test query to understand the flow's capabilities before running complex analyses.\n\n---\n*Note: This flow template uses financial analysis as an example but can be adapted for any research-intensive task requiring multiple perspectives and data sources.*",
             "display_name": "",
@@ -2502,7 +2205,7 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-rwLko",
+        "id": "note-j0zav",
         "measured": {
           "height": 800,
           "width": 328
@@ -2526,7 +2229,7 @@
       },
       {
         "data": {
-          "id": "note-f0wVd",
+          "id": "note-pUC9D",
           "node": {
             "description": "## What Are Sequential Task Agents?\nA system where multiple AI agents work in sequence, each specializing in specific tasks and passing their output to the next agent in the chain. Think of it as an assembly line where each agent adds value to the final result.\n\n## How It Works\n1. **First Agent** → **Second Agent** → **Third Agent** → **Final Output**\n   - Each agent receives input from the previous one\n   - Processes and enhances the information\n   - Passes refined output forward\n\n## Key Benefits\n- **Specialization**: Each agent focuses on specific tasks\n- **Progressive Refinement**: Information gets enhanced at each step\n- **Structured Output**: Final result combines multiple perspectives\n- **Quality Control**: Each agent validates and improves previous work\n\n## Building Your Own Sequence\n1. **Plan Your Chain**\n   - Identify distinct tasks\n   - Determine logical order\n   - Define input/output requirements\n\n2. **Configure Agents**\n   - Give each agent clear instructions\n   - Ensure compatible outputs/inputs\n   - Set appropriate tools for each agent\n\n3. **Connect the Flow**\n   - Link agents in proper order\n   - Test data flow between agents\n   - Verify final output format\n\n## Example Applications\n- Research → Analysis → Report Writing\n- Data Collection → Processing → Visualization\n- Content Research → Writing → Editing\n- Market Analysis → Financial Review → Investment Advice\n\n⭐ **Pro Tip**: The strength of sequential agents comes from how well they complement each other's capabilities.\n\nThis template uses financial analysis as an example, but you can adapt it for any multi-step process requiring different expertise at each stage.",
             "display_name": "",
@@ -2539,7 +2242,7 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-f0wVd",
+        "id": "note-pUC9D",
         "measured": {
           "height": 800,
           "width": 328
@@ -2565,7 +2268,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Researcher Agent",
-          "id": "Agent-i5i7H",
+          "id": "Agent-TmQ5O",
           "node": {
             "base_classes": [
               "Message"
@@ -3126,7 +2829,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-i5i7H",
+        "id": "Agent-TmQ5O",
         "measured": {
           "height": 650,
           "width": 360
@@ -3145,7 +2848,7 @@
       },
       {
         "data": {
-          "id": "note-MGiP3",
+          "id": "note-NgTrE",
           "node": {
             "description": "## Get your API key at [https://tavily.com](https://tavily.com)\n",
             "display_name": "",
@@ -3158,7 +2861,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-MGiP3",
+        "id": "note-NgTrE",
         "measured": {
           "height": 324,
           "width": 328
@@ -3182,7 +2885,7 @@
       },
       {
         "data": {
-          "id": "note-Luc39",
+          "id": "note-7I7gz",
           "node": {
             "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
             "display_name": "",
@@ -3195,7 +2898,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-Luc39",
+        "id": "note-7I7gz",
         "measured": {
           "height": 324,
           "width": 328
@@ -3219,7 +2922,7 @@
       },
       {
         "data": {
-          "id": "YfinanceComponent-FS7QO",
+          "id": "YfinanceComponent-P0VBm",
           "node": {
             "base_classes": [
               "Data",
@@ -3466,7 +3169,7 @@
           "type": "YfinanceComponent"
         },
         "dragging": true,
-        "id": "YfinanceComponent-FS7QO",
+        "id": "YfinanceComponent-P0VBm",
         "measured": {
           "height": 581,
           "width": 360
@@ -3480,7 +3183,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-RNHql",
+          "id": "CalculatorComponent-82dCo",
           "node": {
             "base_classes": [
               "Data"
@@ -3655,7 +3358,7 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-RNHql",
+        "id": "CalculatorComponent-82dCo",
         "measured": {
           "height": 374,
           "width": 360
@@ -3669,7 +3372,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-uLUDV",
+          "id": "TavilySearchComponent-ZgS55",
           "node": {
             "base_classes": [
               "Data",
@@ -3701,17 +3404,18 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
                 "types": [
                   "Tool"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "Tool",
+                "name": "component_as_tool",
+                "hidden": null,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": null,
+                "allows_loop": false
               }
             ],
             "pinned": false,
@@ -3727,7 +3431,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3854,80 +3558,72 @@
                 "value": "advanced"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
+                "tool_mode": false,
                 "is_list": true,
                 "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
+                "table_schema": {
+                  "columns": [
+                    {
+                      "name": "name",
+                      "display_name": "Tool Name",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "edit_mode": "inline",
+                      "formatter": "text"
+                    },
+                    {
+                      "name": "description",
+                      "display_name": "Tool Description",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "edit_mode": "popover",
+                      "formatter": "text"
+                    },
+                    {
+                      "name": "tags",
+                      "display_name": "Tool Identifiers",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "edit_mode": "inline",
+                      "formatter": "text"
+                    }
+                  ]
+                },
+                "trigger_text": "",
+                "trigger_icon": "Hammer",
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
+                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "hide_options": true,
                   "field_parsers": {
-                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ]
+                    ],
+                    "commands": "commands"
                   },
-                  "hide_options": true
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
                 },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "tools_metadata",
                 "value": [
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
@@ -3943,7 +3639,15 @@
                       "TavilySearchComponent-fetch_content_text"
                     ]
                   }
-                ]
+                ],
+                "display_name": "Edit tools",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "real_time_refresh": true,
+                "title_case": false,
+                "type": "table",
+                "_input_type": "TableInput"
               },
               "topic": {
                 "_input_type": "DropdownInput",
@@ -3973,7 +3677,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-uLUDV",
+        "id": "TavilySearchComponent-ZgS55",
         "measured": {
           "height": 489,
           "width": 360
@@ -3986,10 +3690,308 @@
         "type": "genericNode"
       }
     ],
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-xirI8",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_prompt",
+            "id": "Agent-9YXRo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-xirI8{œdataTypeœ:œPromptœ,œidœ:œPrompt-xirI8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-9YXRo{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-xirI8",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-xirI8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-9YXRo",
+        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-f4paU",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_prompt",
+            "id": "Agent-RmOB2",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-f4paU{œdataTypeœ:œPromptœ,œidœ:œPrompt-f4paUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-RmOB2{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-f4paU",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-f4paUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-RmOB2",
+        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-9YXRo",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-DqyyQ",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-9YXRo{œdataTypeœ:œAgentœ,œidœ:œAgent-9YXRoœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DqyyQ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DqyyQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-9YXRo",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-9YXRoœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-DqyyQ",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DqyyQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-RmOB2",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "finance_agent_output",
+            "id": "Prompt-xirI8",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-RmOB2{œdataTypeœ:œAgentœ,œidœ:œAgent-RmOB2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-xirI8{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Agent-RmOB2",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-RmOB2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-xirI8",
+        "targetHandle": "{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-TQ1li",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-TmQ5O",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-TQ1li{œdataTypeœ:œChatInputœ,œidœ:œChatInput-TQ1liœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-TmQ5O{œfieldNameœ:œinput_valueœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-TQ1li",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-TQ1liœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-TmQ5O",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-3fyqW",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_prompt",
+            "id": "Agent-TmQ5O",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-3fyqW{œdataTypeœ:œPromptœ,œidœ:œPrompt-3fyqWœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-TmQ5O{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-3fyqW",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-3fyqWœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-TmQ5O",
+        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-TmQ5O",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-RmOB2",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-TmQ5O{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-RmOB2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-TmQ5O",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-RmOB2",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-TmQ5O",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "research_agent_output",
+            "id": "Prompt-xirI8",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-TmQ5O{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-xirI8{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Agent-TmQ5O",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-xirI8",
+        "targetHandle": "{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorComponent",
+            "id": "CalculatorComponent-82dCo",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-9YXRo",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CalculatorComponent-82dCo{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-82dCoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9YXRo{œfieldNameœ:œtoolsœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-82dCo",
+        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-82dCoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-9YXRo",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "YfinanceComponent",
+            "id": "YfinanceComponent-P0VBm",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-RmOB2",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-YfinanceComponent-P0VBm{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-P0VBmœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-RmOB2{œfieldNameœ:œtoolsœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "YfinanceComponent-P0VBm",
+        "sourceHandle": "{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-P0VBmœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-RmOB2",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-ZgS55",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-TmQ5O",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-TavilySearchComponent-ZgS55{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ZgS55œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-TmQ5O{œfieldNameœ:œtoolsœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-ZgS55",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ZgS55œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-TmQ5O",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "className": ""
+      }
+    ],
     "viewport": {
-      "x": 1043.611076363603,
-      "y": 930.7679466669072,
-      "zoom": 0.5467702171368981
+      "x": 905.1150074113123,
+      "y": 872.5950106358109,
+      "zoom": 0.3920220111611041
     }
   },
   "description": "This Agent is designed to systematically execute a series of tasks following a meticulously predefined sequence. By adhering to this structured order, the Agent ensures that each task is completed efficiently and effectively, optimizing overall performance and maintaining a high level of accuracy.",

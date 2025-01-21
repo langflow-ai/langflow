@@ -1,290 +1,11 @@
 {
   "data": {
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-gqyjP",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "previous_response",
-            "id": "Prompt-0I0H4",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-gqyjP{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-gqyjPœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-0I0H4{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-0I0H4œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-gqyjP",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-gqyjPœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-0I0H4",
-        "targetHandle": "{œfieldNameœ: œprevious_responseœ, œidœ: œPrompt-0I0H4œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-eSKKr",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-S0zP4",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-eSKKr{œdataTypeœ:œPromptœ,œidœ:œPrompt-eSKKrœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-S0zP4{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-S0zP4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-eSKKr",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-eSKKrœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-S0zP4",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-S0zP4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-NO5CC",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Prompt-eSKKr",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-NO5CC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NO5CCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-eSKKr{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-eSKKrœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-NO5CC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NO5CCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-eSKKr",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œPrompt-eSKKrœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-S0zP4",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-ZN3tc",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-S0zP4{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-S0zP4œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-ZN3tc{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-ZN3tcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-S0zP4",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-S0zP4œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-ZN3tc",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-ZN3tcœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-0I0H4",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-YS55M",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-0I0H4{œdataTypeœ:œPromptœ,œidœ:œPrompt-0I0H4œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-YS55M{œfieldNameœ:œinput_valueœ,œidœ:œAgent-YS55Mœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-0I0H4",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-0I0H4œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-YS55M",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-YS55Mœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-YS55M",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_results",
-            "id": "Prompt-eSKKr",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-YS55M{œdataTypeœ:œAgentœ,œidœ:œAgent-YS55Mœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-eSKKr{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-eSKKrœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-YS55M",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-YS55Mœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-eSKKr",
-        "targetHandle": "{œfieldNameœ: œsearch_resultsœ, œidœ: œPrompt-eSKKrœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-CadaL",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "OpenAIModel-gqyjP",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-CadaL{œdataTypeœ:œPromptœ,œidœ:œPrompt-CadaLœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-gqyjP{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-gqyjPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-CadaL",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-CadaLœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-gqyjP",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-gqyjPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-NO5CC",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-gqyjP",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-NO5CC{œdataTypeœ:œChatInputœ,œidœ:œChatInput-NO5CCœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-gqyjP{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-gqyjPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-NO5CC",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-NO5CCœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-gqyjP",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-gqyjPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-KWWyW",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "OpenAIModel-S0zP4",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-KWWyW{œdataTypeœ:œPromptœ,œidœ:œPrompt-KWWyWœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-S0zP4{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-S0zP4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-KWWyW",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KWWyWœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-S0zP4",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-S0zP4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-KcrPr",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-YS55M",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__TavilySearchComponent-KcrPr{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-KcrPrœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-YS55M{œfieldNameœ:œtoolsœ,œidœ:œAgent-YS55Mœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-KcrPr",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-KcrPrœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-YS55M",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-YS55Mœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-0I0H4",
+          "id": "Prompt-vnTcM",
           "node": {
             "base_classes": [
               "Message"
@@ -414,7 +135,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-0I0H4",
+        "id": "Prompt-vnTcM",
         "measured": {
           "height": 347,
           "width": 360
@@ -433,7 +154,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-NO5CC",
+          "id": "ChatInput-JfaSH",
           "node": {
             "base_classes": [
               "Message"
@@ -708,7 +429,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-NO5CC",
+        "id": "ChatInput-JfaSH",
         "measured": {
           "height": 234,
           "width": 360
@@ -729,7 +450,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-ZN3tc",
+          "id": "ChatOutput-dc1aC",
           "node": {
             "base_classes": [
               "Message"
@@ -988,22 +709,22 @@
           },
           "type": "ChatOutput"
         },
-        "dragging": false,
+        "dragging": true,
         "height": 234,
-        "id": "ChatOutput-ZN3tc",
+        "id": "ChatOutput-dc1aC",
         "measured": {
           "height": 234,
           "width": 360
         },
         "position": {
-          "x": 3200.774558432761,
-          "y": 853.9881404769172
+          "x": 3235.4806463111895,
+          "y": 851.4173191525891
         },
         "positionAbsolute": {
           "x": 3200.774558432761,
           "y": 853.9881404769172
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
@@ -1011,7 +732,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-eSKKr",
+          "id": "Prompt-QF5LF",
           "node": {
             "base_classes": [
               "Message"
@@ -1165,7 +886,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-eSKKr",
+        "id": "Prompt-QF5LF",
         "measured": {
           "height": 433,
           "width": 360
@@ -1184,643 +905,7 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
-          "display_name": "OpenAI",
-          "id": "OpenAIModel-gqyjP",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
-            "display_name": "OpenAI",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "system_message",
-              "stream",
-              "max_tokens",
-              "model_kwargs",
-              "json_mode",
-              "output_schema",
-              "model_name",
-              "openai_api_base",
-              "api_key",
-              "temperature",
-              "seed",
-              "output_parser"
-            ],
-            "frozen": false,
-            "icon": "OpenAI",
-            "legacy": false,
-            "lf_version": "1.0.19.post2",
-            "metadata": {},
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "method": "text_response",
-                "name": "text_output",
-                "required_inputs": [],
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Language Model",
-                "method": "build_model",
-                "name": "model_output",
-                "required_inputs": [],
-                "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
-              },
-              "input_value": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "json_mode": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "list": false,
-                "name": "max_tokens",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 128000,
-                  "min": 0,
-                  "step": 0.1,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
-              },
-              "openai_api_base": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "seed": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
-              },
-              "stream": {
-                "_input_type": "BoolInput",
-                "advanced": false,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Stream the response from the model. Streaming works only in Chat.",
-                "list": false,
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "_input_type": "FloatInput",
-                "advanced": false,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "temperature",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": 0.1
-              }
-            },
-            "tool_mode": false
-          },
-          "type": "OpenAIModel"
-        },
-        "dragging": false,
-        "height": 630,
-        "id": "OpenAIModel-gqyjP",
-        "measured": {
-          "height": 630,
-          "width": 360
-        },
-        "position": {
-          "x": 1457.8987895868838,
-          "y": 543.8838473503562
-        },
-        "positionAbsolute": {
-          "x": 1457.8987895868838,
-          "y": 543.8838473503562
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 320
-      },
-      {
-        "data": {
-          "description": "Generates text using OpenAI LLMs.",
-          "display_name": "OpenAI",
-          "id": "OpenAIModel-S0zP4",
-          "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Generates text using OpenAI LLMs.",
-            "display_name": "OpenAI",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "system_message",
-              "stream",
-              "max_tokens",
-              "model_kwargs",
-              "json_mode",
-              "output_schema",
-              "model_name",
-              "openai_api_base",
-              "api_key",
-              "temperature",
-              "seed",
-              "output_parser"
-            ],
-            "frozen": false,
-            "icon": "OpenAI",
-            "legacy": false,
-            "lf_version": "1.0.19.post2",
-            "metadata": {},
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "method": "text_response",
-                "name": "text_output",
-                "required_inputs": [],
-                "selected": "Message",
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Language Model",
-                "method": "build_model",
-                "name": "model_output",
-                "required_inputs": [],
-                "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
-              },
-              "input_value": {
-                "_input_type": "MessageInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "json_mode": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "list": false,
-                "name": "max_tokens",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 128000,
-                  "min": 0,
-                  "step": 0.1,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": ""
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "",
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "gpt-4o-mini"
-              },
-              "openai_api_base": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "seed": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
-              },
-              "stream": {
-                "_input_type": "BoolInput",
-                "advanced": false,
-                "display_name": "Stream",
-                "dynamic": false,
-                "info": "Stream the response from the model. Streaming works only in Chat.",
-                "list": false,
-                "name": "stream",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "system_message": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "System Message",
-                "dynamic": false,
-                "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "load_from_db": false,
-                "name": "system_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "temperature": {
-                "_input_type": "FloatInput",
-                "advanced": false,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "",
-                "list": false,
-                "name": "temperature",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
-                "value": 0.1
-              }
-            },
-            "tool_mode": false
-          },
-          "type": "OpenAIModel"
-        },
-        "dragging": false,
-        "height": 630,
-        "id": "OpenAIModel-S0zP4",
-        "measured": {
-          "height": 630,
-          "width": 360
-        },
-        "position": {
-          "x": 2860.2941186979524,
-          "y": 561.8661152181708
-        },
-        "positionAbsolute": {
-          "x": 2860.2941186979524,
-          "y": 561.8661152181708
-        },
-        "selected": false,
-        "type": "genericNode",
-        "width": 320
-      },
-      {
-        "data": {
-          "id": "note-pNJhC",
+          "id": "note-OmVXD",
           "node": {
             "description": "# Research Agent \n\nWelcome to the Research Agent! This flow helps you conduct in-depth research on various topics using AI-powered tools and analysis.\n\n## Instructions\n1. Enter Your Research Query\n   - Type your research question or topic into the Chat Input node.\n   - Be specific and clear about what you want to investigate.\n\n2. Generate Research Plan\n   - The system will create a focused research plan based on your query.\n   - This plan includes key search queries and priorities.\n\n3. Conduct Web Search\n   - The Tavily AI Search tool will perform web searches using the generated queries.\n   - It focuses on finding academic and reliable sources.\n\n4. Analyze and Synthesize\n   - The AI agent will review the search results and create a comprehensive synthesis.\n   - The report includes an executive summary, methodology, findings, and conclusions.\n\n5. Review the Output\n   - Read the final report in the Chat Output node.\n   - Use this information as a starting point for further research or decision-making.\n\nRemember: You can refine your initial query for more specific results! 🔍📊",
             "display_name": "",
@@ -1833,7 +918,7 @@
         },
         "dragging": false,
         "height": 765,
-        "id": "note-pNJhC",
+        "id": "note-OmVXD",
         "measured": {
           "height": 765,
           "width": 328
@@ -1859,7 +944,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-YS55M",
+          "id": "Agent-yGw6Q",
           "node": {
             "base_classes": [
               "Message"
@@ -2420,7 +1505,7 @@
         },
         "dragging": false,
         "height": 658,
-        "id": "Agent-YS55M",
+        "id": "Agent-yGw6Q",
         "measured": {
           "height": 658,
           "width": 360
@@ -2441,7 +1526,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-CadaL",
+          "id": "Prompt-D14S9",
           "node": {
             "base_classes": [
               "Message"
@@ -2546,7 +1631,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-CadaL",
+        "id": "Prompt-D14S9",
         "measured": {
           "height": 260,
           "width": 360
@@ -2567,7 +1652,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-KWWyW",
+          "id": "Prompt-Lqvw5",
           "node": {
             "base_classes": [
               "Message"
@@ -2672,7 +1757,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-KWWyW",
+        "id": "Prompt-Lqvw5",
         "measured": {
           "height": 260,
           "width": 360
@@ -2691,7 +1776,7 @@
       },
       {
         "data": {
-          "id": "note-OSBLo",
+          "id": "note-0mAkP",
           "node": {
             "description": "# 🔑 Tavily AI Search Needs API Key\n\nYou can get 1000 searches/month free [here](https://tavily.com/) ",
             "display_name": "",
@@ -2704,7 +1789,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-OSBLo",
+        "id": "note-0mAkP",
         "measured": {
           "height": 325,
           "width": 328
@@ -2723,7 +1808,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-KcrPr",
+          "id": "TavilySearchComponent-ChvwJ",
           "node": {
             "base_classes": [
               "Data",
@@ -2755,17 +1840,18 @@
             "output_types": [],
             "outputs": [
               {
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
                 "types": [
                   "Tool"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "Tool",
+                "name": "component_as_tool",
+                "hidden": null,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": null,
+                "allows_loop": false
               }
             ],
             "pinned": false,
@@ -2781,7 +1867,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2908,80 +1994,72 @@
                 "value": "advanced"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
+                "tool_mode": false,
                 "is_list": true,
                 "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
+                "table_schema": {
+                  "columns": [
+                    {
+                      "name": "name",
+                      "display_name": "Tool Name",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "edit_mode": "inline",
+                      "formatter": "text"
+                    },
+                    {
+                      "name": "description",
+                      "display_name": "Tool Description",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "edit_mode": "popover",
+                      "formatter": "text"
+                    },
+                    {
+                      "name": "tags",
+                      "display_name": "Tool Identifiers",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "edit_mode": "inline",
+                      "formatter": "text"
+                    }
+                  ]
+                },
+                "trigger_text": "",
+                "trigger_icon": "Hammer",
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
+                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "hide_options": true,
                   "field_parsers": {
-                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ]
+                    ],
+                    "commands": "commands"
                   },
-                  "hide_options": true
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
                 },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "tools_metadata",
                 "value": [
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
@@ -2997,7 +2075,15 @@
                       "TavilySearchComponent-fetch_content_text"
                     ]
                   }
-                ]
+                ],
+                "display_name": "Edit tools",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "real_time_refresh": true,
+                "title_case": false,
+                "type": "table",
+                "_input_type": "TableInput"
               },
               "topic": {
                 "_input_type": "DropdownInput",
@@ -3027,7 +2113,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-KcrPr",
+        "id": "TavilySearchComponent-ChvwJ",
         "measured": {
           "height": 489,
           "width": 360
@@ -3038,12 +2124,961 @@
         },
         "selected": false,
         "type": "genericNode"
+      },
+      {
+        "id": "OpenAIModel-FVlqP",
+        "type": "genericNode",
+        "position": {
+          "x": 1455.1912046212385,
+          "y": 487.41889689444065
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "load_from_db": true,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "api_key",
+                "value": "",
+                "display_name": "OpenAI API Key",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "title_case": false,
+                "password": true,
+                "type": "str",
+                "_input_type": "SecretStrInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "trace_as_input": true,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "input_value",
+                "value": "",
+                "display_name": "Input",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageInput"
+              },
+              "json_mode": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "json_mode",
+                "value": false,
+                "display_name": "JSON Mode",
+                "advanced": true,
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "title_case": false,
+                "type": "bool",
+                "_input_type": "BoolInput"
+              },
+              "max_tokens": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "range_spec": {
+                  "step_type": "float",
+                  "min": 0,
+                  "max": 128000,
+                  "step": 0.1
+                },
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "max_tokens",
+                "value": "",
+                "display_name": "Max Tokens",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "model_kwargs": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "model_kwargs",
+                "value": {},
+                "display_name": "Model Kwargs",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "title_case": false,
+                "type": "dict",
+                "_input_type": "DictInput"
+              },
+              "model_name": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-3.5-turbo-0125"
+                ],
+                "options_metadata": [],
+                "combobox": false,
+                "dialog_inputs": {},
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "model_name",
+                "value": "gpt-4o-mini",
+                "display_name": "Model Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "DropdownInput"
+              },
+              "openai_api_base": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "openai_api_base",
+                "value": "",
+                "display_name": "OpenAI API Base",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "seed": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "seed",
+                "value": 1,
+                "display_name": "Seed",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "stream": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "stream",
+                "value": false,
+                "display_name": "Stream",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "title_case": false,
+                "type": "bool",
+                "_input_type": "BoolInput"
+              },
+              "system_message": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "system_message",
+                "value": "",
+                "display_name": "System Message",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              },
+              "temperature": {
+                "tool_mode": false,
+                "min_label": "",
+                "max_label": "",
+                "min_label_icon": "",
+                "max_label_icon": "",
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "range_spec": {
+                  "step_type": "float",
+                  "min": 0,
+                  "max": 2,
+                  "step": 0.01
+                },
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "temperature",
+                "value": 0.1,
+                "display_name": "Temperature",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "slider",
+                "_input_type": "SliderInput"
+              }
+            },
+            "description": "Generates text using OpenAI LLMs.",
+            "icon": "OpenAI",
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "display_name": "OpenAI",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "text_output",
+                "display_name": "Message",
+                "method": "text_response",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [],
+                "allows_loop": false
+              },
+              {
+                "types": [
+                  "LanguageModel"
+                ],
+                "selected": "LanguageModel",
+                "name": "model_output",
+                "display_name": "Language Model",
+                "method": "build_model",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [],
+                "allows_loop": false
+              }
+            ],
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "max_tokens",
+              "model_kwargs",
+              "json_mode",
+              "model_name",
+              "openai_api_base",
+              "api_key",
+              "temperature",
+              "seed"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "models",
+            "key": "OpenAIModel",
+            "score": 0.14285714285714285
+          },
+          "showNode": true,
+          "type": "OpenAIModel",
+          "id": "OpenAIModel-FVlqP"
+        },
+        "selected": false,
+        "measured": {
+          "width": 360,
+          "height": 734
+        },
+        "dragging": false
+      },
+      {
+        "id": "OpenAIModel-MhnGV",
+        "type": "genericNode",
+        "position": {
+          "x": 2869.8759720421745,
+          "y": 463.310915040386
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "load_from_db": true,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "api_key",
+                "value": "",
+                "display_name": "OpenAI API Key",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "title_case": false,
+                "password": true,
+                "type": "str",
+                "_input_type": "SecretStrInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "trace_as_input": true,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "input_value",
+                "value": "",
+                "display_name": "Input",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageInput"
+              },
+              "json_mode": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "json_mode",
+                "value": false,
+                "display_name": "JSON Mode",
+                "advanced": true,
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "title_case": false,
+                "type": "bool",
+                "_input_type": "BoolInput"
+              },
+              "max_tokens": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "range_spec": {
+                  "step_type": "float",
+                  "min": 0,
+                  "max": 128000,
+                  "step": 0.1
+                },
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "max_tokens",
+                "value": "",
+                "display_name": "Max Tokens",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "model_kwargs": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "model_kwargs",
+                "value": {},
+                "display_name": "Model Kwargs",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "title_case": false,
+                "type": "dict",
+                "_input_type": "DictInput"
+              },
+              "model_name": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-3.5-turbo-0125"
+                ],
+                "options_metadata": [],
+                "combobox": false,
+                "dialog_inputs": {},
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "model_name",
+                "value": "gpt-4o-mini",
+                "display_name": "Model Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "DropdownInput"
+              },
+              "openai_api_base": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "openai_api_base",
+                "value": "",
+                "display_name": "OpenAI API Base",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "seed": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "seed",
+                "value": 1,
+                "display_name": "Seed",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "stream": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "stream",
+                "value": false,
+                "display_name": "Stream",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "title_case": false,
+                "type": "bool",
+                "_input_type": "BoolInput"
+              },
+              "system_message": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "system_message",
+                "value": "",
+                "display_name": "System Message",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              },
+              "temperature": {
+                "tool_mode": false,
+                "min_label": "",
+                "max_label": "",
+                "min_label_icon": "",
+                "max_label_icon": "",
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "range_spec": {
+                  "step_type": "float",
+                  "min": 0,
+                  "max": 2,
+                  "step": 0.01
+                },
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "temperature",
+                "value": 0.1,
+                "display_name": "Temperature",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "slider",
+                "_input_type": "SliderInput"
+              }
+            },
+            "description": "Generates text using OpenAI LLMs.",
+            "icon": "OpenAI",
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "display_name": "OpenAI",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "text_output",
+                "display_name": "Message",
+                "method": "text_response",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [],
+                "allows_loop": false
+              },
+              {
+                "types": [
+                  "LanguageModel"
+                ],
+                "selected": "LanguageModel",
+                "name": "model_output",
+                "display_name": "Language Model",
+                "method": "build_model",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [],
+                "allows_loop": false
+              }
+            ],
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "max_tokens",
+              "model_kwargs",
+              "json_mode",
+              "model_name",
+              "openai_api_base",
+              "api_key",
+              "temperature",
+              "seed"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "models",
+            "key": "OpenAIModel",
+            "score": 0.14285714285714285
+          },
+          "showNode": true,
+          "type": "OpenAIModel",
+          "id": "OpenAIModel-MhnGV"
+        },
+        "selected": false,
+        "measured": {
+          "width": 360,
+          "height": 734
+        },
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-JfaSH",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Prompt-QF5LF",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-JfaSH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-JfaSHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-QF5LF{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-QF5LFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-JfaSH",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-JfaSHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-QF5LF",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œPrompt-QF5LFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-vnTcM",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-yGw6Q",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-vnTcM{œdataTypeœ:œPromptœ,œidœ:œPrompt-vnTcMœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-yGw6Q{œfieldNameœ:œinput_valueœ,œidœ:œAgent-yGw6Qœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-vnTcM",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-vnTcMœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-yGw6Q",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-yGw6Qœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-yGw6Q",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_results",
+            "id": "Prompt-QF5LF",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-yGw6Q{œdataTypeœ:œAgentœ,œidœ:œAgent-yGw6Qœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-QF5LF{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-QF5LFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-yGw6Q",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-yGw6Qœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-QF5LF",
+        "targetHandle": "{œfieldNameœ:œsearch_resultsœ,œidœ:œPrompt-QF5LFœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-ChvwJ",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-yGw6Q",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-TavilySearchComponent-ChvwJ{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ChvwJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-yGw6Q{œfieldNameœ:œtoolsœ,œidœ:œAgent-yGw6Qœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-ChvwJ",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ChvwJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-yGw6Q",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-yGw6Qœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "className": ""
+      },
+      {
+        "source": "Prompt-D14S9",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-D14S9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-FVlqP",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-FVlqPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "system_message",
+            "id": "OpenAIModel-FVlqP",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-D14S9",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__Prompt-D14S9{œdataTypeœ:œPromptœ,œidœ:œPrompt-D14S9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-FVlqP{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-FVlqPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "ChatInput-JfaSH",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-JfaSHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-FVlqP",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-FVlqPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-FVlqP",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-JfaSH",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__ChatInput-JfaSH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-JfaSHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-FVlqP{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-FVlqPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "OpenAIModel-FVlqP",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-FVlqPœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-vnTcM",
+        "targetHandle": "{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-vnTcMœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "previous_response",
+            "id": "Prompt-vnTcM",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-FVlqP",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__OpenAIModel-FVlqP{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-FVlqPœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-vnTcM{œfieldNameœ:œprevious_responseœ,œidœ:œPrompt-vnTcMœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "Prompt-QF5LF",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-QF5LFœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-MhnGV",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-MhnGVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-MhnGV",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-QF5LF",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__Prompt-QF5LF{œdataTypeœ:œPromptœ,œidœ:œPrompt-QF5LFœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-MhnGV{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-MhnGVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "Prompt-Lqvw5",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-Lqvw5œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-MhnGV",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-MhnGVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "system_message",
+            "id": "OpenAIModel-MhnGV",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-Lqvw5",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__Prompt-Lqvw5{œdataTypeœ:œPromptœ,œidœ:œPrompt-Lqvw5œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-MhnGV{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-MhnGVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "source": "OpenAIModel-MhnGV",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-MhnGVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-dc1aC",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-dc1aCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-dc1aC",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-MhnGV",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__OpenAIModel-MhnGV{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-MhnGVœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-dc1aC{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-dc1aCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {
-      "x": -406.960259959106,
-      "y": -33.16211370837854,
-      "zoom": 0.5577809840170954
+      "x": -1483.015971938532,
+      "y": -267.7229964456226,
+      "zoom": 0.7779614946685405
     }
   },
   "description": "Agent that generates focused plans, conducts web searches, and synthesizes findings into comprehensive reports.",
