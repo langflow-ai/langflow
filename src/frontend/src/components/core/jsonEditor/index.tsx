@@ -8,6 +8,7 @@ import {
 interface JsonEditorProps {
   data?: Content;
   onChange?: (data: Content) => void;
+  readOnly?: boolean;
   options?: any;
   jsonRef?: React.MutableRefObject<VanillaJsonEditor | null>;
   width?: string;
@@ -17,6 +18,7 @@ interface JsonEditorProps {
 const JsonEditor = ({
   data = { json: {} },
   onChange,
+  readOnly,
   jsonRef,
   options = {},
   width = "100%",
@@ -36,6 +38,7 @@ const JsonEditor = ({
         navigationBar: false,
         mode: "text",
         content: data,
+        readOnly,
 
         onChange: (content) => {
           onChange?.(content);
