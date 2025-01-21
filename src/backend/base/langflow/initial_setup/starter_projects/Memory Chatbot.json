@@ -145,6 +145,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "message_response",
@@ -442,6 +443,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "message_response",
@@ -781,6 +783,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "text_response",
@@ -793,6 +796,7 @@
                 "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
                 "method": "build_model",
@@ -1085,6 +1089,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Data",
                 "method": "retrieve_messages",
@@ -1096,6 +1101,7 @@
                 "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "retrieve_messages_as_text",
@@ -1328,6 +1334,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
