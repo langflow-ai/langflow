@@ -42,7 +42,7 @@ class RunnableExecComponent(Component):
 
     outputs = [
         Output(
-            display_name="Text",
+            display_name="Message",
             name="text",
             method="build_executor",
         ),

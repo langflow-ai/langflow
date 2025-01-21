@@ -8,16 +8,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Body,
-    Depends,
-    HTTPException,
-    Request,
-    UploadFile,
-    status,
-)
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -36,11 +27,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import (
-    build_custom_component_template,
-    get_instance_name,
-    update_component_build_config,
-)
+from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
@@ -55,16 +42,9 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.flow.utils import (
-    get_all_webhook_components_in_flow,
-)
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import (
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-    get_telemetry_service,
-)
+from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -747,6 +727,7 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         component_node["template"] = updated_build_config
+
         if isinstance(cc_instance, Component):
             await cc_instance.run_and_validate_update_outputs(
                 frontend_node=component_node,
