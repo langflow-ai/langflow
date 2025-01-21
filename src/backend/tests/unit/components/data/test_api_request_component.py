@@ -34,8 +34,8 @@ def test_parse_curl(api_request):
     # Assert
     assert new_build_config["method"]["value"] == "GET"
     assert new_build_config["urls"]["value"] == ["https://example.com/api/test"]
-    assert new_build_config["headers"]["value"] == {"Content-Type": "application/json"}
-    assert new_build_config["body"]["value"] == {"key": "value"}
+    assert new_build_config["headers"]["value"] == [{"key": "Content-Type", "value": "application/json"}]
+    assert new_build_config["body"]["value"] == [{"key": "key", "value": "value"}]
 
 
 # HTTPx Metadata testing
@@ -78,9 +78,9 @@ async def test_httpx_metadata_behavior(api_request, include_metadata, expected_p
         assert metadata["response_headers"]["custom-header"] == "HeaderValue"
 
         # Validate redirection history
-        assert metadata["redirection_history"] == [
-            {"url": redirected_url, "status_code": 303}
-        ], "Redirection history is incorrect"
+        assert metadata["redirection_history"] == [{"url": redirected_url, "status_code": 303}], (
+            "Redirection history is incorrect"
+        )
 
         # Validate result
         assert metadata["result"] == response_content, "Response content mismatch"
@@ -111,9 +111,9 @@ async def test_save_to_file_behavior(api_request, save_to_file, expected_propert
 
     # Check returned metadata
     metadata = result.data
-    assert (
-        set(metadata.keys()) == expected_properties
-    ), f"Unexpected properties: {set(metadata.keys())}. Raw result: {result.data}"
+    assert set(metadata.keys()) == expected_properties, (
+        f"Unexpected properties: {set(metadata.keys())}. Raw result: {result.data}"
+    )
 
     if save_to_file:
         # Validate that file_path exists in metadata

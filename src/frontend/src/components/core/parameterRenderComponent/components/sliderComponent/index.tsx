@@ -3,6 +3,7 @@ import { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
 import { SliderComponentType } from "@/types/components";
+import { cn } from "@/utils/utils";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -198,7 +199,7 @@ export default function SliderComponent({
   const ringClassInputClass = "ring-[1px] ring-slider-input-border";
 
   return (
-    <div className="w-full rounded-lg">
+    <div className={cn("w-full rounded-lg", editNode && "mt-4")}>
       <Case condition={!sliderButtons}>
         <div className="noflow nowheel nopan nodelete nodrag flex items-center justify-end">
           <div
