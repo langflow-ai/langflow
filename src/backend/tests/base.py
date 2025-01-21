@@ -59,15 +59,14 @@ class ComponentTestBase:
         mock_vertex.graph.flow_id = str(uuid4())
         source_code = await asyncio.to_thread(inspect.getsource, component_class)
         component_instance = component_class(_code=source_code, **default_kwargs)
+        component_instance._should_process_output = Mock(return_value=False)
         component_instance._vertex = mock_vertex
         return component_instance
 
     async def test_latest_version(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> None:
         """Test that the component works with the latest version."""
         component_instance = await self.component_setup(component_class, default_kwargs)
-        result = component_instance()
-        if inspect.iscoroutinefunction(result):
-            result = await result
+        result = await component_instance.run()
         assert result is not None, "Component returned None for the latest version."
 
     def test_all_versions_have_a_file_name_defined(self, file_names_mapping: list[VersionComponentMapping]) -> None:
