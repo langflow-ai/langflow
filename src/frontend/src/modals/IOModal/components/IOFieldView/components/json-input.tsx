@@ -1,14 +1,13 @@
+import JsonEditor from "@/components/core/jsonEditor";
 import { IOJSONInputComponentType } from "@/types/components";
 import { useEffect, useRef } from "react";
 import { JsonEditor as VanillaJsonEditor } from "vanilla-jsoneditor";
-import JsonEditor from "@/components/core/jsonEditor";
 export default function IoJsonInput({
   value = [],
   onChange,
   left,
   output,
 }: IOJSONInputComponentType): JSX.Element {
-
   const ref = useRef<any>(null);
   ref.current = value;
 
@@ -21,7 +20,7 @@ export default function IoJsonInput({
   }, [value]);
 
   return (
-    <div className="w-full h-400px">
+    <div className="h-400px w-full">
       <JsonEditor
         data={{ json: value }}
         jsonRef={jsonEditorRef}
