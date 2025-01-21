@@ -123,6 +123,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="The environment for the Astra DB API Endpoint.",
             advanced=True,
         ),
+        StrInput(
+            name="api_endpoint",
+            display_name="API Endpoint",
+            info="The API endpoint for the Astra DB instance.",
+            advanced=True,
+        ),
         DropdownInput(
             name="database_name",
             display_name="Database",
@@ -333,8 +339,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         cls,
         token: str,
         environment: str | None = None,
+        api_endpoint: str | None = None,
         database_name: str | None = None,
     ):
+        # Check if an api endpoint is provided
+        if api_endpoint:
+            return api_endpoint
+
         # Check if the database_name is like a url
         if database_name and database_name.startswith("https://"):
             return database_name
@@ -350,6 +361,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return self.get_api_endpoint_static(
             token=self.token,
             environment=self.environment,
+            api_endpoint=self.api_endpoint,
             database_name=self.database_name,
         )
 
