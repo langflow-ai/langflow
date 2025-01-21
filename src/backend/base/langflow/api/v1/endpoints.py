@@ -720,6 +720,7 @@ async def custom_component_update(
             user_id=user.id,
         )
 
+        template_data = code_request.model_dump().get("template", {}).copy()
         component_node["tool_mode"] = code_request.tool_mode
 
         if hasattr(cc_instance, "set_attributes"):
@@ -747,6 +748,13 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         component_node["template"] = updated_build_config
+
+        # Preserve previous field values by merging filtered template data into
+        # the component node's template. Only include entries where the value
+        # is a dictionary containing the key "value".
+        filtered_data = {k: v for k, v in template_data.items() if isinstance(v, dict) and "value" in v}
+        component_node["template"] |= filtered_data
+
         if isinstance(cc_instance, Component):
             await cc_instance.run_and_validate_update_outputs(
                 frontend_node=component_node,
