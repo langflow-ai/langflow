@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
 
+import jeraIcon from '../../../../../jera_favicon.ico';
+
 type EmptyPageProps = {
   setOpenModal: (open: boolean) => void;
 };
@@ -18,7 +20,14 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
           {ENABLE_NEW_LOGO ? (
             <LangflowLogo className="h-7 w-8" />
           ) : (
-            <span className="fill-foreground text-4xl">⛓️</span>
+            // <span className="fill-foreground text-4xl">⛓️</span>
+            <span className="fill-black text-2xl dark:fill-white">
+              <img
+                src={jeraIcon}
+                alt="Jera Icon"
+                className="inline-block w-[1em] h-[1em] align-middle"
+              />
+            </span>
           )}
           <h3
             className="pt-5 font-chivo text-2xl font-semibold text-foreground"

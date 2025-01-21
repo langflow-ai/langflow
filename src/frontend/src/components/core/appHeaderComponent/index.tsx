@@ -19,6 +19,8 @@ import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
 import GithubStarComponent from "./components/GithubStarButton";
 
+import jeraIcon from '../../../../jera_favicon.ico';
+
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const navigate = useCustomNavigate();
@@ -64,7 +66,14 @@ export default function AppHeader(): JSX.Element {
           ) : ENABLE_NEW_LOGO ? (
             <LangflowLogo className="h-5 w-6" />
           ) : (
-            <span className="fill-black text-2xl dark:fill-white">⛓️</span>
+            // <span className="fill-black text-2xl dark:fill-white">⛓️</span>
+            <span className="fill-black text-2xl dark:fill-white">
+              <img
+                src={jeraIcon}
+                alt="Jera Icon"
+                className="inline-block w-[1em] h-[1em] align-middle"
+              />
+            </span>
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (

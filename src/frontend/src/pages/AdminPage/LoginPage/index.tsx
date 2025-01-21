@@ -14,6 +14,8 @@ import {
   loginInputStateType,
 } from "../../../types/components";
 
+import jeraIcon from '../../../../jera_favicon.ico';
+
 export default function LoginAdminPage() {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
@@ -57,7 +59,14 @@ export default function LoginAdminPage() {
             className="h-10 w-10 scale-[1.5]"
           />
         ) : (
-          <span className="mb-4 text-5xl">⛓️</span>
+          // <span className="mb-4 text-5xl">⛓️</span>
+            <span className="fill-black text-2xl dark:fill-white">
+              <img
+                src={jeraIcon}
+                alt="Jera Icon"
+                className="inline-block w-[1em] h-[1em] align-middle"
+              />
+            </span>
         )}
         <span className="mb-6 text-2xl font-semibold text-primary">Admin</span>
         <Input
