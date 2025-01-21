@@ -90,7 +90,7 @@ class DatabaseService(Service):
             )
 
     def _create_engine(self) -> AsyncEngine:
-        """Create the engine for the database with retry logic."""
+        """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
         if url_components[0].startswith("sqlite"):
             scheme = "sqlite+aiosqlite"
@@ -110,6 +110,7 @@ class DatabaseService(Service):
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
     def _create_engine_with_retry(self) -> AsyncEngine:
+        """Create the engine for the database with retry logic."""
         return self._create_engine()
 
     def _get_connect_args(self):
