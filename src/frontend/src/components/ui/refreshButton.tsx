@@ -48,6 +48,7 @@ function RefreshButton({
       id={id}
       size={"icon"}
       loading={isLoading}
+      data-testid={id}
     >
       {button_text && <span className="mr-1">{button_text}</span>}
       <IconComponent
