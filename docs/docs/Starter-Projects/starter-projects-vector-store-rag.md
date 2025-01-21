@@ -17,10 +17,7 @@ This enables **vector search**, a more powerful and context-aware search.
 We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-pre-release&utm_medium=referral&utm_campaign=langflow-announcement&utm_content=create-a-free-astra-db-account) as the vector database for this starter flow, but you can follow along with any of Langflow's vector database options.
 
 
-## Prerequisites {#6aa2c6dff6894eccadc39d4903d79e66}
-
-
----
+## Prerequisites
 
 - [Langflow installed and running](https://docs.langflow.org/get-started-installation)
 - [OpenAI API key](https://platform.openai.com/)
