@@ -66,6 +66,8 @@ class ComponentTestBase:
         """Test that the component works with the latest version."""
         component_instance = await self.component_setup(component_class, default_kwargs)
         result = component_instance()
+        if inspect.iscoroutinefunction(result):
+            result = await result
         assert result is not None, "Component returned None for the latest version."
 
     def test_all_versions_have_a_file_name_defined(self, file_names_mapping: list[VersionComponentMapping]) -> None:
