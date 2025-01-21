@@ -116,7 +116,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             try:
                 from langchain_google_genai.chat_models import ChatGoogleGenerativeAI
             except ImportError as e:
-                msg = "langchain_google_genai is not installed. Please install it with `pip install langchain_google_genai`."
+                msg = "langchain_google_genai is not installed."
                 raise ImportError(msg) from e
             for model in model_ids:
                 model_with_tool = ChatGoogleGenerativeAI(

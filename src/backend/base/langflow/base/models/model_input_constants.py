@@ -73,7 +73,10 @@ def _get_google_generative_ai_inputs_and_fields():
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
-        msg = "Google Generative AI is not installed. Please install it with `pip install langchain-google-generative-ai`."
+        msg = (
+            "Google Generative AI is not installed. Please install it with "
+            "`pip install langchain-google-generative-ai`."
+        )
         raise ImportError(msg) from e
     return google_generative_ai_inputs, create_input_fields_dict(google_generative_ai_inputs, "")
 
