@@ -1,18 +1,14 @@
-import { Stack, Duration, RemovalPolicy, CfnOutput } from 'aws-cdk-lib';
+import { RemovalPolicy, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
   aws_ec2 as ec2,
   aws_ecs as ecs,
   aws_s3 as s3,
   aws_iam as iam,
-  aws_logs as logs,
   aws_elasticloadbalancingv2 as elb,
   aws_cloudfront as cloudfront,
   aws_cloudfront_origins as origins,
-  aws_s3_deployment as s3_deployment
 } from 'aws-cdk-lib';
-import { CloudFrontToS3 } from '@aws-solutions-constructs/aws-cloudfront-s3';
-import { CfnDistribution, Distribution } from 'aws-cdk-lib/aws-cloudfront';
 import { NodejsBuild } from 'deploy-time-build';
 
 interface WebProps {
@@ -92,7 +88,8 @@ export class Web extends Construct {
     defaultBehavior: { origin:  s3SpaOrigin },
     additionalBehaviors: {
       '/api/v1/*': albBehaviorOptions,
-      '/health' : albBehaviorOptions,
+      '/health_check' : albBehaviorOptions,
+
     },
     enableLogging: true, // ログ出力設定
     logBucket: new s3.Bucket(this, 'LogBucket',commonBucketProps),
@@ -122,6 +119,8 @@ export class Web extends Construct {
     outputSourceDirectory: 'build',
     buildCommands: ['npm install', 'npm run build'],
     buildEnvironment: {
+      NODE_OPTIONS: '--max-old-space-size=8192', // Increase the Node.js heap size
+      BACKEND_URL: `http://${props.alb.loadBalancerDnsName}`
       // VITE_AXIOS_BASE_URL: `https://${this.distribution.domainName}`
     },
   });
