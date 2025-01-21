@@ -12,7 +12,6 @@ from langflow.memory import (
     aupdate_messages,
     delete_messages,
     get_messages,
-    store_message,
 )
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
@@ -125,11 +124,11 @@ async def test_adelete_messages():
 
 
 @pytest.mark.usefixtures("client")
-def test_store_message():
+async def test_store_message():
     session_id = "stored_session_id"
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    store_message(message)
-    stored_messages = get_messages(sender="User", session_id=session_id)
+    await astore_message(message)
+    stored_messages = await aget_messages(sender="User", session_id=session_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 

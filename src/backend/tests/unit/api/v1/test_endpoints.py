@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 from typing import Any
 
@@ -65,7 +66,7 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     # load the code from the file at langflow.components.agents.agent.py asynchronously
     # we are at str/backend/tests/unit/api/v1/test_endpoints.py
     # find the file by using the class AgentComponent
-    agent_component_file = inspect.getsourcefile(AgentComponent)
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
     async with async_open(agent_component_file, encoding="utf-8") as f:
         code = await f.read()
 
@@ -87,12 +88,12 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     assert "template" in result
     assert "model_name" in result["template"]
     assert isinstance(result["template"]["model_name"]["options"], list)
-    assert len(result["template"]["model_name"]["options"]) > 0, (
-        f"Model names: {result['template']['model_name']['options']}"
-    )
-    assert current_model_names != result["template"]["model_name"]["options"], (
-        f"Current model names: {current_model_names}, New model names: {result['template']['model_name']['options']}"
-    )
+    assert (
+        len(result["template"]["model_name"]["options"]) > 0
+    ), f"Model names: {result['template']['model_name']['options']}"
+    assert (
+        current_model_names != result["template"]["model_name"]["options"]
+    ), f"Current model names: {current_model_names}, New model names: {result['template']['model_name']['options']}"
     # Now test with Custom provider
     template["agent_llm"]["value"] = "Custom"
     request.field_value = "Custom"
