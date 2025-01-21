@@ -30,6 +30,7 @@ from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.log import LoggableType
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
@@ -1020,17 +1021,28 @@ class Component(CustomComponent):
             message (LoggableType | list[LoggableType]): The message to log.
             name (str, optional): The name of the log. Defaults to None.
         """
-        if name is None:
-            name = f"Log {len(self._logs) + 1}"
-        log = Log(message=message, type=get_artifact_type(message), name=name)
-        self._logs.append(log)
+        if isinstance(message, list):
+            names = [f"Log {len(self._logs) + 1 + i}" for i in range(len(message))]
+        else:
+            names = [name if name else f"Log {len(self._logs) + 1}"]
+
+        types = (
+            [get_artifact_type(msg) for msg in message] if isinstance(message, list) else [get_artifact_type(message)]
+        )
+        logs = [Log(message=msg, type=typ, name=nm) for msg, typ, nm in zip(message, types, names, strict=False)]
+
+        self._logs.extend(logs)
+
         if self._tracing_service and self._vertex:
-            self._tracing_service.add_log(trace_name=self.trace_name, log=log)
+            for log in logs:
+                self._tracing_service.add_log(trace_name=self.trace_name, log=log)
+
         if self._event_manager is not None and self._current_output:
-            data = log.model_dump()
-            data["output"] = self._current_output
-            data["component_id"] = self._id
-            self._event_manager.on_log(data=data)
+            for log in logs:
+                data = log.model_dump()
+                data["output"] = self._current_output
+                data["component_id"] = self._id
+                self._event_manager.on_log(data=data)
 
     def _append_tool_output(self) -> None:
         if next((output for output in self.outputs if output.name == TOOL_OUTPUT_NAME), None) is None:

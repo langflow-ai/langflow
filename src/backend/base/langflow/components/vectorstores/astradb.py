@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -410,31 +412,32 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return None
 
     def get_vectorize_providers(self):
+        """Get a sorted map of vectorize providers."""
         try:
             self.log("Dynamically updating list of Vectorize providers.")
 
             # Get the admin object
+            api_endpoint = self.get_api_endpoint()
+            if not api_endpoint:
+                return self.log_and_fetch_if_error("API endpoint not found.")
+
             admin = AstraDBAdmin(token=self.token)
-            db_admin = admin.get_database_admin(api_endpoint=self.get_api_endpoint())
+            db_admin = admin.get_database_admin(api_endpoint=api_endpoint)
 
             # Get the list of embedding providers
-            embedding_providers = db_admin.find_embedding_providers().as_dict()
+            providers = db_admin.find_embedding_providers()
+            embedding_providers = providers.get("embeddingProviders", {})
 
-            vectorize_providers_mapping = {}
-            # Map the provider display name to the provider key and models
-            for provider_key, provider_data in embedding_providers["embeddingProviders"].items():
-                display_name = provider_data["displayName"]
-                models = [model["name"] for model in provider_data["models"]]
+            vectorize_providers_mapping = {
+                provider_data["displayName"]: [provider_key, [model["name"] for model in provider_data["models"]]]
+                for provider_key, provider_data in embedding_providers.items()
+            }
 
-                # TODO: https://astra.datastax.com/api/v2/graphql
-                vectorize_providers_mapping[display_name] = [provider_key, models]
-
-            # Sort the resulting dictionary
+            # Sort the resulting dictionary by provider display name
             return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error fetching Vectorize providers: {e}")
 
-            return {}
+        except Exception as e:
+            return self.log_and_fetch_if_error(f"Error fetching Vectorize providers: {e}")
 
     def _initialize_database_options(self):
         try:
@@ -734,3 +737,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def log_and_fetch_if_error(self, message):
+        self.log(message)
+        return {}
