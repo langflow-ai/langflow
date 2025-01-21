@@ -92,14 +92,15 @@ def edit_value(notepad: DataFrame, value: str, position: int | None = None) -> D
     if notepad_length == 0:
         return notepad
 
-    new_df = notepad.copy()
-    if position is not None and 0 <= position < notepad_length:
-        # Edit at position
-        new_df.loc[new_df.index[position], "value"] = value
-    else:
-        # Edit last row
-        new_df.loc[new_df.index[-1], "value"] = value
-    return new_df
+    if position is None:
+        position = notepad_length - 1
+    if 0 <= position < notepad_length:
+        new_df = notepad.copy()
+        new_df.iloc[position, new_df.columns.get_loc("value")] = value
+        return new_df
+    return notepad
+
+
 
 
 NOTEPAD_OPERATIONS: dict[str, DfOperation] = {
