@@ -53,14 +53,14 @@ class LCVectorStoreComponent(Component):
     trace_type = "retriever"
 
     inputs = [
+        DataInput(
+            name="ingest_data",
+            display_name="Ingest Data",
+        ),
         MultilineInput(
             name="search_query",
             display_name="Search Query",
             tool_mode=True,
-        ),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
         ),
     ]
 
