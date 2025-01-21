@@ -2,6 +2,7 @@ import warnings
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 
+from .arxiv import ArXivComponent
 from .bing_search_api import BingSearchAPIComponent
 from .calculator import CalculatorToolComponent
 from .calculator_core import CalculatorComponent
@@ -35,6 +36,7 @@ with warnings.catch_warnings():
     from .astradb_cql import AstraDBCQLToolComponent
 
 __all__ = [
+    "ArXivComponent",
     "AstraDBCQLToolComponent",
     "AstraDBToolComponent",
     "BingSearchAPIComponent",

@@ -5,7 +5,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
@@ -212,7 +212,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-muted-foreground">
+      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary">
         <TextAreaWrapper
           checkSendingOk={checkSendingOk}
           send={send}
