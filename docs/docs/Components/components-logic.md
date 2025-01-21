@@ -90,6 +90,24 @@ This component listens for a notification and retrieves its associated state.
 |--------|------|--------------------------------------------|
 | output | Data | The state associated with the notification. |
 
+
+## Loop
+
+This component iterates over a list of [Data](/concepts-objects#data) objects, outputting one item at a time and aggregating results from loop inputs.
+
+### Inputs
+
+| Name | Type      | Description                                          |
+|------|-----------|------------------------------------------------------|
+| data | Data/List | The initial list of Data objects to iterate over.    |
+
+### Outputs
+
+| Name | Type    | Description                                           |
+|------|---------|-------------------------------------------------------|
+| item | Data    | Outputs one item at a time from the data list.        |
+| done | Data    | Triggered when iteration complete, returns aggregated results. |
+
 ## Notify
 
 This component generates a notification for the Listen component to use.
