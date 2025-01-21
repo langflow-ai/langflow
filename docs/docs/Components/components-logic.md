@@ -14,8 +14,9 @@ This flow creates a summarizing "for each" loop with the [Loop](/components-logi
 The component iterates over a list of `Data` objects until it's completed, when the **Done** loop aggregates the results.
 
 The **File** component loads text files from your local machine, and then the **Parse Data** component parses them into a list of structured [Data](/concepts-objects) objects.
-The [Loop](/components-logic#loop) component passes each `Data` object to a **Prompt** to be summarized.
-When the **Loop** component runs out of `Data`, the **Done** loop activates, which counts the number of pages and summarizes their tone with another **Prompt**.
+The **Loop** component passes each `Data` object to a **Prompt** to be summarized.
+
+When the **Loop** component runs out of `Data`, the **Done** loop activates, which counts the number of pages and summarizes their tone with another **Prompt**. This is represented in Langflow by connecting the Parse Data component's **Data List** output to the Loop component's `Data` loop input.
 
 ![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
 
