@@ -22,8 +22,8 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
-    def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
-        component_instance = super().component_setup(component_class, default_kwargs)
+    async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
+        component_instance = await super().component_setup(component_class, default_kwargs)
         # Mock _should_process_output method
         component_instance._should_process_output = lambda output: False  # noqa: ARG005
         return component_instance
@@ -47,7 +47,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         }
 
     async def test_build_config_update(self, component_class, default_kwargs):
-        component = self.component_setup(component_class, default_kwargs)
+        component = await self.component_setup(component_class, default_kwargs)
         frontend_node = component.to_frontend_node()
         build_config = frontend_node["data"]["node"]["template"]
         # Test updating build config for OpenAI
@@ -78,9 +78,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
         assert "Anthropic" in updated_config["agent_llm"]["options"]
         assert updated_config["agent_llm"]["input_types"] == []
-        assert any("sonnet" in option.lower() for option in updated_config["model_name"]["options"]), (
-            f"Options: {updated_config['model_name']['options']}"
-        )
+        assert any(
+            "sonnet" in option.lower() for option in updated_config["model_name"]["options"]
+        ), f"Options: {updated_config['model_name']['options']}"
 
         # Test updating build config for Custom
         updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
