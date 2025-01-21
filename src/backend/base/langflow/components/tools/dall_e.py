@@ -10,9 +10,10 @@ from langchain_core.tools import StructuredTool
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.inputs import DropdownInput, MultilineInput, SecretStrInput
+from langflow.io import Output
 from langflow.schema import Data
 from langflow.utils.util_strings import to_pythonic_variable_name
 
@@ -141,7 +142,7 @@ class DallEWrapper(BaseModel):
         return file_path
 
 
-class DallEComponent(LCToolComponent):
+class DallEComponent(Component):
     display_name = "DALL-E"
     description = "Generate Images with OpenAI DALL-E."
     name = "DallETool"
@@ -151,6 +152,9 @@ class DallEComponent(LCToolComponent):
         MultilineInput(
             name="prompt",
             display_name="Image Prompt",
+            required=True,
+            info="Image generation prompt to be given to the OpenAI DALL-E API",
+            tool_mode=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -184,6 +188,14 @@ class DallEComponent(LCToolComponent):
             display_name="Image Quality",
             options=DALL_E_PARAMS[DEFAULT_MODEL]["quality"],
             value=DALL_E_PARAMS[DEFAULT_MODEL]["quality"][0],
+        ),
+    ]
+
+    outputs = [
+        Output(
+            display_name="Data",
+            name="data",
+            method="run_model",
         ),
     ]
 
