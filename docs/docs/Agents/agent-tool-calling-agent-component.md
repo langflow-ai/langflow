@@ -149,7 +149,7 @@ Current Date and Time: I can retrieve the current date and time in various time 
 
 ## Make any component a tool
 
-If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs, and connect the new **Toolset** output to the agent's tools input.
+If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs, and connect the new **Toolset** output to the agent's **Tools** input.
 
 Langflow supports **Tool Mode** for the following data types:
 
