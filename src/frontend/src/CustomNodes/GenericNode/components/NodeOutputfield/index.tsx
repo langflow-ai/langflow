@@ -1,7 +1,8 @@
+import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { TextSearch } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import ForwardedIconComponent, {
   default as IconComponent,
@@ -14,6 +15,7 @@ import { NodeOutputFieldComponentType } from "../../../../types/components";
 import {
   getGroupOutputNodeId,
   scapedJSONStringfy,
+  scapeJSONParse,
 } from "../../../../utils/reactflowUtils";
 import {
   cn,
@@ -205,6 +207,18 @@ function NodeOutputField({
     [edges, id],
   );
 
+  const looping = useMemo(() => {
+    return edges.some((edge) => {
+      const targetHandleObject: targetHandleType = scapeJSONParse(
+        edge.targetHandle!,
+      );
+      return (
+        targetHandleObject.output_types &&
+        edge.sourceHandle === scapedJSONStringfy(id)
+      );
+    });
+  }, [edges, id]);
+
   const handleUpdateOutputHide = useCallback(
     (value?: boolean) => {
       setNode(data.id, (oldNode) => {
@@ -234,6 +248,41 @@ function NodeOutputField({
       handleUpdateOutputHide(false);
     }
   }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
+
+  const LoopHandle = useMemo(() => {
+    if (data.node?.outputs![index].allows_loop) {
+      return (
+        <HandleRenderComponent
+          left={true}
+          nodes={nodes}
+          tooltipTitle={tooltipTitle}
+          id={id}
+          title={title}
+          edges={edges}
+          nodeId={data.id}
+          myData={myData}
+          colors={colors}
+          setFilterEdge={setFilterEdge}
+          showNode={showNode}
+          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          colorName={colorName}
+        />
+      );
+    }
+  }, [
+    nodes,
+    tooltipTitle,
+    id,
+    title,
+    edges,
+    data.id,
+    myData,
+    colors,
+    setFilterEdge,
+    showNode,
+    data?.type,
+    colorName,
+  ]);
 
   const Handle = useMemo(
     () => (
@@ -280,8 +329,14 @@ function NodeOutputField({
         isToolMode && "bg-primary",
       )}
     >
+      {LoopHandle}
       <div className="flex w-full items-center justify-end truncate text-sm">
         <div className="flex flex-1">
+          {data.node?.outputs![index].allows_loop && (
+            <Badge variant="pinkStatic" size="xq" className="mr-2 px-1">
+              <ForwardedIconComponent name="Infinity" className="h-4 w-4" />
+            </Badge>
+          )}
           <HideShowButton
             disabled={disabledOutput}
             onClick={() => handleUpdateOutputHide()}
@@ -324,7 +379,7 @@ function NodeOutputField({
                 : "Please build the component first"
             }
           >
-            <div className="flex">
+            <div className="flex items-center gap-2">
               <OutputModal
                 disabled={!displayOutputPreview || unknownOutput}
                 nodeId={flowPoolId}
@@ -343,6 +398,11 @@ function NodeOutputField({
                   id={data?.type}
                 />
               </OutputModal>
+              {looping && (
+                <Badge variant="pinkStatic" size="xq" className="px-1">
+                  Looping
+                </Badge>
+              )}
             </div>
           </ShadTooltip>
         </div>
