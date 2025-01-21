@@ -950,7 +950,11 @@ class Component(CustomComponent):
         return result
 
     def _build_artifact(self, result):
-        custom_repr = self.custom_repr() or (result if isinstance(result, dict | Data | str) else str(result))
+        custom_repr = self.custom_repr()
+        if custom_repr is None and isinstance(result, dict | Data | str):
+            custom_repr = result
+        if not isinstance(custom_repr, str):
+            custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
         artifact_type = get_artifact_type(self.status or raw, result)
