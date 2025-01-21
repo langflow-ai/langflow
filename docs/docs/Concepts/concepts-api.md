@@ -82,7 +82,7 @@ Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read belo
 To embed the chat widget into any HTML page, insert the code snippet. inside a `<body>` tag.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.6/dist/build/static/js/bundle.min.js""></script>
+<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js""></script>
 
   <langflow-chat
     window_title="Basic Prompting"
