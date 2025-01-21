@@ -9,9 +9,7 @@ from langflow.base.models.model_input_constants import (
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
-from langflow.components.langchain_utilities.tool_calling import (
-    ToolCallingAgentComponent,
-)
+from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from langflow.custom.utils import update_component_build_config
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.logging import logger
@@ -121,6 +119,8 @@ class AgentComponent(ToolCallingAgentComponent):
         memory_kwargs = {
             component_input.name: getattr(self, f"{component_input.name}") for component_input in self.memory_inputs
         }
+        # filter out empty values
+        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
 
         return await MemoryComponent().set(**memory_kwargs).retrieve_messages()
 
@@ -177,13 +177,14 @@ class AgentComponent(ToolCallingAgentComponent):
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name in ("agent_llm",):
+            build_config["agent_llm"]["value"] = field_value
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
             if provider_info:
                 component_class = provider_info.get("component_class")
                 if component_class and hasattr(component_class, "update_build_config"):
                     # Call the component class's update_build_config method
                     build_config = await update_component_build_config(
-                        component_class, build_config, field_value, field_name
+                        component_class, build_config, field_value, "model_name"
                     )
 
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
@@ -261,6 +262,6 @@ class AgentComponent(ToolCallingAgentComponent):
                     if isinstance(field_name, str) and isinstance(prefix, str):
                         field_name = field_name.replace(prefix, "")
                     build_config = await update_component_build_config(
-                        component_class, build_config, field_value, field_name
+                        component_class, build_config, field_value, "model_name"
                     )
-        return build_config
+        return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})

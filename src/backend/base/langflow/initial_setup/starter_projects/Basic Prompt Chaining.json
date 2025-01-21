@@ -222,6 +222,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
@@ -349,6 +350,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "message_response",
@@ -638,6 +640,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "message_response",
@@ -909,6 +912,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
@@ -1041,8 +1045,9 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -1053,6 +1058,7 @@
                 "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
                 "method": "build_model",
@@ -1353,8 +1359,9 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -1365,6 +1372,7 @@
                 "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
                 "method": "build_model",
@@ -1654,6 +1662,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
@@ -1852,8 +1861,9 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -1864,6 +1874,7 @@
                 "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
                 "method": "build_model",

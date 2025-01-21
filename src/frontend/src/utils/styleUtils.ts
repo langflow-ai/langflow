@@ -109,6 +109,7 @@ import {
   HelpCircle,
   Home,
   Image,
+  Infinity,
   Info,
   InstagramIcon,
   Key,
@@ -536,6 +537,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
+  { display_name: "Youtube", name: "youtube", icon: "Youtube" },
 ];
 
 export const categoryIcons = {
@@ -867,6 +869,7 @@ export const nodeIconsLucide: iconsType = {
   Share2,
   Share,
   GitBranchPlus,
+  Infinity,
   Loader2,
   BookmarkPlus,
   Heart,
