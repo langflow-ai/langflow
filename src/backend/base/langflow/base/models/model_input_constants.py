@@ -28,13 +28,36 @@ def process_inputs(component_data):
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
-    elif component_data.name == "temperature":
+    elif component_data.name in {"temperature", "tool_model_enabled", "base_url"}:
         component_data = set_advanced_true(component_data)
+    elif component_data.name == "model_name":
+        component_data = set_real_time_refresh_false(component_data)
+        component_data = add_combobox_true(component_data)
+        component_data = add_info(
+            component_data,
+            "To see the model names, first choose a provider. Then, enter your API key and click the refresh button "
+            "next to the model name.",
+        )
     return component_data
 
 
 def set_advanced_true(component_input):
     component_input.advanced = True
+    return component_input
+
+
+def set_real_time_refresh_false(component_input):
+    component_input.real_time_refresh = False
+    return component_input
+
+
+def add_info(component_input, info_str: str):
+    component_input.info = info_str
+    return component_input
+
+
+def add_combobox_true(component_input):
+    component_input.combobox = True
     return component_input
 
 
@@ -180,3 +203,11 @@ except ImportError:
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
+
+MODEL_DYNAMIC_UPDATE_FIELDS = [
+    "api_key",
+    "model",
+    "tool_model_enabled",
+    "base_url",
+    "model_name",
+]

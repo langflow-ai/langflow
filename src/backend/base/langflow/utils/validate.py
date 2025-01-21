@@ -313,7 +313,6 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
 
         return exec_globals[class_name]
 
-    build_custom_class.__globals__.update(exec_globals)
     return build_custom_class()
 
 
