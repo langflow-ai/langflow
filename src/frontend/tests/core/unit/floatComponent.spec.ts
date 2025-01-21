@@ -13,77 +13,49 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("ollama");
+    await page.getByTestId("sidebar-search-input").fill("nvidia");
 
-    await page.waitForSelector('[data-testid="modelsOllama"]', {
+    await page.waitForSelector('[data-testid="modelsNVIDIA"]', {
       timeout: 30000,
     });
 
     await page
-      .getByTestId("modelsOllama")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
-    await adjustScreenView(page);
+      .getByTestId("modelsNVIDIA")
+      .hover()
+      .then(async () => {
+        await page.getByTestId("add-component-button-nvidia").click();
+      });
 
-    await page.locator('//*[@id="float_float_temperature"]').click();
-    await page.locator('//*[@id="float_float_temperature"]').fill("");
-    await page.locator('//*[@id="float_float_temperature"]').fill("3");
+    await page.getByTestId("title-NVIDIA").click();
 
-    let value = await page
-      .locator('//*[@id="float_float_temperature"]')
-      .inputValue();
+    await page.getByTestId("edit-button-modal").click();
 
-    expect(value).toBe("2");
+    await page.getByTestId("showseed").click();
 
-    await page.locator('//*[@id="float_float_temperature"]').click();
-    await page.locator('//*[@id="float_float_temperature"]').fill("");
-    await page.locator('//*[@id="float_float_temperature"]').fill("-3");
+    await page.getByText("Close").last().click();
 
-    value = await page
-      .locator('//*[@id="float_float_temperature"]')
-      .inputValue();
+    await page.locator('//*[@id="int_int_seed"]').click();
+    await page.locator('//*[@id="int_int_seed"]').fill("");
+    await page.locator('//*[@id="int_int_seed"]').fill("3");
 
-    expect(value).toBe("-2");
+    let value = await page.locator('//*[@id="int_int_seed"]').inputValue();
+
+    expect(value).toBe("3");
+
+    await page.locator('//*[@id="int_int_seed"]').click();
+    await page.locator('//*[@id="int_int_seed"]').fill("");
+    await page.locator('//*[@id="int_int_seed"]').fill("-3");
+
+    value = await page.locator('//*[@id="int_int_seed"]').inputValue();
+
+    expect(value).toBe("-3");
 
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("advanced-button-modal").click();
 
-    await page.getByTestId("showmirostat_eta").click();
-    expect(
-      await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.getByTestId("showmirostat_eta").click();
-    expect(
-      await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
-    ).toBeFalsy();
-
-    await page.getByTestId("showmirostat_eta").click();
-    expect(
-      await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.getByTestId("showmirostat_eta").click();
-    expect(
-      await page.locator('//*[@id="showmirostat_eta"]').isChecked(),
-    ).toBeFalsy();
-
-    await page.getByTestId("showmirostat_tau").click();
-    expect(
-      await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
-    ).toBeTruthy();
-
-    await page.getByTestId("showmirostat_tau").click();
-    expect(
-      await page.locator('//*[@id="showmirostat_tau"]').isChecked(),
-    ).toBeFalsy();
-
     await page.getByText("Close").last().click();
 
-    const plusButtonLocator = page.locator(
-      '//*[@id="float_float_temperature"]',
-    );
+    const plusButtonLocator = page.locator('//*[@id="int_int_edit_seed"]');
     const elementCount = await plusButtonLocator?.count();
     if (elementCount === 0) {
       expect(true).toBeTruthy();
@@ -91,34 +63,24 @@ test(
       await page.getByTestId("more-options-modal").click();
       await page.getByTestId("advanced-button-modal").click();
 
-      // showtemperature
-      await page.locator('//*[@id="showtemperature"]').click();
-      expect(
-        await page.locator('//*[@id="showtemperature"]').isChecked(),
-      ).toBeTruthy();
-
       await page.getByText("Close").last().click();
-      await page.locator('//*[@id="float_float_temperature"]').click();
-      await page.getByTestId("float_float_temperature").fill("");
+      await page.locator('//*[@id="int_int_seed"]').click();
+      await page.getByTestId("int_int_seed").fill("");
 
-      await page.locator('//*[@id="float_float_temperature"]').fill("3");
+      await page.locator('//*[@id="int_int_seed"]').fill("3");
 
-      let value = await page
-        .locator('//*[@id="float_float_temperature"]')
-        .inputValue();
+      let value = await page.locator('//*[@id="int_int_seed"]').inputValue();
 
-      expect(value).toBe("1");
+      expect(value).toBe("3");
 
-      await page.locator('//*[@id="float_float_temperature"]').click();
-      await page.getByTestId("float_float_temperature").fill("");
+      await page.locator('//*[@id="int_int_seed"]').click();
+      await page.getByTestId("int_int_seed").fill("");
 
-      await page.locator('//*[@id="float_float_temperature"]').fill("-3");
+      await page.locator('//*[@id="int_int_seed"]').fill("-3");
 
-      value = await page
-        .locator('//*[@id="float_float_temperature"]')
-        .inputValue();
+      value = await page.locator('//*[@id="int_int_seed"]').inputValue();
 
-      expect(value).toBe("-1");
+      expect(value).toBe("-3");
     }
   },
 );

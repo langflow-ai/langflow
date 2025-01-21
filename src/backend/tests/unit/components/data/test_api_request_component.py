@@ -34,8 +34,8 @@ def test_parse_curl(api_request):
     # Assert
     assert new_build_config["method"]["value"] == "GET"
     assert new_build_config["urls"]["value"] == ["https://example.com/api/test"]
-    assert new_build_config["headers"]["value"] == {"Content-Type": "application/json"}
-    assert new_build_config["body"]["value"] == {"key": "value"}
+    assert new_build_config["headers"]["value"] == [{"key": "Content-Type", "value": "application/json"}]
+    assert new_build_config["body"]["value"] == [{"key": "key", "value": "value"}]
 
 
 # HTTPx Metadata testing
