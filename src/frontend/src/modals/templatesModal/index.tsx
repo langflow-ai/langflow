@@ -34,6 +34,16 @@ export default function TemplatesModal({
     {
       title: "Use Cases",
       items: [
+        { title: "All Telco", icon: "Totogi", id: "telco_ontology" },
+        { title: "Network Management", icon: "Totogi", id: "telco_network_management" },
+        { title: "Order Management", icon: "Totogi", id: "telco_order_management" },
+        { title: "Product Management", icon: "Totogi", id: "telco_product_management" },
+        { title: "Resource Management", icon: "Totogi", id: "telco_resource_management" },
+        { title: "Revenue Management", icon: "Totogi", id: "telco_revenue_management" },
+        { title: "Revenue Assurance", icon: "Totogi", id: "telco_revenue_assurance" },
+        { title: "Service Assurance", icon: "Totogi", id: "telco_service_assurance" },
+        { title: "Service Fulfillment", icon: "Totogi", id: "telco_service_fulfillment" },
+        { title: "Customer Relationship Management", icon: "Totogi", id: "telco_crm" },
         { title: "Assistants", icon: "BotMessageSquare", id: "assistants" },
         { title: "Classification", icon: "Tags", id: "classification" },
         { title: "Coding", icon: "TerminalIcon", id: "coding" },
