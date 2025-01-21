@@ -1,3 +1,4 @@
+import inspect
 from typing import Any
 from unittest.mock import Mock
 from uuid import uuid4
@@ -55,7 +56,8 @@ class ComponentTestBase:
         mock_vertex.graph = Mock(spec=Graph)
         mock_vertex.graph.session_id = str(uuid4())
         mock_vertex.graph.flow_id = str(uuid4())
-        component_instance = component_class(**default_kwargs)
+        source_code = inspect.getsource(component_class)
+        component_instance = component_class(_code=source_code, **default_kwargs)
         component_instance._vertex = mock_vertex
         return component_instance
 
