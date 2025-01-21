@@ -33,7 +33,7 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 
 1. From the Langflow dashboard, click **New Flow**.
 2. Select **Vector Store RAG**.
-3. The **Vector Store RAG** flowis created.
+3. The **Vector Store RAG** flow is created.
 
 ![](/img/starter-flow-vector-rag.png)
 

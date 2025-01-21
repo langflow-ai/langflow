@@ -41,7 +41,10 @@ test(
           "built successfully",
         ) ?? false;
 
-      await page.getByTestId("output-inspection-data").first().click();
+      await page
+        .getByTestId("output-inspection-data-duckduckgosearch")
+        .first()
+        .click();
 
       if (isBuiltSuccessfully) {
         await page.getByRole("gridcell").first().click();
