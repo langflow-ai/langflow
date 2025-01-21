@@ -1,6 +1,11 @@
 from typing import Any
+from unittest.mock import Mock
+from uuid import uuid4
 
 import pytest
+from langflow.custom.custom_component.component import Component
+from langflow.graph.graph.base import Graph
+from langflow.graph.vertex.base import Vertex
 from typing_extensions import TypedDict
 
 from tests.constants import SUPPORTED_VERSIONS
@@ -45,9 +50,19 @@ class ComponentTestBase:
         msg = f"{self.__class__.__name__} must implement the file_names_mapping fixture"
         raise NotImplementedError(msg)
 
+    def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
+        mock_vertex = Mock(spec=Vertex)
+        mock_vertex.graph = Mock(spec=Graph)
+        mock_vertex.graph.session_id = str(uuid4())
+        mock_vertex.graph.flow_id = str(uuid4())
+        component_instance = component_class(**default_kwargs)
+        component_instance._vertex = mock_vertex
+        return component_instance
+
     def test_latest_version(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> None:
         """Test that the component works with the latest version."""
-        result = component_class(**default_kwargs)()
+        component_instance = self.component_setup(component_class, default_kwargs)
+        result = component_instance()
         assert result is not None, "Component returned None for the latest version."
 
     def test_all_versions_have_a_file_name_defined(self, file_names_mapping: list[VersionComponentMapping]) -> None:
