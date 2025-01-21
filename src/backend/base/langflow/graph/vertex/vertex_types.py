@@ -97,11 +97,14 @@ class ComponentVertex(Vertex):
         """
         flow_id = self.graph.flow_id
         if not self.built:
-            default_value = UNDEFINED
+            default_value: Any = UNDEFINED
             for edge in self.get_edge_with_target(requester.id):
                 # We need to check if the edge is a normal edge
                 if edge.is_cycle and edge.target_param:
-                    default_value = requester.get_value_from_template_dict(edge.target_param)
+                    if edge.target_param in requester.output_names:
+                        default_value = None
+                    else:
+                        default_value = requester.get_value_from_template_dict(edge.target_param)
 
             if flow_id:
                 self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
