@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-KiwSm",
+            "id": "TextInput-0rzBn",
             "name": "text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "guidelines",
-            "id": "Prompt-z6Dtw",
+            "id": "Prompt-j3woL",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,11 +23,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextInput-KiwSm{œdataTypeœ:œTextInputœ,œidœ:œTextInput-KiwSmœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-z6Dtw{œfieldNameœ:œguidelinesœ,œidœ:œPrompt-z6Dtwœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-KiwSm",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-KiwSmœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-z6Dtw",
-        "targetHandle": "{œfieldNameœ: œguidelinesœ, œidœ: œPrompt-z6Dtwœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TextInput-0rzBn{œdataTypeœ:œTextInputœ,œidœ:œTextInput-0rzBnœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-j3woL{œfieldNameœ:œguidelinesœ,œidœ:œPrompt-j3woLœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-0rzBn",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-0rzBnœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-j3woL",
+        "targetHandle": "{œfieldNameœ: œguidelinesœ, œidœ: œPrompt-j3woLœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-xATVJ",
+            "id": "OpenAIModel-jxXfH",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "post",
-            "id": "Prompt-8vh0B",
+            "id": "Prompt-lqX5p",
             "inputTypes": [
               "Message",
               "Text"
@@ -51,11 +51,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-xATVJ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-xATVJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-8vh0B{œfieldNameœ:œpostœ,œidœ:œPrompt-8vh0Bœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-xATVJ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-xATVJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-8vh0B",
-        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-8vh0Bœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-jxXfH{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-jxXfHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-lqX5p{œfieldNameœ:œpostœ,œidœ:œPrompt-lqX5pœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-jxXfH",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-jxXfHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-lqX5p",
+        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-lqX5pœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-z6Dtw",
+            "id": "Prompt-j3woL",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -71,18 +71,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-xATVJ",
+            "id": "OpenAIModel-jxXfH",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-z6Dtw{œdataTypeœ:œPromptœ,œidœ:œPrompt-z6Dtwœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-xATVJ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-xATVJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-z6Dtw",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-z6Dtwœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-xATVJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-xATVJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-j3woL{œdataTypeœ:œPromptœ,œidœ:œPrompt-j3woLœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-jxXfH{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-jxXfHœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-j3woL",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-j3woLœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-jxXfH",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-jxXfHœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -90,7 +90,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Nk5P9",
+            "id": "ChatInput-pvWq5",
             "name": "message",
             "output_types": [
               "Message"
@@ -98,18 +98,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-IcxoG",
+            "id": "Agent-TG1G2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Nk5P9{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nk5P9œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-IcxoG{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IcxoGœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-Nk5P9",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Nk5P9œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-IcxoG",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-IcxoGœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-pvWq5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-pvWq5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-TG1G2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-TG1G2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-pvWq5",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-pvWq5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-TG1G2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-TG1G2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -117,7 +117,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-IcxoG",
+            "id": "Agent-TG1G2",
             "name": "response",
             "output_types": [
               "Message"
@@ -125,7 +125,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-z6Dtw",
+            "id": "Prompt-j3woL",
             "inputTypes": [
               "Message",
               "Text"
@@ -133,11 +133,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-IcxoG{œdataTypeœ:œAgentœ,œidœ:œAgent-IcxoGœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-z6Dtw{œfieldNameœ:œcontextœ,œidœ:œPrompt-z6Dtwœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-IcxoG",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-IcxoGœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-z6Dtw",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-z6Dtwœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-TG1G2{œdataTypeœ:œAgentœ,œidœ:œAgent-TG1G2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-j3woL{œfieldNameœ:œcontextœ,œidœ:œPrompt-j3woLœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Agent-TG1G2",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-TG1G2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-j3woL",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-j3woLœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -145,7 +145,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-8vh0B",
+            "id": "Prompt-lqX5p",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -153,18 +153,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-z4zkm",
+            "id": "OpenAIModel-Sef2w",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-8vh0B{œdataTypeœ:œPromptœ,œidœ:œPrompt-8vh0Bœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-z4zkm{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-z4zkmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-8vh0B",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-8vh0Bœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-z4zkm",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-z4zkmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-lqX5p{œdataTypeœ:œPromptœ,œidœ:œPrompt-lqX5pœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Sef2w{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Sef2wœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-lqX5p",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-lqX5pœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-Sef2w",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-Sef2wœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -172,7 +172,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-xATVJ",
+            "id": "OpenAIModel-jxXfH",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -180,7 +180,7 @@
           },
           "targetHandle": {
             "fieldName": "post",
-            "id": "Prompt-TzIMq",
+            "id": "Prompt-R2EK8",
             "inputTypes": [
               "Message",
               "Text"
@@ -188,11 +188,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-xATVJ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-xATVJœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-TzIMq{œfieldNameœ:œpostœ,œidœ:œPrompt-TzIMqœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-xATVJ",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-xATVJœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-TzIMq",
-        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-TzIMqœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-jxXfH{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-jxXfHœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-R2EK8{œfieldNameœ:œpostœ,œidœ:œPrompt-R2EK8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-jxXfH",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-jxXfHœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-R2EK8",
+        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-R2EK8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": true,
@@ -200,7 +200,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-z4zkm",
+            "id": "OpenAIModel-Sef2w",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -208,7 +208,7 @@
           },
           "targetHandle": {
             "fieldName": "image_description",
-            "id": "Prompt-TzIMq",
+            "id": "Prompt-R2EK8",
             "inputTypes": [
               "Message",
               "Text"
@@ -216,11 +216,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-z4zkm{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-z4zkmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-TzIMq{œfieldNameœ:œimage_descriptionœ,œidœ:œPrompt-TzIMqœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-z4zkm",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-z4zkmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-TzIMq",
-        "targetHandle": "{œfieldNameœ: œimage_descriptionœ, œidœ: œPrompt-TzIMqœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-Sef2w{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Sef2wœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-R2EK8{œfieldNameœ:œimage_descriptionœ,œidœ:œPrompt-R2EK8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-Sef2w",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Sef2wœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-R2EK8",
+        "targetHandle": "{œfieldNameœ: œimage_descriptionœ, œidœ: œPrompt-R2EK8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -228,7 +228,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-TzIMq",
+            "id": "Prompt-R2EK8",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -236,24 +236,24 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XWD0l",
+            "id": "ChatOutput-CnabR",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-TzIMq{œdataTypeœ:œPromptœ,œidœ:œPrompt-TzIMqœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XWD0l{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XWD0lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-TzIMq",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-TzIMqœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XWD0l",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XWD0lœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-R2EK8{œdataTypeœ:œPromptœ,œidœ:œPrompt-R2EK8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-CnabR{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CnabRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-R2EK8",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-R2EK8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-CnabR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-CnabRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-cw2iI",
+            "id": "TavilySearchComponent-xQwoJ",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -261,24 +261,24 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-IcxoG",
+            "id": "Agent-TG1G2",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__TavilySearchComponent-cw2iI{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-cw2iIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IcxoG{œfieldNameœ:œtoolsœ,œidœ:œAgent-IcxoGœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-cw2iI",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-cw2iIœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-IcxoG",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-IcxoGœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__TavilySearchComponent-xQwoJ{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-xQwoJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-TG1G2{œfieldNameœ:œtoolsœ,œidœ:œAgent-TG1G2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-xQwoJ",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-xQwoJœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-TG1G2",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-TG1G2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-Nk5P9",
+          "id": "ChatInput-pvWq5",
           "node": {
             "base_classes": [
               "Message"
@@ -309,6 +309,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "message_response",
@@ -550,7 +551,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-Nk5P9",
+        "id": "ChatInput-pvWq5",
         "measured": {
           "height": 234,
           "width": 320
@@ -571,7 +572,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-z6Dtw",
+          "id": "Prompt-j3woL",
           "node": {
             "base_classes": [
               "Message"
@@ -599,6 +600,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
@@ -724,7 +726,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-z6Dtw",
+        "id": "Prompt-j3woL",
         "measured": {
           "height": 433,
           "width": 320
@@ -743,7 +745,7 @@
       },
       {
         "data": {
-          "id": "TextInput-KiwSm",
+          "id": "TextInput-0rzBn",
           "node": {
             "base_classes": [
               "Message"
@@ -766,8 +768,9 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
                 "name": "text",
                 "selected": "Message",
@@ -796,7 +799,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        return Message(\n            text=self.input_value,\n        )\n"
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get text inputs from the Playground.\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        return Message(\n            text=self.input_value,\n        )\n"
               },
               "input_value": {
                 "_input_type": "MultilineInput",
@@ -826,7 +829,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-KiwSm",
+        "id": "TextInput-0rzBn",
         "measured": {
           "height": 234,
           "width": 320
@@ -847,7 +850,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-xATVJ",
+          "id": "OpenAIModel-jxXfH",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -883,8 +886,9 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -895,6 +899,7 @@
                 "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
                 "method": "build_model",
@@ -1117,7 +1122,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "langflow"
               },
               "temperature": {
                 "_input_type": "FloatInput",
@@ -1142,7 +1147,7 @@
         },
         "dragging": false,
         "height": 543,
-        "id": "OpenAIModel-xATVJ",
+        "id": "OpenAIModel-jxXfH",
         "measured": {
           "height": 543,
           "width": 320
@@ -1163,7 +1168,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-8vh0B",
+          "id": "Prompt-lqX5p",
           "node": {
             "base_classes": [
               "Message"
@@ -1190,6 +1195,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
@@ -1292,7 +1298,7 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-8vh0B",
+        "id": "Prompt-lqX5p",
         "measured": {
           "height": 347,
           "width": 320
@@ -1313,7 +1319,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-XWD0l",
+          "id": "ChatOutput-CnabR",
           "node": {
             "base_classes": [
               "Message"
@@ -1343,6 +1349,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
                 "method": "message_response",
@@ -1572,7 +1579,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-XWD0l",
+        "id": "ChatOutput-CnabR",
         "measured": {
           "height": 234,
           "width": 320
@@ -1593,7 +1600,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-IcxoG",
+          "id": "Agent-TG1G2",
           "node": {
             "base_classes": [
               "Message"
@@ -1640,6 +1647,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
                 "method": "message_response",
@@ -1756,7 +1764,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import (\n    ToolCallingAgentComponent,\n)\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n        except Exception as e:\n            # Log the error for debugging purposes\n            logger.error(f\"Error retrieving language model: {e}\")\n            raise\n\n        try:\n            self.chat_history = await self.get_memory_data()\n        except Exception as e:\n            logger.error(f\"Error retrieving chat history: {e}\")\n            raise\n\n        if self.add_current_date_tool:\n            try:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                # Convert CurrentDateComponent to a StructuredTool\n                current_date_tool = (await CurrentDateComponent().to_toolkit()).pop(0)\n                # current_date_tool = CurrentDateComponent().to_toolkit()[0]\n                if isinstance(current_date_tool, StructuredTool):\n                    self.tools.append(current_date_tool)\n                else:\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n            except Exception as e:\n                logger.error(f\"Error adding current date tool: {e}\")\n                raise\n\n        if not self.tools:\n            msg = \"Tools are required to run the agent.\"\n            logger.error(msg)\n            raise ValueError(msg)\n\n        try:\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n        except Exception as e:\n            logger.error(f\"Error setting up the agent: {e}\")\n            raise\n\n        return await self.run_agent(agent)\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n\n        return await MemoryComponent().set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if isinstance(self.agent_llm, str):\n            try:\n                provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n                if provider_info:\n                    component_class = provider_info.get(\"component_class\")\n                    display_name = component_class.display_name\n                    inputs = provider_info.get(\"inputs\")\n                    prefix = provider_info.get(\"prefix\", \"\")\n                    return (\n                        self._build_llm_model(component_class, inputs, prefix),\n                        display_name,\n                    )\n            except Exception as e:\n                msg = f\"Error building {self.agent_llm} language model\"\n                raise ValueError(msg) from e\n        return self.agent_llm, None\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, field_name\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, field_name\n                    )\n        return build_config\n"
+                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n        except Exception as e:\n            # Log the error for debugging purposes\n            logger.error(f\"Error retrieving language model: {e}\")\n            raise\n\n        try:\n            self.chat_history = await self.get_memory_data()\n        except Exception as e:\n            logger.error(f\"Error retrieving chat history: {e}\")\n            raise\n\n        if self.add_current_date_tool:\n            try:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                # Convert CurrentDateComponent to a StructuredTool\n                current_date_tool = (await CurrentDateComponent().to_toolkit()).pop(0)\n                # current_date_tool = CurrentDateComponent().to_toolkit()[0]\n                if isinstance(current_date_tool, StructuredTool):\n                    self.tools.append(current_date_tool)\n                else:\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n            except Exception as e:\n                logger.error(f\"Error adding current date tool: {e}\")\n                raise\n\n        if not self.tools:\n            msg = \"Tools are required to run the agent.\"\n            logger.error(msg)\n            raise ValueError(msg)\n\n        try:\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n        except Exception as e:\n            logger.error(f\"Error setting up the agent: {e}\")\n            raise\n\n        return await self.run_agent(agent)\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}\n\n        return await MemoryComponent().set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if isinstance(self.agent_llm, str):\n            try:\n                provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n                if provider_info:\n                    component_class = provider_info.get(\"component_class\")\n                    display_name = component_class.display_name\n                    inputs = provider_info.get(\"inputs\")\n                    prefix = provider_info.get(\"prefix\", \"\")\n                    return (\n                        self._build_llm_model(component_class, inputs, prefix),\n                        display_name,\n                    )\n            except Exception as e:\n                msg = f\"Error building {self.agent_llm} language model\"\n                raise ValueError(msg) from e\n        return self.agent_llm, None\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n"
               },
               "handle_parsing_errors": {
                 "_input_type": "BoolInput",
@@ -1888,10 +1896,10 @@
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
-                "combobox": false,
+                "combobox": true,
                 "display_name": "Model Name",
                 "dynamic": false,
-                "info": "",
+                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
                 "name": "model_name",
                 "options": [
                   "gpt-4o-mini",
@@ -2151,7 +2159,7 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-IcxoG",
+        "id": "Agent-TG1G2",
         "measured": {
           "height": 650,
           "width": 320
@@ -2172,7 +2180,7 @@
         "data": {
           "description": "Generates text using OpenAI LLMs.",
           "display_name": "OpenAI",
-          "id": "OpenAIModel-z4zkm",
+          "id": "OpenAIModel-Sef2w",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2208,8 +2216,9 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
-                "display_name": "Text",
+                "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
                 "required_inputs": [],
@@ -2220,6 +2229,7 @@
                 "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Language Model",
                 "method": "build_model",
@@ -2467,7 +2477,7 @@
         },
         "dragging": false,
         "height": 543,
-        "id": "OpenAIModel-z4zkm",
+        "id": "OpenAIModel-Sef2w",
         "measured": {
           "height": 543,
           "width": 320
@@ -2488,7 +2498,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-TzIMq",
+          "id": "Prompt-R2EK8",
           "node": {
             "base_classes": [
               "Message"
@@ -2516,6 +2526,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Prompt Message",
                 "method": "build_prompt",
@@ -2641,7 +2652,7 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-TzIMq",
+        "id": "Prompt-R2EK8",
         "measured": {
           "height": 433,
           "width": 320
@@ -2660,7 +2671,7 @@
       },
       {
         "data": {
-          "id": "note-WE2lo",
+          "id": "note-eNaIw",
           "node": {
             "description": "# Instagram Copywriter \n\nWelcome to the Instagram Copywriter! This flow helps you create compelling Instagram posts with AI-generated content and image prompts.\n\n## Instructions\n1. Enter Your Topic\n   - In the Chat Input, enter a brief description of the topic you want to post about.\n   - Example: \"Create a post about meditation and its benefits\"\n\n2. Review the Generated Content\n   - The flow will use AI to research your topic and generate a formatted Instagram post.\n   - The post will include an opening line, main content, emojis, a call-to-action, and hashtags.\n\n3. Check the Image Prompt\n   - The flow will also generate a detailed image prompt based on your post content.\n   - This prompt can be used with image generation tools to create a matching visual.\n\n4. Copy the Final Output\n   - The Chat Output will display the complete Instagram post text followed by the image generation prompt.\n   - Copy this output to use in your Instagram content creation process.\n\n5. Refine if Needed\n   - If you're not satisfied with the result, you can adjust the input or modify the OpenAI model settings for different outputs.\n\nRemember: Keep your initial topic input clear and concise for best results! 🎨✨",
             "display_name": "",
@@ -2673,7 +2684,7 @@
         },
         "dragging": false,
         "height": 648,
-        "id": "note-WE2lo",
+        "id": "note-eNaIw",
         "measured": {
           "height": 648,
           "width": 325
@@ -2697,7 +2708,7 @@
       },
       {
         "data": {
-          "id": "note-f8PDT",
+          "id": "note-HWvzc",
           "node": {
             "description": "**Text Input (Guidelines Prompt)**\n   - NOTE: \"Contains Instagram post formatting rules. Don't modify this component as it maintains format consistency.\"\n   - Maintains fixed guidelines for:\n     * Opening structure\n     * Main content\n     * Emoji usage\n     * Call to Action (CTA)\n     * Hashtags\n\n4. **First Prompt + OpenAI Sequence**\n   - NOTE: \"Generates initial post content following Instagram guidelines\"\n   - Settings:\n     * Temperature: 0.7 (good balance between creativity and consistency)\n     * Input: Receives research context\n     * Output: Generates formatted post text\n\n",
             "display_name": "",
@@ -2710,7 +2721,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-f8PDT",
+        "id": "note-HWvzc",
         "measured": {
           "height": 325,
           "width": 325
@@ -2730,7 +2741,7 @@
       },
       {
         "data": {
-          "id": "note-5ion3",
+          "id": "note-A4SZx",
           "node": {
             "description": "**Second Prompt + OpenAI Sequence**\n   - NOTE: \"Transforms the generated post into a prompt for image generation\"\n   - Settings:\n     * Temperature: 0.7\n     * Input: Receives generated post\n     * Output: Creates detailed description for image generation\n\n",
             "display_name": "",
@@ -2743,7 +2754,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-5ion3",
+        "id": "note-A4SZx",
         "measured": {
           "height": 325,
           "width": 325
@@ -2762,7 +2773,7 @@
       },
       {
         "data": {
-          "id": "note-9U9ap",
+          "id": "note-RKey4",
           "node": {
             "description": "**Final Prompt**\n   - NOTE: \"Combines Instagram post with image prompt in a final format\"\n   - Structure:\n     * First part: Complete Instagram post\n     * Second part: Image generation prompt\n     * Separator: Uses \"**Prompt:**\" to divide sections\n\n7. **Chat Output (Final Output)**\n   - NOTE: \"Presents the combined final result that can be copied and used directly\"\n\nGENERAL USAGE TIPS:\n- Keep initial inputs clear and specific\n- Don't modify pre-defined Instagram guidelines\n- If style adjustments are needed, only modify the OpenAI models' temperature\n- Verify all connections are correct before running\n- Final result will always have two parts: post + image prompt\n\nFLOW CONSIDERATIONS:\n- All tools connect only to the Tool Calling Agent\n- The flow is unidirectional (no loops)\n- Each prompt template maintains specific formatting\n- Temperatures are set for optimal creativity/consistency balance\n\nTROUBLESHOOTING NOTES:\n- If output is too creative: Lower temperature",
             "display_name": "",
@@ -2775,7 +2786,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-9U9ap",
+        "id": "note-RKey4",
         "measured": {
           "height": 325,
           "width": 325
@@ -2794,7 +2805,7 @@
       },
       {
         "data": {
-          "id": "note-xpbyx",
+          "id": "note-sMyWp",
           "node": {
             "description": "# 🔑 Tavily AI Search Needs API Key\n\nYou can get 1000 searches/month free [here](https://tavily.com/) ",
             "display_name": "",
@@ -2807,7 +2818,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-xpbyx",
+        "id": "note-sMyWp",
         "measured": {
           "height": 325,
           "width": 325
@@ -2826,7 +2837,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-cw2iI",
+          "id": "TavilySearchComponent-xQwoJ",
           "node": {
             "base_classes": [
               "Data",
@@ -3076,17 +3087,6 @@
                       "name": "tags",
                       "sortable": false,
                       "type": "text"
-                    },
-                    {
-                      "description": "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. You can add multiple commands separated by a comma.\nExample: `/command1`, `/command2`, `/command3`",
-                      "disable_edit": false,
-                      "display_name": "Commands",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "commands",
-                      "sortable": false,
-                      "type": "text"
                     }
                   ]
                 },
@@ -3134,15 +3134,16 @@
                 "type": "str",
                 "value": "general"
               }
-            }
+            },
+            "tool_mode": true
           },
           "showNode": true,
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-cw2iI",
+        "id": "TavilySearchComponent-xQwoJ",
         "measured": {
-          "height": 437,
+          "height": 435,
           "width": 320
         },
         "position": {
@@ -3154,9 +3155,9 @@
       }
     ],
     "viewport": {
-      "x": -2990.3235424557174,
-      "y": -1714.4878057543951,
-      "zoom": 0.6101920834254135
+      "x": -1462.1369874897664,
+      "y": -557.4373796474765,
+      "zoom": 0.33990357996173937
     }
   },
   "description": " Create engaging Instagram posts with AI-generated content and image prompts, streamlining social media content creation.",
