@@ -17,7 +17,7 @@ from langflow.schema import Data
 class ApifyRunActorComponent(LCToolComponent):
     display_name = "Apify Actors"
     description = (
-        "Use Apify Actors to extract data from hundreds of places fast."
+        "Use Apify Actors to extract data from hundreds of places fast. "
         "This component can be used in a flow to retrieve data or as a tool with an agent."
     )
     documentation: str = "http://docs.langflow.org/integrations-apify"
@@ -55,7 +55,7 @@ class ApifyRunActorComponent(LCToolComponent):
             display_name="Output fields",
             info=(
                 "Fields to extract from the dataset, split by commas. "
-                "Other fields will be ignored. Dots in nested structure will be replaced by undescrore. "
+                "Other fields will be ignored. Dots in nested structure will be replaced by underscore. "
                 "Sample input: 'field1, metadata.field2'. "
                 "Sample output: {'field1': 1, 'metadata_field2': 2}. "
                 "For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, "
@@ -68,7 +68,7 @@ class ApifyRunActorComponent(LCToolComponent):
             info=(
                 "The output dataset will be converted from a nested format to a flat structure. "
                 "Dot in nested structure will be replaced by underscore. "
-                "This is useful for further processing the of the Data object. "
+                "This is useful for further processing of the Data object. "
                 "For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}."
             ),
         ),
@@ -132,7 +132,7 @@ class ApifyRunActorComponent(LCToolComponent):
 
             name: str = f"apify_actor_{ApifyRunActorComponent.toolify_actor_id_str(actor_id)}"
             description: str = (
-                "Run an Apify Actor with the given input."
+                "Run an Apify Actor with the given input. "
                 "Here is part of the currently loaded Actor README:\n\n"
                 f"{readme}\n\n"
             )

@@ -73,7 +73,7 @@ Extract business data from Google Maps, including addresses, contact info, openi
 
 ### TikTok Data Extractor
 **Actor ID:** `clockworks/free-tiktok-scraper`
-Extract data about videos, users, and channels based on hashtags or scrape full user profiles including posts, total likes, name, nickname, numbers of comments, shares, followers, following, and more.
+Extract data about videos, users, and channels based on hashtags or scrape full user profiles including posts, total likes, name, nickname, number of comments, shares, followers, following, and more.
 
 ### Facebook Posts Scraper
 **Actor ID:** `apify/facebook-posts-scraper`
