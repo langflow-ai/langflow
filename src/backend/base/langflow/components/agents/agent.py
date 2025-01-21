@@ -177,13 +177,14 @@ class AgentComponent(ToolCallingAgentComponent):
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
         if field_name in ("agent_llm",):
+            build_config["agent_llm"]["value"] = field_value
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
             if provider_info:
                 component_class = provider_info.get("component_class")
                 if component_class and hasattr(component_class, "update_build_config"):
                     # Call the component class's update_build_config method
                     build_config = await update_component_build_config(
-                        component_class, build_config, field_value, field_name
+                        component_class, build_config, field_value, "model_name"
                     )
 
             provider_configs: dict[str, tuple[dict, list[dict]]] = {
@@ -261,6 +262,6 @@ class AgentComponent(ToolCallingAgentComponent):
                     if isinstance(field_name, str) and isinstance(prefix, str):
                         field_name = field_name.replace(prefix, "")
                     build_config = await update_component_build_config(
-                        component_class, build_config, field_value, field_name
+                        component_class, build_config, field_value, "model_name"
                     )
-        return build_config
+        return {k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()}
