@@ -3,7 +3,7 @@ title: Vector store RAG
 slug: /starter-projects-vector-store-rag
 ---
 
-
+import Icon from "@site/src/components/icon";
 
 Retrieval Augmented Generation, or RAG, is a pattern for training LLMs on your data and querying it.
 
@@ -67,7 +67,7 @@ The **query** part (top of the screen) allows users to retrieve embedded vecto
 	2. In the **Value** field, paste your OpenAI API Key (`sk-...`).
 	3. Click **Save Variable**.
 1. To create environment variables for the **Astra DB** and **Astra DB Search** components:
-	1. In the **Token** field, click the **Globe** button, and then click **Add New Variable**.
+	1. In the **Token** field, click the <Icon name="Globe" aria-label="Globe icon" /> **Globe** button, and then click **Add New Variable**.
 	2. In the **Variable Name** field, enter `astra_token`.
 	3. In the **Value** field, paste your Astra application token (`AstraCS:WSnyFUhRxsrg…`).
 	4. Click **Save Variable**.

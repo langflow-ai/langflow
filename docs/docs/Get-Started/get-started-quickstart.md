@@ -3,6 +3,8 @@ title: Quickstart
 slug: /get-started-quickstart
 ---
 
+import Icon from "@site/src/components/icon";
+
 Get to know Langflow by building an OpenAI-powered chatbot application. After you've constructed a chatbot, add Retrieval Augmented Generation (RAG) to chat with your own data.
 
 ## Prerequisites
@@ -67,7 +69,7 @@ Add your OpenAI API key to the OpenAI model component, and add a prompt to the P
 
 1. Add your credentials to the OpenAI component. The fastest way to complete these fields is with Langflow’s [Global Variables](/configuration-global-variables).
 
-	1. In the OpenAI component’s OpenAI API Key field, click the language Globe icon, and then click **Add New Variable**. 
+	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**. 
 	Alternatively, click your username in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
 	2. Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.
 	3. In the **Apply To Fields** field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
