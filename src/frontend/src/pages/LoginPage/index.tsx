@@ -17,6 +17,8 @@ import {
   loginInputStateType,
 } from "../../types/components";
 
+import JeraIcon from "@/assets/jera_logo.svg"
+
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
@@ -73,7 +75,14 @@ export default function LoginPage(): JSX.Element {
               className="mb-4 h-10 w-10 scale-[1.5]"
             />
           ) : (
-            <span className="mb-4 text-5xl">⛓️</span>
+            // <span className="mb-4 text-5xl">⛓️</span>
+            <span className="fill-black text-2xl dark:fill-white">
+              <img
+                src={JeraIcon}
+                alt="Jera Icon"
+                className="inline-block w-[1em] h-[1em] align-middle"
+              />
+            </span>
           )}
           <span className="mb-6 text-2xl font-semibold text-primary">
             Sign in to Langflow

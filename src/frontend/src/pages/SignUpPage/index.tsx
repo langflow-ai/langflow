@@ -20,6 +20,7 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
+import JeraIcon from "@/assets/jera_logo.svg"
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
@@ -97,7 +98,14 @@ export default function SignUp(): JSX.Element {
               className="mb-4 h-10 w-10 scale-[1.5]"
             />
           ) : (
-            <span className="mb-4 text-5xl">⛓️</span>
+            // <span className="mb-4 text-5xl">⛓️</span>
+            <span className="fill-black text-2xl dark:fill-white">
+              <img
+                src={JeraIcon}
+                alt="Jera Icon"
+                className="inline-block w-[1em] h-[1em] align-middle"
+              />
+            </span>
           )}
           <span className="mb-6 text-2xl font-semibold text-primary">
             Sign up for Langflow

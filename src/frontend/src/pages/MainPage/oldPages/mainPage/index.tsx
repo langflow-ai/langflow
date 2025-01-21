@@ -6,7 +6,7 @@ import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useParams } from "react-router-dom";
 import PageLayout from "../../../../components/common/pageLayout";
 import DropdownButton from "../../../../components/core/dropdownButtonComponent";
 import {
@@ -16,6 +16,7 @@ import {
 import { useFolderStore } from "../../../../stores/foldersStore";
 import useDropdownOptions from "../../hooks/use-dropdown-options";
 import ModalsComponent from "../../oldComponents/modalsComponent";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 
 export default function OldHomePage(): JSX.Element {
   const location = useLocation();
@@ -30,6 +31,7 @@ export default function OldHomePage(): JSX.Element {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const queryClient = useQueryClient();
+  const addFlow = useAddFlow();
 
   // cleanup the query cache when the component unmounts
   // prevent unnecessary queries on flow update
@@ -65,7 +67,9 @@ export default function OldHomePage(): JSX.Element {
       },
     );
   };
+  const { folderId } = useParams();
 
+  console.log("folderId", folderId)
   const isFetchingFolders = !!useIsFetching({
     queryKey: ["useGetFolders"],
     exact: false,
@@ -77,6 +81,12 @@ export default function OldHomePage(): JSX.Element {
   });
 
   const isLoadingFolder = isFetchingFolders || isFetchingFolder;
+  const handleClick = () => {
+    addFlow({ new_blank: true }).then((id) => {
+      navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+    });
+    track("New Flow Created", { template: "Blank Flow" });
+  };
 
   return (
     <>
@@ -102,8 +112,10 @@ export default function OldHomePage(): JSX.Element {
                 <DropdownButton
                   firstButtonName="New Project"
                   onFirstBtnClick={() => {
-                    setOpenModal(true);
+                    handleClick();
+                    // setOpenModal(true);
                     track("New Project Button Clicked");
+                    console.log("clicked project button");
                   }}
                   options={dropdownOptions}
                   plusButton={true}

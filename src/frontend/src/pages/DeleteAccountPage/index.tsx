@@ -5,6 +5,9 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import BaseModal from "../../modals/baseModal";
 
+import JeraIcon from "@/assets/jera_logo.svg"
+
+
 export default function DeleteAccountPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -25,7 +28,14 @@ export default function DeleteAccountPage() {
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
         ) : (
-          <span className="mb-4 text-5xl">⛓️</span>
+          // <span className="mb-4 text-5xl">⛓️</span>
+            <span className="fill-black text-2xl dark:fill-white">
+              <img
+                src={JeraIcon}
+                alt="Jera Icon"
+                className="inline-block w-[1em] h-[1em] align-middle"
+              />
+            </span>
         )}
         <span className="mb-4 text-center text-2xl font-semibold text-primary">
           Delete your account

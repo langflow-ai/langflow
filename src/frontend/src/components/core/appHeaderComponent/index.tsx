@@ -19,6 +19,8 @@ import { AccountMenu } from "./components/AccountMenu";
 import FlowMenu from "./components/FlowMenu";
 import GithubStarComponent from "./components/GithubStarButton";
 
+import JeraIcon from "@/assets/jera_logo.svg"
+
 export default function AppHeader(): JSX.Element {
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const navigate = useCustomNavigate();
@@ -64,7 +66,14 @@ export default function AppHeader(): JSX.Element {
           ) : ENABLE_NEW_LOGO ? (
             <LangflowLogo className="h-5 w-6" />
           ) : (
-            <span className="fill-black text-2xl dark:fill-white">⛓️</span>
+            // <span className="fill-black text-2xl dark:fill-white">⛓️</span>
+            <span className="fill-black text-2xl dark:fill-white">
+              <img
+                src={JeraIcon}
+                alt="Jera Icon"
+                className="inline-block w-[3em] h-[3em] align-middle"
+              />
+            </span>
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (
@@ -85,7 +94,7 @@ export default function AppHeader(): JSX.Element {
         className={`flex items-center gap-2`}
         data-testid="header_right_section_wrapper"
       >
-        {!ENABLE_DATASTAX_LANGFLOW && (
+        {/* {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <Button
               unstyled
@@ -97,7 +106,7 @@ export default function AppHeader(): JSX.Element {
               <GithubStarComponent />
             </Button>
           </>
-        )}
+        )} */}
         <AlertDropdown
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
@@ -137,7 +146,7 @@ export default function AppHeader(): JSX.Element {
             </AlertDropdown>
           </ShadTooltip>
         </AlertDropdown>
-        {!ENABLE_DATASTAX_LANGFLOW && (
+        {/* {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <ShadTooltip
               content="Go to LangflowStore"
@@ -166,7 +175,7 @@ export default function AppHeader(): JSX.Element {
               className="my-auto h-7 dark:border-zinc-700"
             />
           </>
-        )}
+        )} */}
         {ENABLE_DATASTAX_LANGFLOW && (
           <>
             <ShadTooltip content="Docs" side="bottom" styleClasses="z-10">
