@@ -64,7 +64,10 @@ async def initialize_database(*, fix_migration: bool = False) -> None:
 
     database_service: DatabaseService = get_db_service()
     try:
-        await database_service.create_db_and_tables()
+        if database_service.settings_service.settings.database_connection_retry:
+            await database_service.create_db_and_tables_with_retry()
+        else:
+            await database_service.create_db_and_tables()
     except Exception as exc:
         # if the exception involves tables already existing
         # we can ignore it
