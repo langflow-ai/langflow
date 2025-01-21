@@ -1050,7 +1050,7 @@ wheels = [
 
 [[package]]
 name = "codeflash"
-version = "0.8.4"
+version = "0.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1078,7 +1078,7 @@ dependencies = [
     { name = "unidiff" },
     { name = "unittest-xml-reporting" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/5d/8f42ace5b1c2a4eda04d10fe0090e8628ea882c0de2b5addbc91946b63db/codeflash-0.8.4.tar.gz", hash = "sha256:b137ed6f36599fe51c6fbe1988b4f7acb1c8a61c033e913b7e5fe240879258c8", size = 96858 }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/85/d3caefe0037bbbcfb0c01b5a62cf041f92dd062d8dee9dc1bdd7374ce843/codeflash-0.9.1.tar.gz", hash = "sha256:2e07fbc25906b8f5e6b60a120504c0aa0c1ce3847f1073ec8578284e9c694607", size = 102774 }
 
 [[package]]
 name = "cohere"
