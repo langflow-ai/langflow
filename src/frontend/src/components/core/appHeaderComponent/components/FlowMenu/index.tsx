@@ -123,7 +123,11 @@ export const MenuBar = ({}: {}): JSX.Element => {
     }
     // return savedText;
     return (
-      <div className="shrink-0 text-xs font-medium text-accent-emerald-foreground">
+      <div
+        data-testid="menu_status_saved_flow_button"
+        id="menu_status_saved_flow_button"
+        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
+      >
         Saved
       </div>
     );
@@ -212,13 +216,32 @@ export const MenuBar = ({}: {}): JSX.Element => {
     isInvalidName,
   ]);
 
+  useEffect(() => {
+    if (currentFlow && !editingName) {
+      setFlowName(currentFlow.name);
+    }
+  }, [currentFlow, editingName]);
+
+  useEffect(() => {
+    if (measureRef.current) {
+      setInputWidth(measureRef.current.offsetWidth + 10);
+    }
+  }, [flowName]);
+
   return currentFlow && onFlowPage ? (
-    <div className="flex items-center justify-center gap-2 truncate">
-      <div className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex">
+    <div
+      className="flex items-center justify-center gap-2 truncate"
+      data-testid="menu_bar_wrapper"
+    >
+      <div
+        className="header-menu-bar hidden w-20 max-w-fit grow justify-end truncate md:flex"
+        data-testid="menu_flow_bar"
+        id="menu_flow_bar_navigation"
+      >
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate text-muted-foreground hover:text-primary"
+              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -232,55 +255,59 @@ export const MenuBar = ({}: {}): JSX.Element => {
           </div>
         )}
       </div>
-      <div className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex">
+      <div
+        className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
+        data-testid="menu_bar_separator"
+      >
         /
       </div>
 
-      <div className="overflow-hidden truncate text-sm sm:whitespace-normal">
-        <div className="header-menu-bar-display-2 truncate">
+      <div
+        className="overflow-hidden truncate text-sm sm:whitespace-normal"
+        data-testid="menu_bar_display"
+      >
+        <div
+          className="header-menu-bar-display-2 truncate"
+          data-testid="menu_bar_display_wrapper"
+        >
           <div
             className="header-menu-flow-name-2 truncate"
             data-testid="flow-configuration-button"
           >
-            <span
-              ref={measureRef}
-              className="invisible absolute font-semibold"
-              style={{ whiteSpace: "pre" }}
+            <div
+              className="relative inline-flex"
+              style={{ width: Math.max(10, inputWidth) }}
             >
-              {flowName}
-            </span>
-            {editingName ? (
-              <>
-                <Input
-                  className={cn(
-                    "h-6 px-0 font-semibold focus:border-0",
-                    isInvalidName &&
-                      "border-status-red focus-visible:ring-status-red",
-                  )}
-                  style={{ width: `${inputWidth + 1}px` }}
-                  onChange={handleEditName}
-                  maxLength={38}
-                  ref={nameInputRef}
-                  onKeyDown={handleKeyDown}
-                  autoFocus={true}
-                  onBlur={handleNameSubmit}
-                  value={flowName}
-                  id="input-flow-name"
-                  data-testid="input-flow-name"
-                />
-              </>
-            ) : (
-              <div
-                className="truncate font-semibold text-primary"
-                data-testid="flow_name"
-                onClick={() => {
+              <Input
+                className={cn(
+                  "h-6 w-full cursor-text font-semibold",
+                  "bg-transparent pl-1 pr-0 transition-colors duration-200",
+                  "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
+                  !editingName && "text-primary hover:opacity-80",
+                  isInvalidName && "text-status-red",
+                )}
+                onChange={handleEditName}
+                maxLength={38}
+                ref={nameInputRef}
+                onKeyDown={handleKeyDown}
+                onFocus={() => {
                   setEditingName(true);
                   setFlowName(currentFlow.name);
                 }}
+                onBlur={handleNameSubmit}
+                value={flowName}
+                id="input-flow-name"
+                data-testid="input-flow-name"
+              />
+              <span
+                ref={measureRef}
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre pl-1 font-semibold"
+                aria-hidden="true"
+                data-testid="flow_name"
               >
-                {currentFlow.name}
-              </div>
-            )}
+                {flowName}
+              </span>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -299,6 +326,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   handleAddFlow();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_new_flow_button"
+                id="menu_new_flow_button"
               >
                 <IconComponent name="Plus" className="header-menu-options" />
                 New
@@ -309,6 +338,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   setOpenSettings(true);
                 }}
                 className="cursor-pointer"
+                data-testid="menu_edit_flow_button"
+                id="menu_edit_flow_button"
               >
                 <IconComponent
                   name="SquarePen"
@@ -320,6 +351,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 <DropdownMenuItem
                   onClick={handleSave}
                   className="cursor-pointer"
+                  data-testid="menu_save_flow_button"
+                  id="menu_save_flow_button"
                 >
                   <ToolbarSelectItem
                     value="Save"
@@ -338,6 +371,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   setOpenLogs(true);
                 }}
                 className="cursor-pointer"
+                data-testid="menu_logs_flow_button"
+                id="menu_logs_flow_button"
               >
                 <IconComponent
                   name="ScrollText"
@@ -361,6 +396,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                       });
                     });
                 }}
+                data-testid="menu_import_flow_button"
+                id="menu_import_flow_button"
               >
                 <IconComponent name="FileUp" className="header-menu-options" />
                 Import
@@ -379,6 +416,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   undo();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_undo_flow_button"
+                id="menu_undo_flow_button"
               >
                 <ToolbarSelectItem
                   value="Undo"
@@ -395,6 +434,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   redo();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_redo_flow_button"
+                id="menu_redo_flow_button"
               >
                 <ToolbarSelectItem
                   value="Redo"
@@ -411,6 +452,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
                   handleReloadComponents();
                 }}
                 className="cursor-pointer"
+                data-testid="menu_refresh_flow_button"
+                id="menu_refresh_flow_button"
               >
                 <IconComponent
                   name="RefreshCcw"

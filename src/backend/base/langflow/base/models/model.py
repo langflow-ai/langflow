@@ -3,6 +3,7 @@ import json
 import warnings
 from abc import abstractmethod
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import BaseOutputParser
@@ -36,12 +37,26 @@ class LCModelComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Text", name="text_output", method="text_response"),
+        Output(display_name="Message", name="text_output", method="text_response"),
         Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     def _get_exception_message(self, e: Exception):
         return str(e)
+
+    def supports_tool_calling(self, model: LanguageModel) -> bool:
+        try:
+            # Check if the bind_tools method is the same as the base class's method
+            if model.bind_tools is BaseChatModel.bind_tools:
+                return False
+
+            def test_tool(x: int) -> int:
+                return x
+
+            model_with_tool = model.bind_tools([test_tool])
+            return hasattr(model_with_tool, "tools") and len(model_with_tool.tools) > 0
+        except (AttributeError, TypeError, ValueError):
+            return False
 
     def _validate_outputs(self) -> None:
         # At least these two outputs must be defined
