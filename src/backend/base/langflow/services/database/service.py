@@ -150,8 +150,8 @@ class DatabaseService(Service):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
             try:
                 yield session
-            except Exception:
-                logger.error("An error occurred during the session scope")
+            except Exception as exc:
+                logger.error(f"An error occurred during the session scope: {exc}")
                 await session.rollback()
                 raise
 
