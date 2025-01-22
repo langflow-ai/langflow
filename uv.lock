@@ -1941,6 +1941,15 @@ wheels = [
 ]
 
 [[package]]
+name = "eval-type-backport"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/30/ea/8b0ac4469d4c347c6a385ff09dc3c048c2d021696664e26c7ee6791631b5/eval_type_backport-0.2.2.tar.gz", hash = "sha256:f0576b4cf01ebb5bd358d02314d31846af5e07678387486e2c798af0e7d849c1", size = 9079 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/31/55cd413eaccd39125368be33c46de24a1f639f2e12349b0361b4678f3915/eval_type_backport-0.2.2-py3-none-any.whl", hash = "sha256:cb6ad7c393517f476f96d456d0412ea80f0a8cf96f6892834cd9340149111b0a", size = 5830 },
+]
+
+[[package]]
 name = "events"
 version = "0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2651,6 +2660,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/18/87/470e01a940307796f1d25f8167b551a968540fbe0551c0ebb853cb527dd6/greenlet-3.1.1-cp313-cp313t-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6510bf84a6b643dabba74d3049ead221257603a253d0a9873f55f6a59a65f822", size = 602753 },
     { url = "https://files.pythonhosted.org/packages/e2/72/576815ba674eddc3c25028238f74d7b8068902b3968cbe456771b166455e/greenlet-3.1.1-cp313-cp313t-musllinux_1_1_aarch64.whl", hash = "sha256:04b013dc07c96f83134b1e99888e7a79979f1a247e2a9f59697fa14b5862ed01", size = 1122731 },
     { url = "https://files.pythonhosted.org/packages/ac/38/08cc303ddddc4b3d7c628c3039a61a3aae36c241ed01393d00c2fd663473/greenlet-3.1.1-cp313-cp313t-musllinux_1_1_x86_64.whl", hash = "sha256:411f015496fec93c1c8cd4e5238da364e1da7a124bcb293f085bf2860c32c6f6", size = 1142112 },
+]
+
+[[package]]
+name = "griffe"
+version = "1.5.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/74/cd35a98cb11f79de0581e8e1e6fbd738aeeed1f2d90e9b5106728b63f5f7/griffe-1.5.5.tar.gz", hash = "sha256:35ee5b38b93d6a839098aad0f92207e6ad6b70c3e8866c08ca669275b8cba585", size = 391124 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/88/52c9422bc853cd7c2b6122090e887d17b5fad29b67f930e4277c9c557357/griffe-1.5.5-py3-none-any.whl", hash = "sha256:2761b1e8876c6f1f9ab1af274df93ea6bbadd65090de5f38f4cb5cc84897c7dd", size = 128221 },
 ]
 
 [[package]]
@@ -4012,6 +4033,7 @@ dependencies = [
     { name = "opensearch-py" },
     { name = "pgvector" },
     { name = "pyarrow" },
+    { name = "pydantic-ai" },
     { name = "pydantic-settings" },
     { name = "pymongo" },
     { name = "pytube" },
@@ -4150,7 +4172,7 @@ requires-dist = [
     { name = "langchain-nvidia-ai-endpoints", specifier = "==0.3.5" },
     { name = "langchain-ollama", specifier = "==0.2.1" },
     { name = "langchain-openai", specifier = "==0.2.12" },
-    { name = "langchain-pinecone", specifier = ">=0.2.0" },
+    { name = "langchain-pinecone", specifier = "==0.2.2" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
     { name = "langflow-base", editable = "src/backend/base" },
     { name = "langfuse", specifier = "==2.53.9" },
@@ -4173,6 +4195,7 @@ requires-dist = [
     { name = "opensearch-py", specifier = "==2.8.0" },
     { name = "pgvector", specifier = "==0.3.6" },
     { name = "pyarrow", specifier = "==17.0.0" },
+    { name = "pydantic-ai", specifier = ">=0.0.19" },
     { name = "pydantic-settings", specifier = "==2.4.0" },
     { name = "pymongo", specifier = "==4.10.1" },
     { name = "pytube", specifier = "==15.0.0" },
@@ -4617,6 +4640,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1f/19/89836022affc1bf470e2485e28872b489254a66fe587155edba731a07112/llama_cpp_python-0.2.90.tar.gz", hash = "sha256:419b041c62dbdb9f7e67883a6ef2f247d583d08417058776be0bff05b4ec9e3d", size = 63762953 }
 
 [[package]]
+name = "logfire-api"
+version = "3.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/73/896493fc411737ab40daf78e59a7474f6a0c71a9d0409ceee5cd6cf256f6/logfire_api-3.2.0.tar.gz", hash = "sha256:1423888a236010a5e1902aad21801265c701fed673424231451e00b6abc2bf51", size = 44609 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/34/00/c567169fa83c9683ca4d6f7f40f3cbe0080226bca5e5dd687619fcdd5c89/logfire_api-3.2.0-py3-none-any.whl", hash = "sha256:653f01942305d9b48c9283de95aee6315bea585447156100bc4911dd1d9faf44", size = 73880 },
+]
+
+[[package]]
 name = "loguru"
 version = "0.7.3"
 source = { registry = "https://pypi.org/simple" }
@@ -4956,6 +4988,23 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/17/20/9054ace78c61d64a6c24b8e3d6c8a73b23b447028e43c4d1e6c878e8294a/milvus_lite-2.4.10-py3-none-macosx_11_0_arm64.whl", hash = "sha256:74a8e07c5e3b057df17fbb46913388e84df1dc403a200f4e423799a58184c800", size = 19855994 },
     { url = "https://files.pythonhosted.org/packages/34/8e/7858d12d89bf9e84302c6ffd5faf776d7b2de4372a07461f726ce6f9929e/milvus_lite-2.4.10-py3-none-manylinux2014_aarch64.whl", hash = "sha256:240c7386b747bad696ecb5bd1f58d491e86b9d4b92dccee3315ed7256256eddc", size = 39614866 },
     { url = "https://files.pythonhosted.org/packages/84/65/639cb552c892ba5fef73301f878b2e7cabb59c918e0c49c9cf3026d49447/milvus_lite-2.4.10-py3-none-manylinux2014_x86_64.whl", hash = "sha256:211d2e334a043f9282bdd9755f76b9b2d93b23bffa7af240919ffce6a8dfe325", size = 49377774 },
+]
+
+[[package]]
+name = "mistralai"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "eval-type-backport" },
+    { name = "httpx" },
+    { name = "jsonpath-python" },
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+    { name = "typing-inspect" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f1/ca/9aedf3142b2f989e1e5992ba913c96ca3e3459259aa40d870dfc4007be23/mistralai-1.4.0.tar.gz", hash = "sha256:b8a09eda1864cba02ebf70439ca1925025e073d3f6f3eeccfdd146ad0f2260fb", size = 125775 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/9b/67647d4d384016e2941765c5e860a89c83341546af098bb197763492a354/mistralai-1.4.0-py3-none-any.whl", hash = "sha256:74a8b8f5b737b199c83ccc89721cb82a71e8b093b38b27c99d38cbcdf550668c", size = 262460 },
 ]
 
 [[package]]
@@ -6621,6 +6670,55 @@ wheels = [
 ]
 
 [[package]]
+name = "pydantic-ai"
+version = "0.0.19"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic-ai-slim", extra = ["anthropic", "graph", "groq", "mistral", "openai", "vertexai"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c3/d8/8bfad911e9d28921024057baea1463a9c679b549648fc5e97946e6205031/pydantic_ai-0.0.19.tar.gz", hash = "sha256:ec2dfd87f72e439ad044bf0b392709f8ca53c27990818a08d6eebfba30181a7e", size = 66144 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/d7/0a27fa7cc8156464b9de8e1172534eb2cad1ab6b6a00c2823e3d5a321c30/pydantic_ai-0.0.19-py3-none-any.whl", hash = "sha256:4cd53e779f00ee29bb628094075ddc52128669cfee49a49c1b8c5d9ac90fc4c0", size = 9795 },
+]
+
+[[package]]
+name = "pydantic-ai-slim"
+version = "0.0.19"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "eval-type-backport" },
+    { name = "griffe" },
+    { name = "httpx" },
+    { name = "logfire-api" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/db/11c0adb1767ef662aaa6783a5172c3512697000d1b051b7a5060534d2e4d/pydantic_ai_slim-0.0.19.tar.gz", hash = "sha256:ea3d4b30f91e9d59599b4ce69973f579327e071cf22ca5c296a985520e407420", size = 67223 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/01/71/2d22df067f801a32e194dafa38d7839e1fb8e8ef411a6e23510717a34ac8/pydantic_ai_slim-0.0.19-py3-none-any.whl", hash = "sha256:b4edc7abcfc976c406e44dccafa7043f6d35977ba3f2e72e8df7bcb03c8bbaa7", size = 86959 },
+]
+
+[package.optional-dependencies]
+anthropic = [
+    { name = "anthropic" },
+]
+graph = [
+    { name = "pydantic-graph" },
+]
+groq = [
+    { name = "groq" },
+]
+mistral = [
+    { name = "mistralai" },
+]
+openai = [
+    { name = "openai" },
+]
+vertexai = [
+    { name = "google-auth" },
+    { name = "requests" },
+]
+
+[[package]]
 name = "pydantic-core"
 version = "2.27.2"
 source = { registry = "https://pypi.org/simple" }
@@ -6693,6 +6791,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/86/aa/837821ecf0c022bbb74ca132e117c358321e72e7f9702d1b6a03758545e2/pydantic_core-2.27.2-pp310-pypy310_pp73-musllinux_1_1_armv7l.whl", hash = "sha256:0296abcb83a797db256b773f45773da397da75a08f5fcaef41f2044adec05f50", size = 2116582 },
     { url = "https://files.pythonhosted.org/packages/81/b0/5e74656e95623cbaa0a6278d16cf15e10a51f6002e3ec126541e95c29ea3/pydantic_core-2.27.2-pp310-pypy310_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:0d75070718e369e452075a6017fbf187f788e17ed67a3abd47fa934d001863d9", size = 2151985 },
     { url = "https://files.pythonhosted.org/packages/63/37/3e32eeb2a451fddaa3898e2163746b0cffbbdbb4740d38372db0490d67f3/pydantic_core-2.27.2-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:7e17b560be3c98a8e3aa66ce828bdebb9e9ac6ad5466fba92eb74c4c95cb1151", size = 2004715 },
+]
+
+[[package]]
+name = "pydantic-graph"
+version = "0.0.19"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "logfire-api" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/48/6b/130c3d2c395839b040a252302d1683c07ad43f23d90061bdf1a44880320b/pydantic_graph-0.0.19.tar.gz", hash = "sha256:e5dc3cba7f08859f96704db9ecbe68e0b2c084d0112dba77c66f135c587812dd", size = 13105 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/66/65cd869e3e5eac4228526a555dc5601664810ab127f064c2709ba267f381/pydantic_graph-0.0.19-py3-none-any.whl", hash = "sha256:8d9fd21584af2b700e710c933d8ffb50fe15e3489ff2626392d6197d7c76d696", size = 16293 },
 ]
 
 [[package]]
