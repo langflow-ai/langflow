@@ -317,10 +317,10 @@ export async function buildFlowVertices({
         return true;
       }
       case "error": {
-        useFlowStore.getState().setIsBuilding(false);
         if (data.category === "error") {
           useMessagesStore.getState().addMessage(data);
         }
+        onBuildError!("Error Building Flow", [data.text]);
         buildResults.push(false);
         return true;
       }
@@ -344,6 +344,7 @@ export async function buildFlowVertices({
     onData: async (event) => {
       const type = event["event"];
       const data = event["data"];
+      console.log(type, data);
       return await onEvent(type, data);
     },
     onError: (statusCode) => {
