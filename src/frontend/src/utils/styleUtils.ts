@@ -109,6 +109,7 @@ import {
   HelpCircle,
   Home,
   Image,
+  Infinity,
   Info,
   InstagramIcon,
   Key,
@@ -237,6 +238,7 @@ import { AWSIcon } from "../icons/AWS";
 import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { ArXivIcon } from "../icons/ArXiv";
 import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
 import { AstraDBIcon } from "../icons/AstraDB";
@@ -535,7 +537,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
-  { display_name: "Youtube", name: "youtube", icon: "Youtube" },
+  { display_name: "Youtube", name: "youtube", icon: "YouTube" },
 ];
 
 export const categoryIcons = {
@@ -624,6 +626,7 @@ export const nodeIconsLucide: iconsType = {
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
+  ArXiv: ArXivIcon,
   ChatAnthropic: AnthropicIcon,
   assemblyai: AssemblyAIIcon,
   AgentQL: AgentQLIcon,
@@ -866,6 +869,7 @@ export const nodeIconsLucide: iconsType = {
   Share2,
   Share,
   GitBranchPlus,
+  Infinity,
   Loader2,
   BookmarkPlus,
   Heart,
