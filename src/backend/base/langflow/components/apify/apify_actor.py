@@ -178,7 +178,7 @@ class ApifyActorsComponent(LCToolComponent):
         # when token changes, create a new client
         if self._apify_client is None or self._apify_client.token != self.apify_token:
             self._apify_client = ApifyClient(self.apify_token)
-            if httpx_client := getattr(self._apify_client.http_client, "httpx_client"):
+            if httpx_client := self._apify_client.http_client.httpx_client:
                 httpx_client.headers["user-agent"] += "; Origin/langflow"
         return self._apify_client
 
