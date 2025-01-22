@@ -2,40 +2,10 @@
   "data": {
     "edges": [
       {
-        "animated": false,
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-FXOhu",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-E96kR",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-FXOhu{œdataTypeœ:œPromptœ,œidœ:œPrompt-FXOhuœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-E96kR{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-E96kRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-FXOhu",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-FXOhuœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-E96kR",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-E96kRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-aMAQ2",
+            "id": "Prompt-QFfcl",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -43,27 +13,49 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-E96kR",
+            "id": "OpenAIModel-3mbCD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-aMAQ2{œdataTypeœ:œPromptœ,œidœ:œPrompt-aMAQ2œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-E96kR{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-E96kRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-aMAQ2",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-aMAQ2œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-E96kR",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-E96kRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__Prompt-QFfcl{œdataTypeœ:œPromptœ,œidœ:œPrompt-QFfclœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-3mbCD{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-3mbCDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-QFfcl",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-QFfclœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-3mbCD",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-3mbCDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "animated": false,
-        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-RpVoN",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-3mbCD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Prompt-RpVoN{œdataTypeœ:œPromptœ,œidœ:œPrompt-RpVoNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-3mbCD{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-3mbCDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-RpVoN",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-RpVoNœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-3mbCD",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-3mbCDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-E96kR",
+            "id": "OpenAIModel-3mbCD",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -71,19 +63,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-aCpBy",
+            "id": "ChatOutput-vBbvi",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-E96kR{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-E96kRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-aCpBy{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-aCpByœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "OpenAIModel-E96kR",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-E96kRœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-aCpBy",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-aCpByœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__OpenAIModel-3mbCD{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-3mbCDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vBbvi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vBbviœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-3mbCD",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-3mbCDœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-vBbvi",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vBbviœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -91,7 +82,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-FXOhu",
+          "id": "Prompt-RpVoN",
           "node": {
             "base_classes": [
               "Message"
@@ -341,7 +332,11 @@
         },
         "dragging": false,
         "height": 779,
-        "id": "Prompt-FXOhu",
+        "id": "Prompt-RpVoN",
+        "measured": {
+          "height": 779,
+          "width": 360
+        },
         "position": {
           "x": 816.9328565352126,
           "y": 189.70442453076902
@@ -356,7 +351,7 @@
       },
       {
         "data": {
-          "id": "note-5yMAo",
+          "id": "note-bzlUs",
           "node": {
             "description": "# SEO Keyword Generator\nWelcome to the SEO Keywords Generator - an AI tool to create strategic keywords based on your product and audience profile!\n\n## Instructions\n\n1. **Fill Product Information**\n   - Enter your product name and description\n   - Keep it clear and specific\n   - Highlight unique features and benefits\n\n2. **Define Pain Points**\n   - List customer problems and challenges\n   - Be specific about what frustrations they face\n   - Include both practical and emotional pain points\n\n3. **Set Goals & Solutions**\n   - Specify customer objectives\n   - Detail how they currently solve problems\n   - Outline desired outcomes\n\n4. **Target Audience Details**\n   - Define demographics and characteristics\n   - Include expertise level\n   - Describe behavior patterns and preferences\n\n5. **Review Output**\n   - Examine generated keywords\n   - Check relevance and search intent\n   - Use insights for SEO strategy planning\n\nRemember: The more detailed your input, the more targeted and effective your keywords will be! 🎯🔍✨",
             "display_name": "",
@@ -367,7 +362,11 @@
         },
         "dragging": false,
         "height": 607,
-        "id": "note-5yMAo",
+        "id": "note-bzlUs",
+        "measured": {
+          "height": 607,
+          "width": 328
+        },
         "position": {
           "x": 221.74248905040588,
           "y": 363.5469410934121
@@ -389,7 +388,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-aMAQ2",
+          "id": "Prompt-QFfcl",
           "node": {
             "base_classes": [
               "Message"
@@ -494,7 +493,11 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-aMAQ2",
+        "id": "Prompt-QFfcl",
+        "measured": {
+          "height": 260,
+          "width": 360
+        },
         "position": {
           "x": 813.5727530934735,
           "y": 991.0702563306074
@@ -511,7 +514,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-aCpBy",
+          "id": "ChatOutput-vBbvi",
           "node": {
             "base_classes": [
               "Message"
@@ -772,7 +775,11 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-aCpBy",
+        "id": "ChatOutput-vBbvi",
+        "measured": {
+          "height": 234,
+          "width": 360
+        },
         "position": {
           "x": 1598.2529634286327,
           "y": 623.4799714496987
@@ -787,15 +794,44 @@
       },
       {
         "data": {
-          "description": "Generates text using OpenAI LLMs.",
-          "display_name": "OpenAI",
-          "id": "OpenAIModel-E96kR",
+          "id": "note-BWTHt",
+          "node": {
+            "description": "## Make sure to add your OpenAI API key from [platform.openai.com](https://platform.openai.com). ",
+            "display_name": "",
+            "documentation": "",
+            "template": {}
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 325,
+        "id": "note-BWTHt",
+        "measured": {
+          "height": 325,
+          "width": 328
+        },
+        "position": {
+          "x": 1207.1996899547116,
+          "y": 260.0148704431837
+        },
+        "positionAbsolute": {
+          "x": 1207.1996899547116,
+          "y": 260.0148704431837
+        },
+        "selected": false,
+        "type": "noteNode",
+        "width": 325
+      },
+      {
+        "data": {
+          "id": "OpenAIModel-3mbCD",
           "node": {
             "base_classes": [
               "LanguageModel",
               "Message"
             ],
             "beta": false,
+            "category": "models",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Generates text using OpenAI LLMs.",
@@ -809,19 +845,18 @@
               "max_tokens",
               "model_kwargs",
               "json_mode",
-              "output_schema",
               "model_name",
               "openai_api_base",
               "api_key",
               "temperature",
-              "seed",
-              "output_parser"
+              "seed"
             ],
             "frozen": false,
             "icon": "OpenAI",
+            "key": "OpenAIModel",
             "legacy": false,
-            "lf_version": "1.0.19.post2",
             "metadata": {},
+            "minimized": false,
             "output_types": [],
             "outputs": [
               {
@@ -852,6 +887,7 @@
               }
             ],
             "pinned": false,
+            "score": 2.220446049250313e-16,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -901,12 +937,14 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -919,11 +957,13 @@
                 "dynamic": false,
                 "info": "If True, it will output JSON regardless of passing a schema.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "json_mode",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
@@ -935,6 +975,7 @@
                 "dynamic": false,
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
@@ -946,6 +987,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": ""
@@ -957,11 +999,13 @@
                 "dynamic": false,
                 "info": "Additional keyword arguments to pass to the model.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "model_kwargs",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "type": "dict",
                 "value": {}
@@ -970,6 +1014,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "",
@@ -983,6 +1028,7 @@
                   "gpt-3.5-turbo",
                   "gpt-3.5-turbo-0125"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -999,12 +1045,14 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
@@ -1016,11 +1064,13 @@
                 "dynamic": false,
                 "info": "The seed controls the reproducibility of the job.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "seed",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
@@ -1032,17 +1082,19 @@
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "stream",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
               },
               "system_message": {
-                "_input_type": "MessageTextInput",
+                "_input_type": "MultilineInput",
                 "advanced": false,
                 "display_name": "System Message",
                 "dynamic": false,
@@ -1051,7 +1103,9 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
+                "multiline": true,
                 "name": "system_message",
                 "placeholder": "",
                 "required": false,
@@ -1064,72 +1118,57 @@
                 "value": ""
               },
               "temperature": {
-                "_input_type": "FloatInput",
+                "_input_type": "SliderInput",
                 "advanced": false,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
-                "list": false,
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
                 "name": "temperature",
                 "placeholder": "",
+                "range_spec": {
+                  "max": 2,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
                 "required": false,
                 "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
                 "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
+                "tool_mode": false,
+                "type": "slider",
                 "value": 0.1
               }
             },
             "tool_mode": false
           },
+          "showNode": true,
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "height": 543,
-        "id": "OpenAIModel-E96kR",
-        "position": {
-          "x": 1207.6180121002271,
-          "y": 400.34849438035565
+        "id": "OpenAIModel-3mbCD",
+        "measured": {
+          "height": 734,
+          "width": 360
         },
-        "positionAbsolute": {
-          "x": 1207.6180121002271,
-          "y": 400.34849438035565
+        "position": {
+          "x": 1211.6745177781336,
+          "y": 389.1200512413449
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
-      },
-      {
-        "data": {
-          "id": "note-qiq3C",
-          "node": {
-            "description": "## Make sure to add your OpenAI API key from [platform.openai.com](https://platform.openai.com). ",
-            "display_name": "",
-            "documentation": "",
-            "template": {}
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 325,
-        "id": "note-qiq3C",
-        "position": {
-          "x": 1207.1996899547116,
-          "y": 260.0148704431837
-        },
-        "positionAbsolute": {
-          "x": 1207.1996899547116,
-          "y": 260.0148704431837
-        },
-        "selected": false,
-        "type": "noteNode",
-        "width": 325
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -106.23719516361678,
-      "y": -93.96601486484758,
-      "zoom": 0.7759242611491008
+      "x": -34.95262355945238,
+      "y": -104.978464862529,
+      "zoom": 0.7683067619311971
     }
   },
   "description": "Generates targeted SEO keywords based on product information, pain points, and customer profiles for strategic marketing.",
