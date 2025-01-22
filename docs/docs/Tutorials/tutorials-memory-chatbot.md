@@ -43,15 +43,25 @@ This gives the **OpenAI** component a memory of previous chat messages.
 ## Run the memory chatbot flow
 
 1. Open the **Playground**.
-2. Type multiple questions. 
-Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> to see additional options for a component.
+2. Type multiple questions. For example, try entering this conversation:
 
-your queries are logged in order. Up to 100 queries are stored by default. Try telling the AI your name and asking `What is my name?` in a second message, or `What is the first subject I asked you about?` to validate that previous knowledge is taking effect.
+```plain
+Hi, my name is Luca.
+Please tell me about PostgreSQL.
+What is my name?
+What is the second subject I asked you about?
+```
 
+The chatbot should remember your name and previous questions.
+
+3. To view the **Message Logs** pane, click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> and then click **Message Logs**.
+The **Message Logs** pane displays all previous messages, with each conversation sorted by `session_id`.
+
+![](/img/messages-logs.png)
 
 ## Use Session ID with the memory chatbot flow
 
-`SessionID` is a unique identifier in Langflow that stores conversation sessions between the AI and a user. A `SessionID` is created when a conversation is initiated, and then associated with all subsequent messages during that session.
+`session_id` is a unique identifier in Langflow that stores conversation sessions between the AI and a user. A `session_id` is created when a conversation is initiated, and then associated with all subsequent messages during that session.
 
 In the **Memory Chatbot** flow you created, the **Chat Memory** component references past interactions by **Session ID**. You can demonstrate this by modifying the **Session ID** value to switch between conversation histories.
 
