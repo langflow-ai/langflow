@@ -71,8 +71,25 @@ export default function ErrorAlert({
                       <Markdown
                         remarkPlugins={[remarkGfm]}
                         rehypePlugins={[rehypeMathjax]}
-                        className="inline-block w-fit max-w-full align-text-top text-[14px] font-semibold text-primary"
+                        className="align-text-top"
                         components={{
+                          a: ({ node, ...props }) => (
+                            <a
+                              href={props.href}
+                              target="_blank"
+                              className="underline"
+                              rel="noopener noreferrer"
+                            >
+                              {props.children}
+                            </a>
+                          ),
+                          p({ node, ...props }) {
+                            return (
+                              <span className="inline-block w-fit max-w-full">
+                                {props.children}
+                              </span>
+                            );
+                          },
                           li: ({ children }) => (
                             <li className="line-clamp-">{children}</li>
                           ),
