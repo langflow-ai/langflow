@@ -8,7 +8,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 test(
   "should copy code from playground modal",
   {
-    tag: ["@release"],
+    tag: ["@release", "@workspace", "@components"],
   },
   async ({ page }) => {
     test.skip(

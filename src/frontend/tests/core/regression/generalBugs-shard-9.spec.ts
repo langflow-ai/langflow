@@ -5,7 +5,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 test(
   "memory should work as expect",
-  { tag: ["@release"] },
+  { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
