@@ -4,8 +4,8 @@ from langflow.base.models.model import LCModelComponent
 from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
-from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.models.gigachat import GigaChatComponent
+from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
