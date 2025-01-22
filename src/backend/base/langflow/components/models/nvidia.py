@@ -25,8 +25,8 @@ class NVIDIAModelComponent(LCModelComponent):
             display_name="Model Name",
             advanced=False,
             options=[],
-            real_time_refresh=True,
             refresh_button=True,
+            combobox=True,
         ),
         MessageTextInput(
             name="base_url",
