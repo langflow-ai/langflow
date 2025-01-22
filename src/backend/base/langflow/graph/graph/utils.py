@@ -797,7 +797,7 @@ def get_sorted_vertices(
     Returns:
         Tuple of (first layer vertices, remaining layer vertices)
     """
-    # Ensure stop_component_id is converted to start_component_id if part of a cycle
+    # Handle cycles by converting stop to start
     if stop_component_id in cycle_vertices:
         start_component_id = stop_component_id
         stop_component_id = None
@@ -841,6 +841,31 @@ def get_sorted_vertices(
         )
         vertices_ids = list(filtered_vertices)
 
+    # If we have a start component, we need to filter out unconnected vertices
+    # but keep vertices that are connected to the graph even if not reachable from start
+    if start_component_id is not None:
+        # First get all vertices reachable from start
+        reachable_vertices = filter_vertices_from_vertex(
+            vertices_ids,
+            start_component_id,
+            get_vertex_predecessors=get_vertex_predecessors,
+            get_vertex_successors=get_vertex_successors,
+            graph_dict=graph_dict,
+        )
+        # Then get all vertices that can reach any reachable vertex
+        connected_vertices = set()
+        for vertex in reachable_vertices:
+            connected_vertices.update(
+                filter_vertices_up_to_vertex(
+                    vertices_ids,
+                    vertex,
+                    get_vertex_predecessors=get_vertex_predecessors,
+                    get_vertex_successors=get_vertex_successors,
+                    graph_dict=graph_dict,
+                )
+            )
+        vertices_ids = list(connected_vertices)
+
     # Get the layers
     layers = layered_topological_sort(
         vertices_ids=set(vertices_ids),
@@ -865,14 +890,6 @@ def get_sorted_vertices(
     if stop_component_id is not None and remaining_layers and stop_component_id not in remaining_layers[-1]:
         remaining_layers[-1].append(stop_component_id)
 
-    # Filter out unconnected vertices from the first layer unless they are input vertices
-    # or have no predecessors and are part of the main connected component
-    first_layer = [
-        v
-        for v in first_layer
-        if is_input_vertex(v) or (in_degree_map[v] == 0 and any(succ in vertices_ids for succ in successor_map[v]))
-    ]
-
     # Sort chat inputs first and sort each layer by dependencies
     all_layers = [first_layer, *remaining_layers]
     if get_vertex_predecessors is not None and start_component_id is None:
@@ -883,16 +900,7 @@ def get_sorted_vertices(
     if not all_layers:
         return [], []
 
-    # If start_component_id is set, ensure it is included in the first layer
-    if start_component_id and start_component_id not in first_layer:
-        first_layer.insert(0, start_component_id)
-
-    # Ensure start_component_id is processed correctly in cyclic graphs
-    if is_cyclic and start_component_id:
-        first_layer = [start_component_id]
-        remaining_layers = [layer for layer in remaining_layers if start_component_id not in layer]
-
-    return first_layer, remaining_layers
+    return all_layers[0], all_layers[1:]
 
 
 def filter_vertices_up_to_vertex(
@@ -946,5 +954,59 @@ def filter_vertices_up_to_vertex(
             if predecessor in vertices_set and predecessor not in filtered_vertices:
                 filtered_vertices.add(predecessor)
                 queue.append(predecessor)
+
+    return filtered_vertices
+
+
+def filter_vertices_from_vertex(
+    vertices_ids: list[str],
+    vertex_id: str,
+    get_vertex_predecessors: Callable[[str], list[str]] | None = None,
+    get_vertex_successors: Callable[[str], list[str]] | None = None,
+    graph_dict: dict[str, Any] | None = None,
+) -> set[str]:
+    """Filter vertices starting from a given vertex.
+
+    Args:
+        vertices_ids: List of vertex IDs to filter
+        vertex_id: ID of the vertex to start filtering from
+        get_vertex_predecessors: Function to get predecessors of a vertex
+        get_vertex_successors: Function to get successors of a vertex
+        graph_dict: Dictionary containing graph information
+
+    Returns:
+        Set of vertex IDs that are successors of the given vertex
+    """
+    vertices_set = set(vertices_ids)
+    if vertex_id not in vertices_set:
+        return set()
+
+    # Build predecessor map if not provided
+    if get_vertex_predecessors is None:
+        if graph_dict is None:
+            return set()
+
+        def get_vertex_predecessors(v):
+            return graph_dict[v]["predecessors"]
+
+    # Build successor map if not provided
+    if get_vertex_successors is None:
+        if graph_dict is None:
+            return set()
+
+        def get_vertex_successors(v):
+            return graph_dict[v]["successors"]
+
+    # Start with the target vertex
+    filtered_vertices = {vertex_id}
+    queue = deque([vertex_id])
+
+    # Process vertices in breadth-first order
+    while queue:
+        current_vertex = queue.popleft()
+        for successor in get_vertex_successors(current_vertex):
+            if successor in vertices_set and successor not in filtered_vertices:
+                filtered_vertices.add(successor)
+                queue.append(successor)
 
     return filtered_vertices
