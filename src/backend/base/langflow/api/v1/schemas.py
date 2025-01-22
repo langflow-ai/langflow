@@ -287,10 +287,7 @@ class ResultDataResponse(BaseModel):
                 return f"{obj[:max_length]}... [truncated]"
             return obj
         if isinstance(obj, datetime):
-            # Ensure the datetime object is timezone-aware before calling astimezone()
-            if obj.tzinfo is None:
-                obj = obj.replace(tzinfo=timezone.utc)
-            return obj.astimezone(timezone.utc).isoformat()
+            return obj.replace(tzinfo=timezone.utc).isoformat()
         if isinstance(obj, Decimal):
             return float(obj)
         if isinstance(obj, UUID):
