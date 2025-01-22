@@ -15,7 +15,7 @@ class DuckDuckGoSearchComponent(LCToolComponent):
     display_name: str = "DuckDuckGo Search [DEPRECATED]"
     description: str = "Perform web searches using the DuckDuckGo search engine with result limiting"
     name = "DuckDuckGoSearch"
-    legacy = True,
+    legacy = True
     documentation: str = "https://python.langchain.com/docs/integrations/tools/ddg"
     icon: str = "DuckDuckGo"
     inputs = [

@@ -1,7 +1,7 @@
 from langchain_community.tools import DuckDuckGoSearchRun
 
 from langflow.custom import Component
-from langflow.io import MultilineInput, IntInput, Output
+from langflow.io import IntInput, MultilineInput, Output
 from langflow.schema import DataFrame
 
 
@@ -19,9 +19,9 @@ class DuckDuckGoSearchCoreComponent(Component):
             required=True,
         ),
         IntInput(
-            name="max_snippet_length", 
-            display_name="Max Snippet Length", 
-            value=500, 
+            name="max_snippet_length",
+            display_name="Max Snippet Length",
+            value=500,
             advanced=True
         )
     ]
@@ -42,17 +42,17 @@ class DuckDuckGoSearchCoreComponent(Component):
 
             # Perform the search
             full_results = wrapper.run(f"{self.input_value} (site:*)")
-            
+
             # Prepare DataFrame data
             df_data = [
-                result[:self.max_snippet_length]  # Use max_snippet_length from input
+                {"text": result[:self.max_snippet_length]}
                 for result in full_results.split("\n")
             ]
 
             # Create and return DataFrame
-            return DataFrame({"text": df_data})
+            return DataFrame(df_data)
 
-        except Exception as e:
+        except (ValueError, AttributeError, RuntimeError) as e:
             error_message = f"Error in DuckDuckGo Search: {e!s}"
             self.status = error_message
             return DataFrame([{"text": error_message}])
