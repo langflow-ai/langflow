@@ -74,21 +74,15 @@ def serialize_field(value):
     Unified serialization function for handling both BaseModel and Document types,
     including handling lists of these types.
     """
-    if isinstance(value, list | tuple):
+    if isinstance(value, (list, tuple)):
         return [serialize_field(v) for v in value]
-    if isinstance(value, Document):
-        return value.to_json()
-    if isinstance(value, BaseModel):
-        return serialize_field(value.model_dump())
-    if isinstance(value, dict):
-        return {k: serialize_field(v) for k, v in value.items()}
-    if isinstance(value, V1BaseModel):
-        if hasattr(value, "to_json"):
-            return value.to_json()
-        return value.dict()
-    # Handle datetime objects
+
+    if isinstance(value, (Document, BaseModel, V1BaseModel, dict)):
+        return _serialize_composite(value)
+
     if hasattr(value, "isoformat"):
         return value.isoformat()
+
     return str(value)
 
 
@@ -221,3 +215,22 @@ def has_chat_output(vertices: dict[Vertex, int]):
     from langflow.graph.schema import InterfaceComponentTypes
 
     return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)
+
+
+def _serialize_composite(value):
+    """Helper serialization for Document, BaseModel, V1BaseModel, and dict."""
+    if isinstance(value, Document):
+        return value.to_json()
+
+    if isinstance(value, BaseModel):
+        return serialize_field(value.model_dump())
+
+    if isinstance(value, dict):
+        return {k: serialize_field(v) for k, v in value.items()}
+
+    if isinstance(value, V1BaseModel):
+        if hasattr(value, "to_json"):
+            return value.to_json()
+        return value.dict()
+
+    return value  # Just in case
