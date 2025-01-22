@@ -5,7 +5,7 @@ from typing import Any, cast
 from apify_client import ApifyClient
 from langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.field_typing import Tool
@@ -79,8 +79,8 @@ class ApifyActorsComponent(LCToolComponent):
     ]
 
     outputs = [
-        Output(display_name="Output", name="output", method="run_model"),
-        Output(display_name="Tool", name="tool", method="build_tool"),
+        Output(display_name="Output", name="output", type_=list[Data], method="run_model"),
+        Output(display_name="Tool", name="tool", type_=Tool, method="build_tool"),
     ]
 
     def __init__(self, *args, **kwargs) -> None:
@@ -146,6 +146,10 @@ class ApifyActorsComponent(LCToolComponent):
             )
 
             args_schema: type[BaseModel] = input_model
+
+            @field_serializer("args_schema")
+            def serialize_args_schema(self, args_schema):
+                return args_schema.schema()
 
             def _run(self, run_input: str | dict) -> str:
                 """Use the Apify Actor."""
