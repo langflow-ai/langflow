@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from langflow.components.tools import WikipediaComponent
@@ -30,7 +30,6 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
-
 
     def test_wikipedia_initialization(self, component_class):
         component = component_class()
