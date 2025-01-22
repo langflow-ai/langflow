@@ -57,17 +57,6 @@ This component allows you to run Apify Actors in your flow. It can be used manua
 - **Output**:
     - Actor Run Result: The JSON response containing the output of the Actor run.
 
-- **Manual Usage**:
-    - Create the Apify Actors component.
-    - Input the Apify Token, an Actor ID, and configure the Run Input JSON.
-      - Example input can be obtained from the Actor documentation Input section in the JSON Example tab. See [Website Content Crawler](https://apify.com/apify/website-content-crawler/input-schema).
-    - Run the component manually to retrieve data.
-
-- **AI Agent Integration**:
-    - Create the Apify Actors component.
-    - Input the Apify Token and an Actor ID.
-    - Connect the component Tool output to the Agent, allowing it to trigger the Actor as needed.
-
 ## How to use Apify Actors in Langflow
 
 First, you need to pick an Actor that you want to use in your flow from the [Apify Actor Store](https://apify.com/store). Then, create the **Apify Actors** component and input your Apify API token and the Actor ID. You can find the Actor ID in the Apify Actor Store, for instance, the [Website Content Crawler](https://apify.com/apify/website-content-crawler) has Actor ID `apify/website-content-crawler`. Now you can either connect the **Tool** output to an AI Agent or configure the Run input JSON manually and run the component to retrieve data from the **Output Data**. Example Run input can be obtained from the Actor details page in the Apify Actor Store. See the **JSON Example** in the input schema section [here](https://apify.com/apify/website-content-crawler/input-schema).
