@@ -21,7 +21,7 @@ class DuckDuckGoSearchCoreComponent(Component):
         IntInput(
             name="max_results",
             display_name="Max Results",
-            value=5,
+            value=4,
         ),
         IntInput(name="max_snippet_length", display_name="Max Snippet Length", value=500, advanced=True),
     ]
