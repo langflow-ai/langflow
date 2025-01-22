@@ -3,6 +3,8 @@ title: Memory chatbot
 slug: /tutorials-memory-chatbot
 ---
 
+import Icon from "@site/src/components/icon";
+
 This flow extends the [basic prompting flow](/starter-projects-basic-prompting) with a **Chat memory** component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
 
 ## Prerequisites
