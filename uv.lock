@@ -2255,6 +2255,19 @@ wheels = [
 ]
 
 [[package]]
+name = "gigachat"
+version = "0.1.36"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2b/ab/56d332407b0621f34d1d60b414795de32f2158c3be1f39833952e4b357a5/gigachat-0.1.36.tar.gz", hash = "sha256:6c10ae23647946854ef98d67899e2ef239a6f675e4e1406ff08f8d56fc2160d6", size = 28342 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/09/e9/3e5e8ccbf8e77cb6b592bd3afbf6141b3fe208f1e774d15adf858c5e6a1d/gigachat-0.1.36-py3-none-any.whl", hash = "sha256:7e9e3192e8d33e9c63beac533a31290d1a2e7b1b3c57ea0b5dc26da47551db5d", size = 61591 },
+]
+
+[[package]]
 name = "gitdb"
 version = "4.0.11"
 source = { registry = "https://pypi.org/simple" }
@@ -3716,6 +3729,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-gigachat"
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gigachat" },
+    { name = "langchain-core" },
+    { name = "types-requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/30/ef9f01915ae18369e9f05ef362a8a58d7cb4b6414ad2b458f80ca2ab38f7/langchain_gigachat-0.3.1.tar.gz", hash = "sha256:a416510b1f72780358c7fe0cceb03a4a5053f0a260e6e1c84f11ad7859e45b38", size = 21272 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/92/83/4c2a9065b473e6011d6f04578b98d0f38a49e70d64f6fd80352e5d70fc72/langchain_gigachat-0.3.1-py3-none-any.whl", hash = "sha256:3ed7329af134248c8cefb7fcc88a1082faa01a82a014941e5ad1d2905dfdefc5", size = 25280 },
+]
+
+[[package]]
 name = "langchain-google-calendar-tools"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3971,6 +3998,7 @@ dependencies = [
     { name = "langchain-cohere" },
     { name = "langchain-community" },
     { name = "langchain-elasticsearch" },
+    { name = "langchain-gigachat" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
     { name = "langchain-google-genai" },
@@ -4132,6 +4160,7 @@ requires-dist = [
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.10" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
+    { name = "langchain-gigachat", specifier = "==0.3.2" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },
     { name = "langchain-google-genai", specifier = "==2.0.6" },
