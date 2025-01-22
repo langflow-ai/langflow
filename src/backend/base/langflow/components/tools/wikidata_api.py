@@ -57,7 +57,7 @@ class WikidataAPIComponent(LCToolComponent):
     description = "Performs a search using the Wikidata API."
     name = "WikidataAPI"
     icon = "Wikipedia"
-    legacy=True
+    legacy = True
 
     inputs = [
         MultilineInput(
