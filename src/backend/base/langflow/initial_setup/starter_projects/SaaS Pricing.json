@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-LDhCf",
+            "id": "Agent-wKeIr",
             "name": "response",
             "output_types": [
               "Message"
@@ -15,18 +15,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-YQ7Vi",
+            "id": "ChatOutput-BabAw",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-LDhCf{œdataTypeœ:œAgentœ,œidœ:œAgent-LDhCfœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-YQ7Vi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-YQ7Viœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-LDhCf",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-LDhCfœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-YQ7Vi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-YQ7Viœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-wKeIr{œdataTypeœ:œAgentœ,œidœ:œAgent-wKeIrœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-BabAw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BabAwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-wKeIr",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-wKeIrœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-BabAw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-BabAwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -34,7 +34,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-Pe4nO",
+            "id": "Prompt-TXNvz",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -42,24 +42,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-LDhCf",
+            "id": "Agent-wKeIr",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-Pe4nO{œdataTypeœ:œPromptœ,œidœ:œPrompt-Pe4nOœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-LDhCf{œfieldNameœ:œinput_valueœ,œidœ:œAgent-LDhCfœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-Pe4nO",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Pe4nOœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-LDhCf",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-LDhCfœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-TXNvz{œdataTypeœ:œPromptœ,œidœ:œPrompt-TXNvzœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-wKeIr{œfieldNameœ:œinput_valueœ,œidœ:œAgent-wKeIrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-TXNvz",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-TXNvzœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-wKeIr",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-wKeIrœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-unDLj",
+            "id": "CalculatorComponent-btXJ9",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -67,18 +68,18 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-LDhCf",
+            "id": "Agent-wKeIr",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__CalculatorComponent-unDLj{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-unDLjœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-LDhCf{œfieldNameœ:œtoolsœ,œidœ:œAgent-LDhCfœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-unDLj",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-unDLjœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-LDhCf",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-LDhCfœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorComponent-btXJ9{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-btXJ9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-wKeIr{œfieldNameœ:œtoolsœ,œidœ:œAgent-wKeIrœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-btXJ9",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-btXJ9œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-wKeIr",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-wKeIrœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -86,7 +87,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-Pe4nO",
+          "id": "Prompt-TXNvz",
           "node": {
             "base_classes": [
               "Message"
@@ -312,10 +313,10 @@
         },
         "dragging": false,
         "height": 693,
-        "id": "Prompt-Pe4nO",
+        "id": "Prompt-TXNvz",
         "measured": {
           "height": 693,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1349.861745038984,
@@ -333,7 +334,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-YQ7Vi",
+          "id": "ChatOutput-BabAw",
           "node": {
             "base_classes": [
               "Message"
@@ -594,10 +595,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-YQ7Vi",
+        "id": "ChatOutput-BabAw",
         "measured": {
           "height": 234,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 2240.3625274769397,
@@ -613,7 +614,7 @@
       },
       {
         "data": {
-          "id": "note-o7ebV",
+          "id": "note-ux8AH",
           "node": {
             "description": "# SaaS Pricing Calculator\n\nWelcome to the SaaS Pricing Calculator! This flow helps you determine the optimal monthly subscription price for your software service.\n\n## Instructions\n\n1. Prepare Your Data\n   - Gather information on monthly infrastructure costs\n   - Calculate customer support expenses\n   - Estimate continuous development costs\n   - Decide on your desired profit margin\n   - Determine the estimated number of subscribers\n\n2. Input Values\n   - Enter the gathered data into the respective fields in the Prompt node\n   - Double-check the accuracy of your inputs\n\n3. Run the Flow\n   - Click the \"Run\" button to start the calculation process\n   - The flow will use Chain-of-Thought prompting to guide the AI through the steps\n\n4. Review the Results\n   - Examine the output in the Chat Output node\n   - The result will show a breakdown of costs and the final subscription price\n\n5. Adjust and Refine\n   - If needed, modify your inputs to explore different pricing scenarios\n   - Re-run the flow to see how changes affect the final price\n\nRemember: Regularly update your costs and subscriber estimates to keep your pricing model accurate and competitive! 💼📊",
             "display_name": "",
@@ -624,10 +625,10 @@
         },
         "dragging": false,
         "height": 800,
-        "id": "note-o7ebV",
+        "id": "note-ux8AH",
         "measured": {
           "height": 800,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 689.7659055360411,
@@ -650,7 +651,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-LDhCf",
+          "id": "Agent-wKeIr",
           "node": {
             "base_classes": [
               "Message"
@@ -790,7 +791,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -798,7 +799,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1211,10 +1212,10 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-LDhCf",
+        "id": "Agent-wKeIr",
         "measured": {
           "height": 650,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1819.2633856623966,
@@ -1224,13 +1225,13 @@
           "x": 1819.2633856623966,
           "y": 138.32023808479687
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "CalculatorComponent-unDLj",
+          "id": "CalculatorComponent-btXJ9",
           "node": {
             "base_classes": [
               "Data"
@@ -1255,6 +1256,7 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
                 "cache": true,
                 "display_name": "Toolset",
                 "hidden": null,
@@ -1405,23 +1407,23 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-unDLj",
+        "id": "CalculatorComponent-btXJ9",
         "measured": {
-          "height": 333,
-          "width": 320
+          "height": 374,
+          "width": 360
         },
         "position": {
           "x": 1350.9477037257504,
           "y": -45.351578570289234
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -412.6248764419154,
-      "y": 239.5139629945674,
-      "zoom": 0.6920494987327928
+      "x": -432.45261318505345,
+      "y": 74.8182374148081,
+      "zoom": 0.7507017664074155
     }
   },
   "description": "Calculate SaaS subscription price based on costs, profit margin, and subscribers using step-by-step method and Chain-of-Thought prompting. ",
