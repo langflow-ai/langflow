@@ -224,14 +224,7 @@ class APIRequestComponent(Component):
         return isinstance(item, dict) and "key" in item and "value" in item
 
     def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
-        """Parse a cURL command and update build configuration.
-
-        Args:
-            curl: The cURL command to parse
-            build_config: The build configuration to update
-        Returns:
-            Updated build configuration
-        """
+        """Parse a cURL command and update build configuration."""
         try:
             parsed = parse_context(curl)
 
@@ -253,17 +246,21 @@ class APIRequestComponent(Component):
                 build_config["body"]["value"] = []
             elif parsed.data:
                 try:
+                    # Handle array JSON data
                     json_data = json.loads(parsed.data)
-                    if isinstance(json_data, dict):
+                    if isinstance(json_data, list):
+                        # For list data, use index as key
+                        body_list = [{"key": str(i), "value": json.dumps(item)} for i, item in enumerate(json_data)]
+                    elif isinstance(json_data, dict):
                         body_list = [
                             {"key": k, "value": json.dumps(v) if isinstance(v, dict | list) else str(v)}
                             for k, v in json_data.items()
                         ]
-                        build_config["body"]["value"] = body_list
-                        build_config["body"]["advanced"] = False
                     else:
-                        build_config["body"]["value"] = [{"key": "data", "value": json.dumps(json_data)}]
-                        build_config["body"]["advanced"] = False
+                        body_list = [{"key": "data", "value": json.dumps(json_data)}]
+
+                    build_config["body"]["value"] = body_list
+                    build_config["body"]["advanced"] = False
                 except json.JSONDecodeError:
                     build_config["body"]["value"] = [{"key": "data", "value": parsed.data}]
                     build_config["body"]["advanced"] = False
