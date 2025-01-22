@@ -127,7 +127,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="api_endpoint",
             display_name="API Endpoint",
             info="The API endpoint for the Astra DB instance.",
-            advanced=True,
+            show=os.getenv("LANGFLOW_HOST") is not None,  # TODO: Clean up all examples of these
         ),
         DropdownInput(
             name="database_name",
@@ -145,6 +145,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ],
             value="",
             combobox=True,
+            show=os.getenv("LANGFLOW_HOST") is None,
         ),
         DropdownInput(
             name="collection_name",
@@ -164,6 +165,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 }
             ],
             value="",
+        ),
+        DropdownInput(
+            name="vectorize_choice",
+            display_name="Embedding Model or Astra Vectorize",
+            info="Choose an embedding model or use Astra Vectorize.",
+            options=["Embedding Model", "Astra Vectorize"],
+            value="Embedding Model",
+            show=os.getenv("LANGFLOW_HOST") is not None,
+            real_time_refresh=True,
         ),
         StrInput(
             name="keyspace",
@@ -490,6 +500,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        if field_name == "vectorize_choice":
+            if field_value == "Astra Vectorize":
+                build_config["embedding_model"]["advanced"] = True
+                build_config["embedding_model"]["required"] = False
+                build_config["embedding_model"]["value"] = None
+            else:
+                build_config["embedding_model"]["advanced"] = False
+                build_config["embedding_model"]["required"] = True
+
+            return build_config
+
         if not self.token or not self.token.startswith("AstraCS:"):
             build_config["database_name"]["info"] = "Add a Valid Token to Select a Database"
         else:
