@@ -23,7 +23,8 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.chat.id === nextProps.chat.id &&
     prevProps.chat.session === nextProps.chat.session &&
     prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
-    prevProps.chat.properties === nextProps.chat.properties
+    prevProps.chat.properties === nextProps.chat.properties &&
+    prevProps.lastMessage === nextProps.lastMessage
   );
 });
 
