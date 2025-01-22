@@ -51,7 +51,7 @@
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
     "lodash": "^4.17.21",
-    "lucide-react": "^0.395.0",
+    "lucide-react": "^0.469.0",
     "million": "^3.1.11",
     "moment": "^2.30.1",
     "openseadragon": "^4.1.1",
@@ -143,6 +143,6 @@
     "tailwindcss-dotted-background": "^1.1.0",
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
-    "vite": "^5.4.7"
+    "vite": "^5.4.14"
   }
 }

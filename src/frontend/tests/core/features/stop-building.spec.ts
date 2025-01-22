@@ -49,12 +49,12 @@ test(
     //fourth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
+    await page.getByTestId("sidebar-search-input").fill("data to message");
 
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 400 },
+        targetPosition: { x: 100, y: 500 },
       });
 
     //fifth component
@@ -89,7 +89,7 @@ test(
 
     //connection 2
     const textOutput = await page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-message-right")
       .nth(0);
     await textOutput.hover();
     await page.mouse.down();
@@ -113,7 +113,7 @@ test(
 
     //connection 4
     const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0);
     await parseDataOutput.hover();
     await page.mouse.down();

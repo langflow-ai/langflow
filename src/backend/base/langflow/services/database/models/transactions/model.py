@@ -5,10 +5,10 @@ from uuid import UUID, uuid4
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+from langflow.services.database.utils import truncate_json
+
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
-
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class TransactionBase(SQLModel):
@@ -34,9 +34,13 @@ class TransactionBase(SQLModel):
             value = UUID(value)
         return value
 
+    @field_serializer("inputs")
+    def serialize_inputs(self, data) -> dict:
+        return truncate_json(data)
+
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        return truncate_long_strings(data)
+        return truncate_json(data)
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]

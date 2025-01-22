@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,
@@ -15,7 +16,135 @@ import {
 import { cn } from "@/utils/utils";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
+
+const OptionBadge = ({
+  option,
+  onRemove,
+  variant = "emerald",
+  className = "",
+}: {
+  option: string;
+  variant?:
+    | "default"
+    | "emerald"
+    | "gray"
+    | "secondary"
+    | "destructive"
+    | "outline"
+    | "secondaryStatic"
+    | "pinkStatic"
+    | "successStatic"
+    | "errorStatic";
+  className?: string;
+  onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}) => (
+  <Badge
+    variant={
+      variant as
+        | "default"
+        | "emerald"
+        | "gray"
+        | "secondary"
+        | "destructive"
+        | "outline"
+        | "secondaryStatic"
+        | "pinkStatic"
+        | "successStatic"
+        | "errorStatic"
+    }
+    className={cn("flex items-center gap-1 truncate", className)}
+  >
+    <div className="truncate">{option}</div>
+    <X
+      className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
+      onClick={(e) =>
+        onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
+      }
+      data-testid="remove-icon-badge"
+    />
+  </Badge>
+);
+
+const CommandItemContent = ({
+  option,
+  isSelected,
+  optionButton,
+  nodeStyle,
+}: {
+  option: string;
+  isSelected: boolean;
+  optionButton: (option: string) => ReactNode;
+  nodeStyle?: string;
+}) => (
+  <div className="group flex w-full items-center justify-between">
+    <div className="flex items-center justify-between">
+      <SelectionIndicator isSelected={isSelected} />
+      <ShadTooltip content={option} side="left">
+        <div className={cn("truncate pr-2", nodeStyle ? "max-w-52" : "w-full")}>
+          <span>{option}</span>
+        </div>
+      </ShadTooltip>
+    </div>
+    {optionButton && optionButton(option)}
+  </div>
+);
+
+const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
+  <div
+    className={cn(
+      "relative mr-2 h-4 w-4",
+      isSelected ? "opacity-100" : "opacity-0",
+    )}
+  >
+    <div className="absolute opacity-100 transition-all group-hover:opacity-0">
+      <ForwardedIconComponent
+        name="Check"
+        className="mr-2 h-4 w-4 text-primary"
+        aria-hidden="true"
+      />
+    </div>
+    <div className="absolute opacity-0 transition-all group-hover:opacity-100">
+      <ForwardedIconComponent
+        name="X"
+        className="mr-2 h-4 w-4 text-status-red"
+        aria-hidden="true"
+      />
+    </div>
+  </div>
+);
+
+const getInputClassName = (
+  editNode: boolean,
+  disabled: boolean,
+  password: boolean,
+  selectedOptions: string[],
+) => {
+  return cn(
+    "popover-input nodrag w-full truncate px-1 pr-4",
+    editNode && "px-2",
+    editNode && disabled && "h-fit w-fit",
+    disabled &&
+      "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+    password && "text-clip pr-14",
+    selectedOptions?.length >= 0 && "cursor-default",
+  );
+};
+
+const getAnchorClassName = (
+  editNode: boolean,
+  disabled: boolean,
+  isFocused: boolean,
+) => {
+  return cn(
+    "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
+    editNode && "min-h-7 p-0 px-1",
+    editNode && disabled && "min-h-5 border-muted",
+    disabled && "bg-muted text-muted",
+    isFocused &&
+      "border-foreground ring-1 ring-foreground hover:border-foreground",
+  );
+};
 
 const CustomInputPopover = ({
   id,
@@ -43,16 +172,20 @@ const CustomInputPopover = ({
   nodeStyle,
   optionButton,
   autoFocus,
-  className,
+  popoverWidth,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;
 
-  const handleRemoveOption = (optionToRemove, e) => {
-    e.stopPropagation(); // Prevent the popover from opening when removing badges
+  const handleRemoveOption = (
+    optionToRemove: string,
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation();
     if (setSelectedOptions) {
       setSelectedOptions(
         selectedOptions.filter((option) => option !== optionToRemove),
@@ -62,58 +195,58 @@ const CustomInputPopover = ({
     }
   };
 
+  const handleOptionSelect = (currentValue: string) => {
+    if (setSelectedOption) {
+      setSelectedOption(currentValue === selectedOption ? "" : currentValue);
+    }
+    if (setSelectedOptions) {
+      setSelectedOptions(
+        selectedOptions?.includes(currentValue)
+          ? selectedOptions.filter((item) => item !== currentValue)
+          : [...(selectedOptions || []), currentValue],
+      );
+    }
+    !setSelectedOptions && setShowOptions(false);
+  };
+
   return (
     <Popover modal open={showOptions} onOpenChange={setShowOptions}>
       <PopoverAnchor>
         <div
           data-testid={`anchor-${id}`}
-          className={cn(
-            "primary-input noflow nopan nodelete nodrag border-1 flex h-full min-h-[2.375rem] cursor-default flex-wrap items-center px-2",
-            editNode && "min-h-7 p-0 px-1",
-            editNode && disabled && "min-h-5 border-muted",
-            disabled && "bg-muted text-muted",
-            isFocused &&
-              "border-foreground ring-1 ring-foreground hover:border-foreground",
-          )}
-          onClick={() => {
-            if (!nodeStyle && !disabled) {
-              setShowOptions(true);
-            }
-          }}
+          className={getAnchorClassName(editNode, disabled, isFocused)}
+          onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
         >
           {selectedOptions?.length > 0 ? (
-            selectedOptions.map((option) => (
-              <Badge
-                key={option}
-                variant="secondary"
-                className="m-[1px] flex items-center gap-1 truncate px-1"
-              >
-                <div className="truncate">{option}</div>
-                <X
-                  className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-                  onClick={(e) => handleRemoveOption(option, e)}
+            <div className="mr-5 flex flex-wrap gap-2">
+              {selectedOptions.map((option) => (
+                <OptionBadge
+                  key={option}
+                  option={option}
+                  onRemove={(e) => handleRemoveOption(option, e)}
+                  className="rounded-[3px] p-1 font-mono"
                 />
-              </Badge>
-            ))
+              ))}
+            </div>
           ) : selectedOption?.length > 0 ? (
-            <Badge
-              variant={nodeStyle ? "emerald" : "secondary"}
-              className={cn(
-                "flex items-center gap-1 truncate",
-                editNode && "text-xs",
-                nodeStyle ? "font-jetbrains rounded-[3px] px-1" : "bg-muted",
-              )}
-            >
-              <div className="max-w-36 truncate">{selectedOption}</div>
-              <X
-                className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-                onClick={(e) => handleRemoveOption(selectedOption, e)}
-                data-testid={"remove-icon-badge"}
-              />
-            </Badge>
+            <ShadTooltip content={selectedOption} side="left">
+              <div>
+                <OptionBadge
+                  option={selectedOption}
+                  onRemove={(e) => handleRemoveOption(selectedOption, e)}
+                  variant={nodeStyle ? "emerald" : "secondary"}
+                  className={cn(
+                    editNode && "text-xs",
+                    nodeStyle
+                      ? "max-w-60 rounded-[3px] px-1 font-mono"
+                      : "bg-muted",
+                  )}
+                />
+              </div>
+            </ShadTooltip>
           ) : null}
 
-          {!selectedOption && (
+          {!selectedOption?.length && !selectedOptions?.length && (
             <input
               autoComplete="off"
               onFocus={() => setIsFocused(true)}
@@ -128,13 +261,11 @@ const CustomInputPopover = ({
               value={value || ""}
               disabled={disabled}
               required={required}
-              className={cn(
-                "popover-input nodrag w-full truncate px-1 pr-4",
-                editNode && "px-2",
-                editNode && disabled && "h-fit w-fit",
-                disabled &&
-                  "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
-                password && "text-clip pr-14",
+              className={getInputClassName(
+                editNode,
+                disabled,
+                password,
+                selectedOptions,
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
@@ -149,9 +280,13 @@ const CustomInputPopover = ({
           )}
         </div>
       </PopoverAnchor>
+
       <PopoverContentInput
         className="noflow nowheel nopan nodelete nodrag p-0"
-        style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
+        style={{
+          minWidth: refInput?.current?.clientWidth ?? "200px",
+          width: popoverWidth ?? null,
+        }}
         side="bottom"
         align="start"
       >
@@ -168,59 +303,22 @@ const CustomInputPopover = ({
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
             <CommandGroup>
-              {options.map((option, id) => (
+              {Array.from(memoizedOptions).map((option, id) => (
                 <CommandItem
                   key={option + id}
                   value={option}
-                  onSelect={(currentValue) => {
-                    if (setSelectedOption) {
-                      setSelectedOption(
-                        currentValue === selectedOption ? "" : currentValue,
-                      );
-                    }
-                    if (setSelectedOptions) {
-                      setSelectedOptions(
-                        selectedOptions?.includes(currentValue)
-                          ? selectedOptions.filter(
-                              (item) => item !== currentValue,
-                            )
-                          : [...(selectedOptions || []), currentValue],
-                      );
-                    }
-                    !setSelectedOptions && setShowOptions(false);
-                  }}
+                  onSelect={handleOptionSelect}
                   className="group"
                 >
-                  <div className="group flex w-full items-center justify-between">
-                    <div className="flex items-center justify-between">
-                      <div
-                        className={cn(
-                          "relative mr-2 h-4 w-4",
-                          selectedOption === option ||
-                            selectedOptions?.includes(option)
-                            ? "opacity-100"
-                            : "opacity-0",
-                        )}
-                      >
-                        <div className="absolute opacity-100 transition-all group-hover:opacity-0">
-                          <ForwardedIconComponent
-                            name="Check"
-                            className="mr-2 h-4 w-4 text-primary"
-                            aria-hidden="true"
-                          />
-                        </div>
-                        <div className="absolute opacity-0 transition-all group-hover:opacity-100">
-                          <ForwardedIconComponent
-                            name="X"
-                            className="mr-2 h-4 w-4 text-status-red"
-                            aria-hidden="true"
-                          />
-                        </div>
-                      </div>
-                      <span className="max-w-52 truncate pr-2">{option}</span>
-                    </div>
-                    {optionButton && optionButton(option)}
-                  </div>
+                  <CommandItemContent
+                    option={option}
+                    isSelected={
+                      selectedOption === option ||
+                      selectedOptions?.includes(option)
+                    }
+                    optionButton={optionButton}
+                    nodeStyle={nodeStyle}
+                  />
                 </CommandItem>
               ))}
               {optionsButton}

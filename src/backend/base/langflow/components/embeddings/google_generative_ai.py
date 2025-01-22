@@ -1,5 +1,4 @@
 # from langflow.field_typing import Data
-import numpy as np
 
 # TODO: remove ignore once the google package is published with types
 from google.ai.generativelanguage_v1beta.types import BatchEmbedContentsRequest
@@ -9,6 +8,13 @@ from langchain_google_genai._common import GoogleGenerativeAIError
 
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output, SecretStrInput
+
+MIN_DIMENSION_ERROR = "Output dimensionality must be at least 1"
+MAX_DIMENSION_ERROR = (
+    "Output dimensionality cannot exceed 768. Google's embedding models only support dimensions up to 768."
+)
+MAX_DIMENSION = 768
+MIN_DIMENSION = 1
 
 
 class GoogleGenerativeAIEmbeddingsComponent(Component):
@@ -22,7 +28,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
     name = "Google Generative AI Embeddings"
 
     inputs = [
-        SecretStrInput(name="api_key", display_name="API Key"),
+        SecretStrInput(name="api_key", display_name="API Key", required=True),
         MessageTextInput(name="model_name", display_name="Model Name", value="models/text-embedding-004"),
     ]
 
@@ -46,7 +52,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 batch_size: int = 100,
                 task_type: str | None = None,
                 titles: list[str] | None = None,
-                output_dimensionality: int | None = 1536,
+                output_dimensionality: int | None = 768,
             ) -> list[list[float]]:
                 """Embed a list of strings.
 
@@ -63,6 +69,12 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     List of embeddings, one for each text.
                 """
+                if output_dimensionality is not None and output_dimensionality < MIN_DIMENSION:
+                    raise ValueError(MIN_DIMENSION_ERROR)
+                if output_dimensionality is not None and output_dimensionality > MAX_DIMENSION:
+                    error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
+                    raise ValueError(error_msg)
+
                 embeddings: list[list[float]] = []
                 batch_start_index = 0
                 for batch in GoogleGenerativeAIEmbeddings._prepare_batches(texts, batch_size):
@@ -89,7 +101,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                     except Exception as e:
                         msg = f"Error embedding content: {e}"
                         raise GoogleGenerativeAIError(msg) from e
-                    embeddings.extend([list(np.pad(e.values, (0, 768), "constant")) for e in result.embeddings])
+                    embeddings.extend([list(e.values) for e in result.embeddings])
                 return embeddings
 
             def embed_query(
@@ -97,7 +109,7 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 text: str,
                 task_type: str | None = None,
                 title: str | None = None,
-                output_dimensionality: int | None = 1536,
+                output_dimensionality: int | None = 768,
             ) -> list[float]:
                 """Embed a text.
 
@@ -112,6 +124,12 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
                 Returns:
                     Embedding for the text.
                 """
+                if output_dimensionality is not None and output_dimensionality < MIN_DIMENSION:
+                    raise ValueError(MIN_DIMENSION_ERROR)
+                if output_dimensionality is not None and output_dimensionality > MAX_DIMENSION:
+                    error_msg = MAX_DIMENSION_ERROR.format(output_dimensionality)
+                    raise ValueError(error_msg)
+
                 task_type = task_type or "RETRIEVAL_QUERY"
                 return self.embed_documents(
                     [text],

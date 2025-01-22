@@ -58,7 +58,7 @@ router = APIRouter(tags=["Base"])
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
 async def get_all():
-    from langflow.interface.types import get_and_cache_all_types_dict
+    from langflow.interface.components import get_and_cache_all_types_dict
 
     try:
         return await get_and_cache_all_types_dict(settings_service=get_settings_service())
@@ -72,22 +72,31 @@ def validate_input_and_tweaks(input_request: SimplifiedAPIRequest) -> None:
     # then we need to check the tweaks if the ChatInput component is present
     # and if its input_value is not None
     # if so, we raise an error
-    if input_request.tweaks is None:
+    if not input_request.tweaks:
         return
+
     for key, value in input_request.tweaks.items():
-        if "ChatInput" in key or "Chat Input" in key:
-            if isinstance(value, dict):
-                has_input_value = value.get("input_value") is not None
-                input_value_is_chat = input_request.input_value is not None and input_request.input_type == "chat"
-                if has_input_value and input_value_is_chat:
-                    msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
-                    raise InvalidChatInputError(msg)
-        elif ("Text Input" in key or "TextInput" in key) and isinstance(value, dict):
-            has_input_value = value.get("input_value") is not None
-            input_value_is_text = input_request.input_value is not None and input_request.input_type == "text"
-            if has_input_value and input_value_is_text:
-                msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+        if not isinstance(value, dict):
+            continue
+
+        input_value = value.get("input_value")
+        if input_value is None:
+            continue
+
+        request_has_input = input_request.input_value is not None
+
+        if any(chat_key in key for chat_key in ("ChatInput", "Chat Input")):
+            if request_has_input and input_request.input_type == "chat":
+                msg = "If you pass an input_value to the chat input, you cannot pass a tweak with the same name."
                 raise InvalidChatInputError(msg)
+
+        elif (
+            any(text_key in key for text_key in ("TextInput", "Text Input"))
+            and request_has_input
+            and input_request.input_type == "text"
+        ):
+            msg = "If you pass an input_value to the text input, you cannot pass a tweak with the same name."
+            raise InvalidChatInputError(msg)
 
 
 async def simple_run_flow(
@@ -98,8 +107,7 @@ async def simple_run_flow(
     api_key_user: User | None = None,
     event_manager: EventManager | None = None,
 ):
-    if input_request.input_value is not None and input_request.tweaks is not None:
-        validate_input_and_tweaks(input_request)
+    validate_input_and_tweaks(input_request)
     try:
         task_result: list[RunOutputs] = []
         user_id = api_key_user.id if api_key_user else None
@@ -110,13 +118,15 @@ async def simple_run_flow(
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
         graph = Graph.from_payload(graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name)
-        inputs = [
-            InputValueRequest(
-                components=[],
-                input_value=input_request.input_value,
-                type=input_request.input_type,
-            )
-        ]
+        inputs = None
+        if input_request.input_value is not None:
+            inputs = [
+                InputValueRequest(
+                    components=[],
+                    input_value=input_request.input_value,
+                    type=input_request.input_type,
+                )
+            ]
         if input_request.output_component:
             outputs = [input_request.output_component]
         else:
@@ -717,8 +727,9 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         component_node["template"] = updated_build_config
+
         if isinstance(cc_instance, Component):
-            cc_instance.run_and_validate_update_outputs(
+            await cc_instance.run_and_validate_update_outputs(
                 frontend_node=component_node,
                 field_name=code_request.field,
                 field_value=code_request.field_value,

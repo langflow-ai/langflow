@@ -3,6 +3,7 @@ import { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
 import { SliderComponentType } from "@/types/components";
+import { cn } from "@/utils/utils";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -198,13 +199,14 @@ export default function SliderComponent({
   const ringClassInputClass = "ring-[1px] ring-slider-input-border";
 
   return (
-    <div className="w-full rounded-lg pb-2">
+    <div className={cn("w-full rounded-lg", editNode && "mt-3")}>
       <Case condition={!sliderButtons}>
         <div className="noflow nowheel nopan nodelete nodrag flex items-center justify-end">
           <div
             className={clsx(
               "input-slider-text",
               (isGrabbing || isEditing) && ringClassInputClass,
+              editNode && "relative left-0.5",
             )}
           >
             {isEditing ? (
@@ -214,8 +216,9 @@ export default function SliderComponent({
                 onChange={handleInputChange}
                 onBlur={handleInputBlur}
                 onKeyDown={handleKeyDown}
-                className="relative bottom-[1px] w-full cursor-text rounded-sm bg-transparent text-center font-mono text-[0.88rem] arrow-hide"
+                className="relative bottom-[1px] w-full cursor-text rounded-sm bg-transparent text-center font-mono text-sm arrow-hide"
                 autoFocus
+                data-testid="slider_input"
               />
             ) : (
               <span
