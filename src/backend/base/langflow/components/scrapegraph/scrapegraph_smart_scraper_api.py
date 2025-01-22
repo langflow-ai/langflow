@@ -61,6 +61,6 @@ class ScrapeGraphSmartScraperApi(Component):
             sgai_client.close()
 
             return Data(data=response)
-        except Exception as e:
+        except Exception:
             sgai_client.close()
-            raise e
+            raise

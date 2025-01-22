@@ -4120,7 +4120,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ag2" },
+    { name = "ag2", specifier = ">=0.1.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
