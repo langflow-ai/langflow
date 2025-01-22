@@ -161,7 +161,6 @@ export default function TableNodeComponent({
             setSelectedNodes(event.api.getSelectedNodes());
           }}
           rowSelection={table_options?.block_select ? undefined : "multiple"}
-          suppressRowClickSelection={true}
           editable={editable}
           pagination={!table_options?.hide_options}
           addRow={addRow}
