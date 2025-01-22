@@ -128,6 +128,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="API Endpoint",
             info="The API endpoint for the Astra DB instance.",
             advanced=os.getenv("LANGFLOW_HOST") is None,  # TODO: Clean up all examples of these
+            refresh_button=True,
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="database_name",
