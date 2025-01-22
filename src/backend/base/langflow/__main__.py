@@ -624,3 +624,17 @@ if __name__ == "__main__":
     except Exception as e:
         logger.exception(e)
         raise typer.Exit(1) from e
+
+# Add timing metrics around the build process
+async def _build_flow(flow_id):
+    start_time = time.time()
+    try:
+        # Existing build logic...
+        result = await build_flow(flow_id)
+        build_time = time.time() - start_time
+        logger.info(f"Flow {flow_id} built in {build_time:.2f} seconds")
+        return result
+    except Exception as e:
+        build_time = time.time() - start_time
+        logger.error(f"Flow {flow_id} failed to build after {build_time:.2f} seconds: {str(e)}")
+        raise

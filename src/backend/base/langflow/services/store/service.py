@@ -598,3 +598,19 @@ class StoreService(Service):
                         # If we get an error here, it means the user is not authorized
                         authorized = False
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)
+
+    async def search_and_restore(self, data, chunk_size=100):
+        """Process large search and restore operations in chunks"""
+        total_items = len(data)
+        results = []
+        
+        for i in range(0, total_items, chunk_size):
+            chunk = data[i:i + chunk_size]
+            chunk_result = await self._process_chunk(chunk)
+            results.extend(chunk_result)
+            
+            # Report progress
+            progress = min((i + chunk_size) / total_items * 100, 100)
+            logger.debug(f"Search and restore progress: {progress:.1f}%")
+            
+        return results

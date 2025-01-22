@@ -1,4 +1,6 @@
 from abc import ABC
+import psutil
+import os
 
 
 class Service(ABC):
@@ -26,3 +28,16 @@ class Service(ABC):
 
     def set_ready(self) -> None:
         self.ready = True
+
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    logger.debug(f"Memory usage: {mem_info.rss / 1024 / 1024:.2f} MB")
+
+class FlowService:
+    async def process_large_flow(self, flow_data):
+        log_memory_usage()
+        # Process flow
+        result = await self._process_flow(flow_data)
+        log_memory_usage()
+        return result

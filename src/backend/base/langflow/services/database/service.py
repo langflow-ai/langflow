@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
+from functools import wraps
 
 import anyio
 import sqlalchemy as sa
@@ -33,6 +34,18 @@ from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
+
+def monitor_query_time(f):
+    @wraps(f)
+    async def wrapper(*args, **kwargs):
+        start = time.time()
+        result = await f(*args, **kwargs)
+        duration = time.time() - start
+        if duration > 1.0:  # Log slow queries
+            logger.warning(f"Slow query detected in {f.__name__}: {duration:.2f}s")
+        return result
+    return wrapper
 
 
 class DatabaseService(Service):
@@ -446,3 +459,12 @@ class DatabaseService(Service):
         except Exception:  # noqa: BLE001
             logger.exception("Error tearing down database")
         await self.engine.dispose()
+
+    @monitor_query_time
+    async def get_flow(self, flow_id: str):
+        """Get a flow by its ID with query time monitoring."""
+        async with self.with_session() as session:
+            stmt = select(models.Flow).where(models.Flow.id == flow_id)
+            result = await session.exec(stmt)
+            flow = result.first()
+            return flow
