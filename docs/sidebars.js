@@ -25,6 +25,7 @@ module.exports = {
         'Tutorials/tutorials-blog-writer',
         'Tutorials/tutorials-document-qa',
         'Tutorials/tutorials-memory-chatbot',
+        'Tutorials/tutorials-math-agent',
         'Tutorials/tutorials-sequential-agent',
         'Tutorials/tutorials-travel-planning-agent',
       ],
