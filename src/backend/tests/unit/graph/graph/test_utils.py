@@ -851,3 +851,129 @@ def test_get_sorted_vertices_exact_sequence(graph_with_loop):
     assert len(sequence) == len(expected_sequence), (
         f"Expected sequence length {len(expected_sequence)}, but got {len(sequence)}"
     )
+
+
+def test_get_sorted_vertices_with_unconnected_graph():
+    # Define a graph with the specified structure
+    vertices_ids = ["A", "B", "C", "D", "K"]
+    cycle_vertices = set()
+    graph_dict = {
+        "A": {"successors": ["B"], "predecessors": []},
+        "C": {"successors": ["B"], "predecessors": []},
+        "B": {"successors": ["D"], "predecessors": ["A", "C"]},
+        "D": {"successors": [], "predecessors": ["B"]},
+        "K": {"successors": [], "predecessors": []},
+    }
+    in_degree_map = {vertex: len(data["predecessors"]) for vertex, data in graph_dict.items()}
+    successor_map = {vertex: data["successors"] for vertex, data in graph_dict.items()}
+    predecessor_map = {vertex: data["predecessors"] for vertex, data in graph_dict.items()}
+
+    def is_input_vertex(vertex_id: str) -> bool:
+        return vertex_id in ["A"]
+
+    def get_vertex_predecessors(vertex_id: str) -> list[str]:
+        return predecessor_map[vertex_id]
+
+    def get_vertex_successors(vertex_id: str) -> list[str]:
+        return successor_map[vertex_id]
+
+    first_layer, remaining_layers = utils.get_sorted_vertices(
+        vertices_ids=vertices_ids,
+        cycle_vertices=cycle_vertices,
+        stop_component_id=None,
+        start_component_id="A",
+        graph_dict=graph_dict,
+        in_degree_map=in_degree_map,
+        successor_map=successor_map,
+        predecessor_map=predecessor_map,
+        is_input_vertex=is_input_vertex,
+        get_vertex_predecessors=get_vertex_predecessors,
+        get_vertex_successors=get_vertex_successors,
+        is_cyclic=False,
+    )
+
+    # Verify the first layer contains all input vertices
+    assert set(first_layer) == {"A", "C"}
+
+    # Verify the remaining layers contain the rest of the vertices in the correct order
+    assert len(remaining_layers) == 2
+    assert remaining_layers[0] == ["B"]
+    assert remaining_layers[1] == ["D"]
+
+
+def test_filter_vertices_from_vertex():
+    # Test case 1: Simple linear graph
+    vertices_ids = ["A", "B", "C", "D"]
+    graph_dict = {
+        "A": {"successors": ["B"], "predecessors": []},
+        "B": {"successors": ["C"], "predecessors": ["A"]},
+        "C": {"successors": ["D"], "predecessors": ["B"]},
+        "D": {"successors": [], "predecessors": ["C"]},
+    }
+
+    # Starting from A should return all vertices
+    result = utils.filter_vertices_from_vertex(vertices_ids, "A", graph_dict=graph_dict)
+    assert result == {"A", "B", "C", "D"}
+
+    # Starting from B should return B, C, D
+    result = utils.filter_vertices_from_vertex(vertices_ids, "B", graph_dict=graph_dict)
+    assert result == {"B", "C", "D"}
+
+    # Starting from D should return only D
+    result = utils.filter_vertices_from_vertex(vertices_ids, "D", graph_dict=graph_dict)
+    assert result == {"D"}
+
+    # Test case 2: Graph with branches
+    vertices_ids = ["A", "B", "C", "D", "E"]
+    graph_dict = {
+        "A": {"successors": ["B", "C"], "predecessors": []},
+        "B": {"successors": ["D"], "predecessors": ["A"]},
+        "C": {"successors": ["E"], "predecessors": ["A"]},
+        "D": {"successors": [], "predecessors": ["B"]},
+        "E": {"successors": [], "predecessors": ["C"]},
+    }
+
+    # Starting from A should return all vertices
+    result = utils.filter_vertices_from_vertex(vertices_ids, "A", graph_dict=graph_dict)
+    assert result == {"A", "B", "C", "D", "E"}
+
+    # Starting from B should return B and D
+    result = utils.filter_vertices_from_vertex(vertices_ids, "B", graph_dict=graph_dict)
+    assert result == {"B", "D"}
+
+    # Test case 3: Graph with unconnected vertices
+    vertices_ids = ["A", "B", "C", "X", "Y"]
+    graph_dict = {
+        "A": {"successors": ["B"], "predecessors": []},
+        "B": {"successors": ["C"], "predecessors": ["A"]},
+        "C": {"successors": [], "predecessors": ["B"]},
+        "X": {"successors": ["Y"], "predecessors": []},
+        "Y": {"successors": [], "predecessors": ["X"]},
+    }
+
+    # Starting from A should return only A, B, C
+    result = utils.filter_vertices_from_vertex(vertices_ids, "A", graph_dict=graph_dict)
+    assert result == {"A", "B", "C"}
+
+    # Starting from X should return only X, Y
+    result = utils.filter_vertices_from_vertex(vertices_ids, "X", graph_dict=graph_dict)
+    assert result == {"X", "Y"}
+
+    # Test case 4: Invalid vertex
+    result = utils.filter_vertices_from_vertex(vertices_ids, "Z", graph_dict=graph_dict)
+    assert result == set()
+
+    # Test case 5: Using callback functions instead of graph_dict
+    def get_successors(v: str) -> list[str]:
+        return graph_dict[v]["successors"]
+
+    def get_predecessors(v: str) -> list[str]:
+        return graph_dict[v]["predecessors"]
+
+    result = utils.filter_vertices_from_vertex(
+        vertices_ids,
+        "A",
+        get_vertex_predecessors=get_predecessors,
+        get_vertex_successors=get_successors,
+    )
+    assert result == {"A", "B", "C"}
