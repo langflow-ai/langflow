@@ -248,7 +248,7 @@ export async function buildFlowVertices({
           if (!buildData.valid) {
             // lots is a dictionary with the key the output field name and the value the log object
             // logs: { [key: string]: { message: any; type: string }[] };
-            const errorMessages = Object.keys(buildData.data.outputs).map(
+            const errorMessages = Object.keys(buildData.data.outputs).flatMap(
               (key) => {
                 const outputs = buildData.data.outputs[key];
                 if (Array.isArray(outputs)) {
