@@ -2,11 +2,9 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent, {
   TableComponentProps,
 } from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { Button } from "@/components/ui/button";
 import { TableOptionsTypeAPI } from "@/types/api";
-import { DialogClose } from "@radix-ui/react-dialog";
 import { AgGridReact } from "ag-grid-react";
-import { ElementRef, ForwardedRef, forwardRef } from "react";
+import { ForwardedRef, forwardRef } from "react";
 import BaseModal from "../baseModal";
 
 interface TableModalProps extends TableComponentProps {

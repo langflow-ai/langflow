@@ -177,8 +177,6 @@ const CustomInputPopover = ({
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
-  console.log(nodeStyle);
-
   const PopoverContentInput = editNode
     ? PopoverContent
     : PopoverContentWithoutPortal;

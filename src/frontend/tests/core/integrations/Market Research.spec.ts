@@ -34,8 +34,8 @@ test(
     });
 
     await initialGPTsetup(page);
-
     await page
+      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
       .getByTestId("popover-anchor-input-api_key")
       .nth(0)
       .fill(process.env.TAVILY_API_KEY ?? "");
