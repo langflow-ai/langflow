@@ -150,8 +150,6 @@ class DatabaseService(Service):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
             try:
                 yield session
-                if session.is_active:
-                    await session.commit()
             except Exception:
                 logger.error("An error occurred during the session scope")
                 await session.rollback()
