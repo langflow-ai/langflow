@@ -581,14 +581,29 @@ function hasLoop(
   // Check if this connection would create a cycle
   const targetNode = nodes.find((n) => n.id === target);
 
-  const hasCycle = (node, visited = new Set()): boolean => {
+  const hasCycle = (
+    node,
+    visited = new Set(),
+    firstEdge: EdgeType | null = null,
+  ): boolean => {
     if (visited.has(node.id)) return false;
 
     visited.add(node.id);
 
     for (const outgoer of getOutgoers(node, nodes, edges)) {
-      if (outgoer.id === source) return true;
-      if (hasCycle(outgoer, visited)) return true;
+      const edge = edges.find(
+        (e) => e.source === node.id && e.target === outgoer.id,
+      );
+      if (outgoer.id === source) {
+        const sourceHandleObject = scapeJSONParse(
+          firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
+        );
+        const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
+        if (sourceHandleParsed === e.targetHandle) {
+          return true;
+        }
+      }
+      if (hasCycle(outgoer, visited, firstEdge || edge)) return true;
     }
     return false;
   };
