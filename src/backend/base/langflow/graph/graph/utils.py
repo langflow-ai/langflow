@@ -797,7 +797,7 @@ def get_sorted_vertices(
     Returns:
         Tuple of (first layer vertices, remaining layer vertices)
     """
-    # Handle cycles by converting stop to start
+    # Ensure stop_component_id is converted to start_component_id if part of a cycle
     if stop_component_id in cycle_vertices:
         start_component_id = stop_component_id
         stop_component_id = None
@@ -865,6 +865,14 @@ def get_sorted_vertices(
     if stop_component_id is not None and remaining_layers and stop_component_id not in remaining_layers[-1]:
         remaining_layers[-1].append(stop_component_id)
 
+    # Filter out unconnected vertices from the first layer unless they are input vertices
+    # or have no predecessors and are part of the main connected component
+    first_layer = [
+        v
+        for v in first_layer
+        if is_input_vertex(v) or (in_degree_map[v] == 0 and any(succ in vertices_ids for succ in successor_map[v]))
+    ]
+
     # Sort chat inputs first and sort each layer by dependencies
     all_layers = [first_layer, *remaining_layers]
     if get_vertex_predecessors is not None and start_component_id is None:
@@ -875,7 +883,16 @@ def get_sorted_vertices(
     if not all_layers:
         return [], []
 
-    return all_layers[0], all_layers[1:]
+    # If start_component_id is set, ensure it is included in the first layer
+    if start_component_id and start_component_id not in first_layer:
+        first_layer.insert(0, start_component_id)
+
+    # Ensure start_component_id is processed correctly in cyclic graphs
+    if is_cyclic and start_component_id:
+        first_layer = [start_component_id]
+        remaining_layers = [layer for layer in remaining_layers if start_component_id not in layer]
+
+    return first_layer, remaining_layers
 
 
 def filter_vertices_up_to_vertex(
