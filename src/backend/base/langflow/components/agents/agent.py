@@ -266,6 +266,7 @@ class AgentComponent(ToolCallingAgentComponent):
                         component_class, build_config, field_value, "model_name"
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
+
     async def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
         tools_names = self._build_tools_names()
