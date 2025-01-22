@@ -1,4 +1,4 @@
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchResults
 
 from langflow.custom import Component
 from langflow.io import IntInput, MultilineInput, Output
@@ -19,11 +19,11 @@ class DuckDuckGoSearchCoreComponent(Component):
             required=True,
         ),
         IntInput(
-            name="max_snippet_length",
-            display_name="Max Snippet Length",
-            value=500,
-            advanced=True
-        )
+            name="max_results",
+            display_name="Max Results",
+            value=5,
+        ),
+        IntInput(name="max_snippet_length", display_name="Max Snippet Length", value=500, advanced=True),
     ]
 
     outputs = [
@@ -37,16 +37,15 @@ class DuckDuckGoSearchCoreComponent(Component):
 
     def search_duckduckgo(self) -> DataFrame:
         try:
-            # Initialize the DuckDuckGo search wrapper
-            wrapper = DuckDuckGoSearchRun()
+            # Initialize the DuckDuckGo search with list output format
+            search = DuckDuckGoSearchResults(output_format="list")
 
             # Perform the search
-            full_results = wrapper.run(f"{self.input_value} (site:*)")
+            full_results = search.invoke(self.input_value)
 
-            # Prepare DataFrame data
+            # Limit results and prepare DataFrame data
             df_data = [
-                {"text": result[:self.max_snippet_length]}
-                for result in full_results.split("\n")
+                {"text": result["snippet"][: self.max_snippet_length]} for result in full_results[: self.max_results]
             ]
 
             # Create and return DataFrame
