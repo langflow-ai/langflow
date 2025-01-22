@@ -930,7 +930,8 @@ def filter_vertices_up_to_vertex(
     # Build predecessor map if not provided
     if get_vertex_predecessors is None:
         if graph_dict is None:
-            return set()
+            msg = "Either get_vertex_predecessors or graph_dict must be provided"
+            raise ValueError(msg)
 
         def get_vertex_predecessors(v):
             return graph_dict[v]["predecessors"]
@@ -984,7 +985,8 @@ def filter_vertices_from_vertex(
     # Build predecessor map if not provided
     if get_vertex_predecessors is None:
         if graph_dict is None:
-            return set()
+            msg = "Either get_vertex_predecessors or graph_dict must be provided"
+            raise ValueError(msg)
 
         def get_vertex_predecessors(v):
             return graph_dict[v]["predecessors"]
