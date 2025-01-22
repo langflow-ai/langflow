@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 from langchain_core.tools import ToolException
-from langflow.components.tools import WikidataAPIComponent
+from langflow.components.tools import WikidataComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
@@ -11,14 +11,14 @@ from langflow.schema.message import Message
 
 
 def test_wikidata_initialization():
-    component = WikidataAPIComponent()
-    assert component.display_name == "Wikidata API"
+    component = WikidataComponent()
+    assert component.display_name == "Wikidata"
     assert component.description == "Performs a search using the Wikidata API."
     assert component.icon == "Wikipedia"
 
 
 def test_wikidata_template():
-    wikidata = WikidataAPIComponent()
+    wikidata = WikidataComponent()
     component = Component(_code=wikidata._code)
     frontend_node, _ = build_custom_component_template(component)
 
@@ -33,7 +33,7 @@ def test_wikidata_template():
 
 @patch("langflow.components.tools.wikidata_api.httpx.get")
 def test_fetch_content_success(mock_httpx):
-    component = WikidataAPIComponent()
+    component = WikidataComponent()
     component.query = "test query"
 
     # Mock successful API response
@@ -62,7 +62,7 @@ def test_fetch_content_success(mock_httpx):
 
 @patch("langflow.components.tools.wikidata_api.httpx.get")
 def test_fetch_content_empty_response(mock_httpx):
-    component = WikidataAPIComponent()
+    component = WikidataComponent()
     component.query = "test query"
 
     # Mock empty API response
@@ -80,7 +80,7 @@ def test_fetch_content_empty_response(mock_httpx):
 
 @patch("langflow.components.tools.wikidata_api.httpx.get")
 def test_fetch_content_error_handling(mock_httpx):
-    component = WikidataAPIComponent()
+    component = WikidataComponent()
     component.query = "test query"
 
     # Mock HTTP error
@@ -91,7 +91,7 @@ def test_fetch_content_error_handling(mock_httpx):
 
 
 def test_fetch_content_text():
-    component = WikidataAPIComponent()
+    component = WikidataComponent()
     component.fetch_content = MagicMock(
         return_value=[
             Data(text="First result", data={"label": "Label 1"}),
