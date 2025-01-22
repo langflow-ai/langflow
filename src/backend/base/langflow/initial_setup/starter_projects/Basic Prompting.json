@@ -2,35 +2,11 @@
   "data": {
     "edges": [
       {
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-51zV0",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "OpenAIModel-GtPty",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Prompt-51zV0{œdataTypeœ:œPromptœ,œidœ:œPrompt-51zV0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-GtPty{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-GtPtyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-51zV0",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-51zV0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-GtPty",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-GtPtyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5i1v3",
+            "id": "ChatInput-sU0vL",
             "name": "message",
             "output_types": [
               "Message"
@@ -38,24 +14,51 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-GtPty",
+            "id": "OpenAIModel-6Uq9A",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-5i1v3{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5i1v3œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-GtPty{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-GtPtyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-5i1v3",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5i1v3œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-GtPty",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-GtPtyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-sU0vL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-sU0vLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-6Uq9A{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-6Uq9Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-sU0vL",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-sU0vLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-6Uq9A",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-6Uq9Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-a0CWD",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_message",
+            "id": "OpenAIModel-6Uq9A",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-a0CWD{œdataTypeœ:œPromptœ,œidœ:œPrompt-a0CWDœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-6Uq9A{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-6Uq9Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-a0CWD",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-a0CWDœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-6Uq9A",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-6Uq9Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-GtPty",
+            "id": "OpenAIModel-6Uq9A",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -63,18 +66,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-0kSEM",
+            "id": "ChatOutput-S56f5",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__OpenAIModel-GtPty{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-GtPtyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-0kSEM{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-0kSEMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-GtPty",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-GtPtyœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-0kSEM",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-0kSEMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-6Uq9A{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-6Uq9Aœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-S56f5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-S56f5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-6Uq9A",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-6Uq9Aœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-S56f5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-S56f5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -82,7 +85,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-5i1v3",
+          "id": "ChatInput-sU0vL",
           "node": {
             "base_classes": [
               "Message"
@@ -346,10 +349,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-5i1v3",
+        "id": "ChatInput-sU0vL",
         "measured": {
           "height": 234,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 689.5720422421635,
@@ -367,7 +370,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-51zV0",
+          "id": "Prompt-a0CWD",
           "node": {
             "base_classes": [
               "Message"
@@ -471,10 +474,10 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-51zV0",
+        "id": "Prompt-a0CWD",
         "measured": {
           "height": 260,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 690.2015147036818,
@@ -490,7 +493,7 @@
       },
       {
         "data": {
-          "id": "undefined-uksjN",
+          "id": "undefined-omGwP",
           "node": {
             "description": "## 📖 README\n\nPerform basic prompting with an OpenAI model.\n\n#### Quick Start\n- Add your **OpenAI API key** to the **OpenAI Model**\n- Open the **Playground** to chat with your bot.\n\n#### Next steps:\n Experiment by changing the prompt and the OpenAI model temperature to see how the bot's responses change.",
             "display_name": "Read Me",
@@ -502,10 +505,10 @@
         },
         "dragging": false,
         "height": 250,
-        "id": "undefined-uksjN",
+        "id": "undefined-omGwP",
         "measured": {
           "height": 250,
-          "width": 600
+          "width": 328
         },
         "position": {
           "x": 66.38770028934243,
@@ -526,7 +529,7 @@
       },
       {
         "data": {
-          "id": "note-krY7d",
+          "id": "note-bk1gl",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -539,10 +542,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-krY7d",
+        "id": "note-bk1gl",
         "measured": {
           "height": 324,
-          "width": 324
+          "width": 326
         },
         "position": {
           "x": 1075.829573520873,
@@ -563,7 +566,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-0kSEM",
+          "id": "ChatOutput-S56f5",
           "node": {
             "base_classes": [
               "Message"
@@ -823,10 +826,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-0kSEM",
+        "id": "ChatOutput-S56f5",
         "measured": {
           "height": 234,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1460.070372772908,
@@ -842,7 +845,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-GtPty",
+          "id": "OpenAIModel-6Uq9A",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -905,7 +908,7 @@
               }
             ],
             "pinned": false,
-            "score": 2.220446049250313e-16,
+            "score": 0.14285714285714285,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -925,7 +928,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -955,6 +958,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -974,6 +978,7 @@
                 "dynamic": false,
                 "info": "If True, it will output JSON regardless of passing a schema.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "json_mode",
                 "placeholder": "",
                 "required": false,
@@ -991,6 +996,7 @@
                 "dynamic": false,
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
@@ -1014,6 +1020,7 @@
                 "dynamic": false,
                 "info": "Additional keyword arguments to pass to the model.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "model_kwargs",
                 "placeholder": "",
                 "required": false,
@@ -1028,6 +1035,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "",
@@ -1041,6 +1049,7 @@
                   "gpt-3.5-turbo",
                   "gpt-3.5-turbo-0125"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1057,6 +1066,7 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
@@ -1075,6 +1085,7 @@
                 "dynamic": false,
                 "info": "The seed controls the reproducibility of the job.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "seed",
                 "placeholder": "",
                 "required": false,
@@ -1092,6 +1103,7 @@
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "stream",
                 "placeholder": "",
                 "required": false,
@@ -1112,6 +1124,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_message",
@@ -1160,23 +1173,23 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-GtPty",
+        "id": "OpenAIModel-6Uq9A",
         "measured": {
-          "height": 770,
+          "height": 734,
           "width": 360
         },
         "position": {
-          "x": 1075.2249314800433,
-          "y": 729.622454137517
+          "x": 1071.3015591664102,
+          "y": 724.6650363109242
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -352.0739415813646,
-      "y": -439.19385215506,
-      "zoom": 0.8590218788624804
+      "x": 17.718959514444805,
+      "y": -430.8864814643483,
+      "zoom": 0.8320153537381677
     }
   },
   "description": "Perform basic prompting with an OpenAI model.",
