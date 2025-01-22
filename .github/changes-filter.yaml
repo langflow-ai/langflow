@@ -28,6 +28,7 @@ starter-projects:
   - "src/frontend/src/pages/MainPage/**"
   - "src/frontend/src/utils/reactflowUtils.ts"
   - "src/frontend/tests/extended/features/**"
+  - "src/backend/base/langflow/components/**"
 
 components:
   - "src/frontend/src/components/**"
