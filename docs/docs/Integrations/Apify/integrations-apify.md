@@ -29,18 +29,19 @@ Enter the key in the *Apify Token* field in all components that require the key.
 
 ## Example flows
 
-### Extract website content in Markdown format
+### Extract website text content in Markdown format
 
-This example flow demonstrates the use of the Apify Actors component to extract text content from a website in Markdown format. The flow includes a [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) that extracts text content from a website. The extracted content can then be used for various purposes in your flow.
+Use the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to extract text content in Markdown format from a website and process it in your flow. The extracted content can then be used for various purposes in your flow.
 ![Apify Flow - Website Content Crawler](./apify_flow_wcc.png)
-### Simple example with Agent
 
-This example flow demonstrates the use of the Apify Actors component to run a simple web scraping task. The flow includes a [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) that extracts text content from a website. The agent triggers the Actor to scrape the website and retrieve the content, which can then be summarized or analyzed by the agent in the chat.
+### Analyze and process website content with an Agent
+
+Building on the previous example, this flow not only extracts website content using the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) but also processes and analyzes it with an agent. The agent takes the extracted data and transforms it into summaries, insights, or structured responses, making the information more actionable. Unlike simple extraction, this approach enables automated content understanding and contextual processing.
 ![Apify Agent Flow - Simple](./apify_agent_flow_simple.png)
 
-### Multiple Apify Actors with Agent
+### Search and analyze social media profiles with an Agent
 
-This example flow demonstrates the use of multiple Apify Actors to complete a comprehensive web scraping task. The flow includes a [Google Search Results Scraper Actor](https://apify.com/apify/google-search-scraper) that extracts search results from Google and a [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) that gathers data from TikTok. Initially, the agent collects social media links related to an entity (person, company, etc.) from Google. It then utilizes the TikTok Data Extractor to retrieve data and videos from the corresponding TikTok profile.
+Perform comprehensive social media research with multiple Apify Actors. Start with the [Google Search Results Scraper Actor](https://apify.com/apify/google-search-scraper) to find relevant social media profiles, then use the [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) to gather data and videos. The agent streamlines the process by collecting links from Google and retrieving content from TikTok, enabling deeper analysis of a person, brand, or topic.
 ![Apify Agent Flow](./apify_agent_flow.png)
 
 ## Components
