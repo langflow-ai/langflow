@@ -18,6 +18,7 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
     def component_class(self):
         """Fixture to create a WikidataComponent instance."""
         return WikidataComponent
+
     @pytest.fixture
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
