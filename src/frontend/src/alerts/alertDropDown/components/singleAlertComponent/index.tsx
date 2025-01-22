@@ -2,6 +2,10 @@ import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import { SingleAlertComponentType } from "../../../../types/alerts";
+import rehypeMathjax from "rehype-mathjax";
+import remarkGfm from "remark-gfm";
+import Markdown from "react-markdown";
+
 
 export default function SingleAlert({
   dropItem,
@@ -24,14 +28,29 @@ export default function SingleAlert({
       </div>
       <div className="ml-3">
         <h3 className="text-sm font-medium text-error-foreground word-break-break-word">
-          {dropItem.title}
+        <Markdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeMathjax]}
+                  className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+                >
+            {dropItem.title}
+          </Markdown>
         </h3>
         {dropItem.list ? (
           <div className="mt-2 text-sm text-error-foreground">
-            <ul className="list-disc space-y-1 pl-5">
+            <ul className="list-disc space-y-1 pl-5 align-top">
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
-                  {item}
+                  <Markdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeMathjax]}
+                    className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+                    components={{
+                      li: ({ children }) => <li className="line-clamp-">{children}</li>,
+                    }}
+                  >
+                    {item}
+                  </Markdown>
                 </li>
               ))}
             </ul>
@@ -76,7 +95,13 @@ export default function SingleAlert({
       </div>
       <div className="ml-3 flex-1 md:flex md:justify-between">
         <p className="text-sm font-medium text-info-foreground">
-          {dropItem.title}
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeMathjax]}
+            className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+          >
+            {dropItem.title}
+          </Markdown>
         </p>
         <p className="mt-3 text-sm md:ml-6 md:mt-0">
           {dropItem.link ? (
@@ -127,7 +152,13 @@ export default function SingleAlert({
       </div>
       <div className="ml-3">
         <p className="text-sm font-medium text-success-foreground">
-          {dropItem.title}
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeMathjax]}
+            className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+          >
+            {dropItem.title}
+          </Markdown>
         </p>
       </div>
       <div className="ml-auto pl-3">

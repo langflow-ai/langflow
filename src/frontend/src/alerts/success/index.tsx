@@ -2,6 +2,9 @@ import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import { SuccessAlertType } from "../../types/alerts";
+import Markdown from "react-markdown";
+import rehypeMathjax from "rehype-mathjax";
+import remarkGfm from "remark-gfm";
 
 export default function SuccessAlert({
   title,
@@ -45,7 +48,15 @@ export default function SuccessAlert({
             />
           </div>
           <div className="ml-3">
-            <p className="success-alert-message line-clamp-2">{title}</p>
+            <p className="success-alert-message line-clamp-2">
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeMathjax]}
+                className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+              >
+                {title}
+              </Markdown>
+            </p>
           </div>
         </div>
       </div>
