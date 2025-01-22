@@ -7,7 +7,7 @@ from langchain_community.document_loaders.apify_dataset import ApifyDatasetLoade
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field, field_serializer
 
-from langflow.base.langchain_utilities.model import LCToolComponent
+from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.inputs.inputs import BoolInput
 from langflow.io import MultilineInput, Output, SecretStrInput, StrInput
@@ -16,7 +16,7 @@ from langflow.schema import Data
 MAX_DESCRIPTION_LEN = 250
 
 
-class ApifyActorsComponent(LCToolComponent):
+class ApifyActorsComponent(Component):
     display_name = "Apify Actors"
     description = (
         "Use Apify Actors to extract data from hundreds of places fast. "
