@@ -10,7 +10,6 @@ from langflow.schema.message import Message
 class WikipediaComponent(Component):
     display_name = "Wikipedia"
     description = "Call Wikipedia API."
-    name = "Wikipedia"
     icon = "Wikipedia"
 
     inputs = [
