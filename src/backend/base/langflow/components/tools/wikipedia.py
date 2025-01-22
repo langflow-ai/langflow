@@ -53,3 +53,13 @@ class WikipediaComponent(Component):
             load_all_available_meta=self.load_all_available_meta,
             doc_content_chars_max=self.doc_content_chars_max,
         )
+
+    def __init__(
+        self, k: int = 4, lang: str = "en", load_all_available_meta: bool = False, doc_content_chars_max: int = 4000
+    ):
+        super().__init__()
+        self.k = k
+        self.lang = lang
+        self.load_all_available_meta = load_all_available_meta
+        self.doc_content_chars_max = doc_content_chars_max
+        self.wrapper = self._build_wrapper()
