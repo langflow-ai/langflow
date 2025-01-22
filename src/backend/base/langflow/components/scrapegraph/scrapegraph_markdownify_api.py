@@ -1,7 +1,5 @@
 from langflow.custom import Component
 from langflow.io import (
-    DataInput,
-    IntInput,
     Output,
     SecretStrInput,
     StrInput,
