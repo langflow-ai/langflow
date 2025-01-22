@@ -5,7 +5,7 @@ slug: /integrations-apify
 
 # Integrate Apify with Langflow
 
-[Apify](https://apify.com/) is a platform that enables you to automate web scraping, data extraction, and other tasks using Apify Actors.
+[Apify](https://apify.com/) is a web scraping and data extraction platform. It provides an app store with more than a three thounds ready-made cloud tools called Actors.```
 
 The Apify components allow you to run Apify Actors in your flow to accomplish tasks such as:
 
