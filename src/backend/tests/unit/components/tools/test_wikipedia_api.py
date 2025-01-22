@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from langflow.components.tools import WikipediaAPIComponent
+from langflow.components.tools import WikipediaComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
@@ -9,14 +9,14 @@ from langflow.schema.message import Message
 
 
 def test_wikipedia_initialization():
-    component = WikipediaAPIComponent()
+    component = WikipediaComponent()
     assert component.display_name == "Wikipedia API"
     assert component.description == "Call Wikipedia API."
     assert component.icon == "Wikipedia"
 
 
 def test_wikipedia_template():
-    wikipedia = WikipediaAPIComponent()
+    wikipedia = WikipediaComponent()
     component = Component(_code=wikipedia._code)
     frontend_node, _ = build_custom_component_template(component)
 
@@ -39,7 +39,7 @@ def mock_wikipedia_wrapper(mocker):
 
 
 def test_fetch_content(mock_wikipedia_wrapper):
-    component = WikipediaAPIComponent()
+    component = WikipediaComponent()
     component.input_value = "test query"
     component.k = 3
     component.lang = "en"
@@ -66,7 +66,7 @@ def test_fetch_content(mock_wikipedia_wrapper):
 
 
 def test_fetch_content_text():
-    component = WikipediaAPIComponent()
+    component = WikipediaComponent()
     component.fetch_content = MagicMock(return_value=[Data(text="First result"), Data(text="Second result")])
 
     result = component.fetch_content_text()
@@ -76,7 +76,7 @@ def test_fetch_content_text():
 
 
 def test_wikipedia_error_handling():
-    component = WikipediaAPIComponent()
+    component = WikipediaComponent()
 
     # Mock _build_wrapper to raise exception
     component._build_wrapper = MagicMock(side_effect=Exception("API Error"))
