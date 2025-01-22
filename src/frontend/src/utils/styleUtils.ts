@@ -238,6 +238,7 @@ import { AWSIcon } from "../icons/AWS";
 import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { ApifyIcon } from "../icons/Apify";
 import { ArXivIcon } from "../icons/ArXiv";
 import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
@@ -513,6 +514,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
@@ -730,6 +732,7 @@ export const nodeIconsLucide: iconsType = {
   SearchAPI: SearchAPIIcon,
   Wikipedia: WikipediaIcon,
   Arize: ArizeIcon,
+  Apify: ApifyIcon,
 
   //Node Icons
   model_specs: FileSliders,

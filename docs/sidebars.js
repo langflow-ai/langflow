@@ -99,6 +99,7 @@ module.exports = {
       type: "category",
       label: "Integrations",
       items: [
+        "Integrations/Apify/integrations-apify",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
