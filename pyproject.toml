@@ -93,7 +93,7 @@ dependencies = [
     "langchain-openai==0.2.12",
     "langchain-google-vertexai==2.0.7",
     "langchain-groq==0.2.1",
-    "langchain-pinecone==0.2.0",
+    "langchain-pinecone==0.2.2",
     "langchain-mistralai==0.2.3",
     "langchain-chroma==0.1.4",
     "langchain-aws==0.2.7",
@@ -117,8 +117,9 @@ dependencies = [
     "crewai~=0.86.0",
     "mcp>=0.9.1",
     "uv>=0.5.7",
-    "ag2",
-    "pydantic-ai>=0.0.12",
+    "ag2>=0.1.0",
+    "scrapegraph-py>=1.10.2",
+    "pydantic-ai>=0.0.19"
 ]
 
 [project.urls]
