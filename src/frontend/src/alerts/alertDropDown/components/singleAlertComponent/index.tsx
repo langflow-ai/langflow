@@ -41,8 +41,8 @@ export default function SingleAlert({
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
                   <Markdown
+                    linkTarget="_blank"
                     remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeMathjax]}
                     className="align-text-top"
                     components={{
                       a: ({ node, ...props }) => (
@@ -57,17 +57,14 @@ export default function SingleAlert({
                       ),
                       p({ node, ...props }) {
                         return (
-                          <span className="inline-block w-fit max-w-full">
+                          <span className="inline-block w-fit max-w-full align-text-top">
                             {props.children}
                           </span>
                         );
                       },
-                      li: ({ children }) => (
-                        <li className="line-clamp-">{children}</li>
-                      ),
                     }}
                   >
-                    {item}
+                    {Array.isArray(item) ? item.join("\n") : item}
                   </Markdown>
                 </li>
               ))}

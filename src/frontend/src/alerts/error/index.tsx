@@ -68,35 +68,34 @@ export default function ErrorAlert({
                 <ul className="list-disc space-y-1 pl-5 align-top">
                   {list.map((item, index) => (
                     <li key={index} className="word-break-break-word">
-                      <Markdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeMathjax]}
-                        className="align-text-top"
-                        components={{
-                          a: ({ node, ...props }) => (
-                            <a
-                              href={props.href}
-                              target="_blank"
-                              className="underline"
-                              rel="noopener noreferrer"
-                            >
-                              {props.children}
-                            </a>
-                          ),
-                          p({ node, ...props }) {
-                            return (
-                              <span className="inline-block w-fit max-w-full">
+                      <span className="">
+                        <Markdown
+                          linkTarget="_blank"
+                          remarkPlugins={[remarkGfm]}
+                          className="align-text-top"
+                          components={{
+                            a: ({ node, ...props }) => (
+                              <a
+                                href={props.href}
+                                target="_blank"
+                                className="underline"
+                                rel="noopener noreferrer"
+                              >
                                 {props.children}
-                              </span>
-                            );
-                          },
-                          li: ({ children }) => (
-                            <li className="line-clamp-">{children}</li>
-                          ),
-                        }}
-                      >
-                        {item}
-                      </Markdown>
+                              </a>
+                            ),
+                            p({ node, ...props }) {
+                              return (
+                                <span className="inline-block w-fit max-w-full align-text-top">
+                                  {props.children}
+                                </span>
+                              );
+                            },
+                          }}
+                        >
+                          {Array.isArray(item) ? item.join("\n") : item}
+                        </Markdown>
+                      </span>
                     </li>
                   ))}
                 </ul>
