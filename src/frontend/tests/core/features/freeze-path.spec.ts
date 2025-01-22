@@ -65,14 +65,20 @@ test(
       timeout: 15000,
     });
 
-    await page.getByTestId("output-inspection-text").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
+
+    await page.getByRole("gridcell").nth(4).click();
 
     const randomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").first().click();
+    await page.getByText("Close").last().click();
+    await page.getByText("Close").last().click();
 
     await page.waitForSelector('[data-testid="default_slider_display_value"]', {
       timeout: 1000,
@@ -95,14 +101,20 @@ test(
       timeout: 15000,
     });
 
-    await page.getByTestId("output-inspection-text").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
+
+    await page.getByRole("gridcell").nth(4).click();
 
     const secondRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").first().click();
+    await page.getByText("Close").last().click();
+    await page.getByText("Close").last().click();
 
     await page.waitForSelector("text=OpenAI", {
       timeout: 1000,
@@ -140,14 +152,20 @@ test(
       timeout: 15000,
     });
 
-    await page.getByTestId("output-inspection-text").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
+
+    await page.getByRole("gridcell").nth(4).click();
 
     const thirdRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").first().click();
+    await page.getByText("Close").last().click();
+    await page.getByText("Close").last().click();
 
     expect(randomTextGeneratedByAI).not.toEqual(secondRandomTextGeneratedByAI);
     expect(randomTextGeneratedByAI).not.toEqual(thirdRandomTextGeneratedByAI);
