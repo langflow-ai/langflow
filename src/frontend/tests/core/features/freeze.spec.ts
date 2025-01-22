@@ -56,13 +56,13 @@ test(
     //fourth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector('[data-testid="processingParse DataFrame"]', {
+    await page.getByTestId("sidebar-search-input").fill("data to message");
+    await page.waitForSelector('[data-testid="processingData to Message"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingParse DataFrame")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
@@ -138,12 +138,12 @@ test(
 
     //connection 3
     const splitTextOutput = await page
-      .getByTestId("handle-splittext-shownode-dataframe-right")
+      .getByTestId("handle-splittext-shownode-chunks-right")
       .nth(0);
     await splitTextOutput.hover();
     await page.mouse.down();
     const parseDataInput = await page.getByTestId(
-      "handle-parsedataframe-shownode-dataframe-left",
+      "handle-parsedata-shownode-data-left",
     );
     await parseDataInput.hover();
     await page.mouse.up();

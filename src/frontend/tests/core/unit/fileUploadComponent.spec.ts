@@ -51,7 +51,7 @@ test(
     await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
+    await page.getByTestId("sidebar-search-input").fill("data to message");
     await page
       .getByTestId("processingData to Message")
       .first()

@@ -59,7 +59,7 @@ test(
 
     // Add Parse Data component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
+    await page.getByTestId("sidebar-search-input").fill("data to message");
     await page.waitForSelector('[data-testid="processingData to Message"]', {
       timeout: 1000,
     });
