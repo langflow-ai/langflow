@@ -728,6 +728,19 @@ export const formatPlaceholderName = (name) => {
   return `Select ${prefix} ${formattedName}`;
 };
 
+export const formatName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord =
+    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].slice(1);
+
+  return { formattedName, firstWord };
+};
+
 export const isStringArray = (value: unknown): value is string[] => {
   return (
     Array.isArray(value) && value.every((item) => typeof item === "string")
