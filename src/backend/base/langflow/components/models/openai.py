@@ -56,6 +56,7 @@ class OpenAIModelComponent(LCModelComponent):
             info="The OpenAI API Key to use for the OpenAI model.",
             advanced=False,
             value="OPENAI_API_KEY",
+            required=True,
         ),
         SliderInput(
             name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
