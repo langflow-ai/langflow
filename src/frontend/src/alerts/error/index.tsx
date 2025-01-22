@@ -1,10 +1,10 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
-import IconComponent from "../../components/common/genericIconComponent";
-import { ErrorAlertType } from "../../types/alerts";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
+import IconComponent from "../../components/common/genericIconComponent";
+import { ErrorAlertType } from "../../types/alerts";
 
 export default function ErrorAlert({
   title,
@@ -26,7 +26,6 @@ export default function ErrorAlert({
 
   return (
     <Transition
-      className="relative"
       show={show}
       appear={true}
       enter="transition-transform duration-500 ease-out"
@@ -65,14 +64,19 @@ export default function ErrorAlert({
             </h3>
             {list?.length !== 0 &&
             list?.some((item) => item !== null && item !== undefined) ? (
-              <div className="error-build-message-div">
-                <ul className="error-build-message-list">
+              <div className="mt-2 text-sm text-error-foreground">
+                <ul className="list-disc space-y-1 pl-5 align-top">
                   {list.map((item, index) => (
-                    <li key={index} className="line-clamp-5">
+                    <li key={index} className="word-break-break-word">
                       <Markdown
                         remarkPlugins={[remarkGfm]}
                         rehypePlugins={[rehypeMathjax]}
-                        className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+                        className="inline-block w-fit max-w-full align-text-top text-[14px] font-semibold text-primary"
+                        components={{
+                          li: ({ children }) => (
+                            <li className="line-clamp-">{children}</li>
+                          ),
+                        }}
                       >
                         {item}
                       </Markdown>

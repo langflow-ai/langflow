@@ -1,11 +1,10 @@
 import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
-import IconComponent from "../../../../components/common/genericIconComponent";
-import { SingleAlertComponentType } from "../../../../types/alerts";
+import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
-import Markdown from "react-markdown";
-
+import IconComponent from "../../../../components/common/genericIconComponent";
+import { SingleAlertComponentType } from "../../../../types/alerts";
 
 export default function SingleAlert({
   dropItem,
@@ -28,11 +27,11 @@ export default function SingleAlert({
       </div>
       <div className="ml-3">
         <h3 className="text-sm font-medium text-error-foreground word-break-break-word">
-        <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeMathjax]}
-                  className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
-                >
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeMathjax]}
+            className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+          >
             {dropItem.title}
           </Markdown>
         </h3>
@@ -44,9 +43,11 @@ export default function SingleAlert({
                   <Markdown
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeMathjax]}
-                    className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
+                    className="inline-block w-fit max-w-full align-text-top text-[14px] font-semibold text-primary"
                     components={{
-                      li: ({ children }) => <li className="line-clamp-">{children}</li>,
+                      li: ({ children }) => (
+                        <li className="line-clamp-">{children}</li>
+                      ),
                     }}
                   >
                     {item}
