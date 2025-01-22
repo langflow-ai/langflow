@@ -49,6 +49,28 @@ jobs:
       - name: Minimize uv cache
         run: uv cache prune --ci
 
+      - name: Close existing PRs
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+
+            for (const pull of pulls) {
+              if (pull.title === "chore: update test durations") {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pull.number,
+                  state: 'closed'
+                });
+              }
+            }
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
