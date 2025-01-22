@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
-from sqlalchemy import event, inspect
+from sqlalchemy import event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
@@ -148,10 +148,11 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def with_session(self):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
+            # Start of Selection
             try:
                 yield session
-            except Exception as exc:
-                logger.error(f"An error occurred during the session scope: {exc}")
+            except exc.SQLAlchemyError as db_exc:
+                logger.error(f"Database error during session scope: {db_exc}")
                 await session.rollback()
                 raise
 
