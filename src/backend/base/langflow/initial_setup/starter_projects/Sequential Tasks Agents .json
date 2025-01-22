@@ -1,5 +1,303 @@
 {
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-xirI8",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_prompt",
+            "id": "Agent-9YXRo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-xirI8{œdataTypeœ:œPromptœ,œidœ:œPrompt-xirI8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-9YXRo{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-xirI8",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-xirI8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-9YXRo",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-9YXRoœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-f4paU",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_prompt",
+            "id": "Agent-RmOB2",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-f4paU{œdataTypeœ:œPromptœ,œidœ:œPrompt-f4paUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-RmOB2{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-f4paU",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-f4paUœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-RmOB2",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-RmOB2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-9YXRo",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-DqyyQ",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-9YXRo{œdataTypeœ:œAgentœ,œidœ:œAgent-9YXRoœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DqyyQ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DqyyQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-9YXRo",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-9YXRoœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-DqyyQ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-DqyyQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-RmOB2",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "finance_agent_output",
+            "id": "Prompt-xirI8",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-RmOB2{œdataTypeœ:œAgentœ,œidœ:œAgent-RmOB2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-xirI8{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Agent-RmOB2",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-RmOB2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-xirI8",
+        "targetHandle": "{œfieldNameœ: œfinance_agent_outputœ, œidœ: œPrompt-xirI8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-TQ1li",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-TmQ5O",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-TQ1li{œdataTypeœ:œChatInputœ,œidœ:œChatInput-TQ1liœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-TmQ5O{œfieldNameœ:œinput_valueœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-TQ1li",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-TQ1liœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-TmQ5O",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-TmQ5Oœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-3fyqW",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "system_prompt",
+            "id": "Agent-TmQ5O",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-3fyqW{œdataTypeœ:œPromptœ,œidœ:œPrompt-3fyqWœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-TmQ5O{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-3fyqW",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-3fyqWœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-TmQ5O",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-TmQ5Oœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-TmQ5O",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-RmOB2",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-TmQ5O{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-RmOB2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-TmQ5O",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-TmQ5Oœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-RmOB2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-RmOB2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-TmQ5O",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "research_agent_output",
+            "id": "Prompt-xirI8",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-TmQ5O{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-xirI8{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Agent-TmQ5O",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-TmQ5Oœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-xirI8",
+        "targetHandle": "{œfieldNameœ: œresearch_agent_outputœ, œidœ: œPrompt-xirI8œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CalculatorComponent",
+            "id": "CalculatorComponent-82dCo",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-9YXRo",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CalculatorComponent-82dCo{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-82dCoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9YXRo{œfieldNameœ:œtoolsœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-82dCo",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-82dCoœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-9YXRo",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-9YXRoœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "YfinanceComponent",
+            "id": "YfinanceComponent-P0VBm",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-RmOB2",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-YfinanceComponent-P0VBm{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-P0VBmœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-RmOB2{œfieldNameœ:œtoolsœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "YfinanceComponent-P0VBm",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-P0VBmœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-RmOB2",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-RmOB2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-ZgS55",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-TmQ5O",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-TavilySearchComponent-ZgS55{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ZgS55œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-TmQ5O{œfieldNameœ:œtoolsœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-ZgS55",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-ZgS55œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-TmQ5O",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-TmQ5Oœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -3404,18 +3702,18 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
                 "types": [
                   "Tool"
                 ],
-                "selected": "Tool",
-                "name": "component_as_tool",
-                "hidden": null,
-                "display_name": "Toolset",
-                "method": "to_toolkit",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": null,
-                "allows_loop": false
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -3558,72 +3856,80 @@
                 "value": "advanced"
               },
               "tools_metadata": {
-                "tool_mode": false,
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
                 "is_list": true,
                 "list_add_label": "Add More",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "name": "name",
-                      "display_name": "Tool Name",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "description",
-                      "display_name": "Tool Description",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "popover",
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "tags",
-                      "display_name": "Tool Identifiers",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "edit_mode": "inline",
-                      "formatter": "text"
-                    }
-                  ]
-                },
-                "trigger_text": "",
-                "trigger_icon": "Hammer",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
-                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "hide_options": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
+                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ],
-                    "commands": "commands"
+                    ]
                   },
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  "hide_options": true
                 },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "tools_metadata",
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
                 "value": [
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
@@ -3639,15 +3945,7 @@
                       "TavilySearchComponent-fetch_content_text"
                     ]
                   }
-                ],
-                "display_name": "Edit tools",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "real_time_refresh": true,
-                "title_case": false,
-                "type": "table",
-                "_input_type": "TableInput"
+                ]
               },
               "topic": {
                 "_input_type": "DropdownInput",
@@ -3688,304 +3986,6 @@
         },
         "selected": false,
         "type": "genericNode"
-      }
-    ],
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-xirI8",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_prompt",
-            "id": "Agent-9YXRo",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-xirI8{œdataTypeœ:œPromptœ,œidœ:œPrompt-xirI8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-9YXRo{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-xirI8",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-xirI8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-9YXRo",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-f4paU",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_prompt",
-            "id": "Agent-RmOB2",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-f4paU{œdataTypeœ:œPromptœ,œidœ:œPrompt-f4paUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-RmOB2{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-f4paU",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-f4paUœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-RmOB2",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-9YXRo",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-DqyyQ",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-9YXRo{œdataTypeœ:œAgentœ,œidœ:œAgent-9YXRoœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-DqyyQ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DqyyQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-9YXRo",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-9YXRoœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-DqyyQ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-DqyyQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-RmOB2",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "finance_agent_output",
-            "id": "Prompt-xirI8",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-RmOB2{œdataTypeœ:œAgentœ,œidœ:œAgent-RmOB2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-xirI8{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-RmOB2",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-RmOB2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-xirI8",
-        "targetHandle": "{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-TQ1li",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-TmQ5O",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-TQ1li{œdataTypeœ:œChatInputœ,œidœ:œChatInput-TQ1liœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-TmQ5O{œfieldNameœ:œinput_valueœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-TQ1li",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-TQ1liœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-TmQ5O",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-3fyqW",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_prompt",
-            "id": "Agent-TmQ5O",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-3fyqW{œdataTypeœ:œPromptœ,œidœ:œPrompt-3fyqWœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-TmQ5O{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-3fyqW",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-3fyqWœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-TmQ5O",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-TmQ5O",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-RmOB2",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-TmQ5O{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-RmOB2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-TmQ5O",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-RmOB2",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-TmQ5O",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "research_agent_output",
-            "id": "Prompt-xirI8",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-TmQ5O{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-xirI8{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-TmQ5O",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-TmQ5Oœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-xirI8",
-        "targetHandle": "{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-xirI8œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-82dCo",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-9YXRo",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorComponent-82dCo{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-82dCoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-9YXRo{œfieldNameœ:œtoolsœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-82dCo",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-82dCoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-9YXRo",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-9YXRoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-P0VBm",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-RmOB2",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-YfinanceComponent-P0VBm{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-P0VBmœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-RmOB2{œfieldNameœ:œtoolsœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "YfinanceComponent-P0VBm",
-        "sourceHandle": "{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-P0VBmœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-RmOB2",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-RmOB2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-ZgS55",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-TmQ5O",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-TavilySearchComponent-ZgS55{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ZgS55œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-TmQ5O{œfieldNameœ:œtoolsœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-ZgS55",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ZgS55œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-TmQ5O",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-TmQ5Oœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "className": ""
       }
     ],
     "viewport": {
