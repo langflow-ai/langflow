@@ -127,7 +127,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="api_endpoint",
             display_name="API Endpoint",
             info="The API endpoint for the Astra DB instance.",
-            show=os.getenv("LANGFLOW_HOST") is not None,  # TODO: Clean up all examples of these
+            advanced=os.getenv("LANGFLOW_HOST") is not None,  # TODO: Clean up all examples of these
         ),
         DropdownInput(
             name="database_name",
