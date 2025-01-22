@@ -18,7 +18,7 @@ The Apify components allow you to run Apify Actors in your flow to accomplish ta
 More info about Apify:
 
 - [Website](https://apify.com/)
-- [Apify Store](https://apify.com/store)
+- [Apify Actor Store](https://apify.com/store)
 - [Actor Whitepaper](https://whitepaper.actor/)
 
 ## Prerequisites
@@ -27,9 +27,20 @@ You need an **Apify API token**. You can create a free account on [Apify](https:
 
 Enter the key in the *Apify Token* field in all components that require the key.
 
-## Example flow
+## Example flows
 
-This example flow demonstrates the use of multiple Apify Actors to complete a comprehensive web scraping task. The flow includes a Google Search Results Scraper Actor that extracts search results from Google and a TikTok Data Extractor Actor that gathers data from TikTok. Initially, the agent collects social media links related to an entity (person, company, etc.) from Google. It then utilizes the TikTok Data Extractor to retrieve data and videos from the corresponding TikTok profile.
+### Extract website content in Markdown format
+
+This example flow demonstrates the use of the Apify Actors component to extract text content from a website in Markdown format. The flow includes a [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) that extracts text content from a website. The extracted content can then be used for various purposes in your flow.
+![Apify Flow - Website Content Crawler](./apify_flow_wcc.png)
+### Simple example with Agent
+
+This example flow demonstrates the use of the Apify Actors component to run a simple web scraping task. The flow includes a [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) that extracts text content from a website. The agent triggers the Actor to scrape the website and retrieve the content, which can then be summarized or analyzed by the agent in the chat.
+![Apify Agent Flow - Simple](./apify_agent_flow_simple.png)
+
+### Multiple Apify Actors with Agent
+
+This example flow demonstrates the use of multiple Apify Actors to complete a comprehensive web scraping task. The flow includes a [Google Search Results Scraper Actor](https://apify.com/apify/google-search-scraper) that extracts search results from Google and a [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) that gathers data from TikTok. Initially, the agent collects social media links related to an entity (person, company, etc.) from Google. It then utilizes the TikTok Data Extractor to retrieve data and videos from the corresponding TikTok profile.
 ![Apify Agent Flow](./apify_agent_flow.png)
 
 ## Components
@@ -57,26 +68,6 @@ This component allows you to run Apify Actors in your flow. It can be used manua
     - Input the Apify Token and an Actor ID.
     - Connect the component Tool output to the Agent, allowing it to trigger the Actor as needed.
 
-## Popular Apify Actors
+## How to use Apify Actors in Langflow
 
-### Website Content Crawler
-**Actor ID:** `apify/website-content-crawler`
-Crawl websites and extract text content to feed AI models, LLM applications, vector databases, or RAG pipelines. Supports rich formatting using Markdown, cleans HTML, downloads files, and integrates with tools like LangChain and LlamaIndex.
-
-### Instagram Scraper
-**Actor ID:** `apify/instagram-scraper`
-Scrape and download Instagram posts, profiles, places, hashtags, photos, and comments. Get data from Instagram using URLs or search queries. Export scraped data, run the scraper via API, and integrate with other tools.
-
-### Google Maps Extractor
-**Actor ID:** `compass/google-maps-extractor`
-Extract business data from Google Maps, including addresses, contact info, opening hours, prices, and more. Scrape by keyword, category, location, URLs, and other filters. Export data, schedule runs, and integrate with other platforms.
-
-### TikTok Data Extractor
-**Actor ID:** `clockworks/free-tiktok-scraper`
-Extract data about videos, users, and channels based on hashtags or scrape full user profiles including posts, total likes, name, nickname, number of comments, shares, followers, following, and more.
-
-### Facebook Posts Scraper
-**Actor ID:** `apify/facebook-posts-scraper`
-Scrape hundreds of Facebook posts from pages and profiles. Extract post text, URLs, timestamps, number of likes, shares, comments, and more. Download the data in JSON, CSV, or Excel formats.
-
-For more Actors, explore the [Apify Store](https://apify.com/store).
+First, you need to pick an Actor that you want to use in your flow from the [Apify Actor Store](https://apify.com/store). Then, create the **Apify Actors** component and input your Apify API token and the Actor ID. You can find the Actor ID in the Apify Actor Store, for example, `apify/website-content-crawler`. Now you can either connect the **Tool** output to an AI Agent or configure the Run input JSON manually and run the component to retrieve data from the **Output Data**. Example Run input can be obtained from the Actor details page in the Apify Actor Store. See the **JSON Example** in the input schema section [here](https://apify.com/apify/website-content-crawler/input-schema).
