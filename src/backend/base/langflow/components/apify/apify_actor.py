@@ -138,7 +138,7 @@ class ApifyActorsComponent(LCToolComponent):
         class ApifyActorRun(BaseTool):
             """Tool that runs Apify Actors."""
 
-            name: str = f"apify_actor_{ApifyActorsComponent.toolify_actor_id_str(actor_id)}"
+            name: str = f"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}"
             description: str = (
                 "Run an Apify Actor with the given input. "
                 "Here is part of the currently loaded Actor README:\n\n"
@@ -239,7 +239,7 @@ class ApifyActorsComponent(LCToolComponent):
         return json.dumps(d, separators=(",", ":"), default=lambda _: "<n/a>")
 
     @staticmethod
-    def toolify_actor_id_str(actor_id: str) -> str:
+    def actor_id_to_tool_name(actor_id: str) -> str:
         """Turn actor_id into a valid tool name.
 
         Tool name must only contain letters, numbers, underscores, dashes,
