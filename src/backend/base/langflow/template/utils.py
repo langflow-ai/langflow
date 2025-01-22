@@ -80,7 +80,7 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
     frontend_node["edited"] = raw_frontend_node["edited"] or (old_code != new_code)
     frontend_node["tool_mode"] = raw_frontend_node.get("tool_mode", False)
 
-    if any(extract_tool_modes(raw_frontend_node["template"])):
+    if not any(extract_tool_modes(raw_frontend_node["template"])):
         frontend_node["tool_mode"] = False
 
     if not frontend_node.get("edited", False):
