@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import typing as t
 import warnings
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -13,6 +14,7 @@ import anyio
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import add_pagination
@@ -45,6 +47,9 @@ warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 
 MAX_PORT = 65535
+
+
+Json = dict[str | t.Literal["anyOf", "type"], "Json"] | list["Json"] | str | bool  # noqa: PYI051
 
 
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
@@ -146,15 +151,83 @@ def get_lifespan(*, fix_migration=False, version=None):
     return lifespan
 
 
+def convert_3_dot_1_to_3_dot_0(json: dict[str, Json]):
+    """Will attempt to convert version 3.1.0 of some openAPI json into 3.0.2.
+
+    Usage:
+
+        >>> from pprint import pprint
+        >>> json = {
+        ...     "some_irrelevant_keys": {...},
+        ...     "nested_dict": {"nested_key": {"anyOf": [{"type": "string"}, {"type": "null"}]}},
+        ...     "examples": [{...}, {...}]
+        ... }
+        >>> convert_3_dot_1_to_3_dot_0(json)
+        >>> pprint(json)
+        {'example': {Ellipsis},
+         'nested_dict': {'nested_key': {'anyOf': [{'type': 'string'}],
+                                        'nullable': True}},
+         'openapi': '3.0.2',
+         'some_irrelevant_keys': {Ellipsis}}
+    """
+    json["openapi"] = "3.0.2"
+
+    def inner(yaml_dict: Json):
+        if isinstance(yaml_dict, dict):
+            if "anyOf" in yaml_dict and isinstance((any_of := yaml_dict["anyOf"]), list):
+                if "const" in yaml_dict:
+                    yaml_dict["enum"] = [yaml_dict["const"]]
+                    del yaml_dict["const"]
+                for i, item in enumerate(any_of):
+                    if isinstance(item, dict) and item.get("type") == "null":
+                        any_of.pop(i)
+                        yaml_dict["nullable"] = True
+            if "examples" in yaml_dict:
+                examples = yaml_dict["examples"]
+                del yaml_dict["examples"]
+                if isinstance(examples, list) and len(examples):
+                    yaml_dict["example"] = examples[0]
+            for value in yaml_dict.values():
+                inner(value)
+        elif isinstance(yaml_dict, list):
+            for item in yaml_dict:
+                inner(item)
+
+    inner(json)
+
+
 def create_app():
     """Create the FastAPI app and include the router."""
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
 
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        openapi_schema = get_openapi(
+            title="Langflow",
+            version=__version__,
+            openapi_version="3.0.0",
+            routes=app.routes,
+        )
+        convert_3_dot_1_to_3_dot_0(openapi_schema)  # 🙏🙏🙏
+
+        # https://github.com/tiangolo/fastapi/issues/4959
+        for model in ["FieldSelector"]:
+            if model not in openapi_schema["components"]["schemas"]:
+                continue
+            openapi_schema["components"]["schemas"][model]["oneOf"] = openapi_schema["components"]["schemas"][
+                model
+            ].pop("anyOf")
+
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
     configure()
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app.openapi = custom_openapi
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
