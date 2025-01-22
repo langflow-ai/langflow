@@ -12,7 +12,6 @@ from langflow.schema.message import Message
 class WikidataComponent(Component):
     display_name = "Wikidata"
     description = "Performs a search using the Wikidata API."
-    name = "Wikidata"
     icon = "Wikipedia"
 
     inputs = [
