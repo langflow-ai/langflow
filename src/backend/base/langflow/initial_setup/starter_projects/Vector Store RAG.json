@@ -1702,7 +1702,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -2236,7 +2236,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -3773,7 +3773,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,

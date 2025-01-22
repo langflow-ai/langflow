@@ -733,7 +733,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1307,7 +1307,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1315,7 +1315,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -2706,7 +2706,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2714,7 +2714,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
