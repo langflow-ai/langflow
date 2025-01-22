@@ -68,8 +68,8 @@ test(
     //sisxth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector("text=Parse Data", {
+    await page.getByTestId("sidebar-search-input").fill("data to message");
+    await page.waitForSelector("text=Data to Message", {
       timeout: 1000,
     });
 

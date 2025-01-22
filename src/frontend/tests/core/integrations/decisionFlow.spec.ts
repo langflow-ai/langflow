@@ -91,7 +91,7 @@ test(
     await page.getByTestId("inputlist_str_texts_2").last().fill("not cool..");
     //---------------------------------- PARSE DATA
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
+    await page.getByTestId("sidebar-search-input").fill("data to message");
     await page.waitForSelector('[data-testid="processingData to Message"]', {
       timeout: 500,
     });
