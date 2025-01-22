@@ -10,7 +10,7 @@ from langflow.schema.message import Message
 
 def test_wikipedia_initialization():
     component = WikipediaComponent()
-    assert component.display_name == "Wikipedia API"
+    assert component.display_name == "Wikipedia"
     assert component.description == "Call Wikipedia API."
     assert component.icon == "Wikipedia"
 
