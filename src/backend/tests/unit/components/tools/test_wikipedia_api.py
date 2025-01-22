@@ -1,85 +1,101 @@
 from unittest.mock import MagicMock
 
 import pytest
-from langflow.components.tools import WikipediaAPIComponent
+from langflow.components.tools import WikipediaComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.schema import Data
 from langflow.schema.message import Message
 
-
-def test_wikipedia_initialization():
-    component = WikipediaAPIComponent()
-    assert component.display_name == "Wikipedia API"
-    assert component.description == "Call Wikipedia API."
-    assert component.icon == "Wikipedia"
+# Import the base test class
+from tests.base import ComponentTestBaseWithoutClient
 
 
-def test_wikipedia_template():
-    wikipedia = WikipediaAPIComponent()
-    component = Component(_code=wikipedia._code)
-    frontend_node, _ = build_custom_component_template(component)
+class TestWikipediaComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        """Fixture to create a WikipediaComponent instance."""
+        return WikipediaComponent
 
-    # Verify basic structure
-    assert isinstance(frontend_node, dict)
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "input_value": "test query",
+            "lang": "en",
+            "k": 3,
+        }
 
-    # Verify inputs
-    assert "template" in frontend_node
-    input_names = [input_["name"] for input_ in frontend_node["template"].values() if isinstance(input_, dict)]
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
 
-    expected_inputs = ["input_value", "lang", "k", "load_all_available_meta", "doc_content_chars_max"]
+    def test_wikipedia_initialization(self, component_class):
+        component = component_class()
+        assert component.display_name == "Wikipedia"
+        assert component.description == "Call Wikipedia API."
+        assert component.icon == "Wikipedia"
 
-    for input_name in expected_inputs:
-        assert input_name in input_names
+    def test_wikipedia_template(self, component_class):
+        component = component_class()
+        frontend_node, _ = build_custom_component_template(Component(_code=component._code))
 
+        # Verify basic structure
+        assert isinstance(frontend_node, dict)
 
-@pytest.fixture
-def mock_wikipedia_wrapper(mocker):
-    return mocker.patch("langchain_community.utilities.wikipedia.WikipediaAPIWrapper")
+        # Verify inputs
+        assert "template" in frontend_node
+        input_names = [input_["name"] for input_ in frontend_node["template"].values() if isinstance(input_, dict)]
 
+        expected_inputs = ["input_value", "lang", "k", "load_all_available_meta", "doc_content_chars_max"]
 
-def test_fetch_content(mock_wikipedia_wrapper):
-    component = WikipediaAPIComponent()
-    component.input_value = "test query"
-    component.k = 3
-    component.lang = "en"
+        for input_name in expected_inputs:
+            assert input_name in input_names
 
-    # Mock the WikipediaAPIWrapper and its load method
-    mock_instance = MagicMock()
-    mock_wikipedia_wrapper.return_value = mock_instance
-    mock_doc = MagicMock()
-    mock_doc.page_content = "Test content"
-    mock_doc.metadata = {"source": "wikipedia", "title": "Test Page"}
-    mock_instance.load.return_value = [mock_doc]
+    @pytest.fixture
+    def mock_wikipedia_wrapper(self, mocker):
+        return mocker.patch("langchain_community.utilities.wikipedia.WikipediaAPIWrapper")
 
-    # Mock the _build_wrapper method to return our mock instance
-    component._build_wrapper = MagicMock(return_value=mock_instance)
+    def test_fetch_content(self, component_class, mock_wikipedia_wrapper):
+        component = component_class()
+        component.input_value = "test query"
+        component.k = 3
+        component.lang = "en"
 
-    result = component.fetch_content()
+        # Mock the WikipediaAPIWrapper and its load method
+        mock_instance = MagicMock()
+        mock_wikipedia_wrapper.return_value = mock_instance
+        mock_doc = MagicMock()
+        mock_doc.page_content = "Test content"
+        mock_doc.metadata = {"source": "wikipedia", "title": "Test Page"}
+        mock_instance.load.return_value = [mock_doc]
 
-    # Verify wrapper was built with correct params
-    component._build_wrapper.assert_called_once()
-    mock_instance.load.assert_called_once_with("test query")
-    assert isinstance(result, list)
-    assert len(result) == 1
-    assert result[0].text == "Test content"
+        # Mock the _build_wrapper method to return our mock instance
+        component._build_wrapper = MagicMock(return_value=mock_instance)
 
+        result = component.fetch_content()
 
-def test_fetch_content_text():
-    component = WikipediaAPIComponent()
-    component.fetch_content = MagicMock(return_value=[Data(text="First result"), Data(text="Second result")])
+        # Verify wrapper was built with correct params
+        component._build_wrapper.assert_called_once()
+        mock_instance.load.assert_called_once_with("test query")
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0].text == "Test content"
 
-    result = component.fetch_content_text()
+    def test_fetch_content_text(self, component_class):
+        component = component_class()
+        component.fetch_content = MagicMock(return_value=[Data(text="First result"), Data(text="Second result")])
 
-    assert isinstance(result, Message)
-    assert result.text == "First result\nSecond result\n"
+        result = component.fetch_content_text()
 
+        assert isinstance(result, Message)
+        assert result.text == "First result\nSecond result\n"
 
-def test_wikipedia_error_handling():
-    component = WikipediaAPIComponent()
+    def test_wikipedia_error_handling(self, component_class):
+        component = component_class()
+        # Mock _build_wrapper to raise exception
+        component._build_wrapper = MagicMock(side_effect=Exception("API Error"))
 
-    # Mock _build_wrapper to raise exception
-    component._build_wrapper = MagicMock(side_effect=Exception("API Error"))
-
-    with pytest.raises(Exception, match="API Error"):
-        component.fetch_content()
+        with pytest.raises(Exception, match="API Error"):
+            component.fetch_content()
