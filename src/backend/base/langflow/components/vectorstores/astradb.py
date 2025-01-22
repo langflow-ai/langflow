@@ -502,11 +502,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name == "vectorize_choice":
             if field_value == "Astra Vectorize":
-                build_config["embedding_model"]["advanced"] = True
+                build_config["embedding_model"]["show"] = False
                 build_config["embedding_model"]["required"] = False
-                build_config["embedding_model"]["value"] = None
             else:
-                build_config["embedding_model"]["advanced"] = False
+                build_config["embedding_model"]["show"] = True
                 build_config["embedding_model"]["required"] = True
 
             return build_config
@@ -615,7 +614,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         # Get the embedding model and additional params
-        embedding_params = {"embedding": self.embedding_model} if self.embedding_model else {}
+        embedding_params = (
+            {"embedding": self.embedding_model}
+            if self.embedding_model and self.vectorize_choice == "Embedding Model"
+            else {}
+        )
         additional_params = self.astradb_vectorstore_kwargs or {}
 
         # Get Langflow version and platform information
