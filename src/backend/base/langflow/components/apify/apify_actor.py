@@ -25,7 +25,6 @@ class ApifyActorsComponent(LCToolComponent):
     documentation: str = "http://docs.langflow.org/integrations-apify"
     icon = "Apify"
     name = "ApifyActors"
-    beta = True
 
     inputs = [
         SecretStrInput(
