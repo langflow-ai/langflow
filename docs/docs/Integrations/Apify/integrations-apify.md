@@ -31,7 +31,7 @@ Enter the key in the *Apify Token* field in all components that require the key.
 
 ### Extract website text content in Markdown format
 
-Use the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to extract text content in Markdown format from a website and process it in your flow. The extracted content can then be used for various purposes in your flow.
+Use the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler) to extract text content in Markdown format from a website and process it in your flow.
 ![Apify Flow - Website Content Crawler](./apify_flow_wcc.png)
 
 ### Analyze and process website content with an Agent
