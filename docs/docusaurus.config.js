@@ -146,7 +146,10 @@ const config = {
           },
           {
             to: "/concepts-objects",
-            from: "/guides-data-message",
+            from: [
+              "/guides-data-message",
+              "/configuration-objects",
+            ]
           },
           {
             to: "/tutorials-sequential-agent",
