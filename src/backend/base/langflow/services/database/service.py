@@ -21,6 +21,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
@@ -54,7 +55,10 @@ class DatabaseService(Service):
         # register the event listener for sqlite as part of this class.
         # Using decorator will make the method not able to use self
         event.listen(Engine, "connect", self.on_connection)
-        self.engine = self._create_engine()
+        if self.settings_service.settings.database_connection_retry:
+            self.engine = self._create_engine_with_retry()
+        else:
+            self.engine = self._create_engine()
 
         alembic_log_file = self.settings_service.settings.alembic_log_file
         # Check if the provided path is absolute, cross-platform.
@@ -72,7 +76,10 @@ class DatabaseService(Service):
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
-        self.engine = self._create_engine()
+        if self.settings_service.settings.database_connection_retry:
+            self.engine = self._create_engine_with_retry()
+        else:
+            self.engine = self._create_engine()
 
     def _sanitize_database_url(self):
         if self.database_url.startswith("postgres://"):
@@ -86,20 +93,25 @@ class DatabaseService(Service):
         """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
         if url_components[0].startswith("sqlite"):
-            database_url = "sqlite+aiosqlite://"
+            scheme = "sqlite+aiosqlite"
             kwargs = {}
         else:
             kwargs = {
                 "pool_size": self.settings_service.settings.pool_size,
                 "max_overflow": self.settings_service.settings.max_overflow,
             }
-            database_url = "postgresql+psycopg://" if url_components[0].startswith("postgresql") else url_components[0]
-        database_url += url_components[1]
+            scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
+        database_url = f"{scheme}://{url_components[1]}"
         return create_async_engine(
             database_url,
             connect_args=self._get_connect_args(),
             **kwargs,
         )
+
+    @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
+    def _create_engine_with_retry(self) -> AsyncEngine:
+        """Create the engine for the database with retry logic."""
+        return self._create_engine()
 
     def _get_connect_args(self):
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
@@ -136,7 +148,14 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def with_session(self):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            yield session
+            try:
+                yield session
+                if session.is_active:
+                    await session.commit()
+            except Exception:
+                logger.error("An error occurred during the session scope")
+                await session.rollback()
+                raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
@@ -407,6 +426,10 @@ class DatabaseService(Service):
                 raise RuntimeError(msg)
 
         logger.debug("Database and tables created successfully")
+
+    @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
+    async def create_db_and_tables_with_retry(self) -> None:
+        await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
         async with self.with_session() as session, session.bind.connect() as conn:

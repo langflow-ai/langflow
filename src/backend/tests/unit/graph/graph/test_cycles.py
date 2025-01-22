@@ -22,7 +22,7 @@ class Concatenate(Component):
         MessageTextInput(name="text", display_name="Text", required=True),
     ]
     outputs = [
-        Output(display_name="Text", name="some_text", method="concatenate"),
+        Output(display_name="Message", name="some_text", method="concatenate"),
     ]
 
     def concatenate(self) -> Message:
@@ -33,7 +33,8 @@ class Concatenate(Component):
 def test_cycle_in_graph():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router", default_route="true_result")
-    chat_input.set(input_value=router.false_response)
+    # Use router's message output instead of false_response
+    chat_input.set(input_value=router.message)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
     router.set(
@@ -81,13 +82,13 @@ def test_cycle_in_graph():
 
 
 def test_cycle_in_graph_max_iterations():
-    chat_input = ChatInput(_id="chat_input")
+    text_input = TextInputComponent(_id="text_input")
     router = ConditionalRouterComponent(_id="router")
-    chat_input.set(input_value=router.false_response)
+    text_input.set(input_value=router.false_response)
     concat_component = Concatenate(_id="concatenate")
-    concat_component.set(text=chat_input.message_response)
+    concat_component.set(text=text_input.text_response)
     router.set(
-        input_text=chat_input.message_response,
+        input_text=text_input.text_response,
         match_text="testtesttesttest",
         operator="equals",
         message=concat_component.concatenate,
@@ -97,11 +98,11 @@ def test_cycle_in_graph_max_iterations():
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=text_output.text_response)
 
-    graph = Graph(chat_input, chat_output)
+    graph = Graph(text_input, chat_output)
     assert graph.is_cyclic is True
 
     # Run queue should contain chat_input and not router
-    assert "chat_input" in graph._run_queue
+    assert "text_input" in graph._run_queue
     assert "router" not in graph._run_queue
 
     with pytest.raises(ValueError, match="Max iterations reached"):
@@ -111,7 +112,8 @@ def test_cycle_in_graph_max_iterations():
 def test_that_outputs_cache_is_set_to_false_in_cycle():
     chat_input = ChatInput(_id="chat_input")
     router = ConditionalRouterComponent(_id="router")
-    chat_input.set(input_value=router.false_response)
+    # Use router's message output instead of false_response
+    chat_input.set(input_value=router.message)
     concat_component = Concatenate(_id="concatenate")
     concat_component.set(text=chat_input.message_response)
     router.set(
@@ -142,7 +144,7 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
         assert output.cache is True
 
 
-@pytest.mark.api_key_required
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")
 def test_updated_graph_with_prompts():
     # Chat input initialization
     chat_input = ChatInput(_id="chat_input").set(input_value="bacon")
@@ -210,7 +212,7 @@ def test_updated_graph_with_prompts():
     assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
 
 
-@pytest.mark.api_key_required
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")
 def test_updated_graph_with_max_iterations():
     # Chat input initialization
     chat_input = ChatInput(_id="chat_input").set(input_value="bacon")

@@ -11,7 +11,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
-from langflow.io.schema import create_input_schema
+from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
 
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
     from langflow.io import Output
     from langflow.schema.content_block import ContentBlock
+    from langflow.schema.dotdict import dotdict
 
 
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
@@ -159,13 +160,21 @@ def _format_tool_name(name: str):
     return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
 
 
+def _add_commands_to_tool_description(tool_description: str, commands: str):
+    return f"very_time you see one of those commands {commands} run the tool. tool description is {tool_description}"
+
+
 class ComponentToolkit:
     def __init__(self, component: Component, metadata: pd.DataFrame | None = None):
         self.component = component
         self.metadata = metadata
 
     def get_tools(
-        self, tool_name: str | None = None, tool_description: str | None = None, callbacks: Callbacks | None = None
+        self,
+        tool_name: str | None = None,
+        tool_description: str | None = None,
+        callbacks: Callbacks | None = None,
+        flow_mode_inputs: list[dotdict] | None = None,
     ) -> list[BaseTool]:
         tools = []
         for output in self.component.outputs:
@@ -179,7 +188,12 @@ class ComponentToolkit:
             output_method: Callable = getattr(self.component, output.method)
             args_schema = None
             tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
-            if output.required_inputs:
+            if flow_mode_inputs:
+                args_schema = create_input_schema_from_dict(
+                    inputs=flow_mode_inputs,
+                    param_key="flow_tweak_data",
+                )
+            elif output.required_inputs:
                 inputs = [
                     self.component._inputs[input_name]
                     for input_name in output.required_inputs
@@ -206,7 +220,8 @@ class ComponentToolkit:
                 args_schema = create_input_schema(tool_mode_inputs)
             else:
                 args_schema = create_input_schema(self.component.inputs)
-            name = f"{self.component.name}.{output.method}"
+
+            name = f"{self.component.name or self.component.__class__.__name__ or ''}.{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
             if asyncio.iscoroutinefunction(output_method):
@@ -235,8 +250,16 @@ class ComponentToolkit:
                 )
         if len(tools) == 1 and (tool_name or tool_description):
             tool = tools[0]
-            tool.name = tool_name or tool.name
+            tool.name = _format_tool_name(str(tool_name)) or tool.name
             tool.description = tool_description or tool.description
+            tool.tags = [tool.name]
+        elif flow_mode_inputs and (tool_name or tool_description):
+            for tool in tools:
+                tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
+                tool.description = (
+                    str(tool_description) + " Output details: " + str(tool.description)
+                ) or tool.description
+                tool.tags = [tool.name]
         elif tool_name or tool_description:
             msg = (
                 "When passing a tool name or description, there must be only one tool, "
@@ -276,6 +299,10 @@ class ComponentToolkit:
                         tool_metadata = metadata_dict[tag]
                         tool.name = tool_metadata.get("name", tool.name)
                         tool.description = tool_metadata.get("description", tool.description)
+                        if tool_metadata.get("commands"):
+                            tool.description = _add_commands_to_tool_description(
+                                tool.description, tool_metadata.get("commands")
+                            )
                 else:
                     msg = f"Expected a StructuredTool or BaseTool, got {type(tool)}"
                     raise TypeError(msg)

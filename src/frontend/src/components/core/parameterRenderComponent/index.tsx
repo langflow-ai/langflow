@@ -33,7 +33,9 @@ export function ParameterRenderComponent({
   placeholder,
   isToolMode,
 }: {
-  handleOnNewValue: handleOnNewValueType;
+  handleOnNewValue:
+    | handleOnNewValueType
+    | ((value: string, key: string) => void);
   name: string;
   nodeId: string;
   templateData: Partial<InputFieldType>;
@@ -57,14 +59,16 @@ export function ParameterRenderComponent({
       id,
       value: templateValue,
       editNode,
-      handleOnNewValue,
+      handleOnNewValue: handleOnNewValue as handleOnNewValueType,
       disabled,
       nodeClass,
       handleNodeClass,
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
+      nodeId,
     };
+
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
       if (templateData.list) {
         if (!templateData.options) {
@@ -73,6 +77,7 @@ export function ParameterRenderComponent({
               {...baseInputProps}
               componentName={name}
               id={`inputlist_${id}`}
+              listAddLabel={templateData?.list_add_label}
             />
           );
         }
@@ -180,6 +185,7 @@ export function ParameterRenderComponent({
             table_options={templateData?.table_options}
             trigger_icon={templateData?.trigger_icon}
             trigger_text={templateData?.trigger_text}
+            table_icon={templateData?.table_icon}
           />
         );
       case "slider":

@@ -5,7 +5,6 @@ import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ToggleShadComponent from "@/components/core/parameterRenderComponent/components/toggleShadComponent";
 import { Button } from "@/components/ui/button";
-import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { usePostRetrieveVertexOrder } from "@/controllers/API/queries/vertex";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -93,7 +92,6 @@ const NodeToolbarComponent = memo(
         });
       },
     });
-    const updateToolMode = useFlowStore((state) => state.updateToolMode);
 
     const flowDataNodes = useMemo(
       () => currentFlow?.data?.nodes,
@@ -114,7 +112,6 @@ const NodeToolbarComponent = memo(
       node: data.node!,
       nodeId: data.id,
       parameterId: "tool_mode",
-      tool_mode: data.node!.tool_mode ?? false,
     });
 
     const isSaved = flows?.some((flow) =>
@@ -128,40 +125,44 @@ const NodeToolbarComponent = memo(
       () => Object.keys(data.node!.template).includes("code"),
       [data.node],
     );
-    // Check if any of the data.node.template fields have tool_mode as True
-    // if so we can show the tool mode button
-    const hasToolMode = useMemo(
-      () => checkHasToolMode(data.node?.template ?? {}),
-      [data.node?.template],
-    );
     const isGroup = useMemo(
       () => (data.node?.flow ? true : false),
       [data.node],
     );
 
+    // Check if any of the data.node.template fields have tool_mode as True
+    // if so we can show the tool mode button
+    const hasToolMode = useMemo(
+      () => checkHasToolMode(data.node?.template ?? {}) && !isGroup,
+      [data.node?.template, isGroup],
+    );
     const addFlow = useAddFlow();
-
-    const { mutate: patchUpdateFlow } = usePatchUpdateFlow();
 
     const isMinimal = useMemo(
       () => countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1,
       [data, numberOfOutputHandles],
     );
 
-    const [toolMode, setToolMode] = useState(() => {
-      // Check if tool mode is explicitly set on the node
-      const hasToolModeProperty = data.node?.tool_mode;
-      if (hasToolModeProperty) {
-        return hasToolModeProperty;
+    const [toolMode, setToolMode] = useState(
+      () =>
+        data.node?.tool_mode ||
+        data.node?.outputs?.some(
+          (output) => output.name === "component_as_tool",
+        ) ||
+        false,
+    );
+
+    useEffect(() => {
+      if (data.node?.tool_mode !== undefined) {
+        setToolMode(
+          data.node?.tool_mode ||
+            data.node?.outputs?.some(
+              (output) => output.name === "component_as_tool",
+            ) ||
+            false,
+        );
       }
-
-      // Otherwise check if node has component_as_tool output
-      const hasComponentAsTool = data.node?.outputs?.some(
-        (output) => output.name === "component_as_tool",
-      );
-
-      return hasComponentAsTool ?? false;
-    });
+    }, [data.node?.tool_mode, data.node?.outputs]);
 
     const { handleNodeClass: handleNodeClassHook } = useHandleNodeClass(
       data.id,
@@ -172,13 +173,8 @@ const NodeToolbarComponent = memo(
     };
 
     const handleActivateToolMode = () => {
-      const newValue = !flowDataNodes![index]!.data.node.tool_mode;
-
-      updateToolMode(data.id, newValue);
-      data.node!.tool_mode = newValue;
-
+      const newValue = !toolMode;
       setToolMode(newValue);
-
       mutateTemplate(
         newValue,
         data.node!,
@@ -186,21 +182,9 @@ const NodeToolbarComponent = memo(
         postToolModeValue,
         setErrorData,
         "tool_mode",
-        () => {
-          currentFlow!.data!.nodes[index]!.data.node.tool_mode = newValue;
-          patchUpdateFlow({
-            id: currentFlow?.id!,
-            name: currentFlow?.name!,
-            data: currentFlow?.data!,
-            description: currentFlow?.description!,
-            folder_id: currentFlow?.folder_id!,
-            endpoint_name: currentFlow?.endpoint_name!,
-          });
-        },
+        () => updateNodeInternals(data.id),
+        newValue,
       );
-
-      updateNodeInternals(data.id);
-      return newValue;
     };
 
     const handleMinimize = useCallback(() => {
@@ -341,83 +325,105 @@ const NodeToolbarComponent = memo(
 
     const [selectedValue, setSelectedValue] = useState(null);
 
-    const handleSelectChange = useCallback((event) => {
-      setSelectedValue(event);
+    const handleSelectChange = useCallback(
+      (event) => {
+        setSelectedValue(event);
 
-      switch (event) {
-        case "save":
-          saveComponent();
-          break;
-        case "freeze":
-          freezeFunction();
-          break;
-        case "freezeAll":
-          FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
-          break;
-        case "code":
-          setOpenModal(!openModal);
-          break;
-        case "advanced":
-          setShowModalAdvanced(true);
-          break;
-        case "show":
-          takeSnapshot();
-          handleMinimize();
-          break;
-        case "Share":
-          shareComponent();
-          break;
-        case "Download":
-          downloadNode(flowComponent!);
-          break;
-        case "SaveAll":
-          addFlow({
-            flow: flowComponent,
-            override: false,
-          });
-          break;
-        case "documentation":
-          openDocs();
-          break;
-        case "disabled":
-          break;
-        case "ungroup":
-          handleungroup();
-          break;
-        case "override":
-          setShowOverrideModal(true);
-          break;
-        case "delete":
-          deleteNode(data.id);
-          break;
-        case "update":
-          updateNode();
-          break;
-        case "copy":
-          const node = nodes.filter((node) => node.id === data.id);
-          setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
-          break;
-        case "duplicate":
-          paste(
-            {
-              nodes: [nodes.find((node) => node.id === data.id)!],
-              edges: [],
-            },
-            {
-              x: 50,
-              y: 10,
-              paneX: nodes.find((node) => node.id === data.id)?.position.x,
-              paneY: nodes.find((node) => node.id === data.id)?.position.y,
-            },
-          );
-          break;
-        case "toolMode":
-          handleActivateToolMode();
-          break;
-      }
+        switch (event) {
+          case "save":
+            saveComponent();
+            break;
+          case "freeze":
+            freezeFunction();
+            break;
+          case "freezeAll":
+            FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
+            break;
+          case "code":
+            setOpenModal(!openModal);
+            break;
+          case "advanced":
+            setShowModalAdvanced(true);
+            break;
+          case "show":
+            takeSnapshot();
+            handleMinimize();
+            break;
+          case "Share":
+            shareComponent();
+            break;
+          case "Download":
+            downloadNode(flowComponent!);
+            break;
+          case "SaveAll":
+            addFlow({
+              flow: flowComponent,
+              override: false,
+            });
+            break;
+          case "documentation":
+            openDocs();
+            break;
+          case "disabled":
+            break;
+          case "ungroup":
+            handleungroup();
+            break;
+          case "override":
+            setShowOverrideModal(true);
+            break;
+          case "delete":
+            deleteNode(data.id);
+            break;
+          case "update":
+            updateNode();
+            break;
+          case "copy":
+            const node = nodes.filter((node) => node.id === data.id);
+            setLastCopiedSelection({ nodes: _.cloneDeep(node), edges: [] });
+            break;
+          case "duplicate":
+            paste(
+              {
+                nodes: [nodes.find((node) => node.id === data.id)!],
+                edges: [],
+              },
+              {
+                x: 50,
+                y: 10,
+                paneX: nodes.find((node) => node.id === data.id)?.position.x,
+                paneY: nodes.find((node) => node.id === data.id)?.position.y,
+              },
+            );
+            break;
+          case "toolMode":
+            handleActivateToolMode();
+            break;
+        }
 
-      setSelectedValue(null);
-    }, []);
+        setSelectedValue(null);
+      },
+      [
+        saveComponent,
+        freezeFunction,
+        FreezeAllVertices,
+        setOpenModal,
+        setShowModalAdvanced,
+        handleMinimize,
+        shareComponent,
+        downloadNode,
+        addFlow,
+        openDocs,
+        handleungroup,
+        setShowOverrideModal,
+        deleteNode,
+        updateNode,
+        setLastCopiedSelection,
+        paste,
+        handleActivateToolMode,
+        toolMode,
+      ],
+    );
 
     const { handleOnNewValue: handleOnNewValueHook } = useHandleOnNewValue({
       node: data.node!,
@@ -692,7 +698,6 @@ const NodeToolbarComponent = memo(
                       }
                       value={showNode ? "Minimize" : "Expand"}
                       icon={showNode ? "Minimize2" : "Maximize2"}
-                      dataTestId="minimize-button-modal"
                     />
                   </SelectItem>
                 )}
