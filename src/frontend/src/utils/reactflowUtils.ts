@@ -595,7 +595,6 @@ function hasLoop(
         (e) => e.source === node.id && e.target === outgoer.id,
       );
       if (outgoer.id === source) {
-        console.log(outgoer.id, source, node.id, firstEdge);
         const sourceHandleObject = scapeJSONParse(
           firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
         );
