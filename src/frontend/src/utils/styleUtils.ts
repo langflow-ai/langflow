@@ -59,6 +59,7 @@ import {
   Code2,
   CodeXml,
   Cog,
+  Columns2,
   Combine,
   Command,
   Compass,
@@ -80,6 +81,7 @@ import {
   EyeOff,
   File,
   FileClock,
+  FileCode2,
   FileDown,
   FileQuestion,
   FileSearch,
@@ -952,4 +954,6 @@ export const nodeIconsLucide: iconsType = {
   ThumbDownIconCustom,
   ThumbUpIconCustom,
   Serper: SerperIcon,
+  FileCode2,
+  Columns2,
 };
