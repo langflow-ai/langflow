@@ -13,6 +13,7 @@ export default function NodeName({
   validationStatus,
   isOutdated,
   beta,
+  editNameDescription,
 }: {
   display_name?: string;
   selected?: boolean;
@@ -21,11 +22,20 @@ export default function NodeName({
   validationStatus: VertexBuildTypeAPI | null;
   isOutdated: boolean;
   beta: boolean;
+  editNameDescription: boolean;
 }) {
-  const [inputName, setInputName] = useState(false);
+  const [inputName, setInputName] = useState(editNameDescription);
   const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
+
+  useEffect(() => {
+    if (selected && editNameDescription) {
+      setInputName(true);
+      takeSnapshot();
+    }
+  }, [editNameDescription, selected, takeSnapshot]);
+
   useEffect(() => {
     if (!selected) {
       setInputName(false);
@@ -66,15 +76,6 @@ export default function NodeName({
   ) : (
     <div className="group flex w-full items-center gap-1">
       <div
-        onDoubleClick={(event) => {
-          if (!showNode) {
-            return;
-          }
-          setInputName(true);
-          takeSnapshot();
-          event.stopPropagation();
-          event.preventDefault();
-        }}
         data-testid={"title-" + display_name}
         className={cn(
           "nodoubleclick w-full truncate font-medium text-primary",

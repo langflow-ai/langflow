@@ -16,6 +16,7 @@ export default function NodeDescription({
   inputClassName,
   mdClassName,
   style,
+  editNameDescription,
 }: {
   description?: string;
   selected?: boolean;
@@ -26,6 +27,7 @@ export default function NodeDescription({
   inputClassName?: string;
   mdClassName?: string;
   style?: React.CSSProperties;
+  editNameDescription: boolean;
 }) {
   const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState<string>(
@@ -35,6 +37,13 @@ export default function NodeDescription({
   const setNode = useFlowStore((state) => state.setNode);
   const overflowRef = useRef<HTMLDivElement>(null);
   const [hasScroll, sethasScroll] = useState(false);
+
+  useEffect(() => {
+    if (selected && editNameDescription) {
+      setInputDescription(true);
+      takeSnapshot();
+    }
+  }, [editNameDescription, selected, takeSnapshot]);
 
   useEffect(() => {
     //timeout to wait for the dom to update
@@ -154,10 +163,6 @@ export default function NodeDescription({
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}
-          onDoubleClick={(e) => {
-            setInputDescription(true);
-            takeSnapshot();
-          }}
         >
           {renderedDescription}
         </div>

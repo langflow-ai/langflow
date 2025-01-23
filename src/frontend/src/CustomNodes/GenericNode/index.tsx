@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "../../components/ui/button";
 import {
+  ICON_STROKE_WIDTH,
   TOOLTIP_HIDDEN_OUTPUTS,
   TOOLTIP_OPEN_HIDDEN_OUTPUTS,
 } from "../../constants/constants";
@@ -20,6 +21,7 @@ import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 
+import { useAlternate } from "@/shared/hooks/use-alternate";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
@@ -53,8 +55,8 @@ const HiddenOutputsButton = memo(
     >
       <ForwardedIconComponent
         name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        strokeWidth={1.5}
-        className="h-4 w-4 text-placeholder-foreground group-hover:text-foreground"
+        strokeWidth={ICON_STROKE_WIDTH}
+        className="icon-size text-placeholder-foreground group-hover:text-foreground"
       />
     </Button>
   ),
@@ -96,6 +98,9 @@ function GenericNode({
   };
 
   const { mutate: validateComponentCode } = usePostValidateComponentCode();
+
+  const [editNameDescription, toggleEditNameDescription, set] =
+    useAlternate(false);
 
   const updateNodeCode = useUpdateNodeCode(
     data?.id,
@@ -197,6 +202,12 @@ function GenericNode({
     [data.node?.outputs],
   );
 
+  useEffect(() => {
+    if (!selected) {
+      set(false);
+    }
+  }, [selected]);
+
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
       return outputs?.map((output, idx) => (
@@ -231,27 +242,51 @@ function GenericNode({
 
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected ? (
-      <div className={cn("absolute -top-12 left-1/2 z-50 -translate-x-1/2")}>
-        <NodeToolbarComponent
-          data={data}
-          deleteNode={(id) => {
-            takeSnapshot();
-            deleteNode(id);
-          }}
-          setShowNode={(show) => {
-            setNode(data.id, (old) => ({
-              ...old,
-              data: { ...old.data, showNode: show },
-            }));
-          }}
-          numberOfOutputHandles={shownOutputs.length ?? 0}
-          showNode={showNode}
-          openAdvancedModal={false}
-          onCloseAdvancedModal={() => {}}
-          updateNode={handleUpdateCode}
-          isOutdated={isOutdated && isUserEdited}
-        />
-      </div>
+      <>
+        <div className={cn("absolute -top-14 left-1/2 z-50 -translate-x-1/2")}>
+          <NodeToolbarComponent
+            data={data}
+            deleteNode={(id) => {
+              takeSnapshot();
+              deleteNode(id);
+            }}
+            setShowNode={(show) => {
+              setNode(data.id, (old) => ({
+                ...old,
+                data: { ...old.data, showNode: show },
+              }));
+            }}
+            numberOfOutputHandles={shownOutputs.length ?? 0}
+            showNode={showNode}
+            openAdvancedModal={false}
+            onCloseAdvancedModal={() => {}}
+            updateNode={handleUpdateCode}
+            isOutdated={isOutdated && isUserEdited}
+          />
+        </div>
+        <div className="z-40">
+          <Button
+            unstyled
+            onClick={() => {
+              toggleEditNameDescription();
+            }}
+            className="bg-zinc-foreground nodrag absolute left-1/2 top-0 z-50 flex h-6 w-6 translate-x-44 cursor-pointer items-center justify-center rounded-md"
+          >
+            <ForwardedIconComponent
+              name="PencilLine"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="icon-size text-muted-foreground"
+            />
+          </Button>
+          {/* <Button unstyled className="bg-zinc-foreground nodrag absolute left-1/2 top-8 z-50 flex h-6 w-6 translate-x-44 cursor-pointer items-center justify-center rounded-md">
+            <ForwardedIconComponent
+              name="Info"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="icon-size text-muted-foreground"
+            />
+          </Button> */}
+        </div>
+      </>
     ) : (
       <></>
     );
@@ -296,6 +331,7 @@ function GenericNode({
         validationStatus={validationStatus}
         isOutdated={isOutdated}
         beta={data.node?.beta || false}
+        editNameDescription={editNameDescription}
       />
     );
   }, [
@@ -306,6 +342,8 @@ function GenericNode({
     validationStatus,
     isOutdated,
     data.node?.beta,
+    editNameDescription,
+    toggleEditNameDescription,
   ]);
 
   const renderNodeStatus = useCallback(() => {
@@ -341,9 +379,16 @@ function GenericNode({
         mdClassName={"dark:prose-invert"}
         nodeId={data.id}
         selected={selected}
+        editNameDescription={editNameDescription}
       />
     );
-  }, [data.node?.description, data.id, selected]);
+  }, [
+    data.node?.description,
+    data.id,
+    selected,
+    editNameDescription,
+    toggleEditNameDescription,
+  ]);
 
   const renderInputParameters = useCallback(() => {
     return (
@@ -373,8 +418,8 @@ function GenericNode({
           <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
             <ForwardedIconComponent
               name="AlertTriangle"
-              strokeWidth={1.5}
-              className="h-[18px] w-[18px] shrink-0"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="icon-size shrink-0"
             />
             <span className="flex-1 truncate text-sm font-medium">
               {showNode && "Update Ready"}
