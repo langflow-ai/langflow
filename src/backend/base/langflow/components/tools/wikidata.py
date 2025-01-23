@@ -1,17 +1,21 @@
 import httpx
-from httpx import HTTPError
-from langchain_core.tools import ToolException
+import requests
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
-from langflow.io import MultilineInput, Output
-from langflow.schema import Data
-from langflow.schema.message import Message
+from langflow.inputs import MultilineInput
+from langflow.io import Output
+from langflow.schema import DataFrame
 
 
 class WikidataComponent(Component):
+    """Component for performing searches using the Wikidata API.
+
+    This component allows users to search Wikidata and returns results
+    in a DataFrame format, providing detailed entity information.
+    """
+
     display_name = "Wikidata"
-    description = "Performs a search using the Wikidata API."
+    description = "Performs a search using the Wikidata API and returns results as a DataFrame."
     icon = "Wikipedia"
 
     inputs = [
@@ -25,11 +29,16 @@ class WikidataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Message", name="text", method="fetch_content_text"),
+        Output(
+            display_name="Results",
+            name="results",
+            type_=DataFrame,
+            method="search_wikidata",
+        ),
     ]
 
-    def fetch_content(self) -> list[Data]:
+    def search_wikidata(self) -> DataFrame:
+        """Search Wikidata and return results as a DataFrame."""
         try:
             # Define request parameters for Wikidata API
             params = {
@@ -49,38 +58,32 @@ class WikidataComponent(Component):
             results = response_json.get("search", [])
 
             if not results:
-                return [Data(data={"error": "No search results found for the given query."})]
+                return DataFrame([{"error": "No search results found for the given query."}])
 
-            # Transform the API response into Data objects
-            data = [
-                Data(
-                    text=f"{result['label']}: {result.get('description', '')}",
-                    data={
-                        "label": result["label"],
-                        "id": result.get("id"),
-                        "url": result.get("url"),
-                        "description": result.get("description", ""),
-                        "concepturi": result.get("concepturi"),
-                    },
-                )
+            # Transform the API response into a DataFrame
+            df_results = [
+                {
+                    "label": result["label"],
+                    "id": result.get("id", ""),
+                    "url": result.get("url", ""),
+                    "description": result.get("description", ""),
+                    "concepturi": result.get("concepturi", ""),
+                    "full_text": f"{result['label']}: {result.get('description', '')}",
+                }
                 for result in results
             ]
 
-            self.status = data
-        except HTTPError as e:
-            error_message = f"HTTP Error in Wikidata Search API: {e!s}"
-            raise ToolException(error_message) from None
-        except KeyError as e:
-            error_message = f"Data parsing error in Wikidata API response: {e!s}"
-            raise ToolException(error_message) from None
-        except ValueError as e:
-            error_message = f"Value error in Wikidata API: {e!s}"
-            raise ToolException(error_message) from None
-        else:
-            return data
+            return DataFrame(df_results)
 
-    def fetch_content_text(self) -> Message:
-        data = self.fetch_content()
-        result_string = data_to_text("{text}", data)
-        self.status = result_string
-        return Message(text=result_string)
+        except (httpx.HTTPStatusError, requests.HTTPError) as e:
+            error_message = f"HTTP Error in Wikidata Search API: {e!s}"
+            self.log(error_message)
+            return DataFrame([{"error": error_message}])
+        except (KeyError, ValueError) as e:
+            error_message = f"Data parsing error in Wikidata API response: {e!s}"
+            self.log(error_message)
+            return DataFrame([{"error": error_message}])
+        except (httpx.RequestError, ConnectionError) as e:
+            error_message = f"Connection error in Wikidata search: {e!s}"
+            self.log(error_message)
+            return DataFrame([{"error": error_message}])
