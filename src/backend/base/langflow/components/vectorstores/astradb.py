@@ -522,7 +522,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Reset the list of collections
             build_config["collection_name"]["options"] = []
             build_config["collection_name"]["options_metadata"] = []
-            build_config["database_name"]["value"] = []
 
             # Get the list of databases
             database_options = self._initialize_database_options()
@@ -530,6 +529,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             if database_options and not os.getenv("LANGFLOW_HOST"):
                 build_config["database_name"]["show"] = True
                 build_config["api_endpoint"]["advanced"] = True
+                build_config["api_endpoint"]["value"] = ""
                 build_config["database_name"]["options"] = [db["name"] for db in database_options]
                 build_config["database_name"]["options_metadata"] = [
                     {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
