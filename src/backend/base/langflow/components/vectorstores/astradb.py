@@ -571,6 +571,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             if value_of_provider:
                 build_config["embedding_model"]["advanced"] = True
                 build_config["embedding_model"]["required"] = False
+                build_config["embedding_model"]["value"] = None
             else:
                 build_config["embedding_model"]["advanced"] = False
                 build_config["embedding_model"]["required"] = True
