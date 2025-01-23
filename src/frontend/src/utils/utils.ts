@@ -562,8 +562,8 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
         if (col.edit_mode === "popover") {
-          newCol.wrapText = true;
-          newCol.autoHeight = true;
+          newCol.wrapText = false;
+          newCol.autoHeight = false;
           newCol.cellEditor = "agLargeTextCellEditor";
           newCol.cellEditorPopup = true;
           newCol.cellEditorParams = {
@@ -726,6 +726,19 @@ export const formatPlaceholderName = (name) => {
   const prefix = /^[aeiou]/i.test(firstWord) ? "an" : "a";
 
   return `Select ${prefix} ${formattedName}`;
+};
+
+export const formatName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord =
+    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].slice(1);
+
+  return { formattedName, firstWord };
 };
 
 export const isStringArray = (value: unknown): value is string[] => {
