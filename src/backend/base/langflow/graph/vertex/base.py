@@ -635,9 +635,8 @@ class Vertex:
         async with self._lock:
             if self.log_transaction_tasks:
                 # Safely await and remove completed tasks
-                tasks = list(self.log_transaction_tasks)
-                await asyncio.gather(*tasks)
-                self.log_transaction_tasks.clear()
+                task = self.log_transaction_tasks.pop()
+                await task
 
             # Create and track new task
             task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
