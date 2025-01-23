@@ -22,6 +22,7 @@ class BrowserUseAgentComponent(Component):
             name="user_prompt",
             display_name="User Prompt",
             info="The prompt that the agent will use to perform tasks effectively.",
+            tool_mode=True,
         ),
     ]
 
@@ -35,5 +36,4 @@ class BrowserUseAgentComponent(Component):
             llm=self.llm,
         )
         result = await agent.run()
-        print(result)
         return Message(text=str(result))
