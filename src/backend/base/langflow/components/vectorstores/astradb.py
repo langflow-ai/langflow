@@ -125,7 +125,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Astra DB API Endpoint" if os.getenv("LANGFLOW_HOST") is None else "Database",
             info="The API endpoint for the Astra DB instance.",
             advanced=os.getenv("LANGFLOW_HOST") is None,  # TODO: Clean up all examples of these
             refresh_button=True,
@@ -169,12 +169,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             value="",
         ),
         DropdownInput(
-            name="vectorize_choice",
+            name="embedding_choice",
             display_name="Embedding Model or Astra Vectorize",
             info="Choose an embedding model or use Astra Vectorize.",
             options=["Embedding Model", "Astra Vectorize"],
             value="Embedding Model",
-            show=os.getenv("LANGFLOW_HOST") is not None,
+            advanced=os.getenv("LANGFLOW_HOST") is None,
             real_time_refresh=True,
         ),
         StrInput(
@@ -502,7 +502,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name == "vectorize_choice":
+        if field_name == "embedding_choice":
             if field_value == "Astra Vectorize":
                 build_config["embedding_model"]["show"] = False
                 build_config["embedding_model"]["required"] = False
@@ -522,14 +522,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Reset the list of collections
             build_config["collection_name"]["options"] = []
             build_config["collection_name"]["options_metadata"] = []
-            build_config["database_name"]["value"] = []
 
             # Get the list of databases
             database_options = self._initialize_database_options()
-            build_config["database_name"]["options"] = [db["name"] for db in database_options]
-            build_config["database_name"]["options_metadata"] = [
-                {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-            ]
+
+            if database_options and not os.getenv("LANGFLOW_HOST"):
+                build_config["database_name"]["show"] = True
+                build_config["api_endpoint"]["advanced"] = True
+                build_config["api_endpoint"]["value"] = ""
+                build_config["database_name"]["options"] = [db["name"] for db in database_options]
+                build_config["database_name"]["options_metadata"] = [
+                    {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+                ]
+            else:
+                build_config["database_name"]["show"] = False
+                build_config["api_endpoint"]["advanced"] = False
 
             # Get list of regions for a given cloud provider
             """
@@ -544,12 +551,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
             """
 
-            return build_config
-
         # Refresh the collection name options
         if field_name in ["database_name", "api_endpoint"] or not build_config["collection_name"]["options"]:
-            build_config["collection_name"]["value"] = None
-
             # Reset the list of collections
             collection_options = self._initialize_collection_options()
             build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
@@ -568,9 +571,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             if value_of_provider:
                 build_config["embedding_model"]["advanced"] = True
                 build_config["embedding_model"]["required"] = False
+                build_config["embedding_choice"]["value"] = "Astra Vectorize"
             else:
                 build_config["embedding_model"]["advanced"] = False
                 build_config["embedding_model"]["required"] = True
+                build_config["embedding_choice"]["value"] = "Embedding Model"
 
         # For the final step, get the list of vectorize providers
         """
@@ -618,9 +623,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the embedding model and additional params
         embedding_params = (
             {"embedding": self.embedding_model}
-            if self.embedding_model and self.vectorize_choice == "Embedding Model"
+            if self.embedding_model and self.embedding_choice == "Embedding Model"
             else {}
         )
+
         additional_params = self.astradb_vectorstore_kwargs or {}
 
         # Get Langflow version and platform information
