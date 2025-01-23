@@ -1,7 +1,6 @@
 import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import { SingleAlertComponentType } from "../../../../types/alerts";
@@ -27,13 +26,7 @@ export default function SingleAlert({
       </div>
       <div className="ml-3">
         <h3 className="text-sm font-medium text-error-foreground word-break-break-word">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeMathjax]}
-            className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
-          >
-            {dropItem.title}
-          </Markdown>
+          {dropItem.title}
         </h3>
         {dropItem.list ? (
           <div className="mt-2 text-sm text-error-foreground">
@@ -110,13 +103,7 @@ export default function SingleAlert({
       </div>
       <div className="ml-3 flex-1 md:flex md:justify-between">
         <p className="text-sm font-medium text-info-foreground">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeMathjax]}
-            className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
-          >
-            {dropItem.title}
-          </Markdown>
+          {dropItem.title}
         </p>
         <p className="mt-3 text-sm md:ml-6 md:mt-0">
           {dropItem.link ? (
@@ -167,13 +154,7 @@ export default function SingleAlert({
       </div>
       <div className="ml-3">
         <p className="text-sm font-medium text-success-foreground">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeMathjax]}
-            className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
-          >
-            {dropItem.title}
-          </Markdown>
+          {dropItem.title}
         </p>
       </div>
       <div className="ml-auto pl-3">

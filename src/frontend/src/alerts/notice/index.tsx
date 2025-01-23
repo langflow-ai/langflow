@@ -3,9 +3,6 @@ import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import { NoticeAlertType } from "../../types/alerts";
-import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
-import remarkGfm from "remark-gfm";
 
 export default function NoticeAlert({
   title,
@@ -59,13 +56,7 @@ export default function NoticeAlert({
           </div>
           <div className="ml-3 flex-1 md:flex md:justify-between">
             <p className="text-sm text-info-foreground word-break-break-word">
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeMathjax]}
-                className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
-              >
-                {title}
-              </Markdown>
+              {title}
             </p>
             <p className="mt-3 text-sm md:ml-6 md:mt-0">
               {link && (

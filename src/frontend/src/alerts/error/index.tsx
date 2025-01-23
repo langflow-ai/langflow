@@ -1,7 +1,6 @@
 import { Transition } from "@headlessui/react";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax";
 import remarkGfm from "remark-gfm";
 import IconComponent from "../../components/common/genericIconComponent";
 import { ErrorAlertType } from "../../types/alerts";
@@ -53,15 +52,7 @@ export default function ErrorAlert({
             />
           </div>
           <div className="ml-3">
-            <h3 className="error-build-foreground line-clamp-2">
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeMathjax]}
-                className="inline-block w-fit max-w-full text-[14px] font-semibold text-primary"
-              >
-                {title}
-              </Markdown>
-            </h3>
+            <h3 className="error-build-foreground line-clamp-2">{title}</h3>
             {list?.length !== 0 &&
             list?.some((item) => item !== null && item !== undefined) ? (
               <div className="mt-2 text-sm text-error-foreground">
