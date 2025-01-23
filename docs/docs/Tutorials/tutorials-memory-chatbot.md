@@ -23,7 +23,7 @@ This flow extends the [basic prompting flow](/starter-projects-basic-prompting)
 This flow adds a **Chat Memory** component to the Basic Prompting flow.
 This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
 
-To examine the template, clicking the **Template** field in the **Prompt** component.
+To examine the template, click the **Template** field in the **Prompt** component.
 The **Prompt** tells the **OpenAI model** component how to respond to input.
 
 ```plain

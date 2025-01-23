@@ -37,12 +37,10 @@ The **Math Agent** flow consists of these components:
 ## Run the Math Agent flow
 
 1. Add your credentials to the Open AI component.
-2. In the **Chat output** component, click <Icon name="Play" aria-label="Play button" /> **Play** to start the end-to-end application flow.
-   A **Chat output built successfully** message and a <Icon name="Check" aria-label="Checkmark" />**Checkmark** on all components indicate that the flow ran successfully.
-3. Click **Playground** to start a chat session.
-4. Enter a simple math problem, like `2 + 2`, and then make sure the bot responds with the correct answer.
-5. To confirm the REPL interpreter is working, prompt the `math` library directly with `math.sqrt(4)` and see if the bot responds with `4`.
-6. The agent will also reason through more complex word problems. For example, prompt the agent with the following math problem:
+2. Click **Playground** to start a chat session.
+3. Enter a simple math problem, like `2 + 2`, and then make sure the bot responds with the correct answer.
+4. To confirm the REPL interpreter is working, prompt the `math` library directly with `math.sqrt(4)` and see if the bot responds with `4`.
+5. The agent will also reason through more complex word problems. For example, prompt the agent with the following math problem:
 
 ```plain
 The equation 24x2+25x−47ax−2=−8x−3−53ax−2 is true for all values of x≠2a, where a is a constant.
