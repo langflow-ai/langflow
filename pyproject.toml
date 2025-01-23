@@ -12,7 +12,7 @@ packages = ["src/backend/langflow"]
 name = "langflow"
 version = "1.1.1"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -119,7 +119,9 @@ dependencies = [
     "uv>=0.5.7",
     "ag2>=0.1.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19"
+    "pydantic-ai>=0.0.19",
+    "playwright>=1.49.1",
+    "browser-use>=0.1.17",
 ]
 
 [project.urls]
