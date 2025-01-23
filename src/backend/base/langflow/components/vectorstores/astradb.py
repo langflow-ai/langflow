@@ -125,7 +125,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(
             name="api_endpoint",
-            display_name="Astra DB API Endpoint",
+            display_name="Astra DB API Endpoint" if os.getenv("LANGFLOW_HOST") is None else "Database",
             info="The API endpoint for the Astra DB instance.",
             advanced=os.getenv("LANGFLOW_HOST") is None,  # TODO: Clean up all examples of these
             refresh_button=True,
@@ -169,7 +169,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             value="",
         ),
         DropdownInput(
-            name="vectorize_choice",
+            name="embedding_choice",
             display_name="Embedding Model or Astra Vectorize",
             info="Choose an embedding model or use Astra Vectorize.",
             options=["Embedding Model", "Astra Vectorize"],
@@ -502,7 +502,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name == "vectorize_choice":
+        if field_name == "embedding_choice":
             if field_value == "Astra Vectorize":
                 build_config["embedding_model"]["show"] = False
                 build_config["embedding_model"]["required"] = False
@@ -553,8 +553,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Refresh the collection name options
         if field_name in ["database_name", "api_endpoint"] or not build_config["collection_name"]["options"]:
-            build_config["collection_name"]["value"] = None
-
             # Reset the list of collections
             collection_options = self._initialize_collection_options()
             build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
@@ -623,7 +621,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the embedding model and additional params
         embedding_params = (
             {"embedding": self.embedding_model}
-            if self.embedding_model and self.vectorize_choice == "Embedding Model"
+            if self.embedding_model and self.embedding_choice == "Embedding Model"
             else {}
         )
         additional_params = self.astradb_vectorstore_kwargs or {}
