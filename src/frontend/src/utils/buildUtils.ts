@@ -317,7 +317,7 @@ export async function buildFlowVertices({
         return true;
       }
       case "error": {
-        if (data.category === "error") {
+        if (data?.category === "error") {
           useMessagesStore.getState().addMessage(data);
           if (data?.properties?.source?.id === null) {
             onBuildError!("Error Building Flow", [data.text]);
