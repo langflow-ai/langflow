@@ -15,7 +15,7 @@ from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
+from langflow.graph.utils import UnbuiltObject, UnbuiltResult
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
 from langflow.schema.artifact import ArtifactType
@@ -632,16 +632,17 @@ class Vertex:
             target: Optional target vertex
             error: Optional error information
         """
-        async with self._lock:
-            if self.log_transaction_tasks:
-                # Safely await and remove completed tasks
-                task = self.log_transaction_tasks.pop()
-                await task
+        # Commenting this out for now
+        # async with self._lock:
+        #     if self.log_transaction_tasks:
+        #         # Safely await and remove completed tasks
+        #         task = self.log_transaction_tasks.pop()
+        #         await task
 
-            # Create and track new task
-            task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
-            self.log_transaction_tasks.add(task)
-            task.add_done_callback(self.log_transaction_tasks.discard)
+        #     # Create and track new task
+        #     task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
+        #     self.log_transaction_tasks.add(task)
+        #     task.add_done_callback(self.log_transaction_tasks.discard)
 
     async def _get_result(
         self,
