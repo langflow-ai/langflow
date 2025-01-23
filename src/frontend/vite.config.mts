@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
   }, {});
 
   return {
-    base: BASENAME || "",
+    base: env.LANGFLOW_ROOT_PATH || BASENAME || "",
     build: {
       outDir: "build",
     },
@@ -40,6 +40,7 @@ export default defineConfig(({ mode }) => {
         env.ACCESS_TOKEN_EXPIRE_SECONDS,
       ),
       "process.env.CI": JSON.stringify(env.CI),
+      "process.env.LANGFLOW_ROOT_PATH": JSON.stringify(env.LANGFLOW_ROOT_PATH),
     },
     plugins: [react(), svgr(), tsconfigPaths()],
     server: {
