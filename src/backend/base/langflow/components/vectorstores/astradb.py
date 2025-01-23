@@ -527,7 +527,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Get the list of databases
             database_options = self._initialize_database_options()
 
-            if database_options:
+            if database_options and not os.getenv("LANGFLOW_HOST"):
                 build_config["database_name"]["show"] = True
                 build_config["api_endpoint"]["advanced"] = True
                 build_config["database_name"]["options"] = [db["name"] for db in database_options]
