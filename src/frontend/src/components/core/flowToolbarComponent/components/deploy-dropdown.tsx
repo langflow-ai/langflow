@@ -29,13 +29,17 @@ export default function DeployDropdown() {
           <div className="group">
             <IconComponent name="Globe" className="icon-size mr-2" />
             <a
-              className="w-full truncate"
+              className="max-w-full truncate"
               href={`${domain}/${flowName}`}
               target="_blank"
               rel="noreferrer"
             >
               {domain.replace(/^https?:\/\//, "")}/{flowName}
             </a>
+            <IconComponent
+              name="ExternalLink"
+              className="icon-size ml-auto hidden group-hover:block"
+            />
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem className="deploy-dropdown-item group">
@@ -51,9 +55,13 @@ export default function DeployDropdown() {
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem className="deploy-dropdown-item group">
-          <div>
+          <div className="group">
             <IconComponent name="FileCode2" className="icon-size mr-2" />
             <span>Langflow SDK</span>
+            <IconComponent
+              name="ExternalLink"
+              className="icon-size ml-auto hidden group-hover:block"
+            />
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
