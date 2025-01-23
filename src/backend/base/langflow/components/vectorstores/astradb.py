@@ -467,49 +467,33 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ]
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching databases: {e}")
-
             return []
 
     def _initialize_collection_options(self):
         database = self.get_database_object()
-        if database is None:
+        if not database:
             return []
 
         try:
-            collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
-
+            collection_list = database.list_collections(keyspace=self.get_keyspace())
             return [
                 {
                     "name": col.name,
-                    "records": self.collection_data(collection_name=col.name, database=database),
-                    "provider": (
-                        col.options.vector.service.provider
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
+                    "records": self.collection_data(col.name, database),
+                    "provider": getattr(col.options.vector.service, "provider", None),
                     "icon": "",
-                    "model": (
-                        col.options.vector.service.model_name
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
+                    "model": getattr(col.options.vector.service, "model_name", None),
                 }
                 for col in collection_list
             ]
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching collections: {e}")
-
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         if field_name == "embedding_choice":
-            if field_value == "Astra Vectorize":
-                build_config["embedding_model"]["show"] = False
-                build_config["embedding_model"]["required"] = False
-            else:
-                build_config["embedding_model"]["show"] = True
-                build_config["embedding_model"]["required"] = True
-
+            build_config["embedding_model"]["show"] = field_value != "Astra Vectorize"
+            build_config["embedding_model"]["required"] = field_value != "Astra Vectorize"
             return build_config
 
         if not self.token or not self.token.startswith("AstraCS:"):
@@ -519,91 +503,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Refresh the database name options
         if field_name in ["token", "environment"] or not build_config["database_name"]["options"]:
-            # Reset the list of collections
-            build_config["collection_name"]["options"] = []
-            build_config["collection_name"]["options_metadata"] = []
-            build_config["database_name"]["value"] = []
-
-            # Get the list of databases
-            database_options = self._initialize_database_options()
-
-            if database_options and not os.getenv("LANGFLOW_HOST"):
-                build_config["database_name"]["show"] = True
-                build_config["api_endpoint"]["advanced"] = True
-                build_config["database_name"]["options"] = [db["name"] for db in database_options]
-                build_config["database_name"]["options_metadata"] = [
-                    {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-                ]
-            else:
-                build_config["database_name"]["show"] = False
-                build_config["api_endpoint"]["advanced"] = False
-
-            # Get list of regions for a given cloud provider
-            """
-            cloud_provider = (
-                build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["cloud_provider"][
-                    "value"
-                ]
-                or "Amazon Web Services"
-            )
-            build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
-                "options"
-            ] = self.map_cloud_providers()[cloud_provider]["regions"]
-            """
+            self._refresh_database_options(build_config)
 
         # Refresh the collection name options
         if field_name in ["database_name", "api_endpoint"] or not build_config["collection_name"]["options"]:
-            # Reset the list of collections
-            collection_options = self._initialize_collection_options()
-            build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-            build_config["collection_name"]["options_metadata"] = [
-                {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-            ]
+            self._refresh_collection_options(build_config)
 
-            return build_config
-
-        # Hide embedding model option if opriona_metadata provider is not null
+        # Hide embedding model option if provider is not null
         if field_name == "collection_name":
-            # Find location of the name in the options list
-            index_of_name = build_config["collection_name"]["options"].index(field_value)
-            value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
-
-            if value_of_provider:
-                build_config["embedding_model"]["advanced"] = True
-                build_config["embedding_model"]["required"] = False
-            else:
-                build_config["embedding_model"]["advanced"] = False
-                build_config["embedding_model"]["required"] = True
-
-        # For the final step, get the list of vectorize providers
-        """
-        vectorize_providers = self.get_vectorize_providers()
-        if not vectorize_providers:
-            return build_config
-
-        # Allow the user to see the embedding provider options
-        provider_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_provider"
-        ]["options"]
-        if not provider_options:
-            # If the collection is set, allow user to see embedding options
-            build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "embedding_generation_provider"
-            ]["options"] = ["Bring your own", "Nvidia", *[key for key in vectorize_providers if key != "Nvidia"]]
-
-        # And allow the user to see the models based on a selected provider
-        model_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_model"
-        ]["options"]
-        if not model_options:
-            embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "embedding_generation_provider"
-            ]["value"]
-
-            build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "embedding_generation_model"
-            ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
-        """
+            self._update_embedding_model_visibility(build_config, field_value)
 
         return build_config
 
@@ -775,3 +683,38 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def _refresh_database_options(self, build_config):
+        build_config["collection_name"]["options"] = []
+        build_config["collection_name"]["options_metadata"] = []
+        build_config["database_name"]["value"] = []
+
+        database_options = self._initialize_database_options()
+        if database_options and not os.getenv("LANGFLOW_HOST"):
+            build_config["database_name"]["show"] = True
+            build_config["api_endpoint"]["advanced"] = True
+            build_config["database_name"]["options"] = [db["name"] for db in database_options]
+            build_config["database_name"]["options_metadata"] = [
+                {k: v for k, v in db.items() if k != "name"} for db in database_options
+            ]
+        else:
+            build_config["database_name"]["show"] = False
+            build_config["api_endpoint"]["advanced"] = False
+
+    def _refresh_collection_options(self, build_config):
+        collection_options = self._initialize_collection_options()
+        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
+        build_config["collection_name"]["options_metadata"] = [
+            {k: v for k, v in col.items() if k != "name"} for col in collection_options
+        ]
+
+    def _update_embedding_model_visibility(self, build_config, field_value):
+        index_of_name = build_config["collection_name"]["options"].index(field_value)
+        value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
+
+        if value_of_provider:
+            build_config["embedding_model"]["advanced"] = True
+            build_config["embedding_model"]["required"] = False
+        else:
+            build_config["embedding_model"]["advanced"] = False
+            build_config["embedding_model"]["required"] = True
