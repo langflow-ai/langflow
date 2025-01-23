@@ -11,7 +11,7 @@ import os
 load_dotenv()
 
 SDCP_ROOT_URL = os.getenv("SDCP_ROOT_URL")
-SDCP_TOKEN = os.getenv("SDCP_ROOT_URL")
+SDCP_TOKEN = os.getenv("SDCP_TOKEN")
 
 
 class TxtCleaningComponent(Component):
