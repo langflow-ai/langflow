@@ -538,7 +538,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["database_name"]["show"] = False
                 build_config["api_endpoint"]["advanced"] = False
 
-
             # Get list of regions for a given cloud provider
             """
             cloud_provider = (
