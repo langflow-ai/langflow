@@ -54,6 +54,8 @@ class CreateCustomCollectionComponent(Component):
             processed_table.append(processed_row)
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
         url = f"{SDCP_ROOT_URL}embedding/create_custom_collection/"
 
         # Prepare the body

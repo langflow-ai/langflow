@@ -63,6 +63,8 @@ class BlobGetDownloadURLComponent(Component):
 
         url = f"{SDCP_ROOT_URL}blob/download-url/"
         headers = {'accept': 'application/json'}
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
 
         fields = {
             "file_path": file_path,

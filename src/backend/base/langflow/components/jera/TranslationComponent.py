@@ -46,6 +46,8 @@ class TranslationComponent(Component):
  
         url = f"{SDCP_ROOT_URL}translate/"
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
  
         fields = json.dumps({
             "text": f"please translate the following text to {translation_language}: {text_to_translate}!",

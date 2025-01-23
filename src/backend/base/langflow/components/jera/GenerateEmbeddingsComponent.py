@@ -36,6 +36,9 @@ class GenerateEmbeddingsComponent(Component):
         docs = [(row.get("doc") or "").strip() for row in self.my_table if "doc" in row]
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
+            
         url = f"{SDCP_ROOT_URL}embedding/generate_embeddings/"
         fields = {"docs": docs}
         response = http.request('POST', url, headers=headers, json=fields)

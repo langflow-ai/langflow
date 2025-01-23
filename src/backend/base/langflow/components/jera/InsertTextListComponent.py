@@ -40,6 +40,8 @@ class InsertTextListComponent(Component):
         dt = [row.get("data", "").strip() for row in self.datas if "data" in row]
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
         url = f"{SDCP_ROOT_URL}embedding/insert_text_list/"
 
         # Prepare the body

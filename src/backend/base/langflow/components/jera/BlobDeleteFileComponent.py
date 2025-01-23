@@ -59,6 +59,8 @@ class BlobDeleteFileComponent(Component):
  
         url = f"{SDCP_ROOT_URL}blob/delete_file/"
         headers = {'accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'}
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
  
         fields = {
             "file_path": file_path,

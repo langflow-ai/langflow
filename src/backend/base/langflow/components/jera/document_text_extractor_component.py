@@ -54,6 +54,8 @@ class DocumentTextExtractorComponent(Component):
             http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
 
             headers = {'accept': 'application/json'}
+            if SDCP_TOKEN:
+                headers['apikey'] = SDCP_TOKEN
 
             fields = {'file': (file_path, file_content, mime_type)}
             response = http.request('POST', url, headers=headers, fields=fields)

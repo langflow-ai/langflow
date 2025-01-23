@@ -78,6 +78,8 @@ class UploadFileComponent(Component):
         url = f"{SDCP_ROOT_URL}blob/upload_file/?overwrite={Overwrite_file}"
 
         headers = {'accept': 'application/json', 'Content-Type': 'multipart/form-data'}
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
         
         fields = {
             "file": ( filename, file_content, 'application/octet-stream'),

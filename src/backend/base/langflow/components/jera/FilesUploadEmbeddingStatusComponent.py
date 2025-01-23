@@ -37,7 +37,8 @@ class FilesUploadEmbeddingStatusComponent(Component):
         url = f"{SDCP_ROOT_URL}blob/files_upload_embedding_status/{task_id}"
 
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
-
+        if SDCP_TOKEN:
+            headers['apikey'] = SDCP_TOKEN
 
         response = http.request('GET', url, headers=headers)
         

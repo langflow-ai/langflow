@@ -51,15 +51,34 @@ class ImageEmbeddingsComponent(Component):
         files ={'image_files': open(self.image_files, 'rb')} 
         data={"gpt_model_name":self.gpt_model_name,"image_urls":[self.image_urls]}
         embedding_url = f"{SDCP_ROOT_URL}embedding/image_embeddings"
-        embedding_result=requests.post(embedding_url,data=data,files=files)
+        if SDCP_TOKEN:
+            headers = {"apikey": SDCP_TOKEN}
+            embedding_result=requests.post(embedding_url,data=data,files=files,headers=headers)
+        else:
+            embedding_result=requests.post(embedding_url,data=data,files=files)
+
         job_id=embedding_result.json().get("process_id")
         time.sleep(10)
+        
         embedding_job_url = f"{SDCP_ROOT_URL}embedding/image_embeddings/{job_id}"
-        embedding_job_result=requests.get(embedding_job_url)
+
+        if SDCP_TOKEN:
+            headers = {"apikey": SDCP_TOKEN}
+            embedding_job_result = requests.get(embedding_job_url,headers=headers)
+        else:
+            embedding_job_result = requests.get(embedding_job_url)
+        
         status=embedding_job_result.json().get("status")
+
         while status == "In Progress":
             time.sleep(10)
-            embedding_job_result=requests.get(embedding_job_url)
+            
+            if SDCP_TOKEN:
+                headers = {"apikey": SDCP_TOKEN}
+                embedding_job_result = requests.get(embedding_job_url,headers=headers)
+            else:
+                embedding_job_result = requests.get(embedding_job_url)
+                
             status=embedding_job_result.json().get("status")
         
         return Data(value=embedding_job_result.json())
