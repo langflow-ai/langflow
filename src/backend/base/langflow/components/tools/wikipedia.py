@@ -15,7 +15,7 @@ class WikipediaComponent(Component):
     """
 
     display_name = "Wikipedia"
-    description = "Search Wikipedia API and return results as a DataFrame."
+    description = "Call Wikipedia API."
     icon = "Wikipedia"
 
     inputs = [
