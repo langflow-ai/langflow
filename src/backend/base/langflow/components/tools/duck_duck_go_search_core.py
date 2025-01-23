@@ -56,6 +56,3 @@ class DuckDuckGoSearchCoreComponent(Component):
             error_message = f"Error in DuckDuckGo Search: {e!s}"
             self.status = error_message
             return DataFrame([{"text": error_message}])
-
-    def build(self):
-        return self.search_duckduckgo
