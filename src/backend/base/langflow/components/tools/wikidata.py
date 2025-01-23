@@ -15,7 +15,7 @@ class WikidataComponent(Component):
     """
 
     display_name = "Wikidata"
-    description = "Performs a search using the Wikidata API and returns results as a DataFrame."
+    description = "Performs a search using the Wikidata API."
     icon = "Wikipedia"
 
     inputs = [
