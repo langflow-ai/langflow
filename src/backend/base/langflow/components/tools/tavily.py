@@ -11,7 +11,7 @@ class TavilySearchComponent(Component):
     """Component for performing searches using the Tavily AI Search API.
 
     This component allows users to search using Tavily AI and returns results
-    in a DataFrame format. It supports customization of search parameters 
+    in a DataFrame format. It supports customization of search parameters
     and provides detailed search options.
     """
 
@@ -114,27 +114,25 @@ class TavilySearchComponent(Component):
 
             # Add answer if included
             if self.include_answer and search_results.get("answer"):
-                results.append({
-                    "type": "answer",
-                    "content": search_results["answer"]
-                })
+                results.append({"type": "answer", "content": search_results["answer"]})
 
             # Add search results
-            for result in search_results.get("results", []):
-                results.append({
-                    "type": "search_result",
-                    "title": result.get("title", ""),
-                    "url": result.get("url", ""),
-                    "content": result.get("content", ""),
-                    "score": result.get("score", 0)
-                })
+            results.extend(
+                [
+                    {
+                        "type": "search_result",
+                        "title": result.get("title", ""),
+                        "url": result.get("url", ""),
+                        "content": result.get("content", ""),
+                        "score": result.get("score", 0),
+                    }
+                    for result in search_results.get("results", [])
+                ]
+            )
 
             # Add images if included
             if self.include_images and search_results.get("images"):
-                results.append({
-                    "type": "images",
-                    "images": search_results["images"]
-                })
+                results.append({"type": "images", "images": search_results["images"]})
 
             return DataFrame(results)
 
