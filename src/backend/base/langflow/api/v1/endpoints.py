@@ -667,6 +667,13 @@ async def custom_component(
     if raw_code.frontend_node is not None:
         built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
 
+    tool_mode: bool = built_frontend_node.get("tool_mode", False)
+    if isinstance(component_instance, Component):
+        await component_instance.run_and_validate_update_outputs(
+            frontend_node=built_frontend_node,
+            field_name="tool_mode",
+            field_value=tool_mode,
+        )
     type_ = get_instance_name(component_instance)
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
