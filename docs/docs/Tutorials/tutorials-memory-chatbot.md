@@ -20,7 +20,8 @@ This flow extends the [basic prompting flow](/starter-projects-basic-prompting)
 
 ![](/img/starter-flow-memory-chatbot.png)
 
-This flow adds a **Chat Memory** component to the Basic Prompting flow. This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
+This flow adds a **Chat Memory** component to the Basic Prompting flow.
+This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
 
 To examine the template, clicking the **Template** field in the **Prompt** component.
 The **Prompt** tells the **OpenAI model** component how to respond to input.
@@ -52,9 +53,9 @@ What is my name?
 What is the second subject I asked you about?
 ```
 
-The chatbot should remember your name and previous questions.
+The chatbot remembers your name and previous questions.
 
-3. To view the **Message Logs** pane, click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> and then click **Message Logs**.
+3. To view the **Message Logs** pane, click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" />, and then click **Message Logs**.
 The **Message Logs** pane displays all previous messages, with each conversation sorted by `session_id`.
 
 ![](/img/messages-logs.png)

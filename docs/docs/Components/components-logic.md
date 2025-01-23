@@ -11,12 +11,13 @@ Logic components provide functionalities for routing, conditional processing, an
 
 This flow creates a summarizing "for each" loop with the [Loop](/components-logic#loop) component.
 
-The component iterates over a list of [Data](/concepts-objects#data-object) objects until it's completed, when the **Done** loop aggregates the results.
+The component iterates over a list of [Data](/concepts-objects#data-object) objects until it's completed, and then the **Done** loop aggregates the results.
 
 The **File** component loads text files from your local machine, and then the **Parse Data** component parses them into a list of structured `Data` objects.
 The **Loop** component passes each `Data` object to a **Prompt** to be summarized.
 
-When the **Loop** component runs out of `Data`, the **Done** loop activates, which counts the number of pages and summarizes their tone with another **Prompt**. This is represented in Langflow by connecting the Parse Data component's **Data List** output to the Loop component's `Data` loop input.
+When the **Loop** component runs out of `Data`, the **Done** loop activates, which counts the number of pages and summarizes their tone with another **Prompt**.
+This is represented in Langflow by connecting the Parse Data component's **Data List** output to the Loop component's `Data` loop input.
 
 ![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
 

@@ -132,7 +132,7 @@ The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) componen
 
 8. Configure the **Astra DB** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
-	The component connects to your database and populates the dropdown menus with existing databases and collections.
+	The component connects to your database and populates the menus with existing databases and collections.
 	2. Select your **Database**.
 	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
 	If you don't have a collection, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection).

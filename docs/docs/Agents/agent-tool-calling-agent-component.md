@@ -160,7 +160,7 @@ Langflow supports **Tool Mode** for the following data types:
 * `MultilineInput`
 * `DropdownInput`
 
-For example, in the [components as tools](#components-as-tools) example above, `tool_mode=True,` is added to the `MessageTextInput` input so the custom component can be used as a tool.
+For example, the [components as tools](#components-as-tools) example above adds `tool_mode=True` to the `MessageTextInput` input so the custom component can be used as a tool.
 
 ```python
 inputs = [

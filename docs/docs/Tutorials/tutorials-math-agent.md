@@ -7,7 +7,8 @@ import Icon from "@site/src/components/icon";
 
 Build a **Math Agent** flow for an agentic application using the **Tool-calling agent** component.
 
-In this flow, the **Tool-calling agent** reasons using an **Open AI** LLM to solve math problems. It selects the **Calculator** tool for simpler math, and the **Python REPL** tool (with the Python `math` library) for more complex problems.
+In this flow, the **Tool-calling agent** reasons using an **Open AI** LLM to solve math problems.
+It selects the **Calculator** tool for simpler math and the **Python REPL** tool (with the Python `math` library) for more complex problems.
 
 ## Prerequisites
 

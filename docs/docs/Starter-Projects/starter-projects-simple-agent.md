@@ -7,7 +7,8 @@ Build a **Simple Agent** flow for an agentic application using the **Tool-callin
 
 An **agent** uses an LLM as its "brain" to select among the connected tools and complete its tasks.
 
-In this flow, the **Tool-calling agent** reasons using an **Open AI** LLM. The agent selects the **Calculator** tool for simple math problems, and the **URL** tool to search a URL for content.
+In this flow, the **Tool-calling agent** reasons using an **Open AI** LLM.
+The agent selects the **Calculator** tool for simple math problems and the **URL** tool to search a URL for content.
 
 ## Prerequisites
 
@@ -38,7 +39,7 @@ The **Simple Agent** flow consists of these components:
 1. Add your credentials to the Open AI component.
 2. Click **Playground** to start a chat session.
 3. To confirm the tools are connected, ask the agent, `What tools are available to you?`
-The response should be similar to this:
+The response is similar to the following:
 ```plain
 I have access to the following tools:
 Calculator: Perform basic arithmetic operations.
