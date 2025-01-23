@@ -21,12 +21,13 @@ class GoogleSerperAPICore(Component):
             name="input_value",
             display_name="Input",
             tool_mode=True,
+            required=True,
         ),
         IntInput(
             name="k",
             display_name="Number of results",
             value=4,
-            required=True,
+            advanced=True,
         ),
     ]
 
