@@ -1,14 +1,20 @@
 import httpx
-from loguru import logger
+import requests
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
-from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
-from langflow.schema import Data
-from langflow.schema.message import Message
+from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.io import Output
+from langflow.schema import DataFrame
 
 
 class TavilySearchComponent(Component):
+    """Component for performing searches using the Tavily AI Search API.
+
+    This component allows users to search using Tavily AI and returns results
+    in a DataFrame format. It supports customization of search parameters 
+    and provides detailed search options.
+    """
+
     display_name = "Tavily AI Search"
     description = """**Tavily AI** is a search engine optimized for LLMs and RAG, \
         aimed at efficient, quick, and persistent search results."""
@@ -26,6 +32,7 @@ class TavilySearchComponent(Component):
             display_name="Search Query",
             info="The search query you want to execute with Tavily.",
             tool_mode=True,
+            required=True,
         ),
         DropdownInput(
             name="search_depth",
@@ -67,11 +74,19 @@ class TavilySearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Text", name="text", method="fetch_content_text"),
+        Output(
+            display_name="Results",
+            name="results",
+            type_=DataFrame,
+            method="search_tavily",
+        ),
     ]
 
-    def fetch_content(self) -> list[Data]:
+    def search_tavily(self) -> DataFrame:
+        """Search using Tavily AI and return results as a DataFrame."""
+        if not self.api_key:
+            return DataFrame([{"error": "Invalid Tavily API Key"}])
+
         try:
             url = "https://api.tavily.com/search"
             headers = {
@@ -94,45 +109,44 @@ class TavilySearchComponent(Component):
             response.raise_for_status()
             search_results = response.json()
 
-            data_results = []
+            # Prepare results
+            results = []
 
+            # Add answer if included
             if self.include_answer and search_results.get("answer"):
-                data_results.append(Data(text=search_results["answer"]))
+                results.append({
+                    "type": "answer",
+                    "content": search_results["answer"]
+                })
 
+            # Add search results
             for result in search_results.get("results", []):
-                content = result.get("content", "")
-                data_results.append(
-                    Data(
-                        text=content,
-                        data={
-                            "title": result.get("title"),
-                            "url": result.get("url"),
-                            "content": content,
-                            "score": result.get("score"),
-                        },
-                    )
-                )
+                results.append({
+                    "type": "search_result",
+                    "title": result.get("title", ""),
+                    "url": result.get("url", ""),
+                    "content": result.get("content", ""),
+                    "score": result.get("score", 0)
+                })
 
+            # Add images if included
             if self.include_images and search_results.get("images"):
-                data_results.append(Data(text="Images found", data={"images": search_results["images"]}))
-        except httpx.HTTPStatusError as exc:
-            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
-            logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
-        except httpx.RequestError as exc:
+                results.append({
+                    "type": "images",
+                    "images": search_results["images"]
+                })
+
+            return DataFrame(results)
+
+        except (httpx.HTTPStatusError, requests.HTTPError) as exc:
+            error_message = f"HTTP error occurred: {exc}"
+            self.log(error_message)
+            return DataFrame([{"error": error_message}])
+        except (httpx.RequestError, requests.RequestException) as exc:
             error_message = f"Request error occurred: {exc}"
-            logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
+            self.log(error_message)
+            return DataFrame([{"error": error_message}])
         except ValueError as exc:
             error_message = f"Invalid response format: {exc}"
-            logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
-        else:
-            self.status = data_results
-            return data_results
-
-    def fetch_content_text(self) -> Message:
-        data = self.fetch_content()
-        result_string = data_to_text("{text}", data)
-        self.status = result_string
-        return Message(text=result_string)
+            self.log(error_message)
+            return DataFrame([{"error": error_message}])
