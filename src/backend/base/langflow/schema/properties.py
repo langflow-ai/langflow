@@ -28,6 +28,8 @@ class Properties(BaseModel):
     def validate_source(cls, v):
         if isinstance(v, str):
             return Source(id=v, display_name=v, source=v)
+        if v is None:
+            return Source()
         return v
 
     @field_serializer("source")
