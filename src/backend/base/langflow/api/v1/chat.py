@@ -350,12 +350,12 @@ async def build_flow(
         build_task = asyncio.create_task(_build_vertex(vertex_id, graph, event_manager))
         try:
             await build_task
+            vertex_build_response: VertexBuildResponse = build_task.result()
         except asyncio.CancelledError as exc:
             logger.exception(exc)
             build_task.cancel()
             return
 
-        vertex_build_response: VertexBuildResponse = build_task.result()
         # send built event or error event
         try:
             vertex_build_response_json = vertex_build_response.model_dump_json()
