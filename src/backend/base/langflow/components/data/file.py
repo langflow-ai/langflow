@@ -30,7 +30,7 @@ class FileComponent(BaseFileComponent):
         IntInput(
             name="concurrency_multithreading",
             display_name="Processing Concurrency",
-            advanced=False,
+            advanced=True,
             info="When multiple files are being processed, the number of files to process concurrently.",
             value=1,
         ),
