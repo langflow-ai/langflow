@@ -24,7 +24,9 @@ from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
 from .tavily import TavilySearchComponent
 from .tavily_search import TavilySearchToolComponent
+from .wikidata import WikidataComponent
 from .wikidata_api import WikidataAPIComponent
+from .wikipedia import WikipediaComponent
 from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
 from .yahoo import YfinanceComponent
@@ -61,7 +63,9 @@ __all__ = [
     "TavilySearchComponent",
     "TavilySearchToolComponent",
     "WikidataAPIComponent",
+    "WikidataComponent",
     "WikipediaAPIComponent",
+    "WikipediaComponent",
     "WolframAlphaAPIComponent",
     "YfinanceComponent",
     "YfinanceToolComponent",

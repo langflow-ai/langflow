@@ -32,6 +32,7 @@ class AnthropicModelComponent(LCModelComponent):
             options=ANTHROPIC_MODELS,
             refresh_button=True,
             value=ANTHROPIC_MODELS[0],
+            combobox=True,
         ),
         SecretStrInput(
             name="api_key",
