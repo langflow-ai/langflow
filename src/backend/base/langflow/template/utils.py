@@ -82,7 +82,7 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
     # Compute tool modes from template
     tool_modes = [
         value.get("tool_mode")
-        for key, value in raw_frontend_node["template"].items()
+        for key, value in frontend_node["template"].items()
         if key != "_type" and isinstance(value, dict)
     ]
 
