@@ -109,6 +109,7 @@ import {
   HelpCircle,
   Home,
   Image,
+  Infinity,
   Info,
   InstagramIcon,
   Key,
@@ -237,6 +238,7 @@ import { AWSIcon } from "../icons/AWS";
 import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { ArXivIcon } from "../icons/ArXiv";
 import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
 import { AstraDBIcon } from "../icons/AstraDB";
@@ -252,6 +254,7 @@ import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
+import { DeepSeekIcon } from "../icons/DeepSeek";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
 import { EvernoteIcon } from "../icons/Evernote";
 import { FBIcon } from "../icons/FacebookMessenger";
@@ -280,6 +283,7 @@ import { MongoDBIcon } from "../icons/MongoDB";
 import { NeedleIcon } from "../icons/Needle";
 import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
+import { NovitaIcon } from "../icons/Novita";
 import { NvidiaIcon } from "../icons/Nvidia";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
@@ -293,6 +297,7 @@ import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
 import { SambaNovaIcon } from "../icons/SambaNova";
 import { SearxIcon } from "../icons/Searx";
+import { SerperIcon } from "../icons/Serper";
 import { ShareIcon } from "../icons/Share";
 import { Share2Icon } from "../icons/Share2";
 import SvgSlackIcon from "../icons/Slack/SlackIcon";
@@ -532,6 +537,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
+  { display_name: "Youtube", name: "youtube", icon: "YouTube" },
 ];
 
 export const categoryIcons = {
@@ -620,6 +626,7 @@ export const nodeIconsLucide: iconsType = {
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
   Anthropic: AnthropicIcon,
+  ArXiv: ArXivIcon,
   ChatAnthropic: AnthropicIcon,
   assemblyai: AssemblyAIIcon,
   AgentQL: AgentQLIcon,
@@ -664,12 +671,15 @@ export const nodeIconsLucide: iconsType = {
   notion: NotionIcon,
   Notion: NotionIcon,
   NotionDirectoryLoader: NotionIcon,
+  novita: NovitaIcon,
+  Novita: NovitaIcon,
   Needle: NeedleIcon,
   NVIDIA: NvidiaIcon,
   ChatOpenAI: OpenAiIcon,
   AzureChatOpenAI: OpenAiIcon,
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
+  DeepSeek: DeepSeekIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
@@ -859,6 +869,7 @@ export const nodeIconsLucide: iconsType = {
   Share2,
   Share,
   GitBranchPlus,
+  Infinity,
   Loader2,
   BookmarkPlus,
   Heart,
@@ -940,4 +951,5 @@ export const nodeIconsLucide: iconsType = {
   ThumbsDown,
   ThumbDownIconCustom,
   ThumbUpIconCustom,
+  Serper: SerperIcon,
 };

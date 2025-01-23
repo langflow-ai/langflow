@@ -6,26 +6,27 @@ from langflow.schema.message import Message
 
 
 class ParseDataComponent(Component):
-    display_name = "Parse Data"
-    description = "Convert Data into plain text following a specified template."
-    icon = "braces"
+    display_name = "Data to Message"
+    description = "Convert Data objects into Messages using any {field_name} from input data."
+    icon = "message-square"
     name = "ParseData"
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="The data to convert to text.", is_list=True),
+        DataInput(name="data", display_name="Data", info="The data to convert to text.", is_list=True, required=True),
         MultilineInput(
             name="template",
             display_name="Template",
             info="The template to use for formatting the data. "
             "It can contain the keys {text}, {data} or any other key in the Data.",
             value="{text}",
+            required=True,
         ),
         StrInput(name="sep", display_name="Separator", advanced=True, value="\n"),
     ]
 
     outputs = [
         Output(
-            display_name="Text",
+            display_name="Message",
             name="text",
             info="Data as a single Message, with each input Data separated by Separator",
             method="parse_data",

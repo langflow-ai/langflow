@@ -36,15 +36,9 @@ test(
     let cleanCode = await extractAndCleanCode(page);
 
     // Replace the import statement
-    cleanCode = cleanCode.replace("FloatInput(", "SliderInput(");
     cleanCode = cleanCode.replace(
-      "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput",
-      "from langflow.io import BoolInput, DictInput, DropdownInput, FloatInput, IntInput, StrInput, SliderInput",
-    );
-
-    cleanCode = cleanCode.replace(
-      "value=0.2,",
-      "value=0.2, range_spec=RangeSpec(min=3, max=30, step=1), min_label='test', max_label='test2', min_label_icon='pencil-ruler', max_label_icon='palette', slider_buttons=False, slider_buttons_options=[], slider_input=False,",
+      'name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)',
+      'name="temperature", display_name="Temperature", value=0.2, range_spec=RangeSpec(min=3, max=30, step=1), min_label="test", max_label="test2", min_label_icon="pencil-ruler", max_label_icon="palette", slider_buttons=False, slider_buttons_options=[], slider_input=False,',
     );
 
     await page.locator("textarea").last().press(`ControlOrMeta+a`);

@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     """Database driver name async. If not provided, Langflow will use a SQLite driver async."""
     database_driver_async: str | None = None
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
+    database_connection_retry: bool = False
+    """If True, Langflow will retry to connect to the database if it fails."""
     pool_size: int = 10
     """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
     max_overflow: int = 20
@@ -183,6 +185,8 @@ class Settings(BaseSettings):
     """The maximum number of transactions to keep in the database."""
     max_vertex_builds_to_keep: int = 3000
     """The maximum number of vertex builds to keep in the database."""
+    max_vertex_builds_per_vertex: int = 2
+    """The maximum number of builds to keep per vertex. Older builds will be deleted."""
 
     # MCP Server
     mcp_server_enabled: bool = True

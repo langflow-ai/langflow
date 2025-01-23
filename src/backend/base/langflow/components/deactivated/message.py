@@ -19,7 +19,7 @@ class MessageComponent(CustomComponent):
             "session_id": {
                 "display_name": "Session ID",
                 "info": "Session ID of the chat history.",
-                "input_types": ["Text"],
+                "input_types": ["Message"],
             },
         }
 

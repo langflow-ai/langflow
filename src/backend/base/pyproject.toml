@@ -118,6 +118,7 @@ maintainers = [
 dependencies = [
     "fastapi>=0.115.2,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
+    "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
     "gunicorn>=22.0.0,<24.0.0",
     "langchain~=0.3.10",
@@ -173,6 +174,11 @@ dependencies = [
     "defusedxml>=0.7.1,<1.0.0",
     "pypdf~=5.1.0",
     "validators>=0.34.0",
+    "networkx>=3.4.2",
+    "json-repair>=0.30.3",
+    "mcp>=1.1.2",
+    "aiosqlite>=0.20.0",
+    "greenlet>=3.1.1",
 ]
 
 [project.urls]
