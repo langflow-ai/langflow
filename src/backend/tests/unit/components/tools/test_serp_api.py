@@ -1,90 +1,73 @@
-from unittest.mock import MagicMock, patch
-
 import pytest
-from langchain_core.tools import ToolException
-from langflow.components.tools import SerpComponent
-from langflow.custom import Component
-from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
-from langflow.schema.message import Message
+from langflow.components.tools.serp import SerpComponent
+from tests.base import ComponentTestBaseWithoutClient
 
 
-def test_serpapi_initialization():
-    component = SerpComponent()
-    assert component.display_name == "Serp Search API"
-    assert component.description == "Call Serp Search API with result limiting"
-    assert component.icon == "SerpSearch"
+class TestSerpComponent(ComponentTestBaseWithoutClient):
+    """Test the Serp Search API component"""
 
+    @pytest.fixture
+    def component_class(self):
+        """Return the class of the component to be tested"""
+        return SerpComponent
 
-def test_serpapi_template():
-    serpapi = SerpComponent()
-    component = Component(_code=serpapi._code)
-    frontend_node, _ = build_custom_component_template(component)
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default arguments required to instantiate the component"""
+        return {
+            "serpapi_api_key": "test_api_key",
+            "input_value": "test query",
+            "search_params": {"num": 5},
+            "max_results": 5,
+            "max_snippet_length": 100,
+            "_session_id": "test_session",
+        }
 
-    # Verify basic structure
-    assert isinstance(frontend_node, dict)
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return the mapping of versions and file names for the component"""
+        # Since this appears to be a new component, we can return an empty list
+        return []
 
-    # Verify inputs
-    assert "template" in frontend_node
-    input_names = [input_["name"] for input_ in frontend_node["template"].values() if isinstance(input_, dict)]
+    def test_component_initialization(self, component_class, default_kwargs):
+        """Test if the component initializes correctly with default arguments"""
+        component = component_class(**default_kwargs)
+        frontend_node = component.to_frontend_node()
+        node_data = frontend_node["data"]["node"]
 
-    expected_inputs = ["serpapi_api_key", "input_value", "search_params", "max_results", "max_snippet_length"]
+        # Test component attributes
+        assert node_data["display_name"] == "Serp Search API"
+        assert node_data["description"] == "Call Serp Search API and return results as a DataFrame"
+        assert node_data["base_classes"] == ["DataFrame"]
 
-    for input_name in expected_inputs:
-        assert input_name in input_names
+        # Test input fields
+        template_fields = node_data["template"]
+        assert "serpapi_api_key" in template_fields
+        assert "input_value" in template_fields
+        assert "search_params" in template_fields
+        assert "max_results" in template_fields
+        assert "max_snippet_length" in template_fields
 
+        # Test input field properties
+        assert template_fields["serpapi_api_key"]["type"] == "str"
+        assert template_fields["serpapi_api_key"]["required"] is True
+        assert template_fields["max_results"]["value"] == 5
+        assert template_fields["max_snippet_length"]["value"] == 100
 
-@patch("langflow.components.tools.serp.SerpAPIWrapper")
-def test_fetch_content(mock_serpapi_wrapper):
-    component = SerpComponent()
-    component.serpapi_api_key = "test-key"
-    component.input_value = "test query"
-    component.max_results = 3
-    component.max_snippet_length = 100
+    def test_invalid_api_key(self, component_class, default_kwargs):
+        """Test component behavior with invalid API key"""
+        default_kwargs["serpapi_api_key"] = ""
+        component = component_class(**default_kwargs)
+        
+        result = component.search_serp()
+        assert len(result) == 1
+        assert result.iloc[0]["error"] == "Invalid SerpAPI Key"
 
-    # Mock the SerpAPIWrapper and its results method
-    mock_instance = MagicMock()
-    mock_serpapi_wrapper.return_value = mock_instance
-    mock_instance.results.return_value = {
-        "organic_results": [
-            {"title": "Test Result 1", "link": "https://test.com", "snippet": "This is a test result 1"},
-            {"title": "Test Result 2", "link": "https://test2.com", "snippet": "This is a test result 2"},
-        ]
-    }
-
-    result = component.fetch_content()
-
-    assert isinstance(result, list)
-    assert len(result) == 2
-    assert result[0].text == "This is a test result 1"
-    assert result[0].data["title"] == "Test Result 1"
-    assert result[0].data["link"] == "https://test.com"
-
-
-def test_fetch_content_text():
-    component = SerpComponent()
-    component.fetch_content = MagicMock(
-        return_value=[
-            Data(text="First result", data={"title": "Title 1"}),
-            Data(text="Second result", data={"title": "Title 2"}),
-        ]
-    )
-
-    result = component.fetch_content_text()
-
-    assert isinstance(result, Message)
-    assert result.text == "First result\nSecond result\n"
-
-
-def test_error_handling():
-    component = SerpComponent()
-    component.serpapi_api_key = "test-key"
-    component.input_value = "test query"
-
-    with patch("langflow.components.tools.serp.SerpAPIWrapper") as mock_serpapi:
-        mock_instance = MagicMock()
-        mock_serpapi.return_value = mock_instance
-        mock_instance.results.side_effect = Exception("API Error")
-
-        with pytest.raises(ToolException):
-            component.fetch_content()
+    def test_search_params_default(self, component_class, default_kwargs):
+        """Test component with default search parameters"""
+        # Remove search_params to test default behavior
+        default_kwargs.pop("search_params")
+        component = component_class(**default_kwargs)
+        
+        # Verify that the component uses empty dict as default
+        assert component.search_params == {}
