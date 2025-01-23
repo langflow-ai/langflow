@@ -125,7 +125,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ),
         StrInput(
             name="api_endpoint",
-            display_name="API Endpoint",
+            display_name="Astra DB API Endpoint",
             info="The API endpoint for the Astra DB instance.",
             advanced=os.getenv("LANGFLOW_HOST") is None,  # TODO: Clean up all examples of these
             refresh_button=True,
@@ -526,10 +526,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Get the list of databases
             database_options = self._initialize_database_options()
-            build_config["database_name"]["options"] = [db["name"] for db in database_options]
-            build_config["database_name"]["options_metadata"] = [
-                {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-            ]
+
+            if database_options:
+                build_config["database_name"]["show"] = True
+                build_config["api_endpoint"]["advanced"] = True
+                build_config["database_name"]["options"] = [db["name"] for db in database_options]
+                build_config["database_name"]["options_metadata"] = [
+                    {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+                ]
+            else:
+                build_config["database_name"]["show"] = False
+                build_config["api_endpoint"]["advanced"] = False
+
 
             # Get list of regions for a given cloud provider
             """
@@ -543,8 +551,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "options"
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
             """
-
-            return build_config
 
         # Refresh the collection name options
         if field_name in ["database_name", "api_endpoint"] or not build_config["collection_name"]["options"]:
