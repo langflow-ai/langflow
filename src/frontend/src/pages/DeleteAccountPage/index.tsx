@@ -5,7 +5,8 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import BaseModal from "../../modals/baseModal";
 
-import jeraIcon from '../../../jera_favicon.ico';
+import JeraIcon from "@/assets/jera_logo.svg"
+
 
 export default function DeleteAccountPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -30,7 +31,7 @@ export default function DeleteAccountPage() {
           // <span className="mb-4 text-5xl">⛓️</span>
             <span className="fill-black text-2xl dark:fill-white">
               <img
-                src={jeraIcon}
+                src={JeraIcon}
                 alt="Jera Icon"
                 className="inline-block w-[1em] h-[1em] align-middle"
               />

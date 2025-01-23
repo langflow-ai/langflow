@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useFolderStore } from "@/stores/foldersStore";
 
-import jeraIcon from '../../../../../jera_favicon.ico';
+import JeraIcon from "@/assets/jera_logo.svg"
 
 type EmptyPageProps = {
   setOpenModal: (open: boolean) => void;
@@ -23,7 +23,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
             // <span className="fill-foreground text-4xl">⛓️</span>
             <span className="fill-black text-2xl dark:fill-white">
               <img
-                src={jeraIcon}
+                src={JeraIcon}
                 alt="Jera Icon"
                 className="inline-block w-[1em] h-[1em] align-middle"
               />

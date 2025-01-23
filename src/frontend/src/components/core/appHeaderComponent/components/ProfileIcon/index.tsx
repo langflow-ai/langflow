@@ -6,8 +6,9 @@ export function ProfileIcon() {
   const { userData } = useContext(AuthContext);
 
   const profileImageUrl = `${BASE_URL_API}files/profile_pictures/${
-    userData?.profile_image ?? "Space/046-rocket.svg"
+    userData?.profile_image ?? "People/People Avatar-01-16.svg"
   }`;
+
 
   return (
     <img

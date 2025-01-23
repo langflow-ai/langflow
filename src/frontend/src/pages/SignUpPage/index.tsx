@@ -20,8 +20,7 @@ import {
   inputHandlerEventType,
   signUpInputStateType,
 } from "../../types/components";
-
-import jeraIcon from '../../../jera_favicon.ico';
+import JeraIcon from "@/assets/jera_logo.svg"
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
@@ -102,7 +101,7 @@ export default function SignUp(): JSX.Element {
             // <span className="mb-4 text-5xl">⛓️</span>
             <span className="fill-black text-2xl dark:fill-white">
               <img
-                src={jeraIcon}
+                src={JeraIcon}
                 alt="Jera Icon"
                 className="inline-block w-[1em] h-[1em] align-middle"
               />
