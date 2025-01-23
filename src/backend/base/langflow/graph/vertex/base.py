@@ -7,7 +7,6 @@ import os
 import traceback
 import types
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping
-from contextlib import suppress
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -633,31 +632,17 @@ class Vertex:
             target: Optional target vertex
             error: Optional error information
         """
-        try:
-            async with self._lock:
-                if self.log_transaction_tasks:
-                    # Safely await and remove completed tasks
-                    tasks = list(self.log_transaction_tasks)
-                    self.log_transaction_tasks.clear()
-                    try:
-                        await asyncio.gather(*tasks)
-                    except asyncio.CancelledError:
-                        # Cancel any pending tasks
-                        for task in tasks:
-                            if not task.done():
-                                task.cancel()
-                        raise
-                # Create and track new task
-                task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
-                self.log_transaction_tasks.add(task)
-                task.add_done_callback(self.log_transaction_tasks.discard)
-        except asyncio.CancelledError:
-            # Cancel any pending tasks in self.log_transaction_tasks
-            for pending_task in self.log_transaction_tasks:
-                if not pending_task.done():
-                    with suppress(asyncio.CancelledError):
-                        pending_task.cancel()
-            raise
+        async with self._lock:
+            if self.log_transaction_tasks:
+                # Safely await and remove completed tasks
+                tasks = list(self.log_transaction_tasks)
+                await asyncio.gather(*tasks)
+                self.log_transaction_tasks.clear()
+
+            # Create and track new task
+            task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
+            self.log_transaction_tasks.add(task)
+            task.add_done_callback(self.log_transaction_tasks.discard)
 
     async def _get_result(
         self,
