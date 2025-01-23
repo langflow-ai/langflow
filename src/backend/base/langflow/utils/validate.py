@@ -230,14 +230,16 @@ def prepare_global_scope(module):
         ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
+
+    import_statements = []
+
     for node in module.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
                     exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
-                    msg = f"Module {alias.name} not found. Please install it and try again."
-                    raise ModuleNotFoundError(msg) from e
+                    raise ModuleNotFoundError(f"Module {alias.name} not found. Please install it and try again.") from e
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             try:
                 with warnings.catch_warnings():
@@ -246,18 +248,14 @@ def prepare_global_scope(module):
                     for alias in node.names:
                         exec_globals[alias.name] = getattr(imported_module, alias.name)
             except ModuleNotFoundError as e:
-                msg = f"Module {node.module} not found. Please install it and try again"
-                raise ModuleNotFoundError(msg) from e
-        elif isinstance(node, ast.ClassDef):
-            # Compile and execute the class definition to properly create the class
-            class_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            exec(class_code, exec_globals)
-        elif isinstance(node, ast.FunctionDef):
-            function_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            exec(function_code, exec_globals)
-        elif isinstance(node, ast.Assign):
-            assign_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            exec(assign_code, exec_globals)
+                raise ModuleNotFoundError(f"Module {node.module} not found. Please install it and try again.") from e
+        else:
+            import_statements.append(node)
+
+    if import_statements:
+        code = compile(ast.Module(body=import_statements, type_ignores=[]), "<string>", "exec")
+        exec(code, exec_globals)
+
     return exec_globals
 
 
