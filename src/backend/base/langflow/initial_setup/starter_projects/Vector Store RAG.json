@@ -3805,11 +3805,7 @@
                 "info": "Select a database in Astra DB.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [
-                  {
-                    "collections": 4
-                  }
-                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
