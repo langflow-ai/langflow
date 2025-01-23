@@ -50,7 +50,7 @@ class ChunkingComponent(Component):
         break_point = self.breakpoint
 
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
-        base_url = f"http://{SDCP_ROOT_URL}/chunking/chunking/"
+        base_url = f"{SDCP_ROOT_URL}chunking/chunking/"
 
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
         if SDCP_TOKEN:

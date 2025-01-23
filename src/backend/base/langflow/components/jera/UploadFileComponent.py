@@ -75,7 +75,7 @@ class UploadFileComponent(Component):
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         
         Overwrite_file = self.overwrite
-        url = f"http://{SDCP_ROOT_URL}/blob/upload_file/?overwrite={Overwrite_file}"
+        url = f"{SDCP_ROOT_URL}blob/upload_file/?overwrite={Overwrite_file}"
 
         headers = {'accept': 'application/json', 'Content-Type': 'multipart/form-data'}
         

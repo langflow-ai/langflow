@@ -46,7 +46,7 @@ class CustomCollectionSearchComponent(Component):
         optfld = [row.get("fields", "").strip() for row in self.output_fields if "fields" in row]
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
-        url = f"http://{SDCP_ROOT_URL}/embedding/custom_collection_search/"
+        url = f"{SDCP_ROOT_URL}embedding/custom_collection_search/"
 
         # Prepare the body
         fields = {

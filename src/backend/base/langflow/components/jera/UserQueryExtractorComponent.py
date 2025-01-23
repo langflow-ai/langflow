@@ -38,7 +38,7 @@ class UserQueryExtractorComponent(Component):
         user_query = self.user_query
 
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
-        url = f"http://{SDCP_ROOT_URL}/diagram_extractor/extract_diagram_with_description"
+        url = f"{SDCP_ROOT_URL}diagram_extractor/extract_diagram_with_description"
         headers = {'accept': 'multipart/form-data'}
         # Prepare the fields for multipart/form-data
         fields = {

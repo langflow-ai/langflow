@@ -44,7 +44,7 @@ class EntityExtractionComponent(Component):
         entity_schemas = json.loads(self.entity_schemas) if self.entity_schemas else {}
         examples = json.loads(self.examples) if self.examples else []
         metadata = json.loads(self.metadata) if self.metadata else {}
-        url = f"http://{SDCP_ROOT_URL}/entity_extraction/extract_entities/"
+        url = f"{SDCP_ROOT_URL}entity_extraction/extract_entities/"
 
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
         if SDCP_TOKEN:

@@ -81,7 +81,7 @@ class SharepointUploadFileComponent(Component):
             file_content = file.read()
             http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
 
-            url = f"http://{SDCP_ROOT_URL}/sharepoint/upload_file/"
+            url = f"{SDCP_ROOT_URL}sharepoint/upload_file/"
             
             headers = {
                 'accept': 'application/json',

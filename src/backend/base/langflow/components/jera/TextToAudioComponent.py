@@ -40,7 +40,7 @@ class TextToAudioComponent(Component):
 
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
 
-        url = f"http://{SDCP_ROOT_URL}/audio_generator/generate-audio/"
+        url = f"{SDCP_ROOT_URL}audio_generator/generate-audio/"
         
         headers = {'accept': 'application/json'}
         if SDCP_TOKEN:

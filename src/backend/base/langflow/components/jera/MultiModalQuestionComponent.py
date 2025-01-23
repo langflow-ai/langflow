@@ -45,7 +45,7 @@ class MultiModalQuestionComponent(Component):
             file_content = file.read()
 
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
-        url = f"http://{SDCP_ROOT_URL}/multi_modal_question/query/"
+        url = f"{SDCP_ROOT_URL}multi_modal_question/query/"
 
         headers = {
           "accept": "application/json",

@@ -36,7 +36,7 @@ class GenerateEmbeddingsComponent(Component):
         docs = [(row.get("doc") or "").strip() for row in self.my_table if "doc" in row]
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
-        url = f"http://{SDCP_ROOT_URL}/embedding/generate_embeddings/"
+        url = f"{SDCP_ROOT_URL}embedding/generate_embeddings/"
         fields = {"docs": docs}
         response = http.request('POST', url, headers=headers, json=fields)
         result = json.loads(response.data.decode('utf-8'))

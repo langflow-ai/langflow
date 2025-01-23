@@ -42,7 +42,7 @@ class AudioEmbeddingComponent(Component):
     def build_output_data(self) -> Data:
         files ={'audio_file': open(self.audio_file, 'rb')} 
         data={"split_length":self.split_length}
-        embedding_url=f"http://{SDCP_ROOT_URL}/embedding/audio-embedding"##PS: if you are using docker in windows url="http://host.docker.internal:8000/embedding/audio-embedding"
+        embedding_url=f"{SDCP_ROOT_URL}embedding/audio-embedding"##PS: if you are using docker in windows url="http://host.docker.internal:8000/embedding/audio-embedding"
         embedding_result=requests.post(embedding_url,data=data,files=files)
         
         return Data(value=embedding_result.json())

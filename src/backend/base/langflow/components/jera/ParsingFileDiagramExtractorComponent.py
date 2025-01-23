@@ -40,7 +40,7 @@ class ParsingFileDiagramExtractorComponent(Component):
             parsing_content = file2.read()
 
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
-        url = f"http://{SDCP_ROOT_URL}/diagram_extractor/extract_diagram_with_parser"
+        url = f"{SDCP_ROOT_URL}diagram_extractor/extract_diagram_with_parser"
 
         headers = {'accept': 'multipart/form-data'}
         if SDCP_TOKEN:

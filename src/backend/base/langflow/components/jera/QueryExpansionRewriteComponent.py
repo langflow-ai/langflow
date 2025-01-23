@@ -42,7 +42,7 @@ class QueryExpansionRewriteComponent(Component):
        
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
 
-        url = f"http://{SDCP_ROOT_URL}/query_expansion/rewrite/"
+        url = f"{SDCP_ROOT_URL}query_expansion/rewrite/"
 
         headers = {'accept': 'application/json'}
         if SDCP_TOKEN:

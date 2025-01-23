@@ -47,7 +47,7 @@ class DataStoreFusionRerankerComponent(Component):
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
-        url = f"http://{SDCP_ROOT_URL}/reranking/data_store_fusion_reranker"
+        url = f"{SDCP_ROOT_URL}reranking/data_store_fusion_reranker"
 
         payload = {
             "host": self.host,

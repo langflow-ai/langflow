@@ -34,7 +34,7 @@ class FilesUploadEmbeddingStatusComponent(Component):
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         
         task_id = self.task_id
-        url = f"http://{SDCP_ROOT_URL}/blob/files_upload_embedding_status/{task_id}"
+        url = f"{SDCP_ROOT_URL}blob/files_upload_embedding_status/{task_id}"
 
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 

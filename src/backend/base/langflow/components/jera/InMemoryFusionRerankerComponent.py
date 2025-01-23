@@ -42,7 +42,7 @@ class InMemoryFusionRerankerComponent(Component):
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
-        url = f"http://{SDCP_ROOT_URL}/reranking/in_memory_fusion_reranker/"
+        url = f"{SDCP_ROOT_URL}reranking/in_memory_fusion_reranker/"
 
         try:
             docs_list = json.loads(self.docs)

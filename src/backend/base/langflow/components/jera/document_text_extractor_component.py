@@ -37,13 +37,13 @@ class DocumentTextExtractorComponent(Component):
 
         # Determine the correct endpoint based on file extension
         if file_extension == 'pdf':
-            url = f"http://{SDCP_ROOT_URL}/document_loader/pdf/"
+            url = f"{SDCP_ROOT_URL}document_loader/pdf/"
             mime_type = 'application/pdf'
         elif file_extension == 'docx':
-            url = f"http://{SDCP_ROOT_URL}/document_loader/docx/"
+            url = f"{SDCP_ROOT_URL}document_loader/docx/"
             mime_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         elif file_extension == 'pptx':
-            url = f"http://{SDCP_ROOT_URL}/document_loader/pptx/"
+            url = f"{SDCP_ROOT_URL}document_loader/pptx/"
             mime_type = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
         else:
             raise ValueError("Unsupported file type")

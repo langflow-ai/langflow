@@ -43,11 +43,11 @@ class GenerateVideoEmbeddingsComponent(Component):
     def build_output_data(self) -> Data:
         files ={'video_file': open(self.video_file, 'rb')} 
         data={"frame_interval":self.frame_interval}
-        generation_embedding_url = f"http://{SDCP_ROOT_URL}/video_processor/generate_video_embeddings"
+        generation_embedding_url = f"{SDCP_ROOT_URL}video_processor/generate_video_embeddings"
         generation_embedding_result=requests.post(generation_embedding_url,data=data,files=files)
         job_id=generation_embedding_result.json().get("job_id")
         status=generation_embedding_result.json().get("status")
-        embedding_job_url = f"http://{SDCP_ROOT_URL}/video_processor/generate_video_embeddings/{job_id}"
+        embedding_job_url = f"{SDCP_ROOT_URL}video_processor/generate_video_embeddings/{job_id}"
         time.sleep(20)
         while status in  ["in_progress","In Progress"]:
             embedding_job_result=requests.get(embedding_job_url)

@@ -48,7 +48,7 @@ class SharepointDownloadFileFromFilePathComponent(Component):
     def build_output_data(self) -> Data:
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
  
-        url = f"http://{SDCP_ROOT_URL}/sharepoint/get_file_content_by_file_path/"
+        url = f"{SDCP_ROOT_URL}sharepoint/get_file_content_by_file_path/"
         
         headers = {'accept': 'application/json'}
         if SDCP_TOKEN:

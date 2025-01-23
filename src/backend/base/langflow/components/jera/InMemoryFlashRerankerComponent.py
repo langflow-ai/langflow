@@ -39,7 +39,7 @@ class InMemoryFlashRerankerComponent(Component):
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
         print(json.loads(self.docs))
         
-        url = f"http://{SDCP_ROOT_URL}/reranking/in_memory_flash_reranker"
+        url = f"{SDCP_ROOT_URL}reranking/in_memory_flash_reranker"
         payload = {
             "query": self.query,
             "docs": json.loads(self.docs),

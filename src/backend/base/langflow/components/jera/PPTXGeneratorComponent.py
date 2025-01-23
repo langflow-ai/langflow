@@ -39,7 +39,7 @@ class PPTXGeneratorComponent(Component):
  
         http = urllib3.PoolManager(retries=Retry(total=3, backoff_factor=0.2))
 
-        url = f"http://{SDCP_ROOT_URL}/pptx_generator/topic/"
+        url = f"{SDCP_ROOT_URL}pptx_generator/topic/"
         
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
         if SDCP_TOKEN:
