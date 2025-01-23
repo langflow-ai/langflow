@@ -174,7 +174,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="Choose an embedding model or use Astra Vectorize.",
             options=["Embedding Model", "Astra Vectorize"],
             value="Embedding Model",
-            show=os.getenv("LANGFLOW_HOST") is not None,
+            advanced=os.getenv("LANGFLOW_HOST") is None,
             real_time_refresh=True,
         ),
         StrInput(
@@ -571,9 +571,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             if value_of_provider:
                 build_config["embedding_model"]["advanced"] = True
                 build_config["embedding_model"]["required"] = False
+                build_config["embedding_choice"]["value"] = "Astra Vectorize"
             else:
                 build_config["embedding_model"]["advanced"] = False
                 build_config["embedding_model"]["required"] = True
+                build_config["embedding_choice"]["value"] = "Embedding Model"
 
         # For the final step, get the list of vectorize providers
         """
@@ -624,6 +626,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             if self.embedding_model and self.embedding_choice == "Embedding Model"
             else {}
         )
+
         additional_params = self.astradb_vectorstore_kwargs or {}
 
         # Get Langflow version and platform information
