@@ -26,7 +26,7 @@ class MaritalkModelComponent(LCModelComponent):
             advanced=False,
             info="Choose between Sabiazinho-3 (smaller and faster) or Sabia-3 (larger and more capable) models.",
             options=["sabiazinho-3", "sabia-3"],
-            value=["sabiazinho-3"],
+            value="sabiazinho-3",
         ),
         SecretStrInput(
             name="api_key",
