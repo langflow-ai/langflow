@@ -47,7 +47,7 @@ The **workspace** is where you create AI applications by connecting and running 
 The workspace controls allow you to adjust your view and lock your flows in place.
 
 * Add **Notes** to flows with the **Add Note** button, similar to commenting in code.
-* To access the [Settings](#settings) menu, click ⚙️ **Settings**.
+* To access the [Settings](#settings) menu, click <Icon name="Settings" aria-label="Gear icon" /> **Settings**.
 
 This menu contains configuration for **Global Variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 

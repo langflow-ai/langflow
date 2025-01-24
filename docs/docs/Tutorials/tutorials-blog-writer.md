@@ -1,5 +1,5 @@
 ---
-title: Blog Writer
+title: Blog writer
 slug: /tutorials-blog-writer
 ---
 

@@ -3,12 +3,13 @@ title: Global variables
 slug: /configuration-global-variables
 ---
 
+import Icon from "@site/src/components/icon";
 import ReactPlayer from "react-player";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 Global variables let you store and reuse generic input values and credentials across your projects.
-You can use a global variable in any text input field that displays the 🌐 icon.
+You can use a global variable in any text input field that displays the <Icon name="Globe" aria-label="Globe" /> **Globe** icon.
 
 Langflow stores global variables in its internal database, and encrypts the values using a secret key.
 

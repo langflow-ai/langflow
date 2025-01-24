@@ -49,7 +49,7 @@ The Data output is primarily used when directly querying Astra DB, while the Too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[`Data`] | A list of [Data](/configuration-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
+| Data | List[`Data`] | A list of [Data](/concepts-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
 
 
@@ -79,7 +79,7 @@ The main difference between this tool and the **Astra DB Tool** is that this too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of [Data](/configuration-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the number_of_results parameter. |
+| Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
 
 ## Bing Search API
