@@ -2816,7 +2816,9 @@
                 "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [],
+                "required_inputs": [
+                  "api_key"
+                ],
                 "selected": "Message",
                 "types": [
                   "Message"
@@ -3183,7 +3185,12 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
+                "required_inputs": [
+                  "collection_name",
+                  "database_name",
+                  "embedding_model",
+                  "token"
+                ],
                 "selected": "DataFrame",
                 "types": [
                   "DataFrame"
@@ -3666,7 +3673,12 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [],
+                "required_inputs": [
+                  "collection_name",
+                  "database_name",
+                  "embedding_model",
+                  "token"
+                ],
                 "selected": "DataFrame",
                 "types": [
                   "DataFrame"
