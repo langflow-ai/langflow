@@ -1,4 +1,5 @@
 import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltipComponent from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,10 +8,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useFlowStore from "@/stores/flowStore";
 
 export default function DeployDropdown() {
   const domain = window.location.origin;
   const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
+  const hasIO = useFlowStore((state) => state.hasIO);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -25,23 +28,42 @@ export default function DeployDropdown() {
         align="end"
         className="min-w-[300px] max-w-[400px]"
       >
-        <DropdownMenuItem className="deploy-dropdown-item text-nowrap">
-          <div className="group">
-            <IconComponent name="Globe" className="icon-size mr-2" />
-            <a
-              className="max-w-full truncate"
-              href={`${domain}/${flowName}`}
-              target="_blank"
-              rel="noreferrer"
+        <ShadTooltipComponent
+          styleClasses="truncate"
+          side="left"
+          content={
+            hasIO
+              ? `${domain}/${flowName}`
+              : "Add a Chat Input or Chat Output to deploy the playground"
+          }
+        >
+          <DropdownMenuItem className="deploy-dropdown-item text-nowrap">
+            <div
+              className={`group ${!hasIO ? "!important cursor-not-allowed text-muted-foreground" : ""}`}
             >
-              {domain.replace(/^https?:\/\//, "")}/{flowName}
-            </a>
-            <IconComponent
-              name="ExternalLink"
-              className="icon-size ml-auto hidden group-hover:block"
-            />
-          </div>
-        </DropdownMenuItem>
+              <IconComponent name="Globe" className="icon-size mr-2" />
+              <a
+                className={`max-w-[80%] truncate ${!hasIO ? "cursor-not-allowed" : ""}`}
+                href={`${domain}/${flowName}`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => {
+                  if (!hasIO) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                {domain.replace(/^https?:\/\//, "")}/{flowName}
+              </a>
+              <div className="ml-auto w-[5%]">
+                <IconComponent
+                  name="ExternalLink"
+                  className="icon-size ml-auto opacity-0 group-hover:opacity-100"
+                />
+              </div>
+            </div>
+          </DropdownMenuItem>
+        </ShadTooltipComponent>
         <DropdownMenuItem className="deploy-dropdown-item group">
           <div>
             <IconComponent name="Code2" className="icon-size mr-2" />
