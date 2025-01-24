@@ -140,19 +140,76 @@ async def retrieve_vertices_order(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.post("/build/{flow_id}/flow")
-async def build_flow(
+async def create_flow_response(
+    queue: asyncio.Queue,
+    client_consumed_queue: asyncio.Queue,
+    event_manager: EventManager,
+    event_task: asyncio.Task,
+) -> DisconnectHandlerStreamingResponse:
+    """Create a streaming response for the flow build process.
+
+    Args:
+        queue: The queue for events
+        client_consumed_queue: The queue for client consumption tracking
+        event_manager: The event manager instance
+        event_task: The task generating events
+
+    Returns:
+        DisconnectHandlerStreamingResponse: A streaming response that handles disconnection
+    """
+
+    async def consume_and_yield(
+        queue: asyncio.Queue, client_consumed_queue: asyncio.Queue
+    ) -> typing.AsyncIterator[str]:
+        while True:
+            event_id, value, put_time = await queue.get()
+            if value is None:
+                break
+            get_time = time.time()
+            yield value
+            get_time_yield = time.time()
+            client_consumed_queue.put_nowait(event_id)
+            logger.debug(
+                f"consumed event {event_id} "
+                f"(time in queue, {get_time - put_time:.4f}, "
+                f"client {get_time_yield - get_time:.4f})"
+            )
+
+    def on_disconnect() -> None:
+        logger.debug("Client disconnected, closing tasks")
+        # Cancel the event generation task
+        event_task.cancel()
+        # Signal event manager to stop
+        event_manager.on_end(data={})
+
+    return DisconnectHandlerStreamingResponse(
+        consume_and_yield(queue, client_consumed_queue),
+        media_type="application/x-ndjson",
+        on_disconnect=on_disconnect,
+    )
+
+
+async def generate_flow_events(
     *,
-    background_tasks: BackgroundTasks,
     flow_id: uuid.UUID,
-    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
-    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
-    files: list[str] | None = None,
-    stop_component_id: str | None = None,
-    start_component_id: str | None = None,
-    log_builds: bool | None = True,
+    background_tasks: BackgroundTasks,
+    event_manager: EventManager,
+    client_consumed_queue: asyncio.Queue,
+    inputs: InputValueRequest | None,
+    data: FlowDataRequest | None,
+    files: list[str] | None,
+    stop_component_id: str | None,
+    start_component_id: str | None,
+    log_builds: bool,
     current_user: CurrentActiveUser,
-):
+) -> None:
+    """Generate events for flow building process.
+
+    This function handles the core flow building logic and generates appropriate events:
+    - Building and validating the graph
+    - Processing vertices
+    - Handling errors and cleanup
+    """
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     if not inputs:
@@ -347,12 +404,20 @@ async def build_flow(
         client_consumed_queue: asyncio.Queue,
         event_manager: EventManager,
     ) -> None:
+        """Build vertices and handle their events.
+
+        Args:
+            vertex_id: The ID of the vertex to build
+            graph: The graph instance
+            client_consumed_queue: Queue for tracking client consumption
+            event_manager: Manager for handling events
+        """
         build_task = asyncio.create_task(_build_vertex(vertex_id, graph, event_manager))
         try:
             await build_task
             vertex_build_response: VertexBuildResponse = build_task.result()
-        except asyncio.CancelledError as exc:
-            logger.exception(exc)
+        except asyncio.CancelledError:
+            logger.debug("Build task cancelled")
             build_task.cancel()
             return
 
@@ -363,12 +428,21 @@ async def build_flow(
         except Exception as exc:
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc
+
         event_manager.on_end_vertex(data={"build_data": build_data})
         await client_consumed_queue.get()
+
         if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
             tasks = []
             for next_vertex_id in vertex_build_response.next_vertices_ids:
-                task = asyncio.create_task(build_vertices(next_vertex_id, graph, client_consumed_queue, event_manager))
+                task = asyncio.create_task(
+                    build_vertices(
+                        next_vertex_id,
+                        graph,
+                        client_consumed_queue,
+                        event_manager,
+                    )
+                )
                 tasks.append(task)
             try:
                 await asyncio.gather(*tasks)
@@ -377,73 +451,118 @@ async def build_flow(
                     task.cancel()
                 return
 
-    async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
-        try:
-            ids, vertices_to_run, graph = await build_graph_and_get_order()
-        except Exception as e:
-            error_message = ErrorMessage(
-                flow_id=flow_id,
-                exception=e,
-            )
-            event_manager.on_error(data=error_message.data)
-            raise
-        event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
-        await client_consumed_queue.get()
+    try:
+        ids, vertices_to_run, graph = await build_graph_and_get_order()
+    except Exception as e:
+        error_message = ErrorMessage(
+            flow_id=flow_id,
+            exception=e,
+        )
+        event_manager.on_error(data=error_message.data)
+        raise
 
-        tasks = []
-        for vertex_id in ids:
-            task = asyncio.create_task(build_vertices(vertex_id, graph, client_consumed_queue, event_manager))
-            tasks.append(task)
-        try:
-            await asyncio.gather(*tasks)
-        except asyncio.CancelledError:
-            background_tasks.add_task(graph.end_all_traces)
-            for task in tasks:
-                task.cancel()
-            return
-        except Exception as e:
-            logger.error(f"Error building vertices: {e}")
-            custom_component = graph.get_vertex(vertex_id).custom_component
-            trace_name = getattr(custom_component, "trace_name", None)
-            error_message = ErrorMessage(
-                flow_id=flow_id,
-                exception=e,
-                session_id=graph.session_id,
-                trace_name=trace_name,
-            )
-            event_manager.on_error(data=error_message.data)
-            raise
-        event_manager.on_end(data={})
-        await event_manager.queue.put((None, None, time.time))
+    event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
+    await client_consumed_queue.get()
 
-    async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> typing.AsyncGenerator:
-        while True:
-            event_id, value, put_time = await queue.get()
-            if value is None:
-                break
-            get_time = time.time()
-            yield value
-            get_time_yield = time.time()
-            client_consumed_queue.put_nowait(event_id)
-            logger.debug(
-                f"consumed event {event_id} "
-                f"(time in queue, {get_time - put_time:.4f}, "
-                f"client {get_time_yield - get_time:.4f})"
-            )
+    tasks = []
+    for vertex_id in ids:
+        task = asyncio.create_task(build_vertices(vertex_id, graph, client_consumed_queue, event_manager))
+        tasks.append(task)
+    try:
+        await asyncio.gather(*tasks)
+    except asyncio.CancelledError:
+        background_tasks.add_task(graph.end_all_traces)
+        for task in tasks:
+            task.cancel()
+        return
+    except Exception as e:
+        logger.error(f"Error building vertices: {e}")
+        custom_component = graph.get_vertex(vertex_id).custom_component
+        trace_name = getattr(custom_component, "trace_name", None)
+        error_message = ErrorMessage(
+            flow_id=flow_id,
+            exception=e,
+            session_id=graph.session_id,
+            trace_name=trace_name,
+        )
+        event_manager.on_error(data=error_message.data)
+        raise
+
+    event_manager.on_end(data={})
+    await event_manager.queue.put((None, None, time.time))
+
+
+async def process_flow_build(
+    *,
+    flow_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    inputs: InputValueRequest | None = None,
+    data: FlowDataRequest | None = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool = True,
+    current_user: CurrentActiveUser,
+) -> StreamingResponse:
+    """Process a flow build request and return a streaming response."""
+    get_chat_service()
+    get_telemetry_service()
+    if not inputs:
+        inputs = InputValueRequest(session=str(flow_id))
 
     asyncio_queue: asyncio.Queue = asyncio.Queue()
     asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
     event_manager = create_default_event_manager(queue=asyncio_queue)
-    main_task = asyncio.create_task(event_generator(event_manager, asyncio_queue_client_consumed))
 
-    def on_disconnect() -> None:
-        logger.debug("Client disconnected, closing tasks")
-        main_task.cancel()
+    # Create task for event generation
+    event_task = asyncio.create_task(
+        generate_flow_events(
+            flow_id=flow_id,
+            background_tasks=background_tasks,
+            event_manager=event_manager,
+            client_consumed_queue=asyncio_queue_client_consumed,
+            inputs=inputs,
+            data=data,
+            files=files,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            log_builds=log_builds,
+            current_user=current_user,
+        )
+    )
 
-    return DisconnectHandlerStreamingResponse(
-        consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
-        media_type="application/x-ndjson",
-        on_disconnect=on_disconnect,
+    return await create_flow_response(
+        queue=asyncio_queue,
+        client_consumed_queue=asyncio_queue_client_consumed,
+        event_manager=event_manager,
+        event_task=event_task,
+    )
+
+
+@router.post("/build/{flow_id}/flow")
+async def build_flow(
+    *,
+    background_tasks: BackgroundTasks,
+    flow_id: uuid.UUID,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool = True,
+    current_user: CurrentActiveUser,
+):
+    """Build and process a flow, returning a streaming response of the build progress."""
+    return await process_flow_build(
+        flow_id=flow_id,
+        background_tasks=background_tasks,
+        inputs=inputs,
+        data=data,
+        files=files,
+        stop_component_id=stop_component_id,
+        start_component_id=start_component_id,
+        log_builds=log_builds,
+        current_user=current_user,
     )
 
 
