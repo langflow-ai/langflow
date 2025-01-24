@@ -57,7 +57,7 @@ current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
 MAX_RETRIES = 2
 
 
-def get_enable_progress_notifications():
+def get_enable_progress_notifications() -> bool:
     return get_settings_service().settings.mcp_server_enable_progress_notifications
 
 
@@ -179,7 +179,7 @@ async def handle_list_tools():
 
 @server.call_tool()
 async def handle_call_tool(
-    name: str, arguments: dict, enable_progress_notifications: Depends(get_enable_progress_notifications)
+    name: str, arguments: dict, *, enable_progress_notifications: bool = Depends(get_enable_progress_notifications)
 ) -> list[types.TextContent]:
     """Handle tool execution requests."""
     try:
