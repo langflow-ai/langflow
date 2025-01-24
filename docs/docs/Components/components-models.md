@@ -13,7 +13,7 @@ Refer to your specific component's documentation for more information on paramet
 
 Model components receive inputs and prompts for generating text, and the generated text is sent to an output component.
 
-The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/configuration-objects) objects.
+The model output can also be sent to the **Language Model** port and on to a **Parse Data** component, where the output can be parsed into structured [Data](/concepts-objects) objects.
 
 This example has the OpenAI model in a chatbot flow. For more information, see the [Basic prompting flow](/starter-projects-basic-prompting).
 
@@ -124,6 +124,12 @@ For more information, see the [Cohere documentation](https://cohere.ai/).
 | Max Tokens          | Max Tokens         | Specifies the maximum number of tokens to generate. Defaults to `256`. |
 | Temperature         | Temperature        | Specifies the sampling temperature. Defaults to `0.75`. |
 | Input Value         | Input Value        | Specifies the input text for text generation.           |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of the Cohere model configured with the specified parameters. |
 
 ## Google Generative AI
 
@@ -269,6 +275,12 @@ For more information, see [Ollama documentation](https://ollama.com/).
 | Model Name          | Model Name    | The model name to use.                     |
 | Temperature         | Temperature   | Controls the creativity of model responses. |
 
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of an Ollama model configured with the specified parameters. |
+
 ## OpenAI
 
 This component generates text using OpenAI's language models.
@@ -298,6 +310,30 @@ For more information, see [OpenAI documentation](https://beta.openai.com/docs/).
 This component generates text using Qianfan's language models.
 
 For more information, see [Qianfan documentation](https://github.com/baidubce/bce-qianfan-sdk).
+
+## OpenRouter
+
+This component generates text using OpenRouter's unified API for multiple AI models from different providers.
+
+For more information, see [OpenRouter documentation](https://openrouter.ai/docs).
+
+### Inputs
+
+| Name         | Type          | Description                                                      |
+|-------------|---------------|------------------------------------------------------------------|
+| api_key      | SecretString  | Your OpenRouter API key for authentication.                      |
+| site_url     | String        | Your site URL for OpenRouter rankings (advanced).                |
+| app_name     | String        | Your app name for OpenRouter rankings (advanced).                |
+| provider     | String        | The AI model provider to use.                                    |
+| model_name   | String        | The specific model to use for chat completion.                   |
+| temperature  | Float         | Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens   | Integer       | The maximum number of tokens to generate (advanced).             |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
 
 ## Perplexity
 

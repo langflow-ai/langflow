@@ -107,7 +107,7 @@ class ComponentVertex(Vertex):
                         default_value = requester.get_value_from_template_dict(edge.target_param)
 
             if flow_id:
-                self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
+                await self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
             if default_value is not UNDEFINED:
                 return default_value
             msg = f"Component {self.display_name} has not been built yet"
@@ -146,7 +146,7 @@ class ComponentVertex(Vertex):
             msg = f"Result not found for {edge.source_handle.name} in {edge}"
             raise ValueError(msg)
         if flow_id:
-            self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
+            await self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:

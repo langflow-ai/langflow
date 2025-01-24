@@ -137,6 +137,10 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
             return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+        if isinstance(value, str):
+            # Make sure the timestamp is in UTC
+            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
         return value
 
     @field_validator("flow_id", mode="before")
