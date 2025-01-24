@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@code-hike/mdx": "^0.9.0",
-    "@docusaurus/core": "3.5.2",
-    "@docusaurus/plugin-client-redirects": "3.5.2",
-    "@docusaurus/plugin-google-tag-manager": "3.5.2",
-    "@docusaurus/preset-classic": "3.5.2",
+    "@docusaurus/core": "^3.7.0",
+    "@docusaurus/plugin-client-redirects": "^3.7.0",
+    "@docusaurus/plugin-google-tag-manager": "^3.7.0",
+    "@docusaurus/preset-classic": "^3.7.0",
     "@easyops-cn/docusaurus-search-local": "^0.45.0",
     "@mdx-js/react": "^3.0.1",
     "@mendable/search": "^0.0.206",
@@ -23,9 +23,10 @@
     "clsx": "^1.2.1",
     "docusaurus-node-polyfills": "^1.0.0",
     "docusaurus-plugin-image-zoom": "^2.0.0",
-    "docusaurus-plugin-openapi-docs": "^4.2.0",
-    "docusaurus-preset-openapi": "^0.7.5",
-    "docusaurus-theme-openapi-docs": "^4.2.0",
+    "docusaurus-plugin-openapi": "^0.7.6",
+    "docusaurus-plugin-openapi-docs": "^4.3.1",
+    "docusaurus-preset-openapi": "^0.7.6",
+    "docusaurus-theme-openapi-docs": "^4.3.1",
     "lucide-react": "^0.460.0",
     "prism-react-renderer": "^1.3.5",
     "react": "^18.2.0",
@@ -35,7 +36,7 @@
     "tailwindcss": "^3.4.4"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.5.2",
+    "@docusaurus/module-type-aliases": "^3.7.0",
     "@tsconfig/docusaurus": "^2.0.3",
     "cross-var": "^1.1.0",
     "typescript": "^5.2.2"
@@ -56,5 +57,12 @@
   "volta": {
     "node": "18.18.0",
     "yarn": "1.22.19"
+  },
+  "resolutions": {
+    "lodash": "4.17.21",
+    "openapi-to-postmanv2/lodash": "4.17.21",
+    "postman-collection/lodash": "4.17.21",
+    "json-schema-resolve-allof/lodash": "4.17.21",
+    "json-refs/lodash": "4.17.21"
   }
 }
