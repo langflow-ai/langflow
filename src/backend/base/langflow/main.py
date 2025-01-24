@@ -24,7 +24,6 @@ from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router
-from langflow.api.v1 import mcp_router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -235,6 +234,8 @@ def create_app():
         start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
+        from langflow.api.v1 import mcp_router
+
         router.include_router(mcp_router)
 
     app.include_router(router)
