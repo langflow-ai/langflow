@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import SvgOlivya from "./Olivya";
+import OlivyaSVG from "./olivya";
 
 export const OlivyaIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SvgOlivya ref={ref} {...props} />;
+  return <OlivyaSVG ref={ref} {...props} />;
 });

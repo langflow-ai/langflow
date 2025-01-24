@@ -1,4 +1,4 @@
-const OlivyaIcon = (props) => (
+const OlivyaSVG = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     xmlSpace="preserve"
@@ -475,4 +475,4 @@ const OlivyaIcon = (props) => (
     ></path>
   </svg>
 );
-export default OlivyaIcon;
+export default OlivyaSVG;
