@@ -45,10 +45,11 @@ class MCPSseClient:
             )
             # List available tools
             response = await self.session.list_tools()
-            return response.tools
         except asyncio.TimeoutError as err:
             error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
             raise TimeoutError(error_message) from err
+        else:  # Only executed if no TimeoutError
+            return response.tools
 
     async def _connect_with_timeout(
         self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
