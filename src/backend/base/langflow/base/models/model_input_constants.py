@@ -151,6 +151,7 @@ def _get_amazon_bedrock_inputs_and_fields():
 def _get_sambanova_inputs_and_fields():
     try:
         from langflow.components.models.sambanova import SambaNovaComponent
+
         sambanova_inputs = get_filtered_inputs(SambaNovaComponent)
     except ImportError as e:
         msg = "SambaNova is not installed. Please install it with `pip install langchain-sambanova`."
