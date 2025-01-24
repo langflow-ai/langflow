@@ -26,8 +26,18 @@ export default function TextModal({
   const [open, setOpen] = useState(false);
   const [internalValue, setInternalValue] = useState(value);
 
+  const handleEscapeKeyDown = (event: KeyboardEvent) => {
+    setOpen(false);
+    event.stopPropagation();
+  };
+
   return (
-    <BaseModal size="medium-h-full" open={open} setOpen={setOpen}>
+    <BaseModal
+      size="medium-h-full"
+      open={open}
+      setOpen={setOpen}
+      onEscapeKeyDown={handleEscapeKeyDown}
+    >
       <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
       <BaseModal.Header description={""}>
         <span className="pr-2">View Text</span>
