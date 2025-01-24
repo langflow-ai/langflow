@@ -71,11 +71,15 @@ class NVIDIAModelComponent(LCModelComponent):
     ]
 
     def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
-        build_model = self.build_model()
+        try:
+            from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        except ImportError as e:
+            msg = "langchain_nvidia_ai_endpoints is not installed."
+            raise ImportError(msg) from e
         if tool_model_enabled:
-            tool_models = [model for model in build_model.get_available_models() if model.supports_tools]
+            tool_models = [model for model in ChatNVIDIA.get_available_models() if model.supports_tools]
             return [model.id for model in tool_models]
-        return [model.id for model in build_model.available_models]
+        return [model.id for model in ChatNVIDIA.available_models]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
