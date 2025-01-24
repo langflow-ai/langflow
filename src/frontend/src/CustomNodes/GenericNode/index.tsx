@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "../../components/ui/button";
 import {
@@ -22,6 +22,7 @@ import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 
 import { useAlternate } from "@/shared/hooks/use-alternate";
+import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
@@ -202,11 +203,17 @@ function GenericNode({
     [data.node?.outputs],
   );
 
-  useEffect(() => {
-    if (!selected) {
-      set(false);
-    }
-  }, [selected]);
+  const nodeRef = useRef<HTMLDivElement>(null);
+
+  useChangeOnUnfocus({
+    selected,
+    value: editNameDescription,
+    onChange: set,
+    defaultValue: false,
+    shouldChangeValue: (value) => value === true,
+    nodeRef,
+    callback: toggleEditNameDescription,
+  });
 
   const renderOutputs = useCallback(
     (outputs, key?: string) => {
@@ -270,10 +277,10 @@ function GenericNode({
             onClick={() => {
               toggleEditNameDescription();
             }}
-            className="bg-zinc-foreground nodrag absolute left-1/2 top-0 z-50 flex h-6 w-6 translate-x-44 cursor-pointer items-center justify-center rounded-md"
+            className="nodrag absolute left-1/2 top-0 z-50 flex h-6 w-6 translate-x-44 cursor-pointer items-center justify-center rounded-md bg-zinc-foreground"
           >
             <ForwardedIconComponent
-              name="PencilLine"
+              name={editNameDescription ? "Check" : "PencilLine"}
               strokeWidth={ICON_STROKE_WIDTH}
               className="icon-size text-muted-foreground"
             />
@@ -301,6 +308,7 @@ function GenericNode({
     isUserEdited,
     selected,
     shortcuts,
+    editNameDescription,
   ]);
 
   useEffect(() => {
@@ -404,7 +412,10 @@ function GenericNode({
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
-    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
+    <div
+      ref={nodeRef}
+      className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}
+    >
       <div
         className={cn(
           borderColor,

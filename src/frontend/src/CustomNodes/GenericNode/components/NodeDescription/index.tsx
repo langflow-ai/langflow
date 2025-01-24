@@ -40,10 +40,9 @@ export default function NodeDescription({
 
   useEffect(() => {
     if (selected && editNameDescription) {
-      setInputDescription(true);
       takeSnapshot();
     }
-  }, [editNameDescription, selected, takeSnapshot]);
+  }, [editNameDescription]);
 
   useEffect(() => {
     //timeout to wait for the dom to update
@@ -98,11 +97,14 @@ export default function NodeDescription({
         "w-full",
       )}
     >
-      {inputDescription ? (
+      {editNameDescription ? (
         <>
           <Textarea
             maxLength={charLimit}
-            className={cn("nowheel h-full", inputClassName)}
+            className={cn(
+              "nowheel h-full w-full focus:border-border focus:ring-0",
+              inputClassName,
+            )}
             autoFocus
             style={style}
             onBlur={() => {
@@ -159,7 +161,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-auto text-[13px] text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text h-full cursor-grab text-[13px] text-muted-foreground word-break-break-word",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}

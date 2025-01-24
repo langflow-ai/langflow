@@ -31,10 +31,9 @@ export default function NodeName({
 
   useEffect(() => {
     if (selected && editNameDescription) {
-      setInputName(true);
       takeSnapshot();
     }
-  }, [editNameDescription, selected, takeSnapshot]);
+  }, [editNameDescription]);
 
   useEffect(() => {
     if (!selected) {
@@ -46,7 +45,7 @@ export default function NodeName({
     setNodeName(display_name ?? "");
   }, [display_name]);
 
-  return inputName ? (
+  return editNameDescription ? (
     <div className="m-[1px] w-full">
       <Input
         onBlur={() => {
@@ -85,7 +84,7 @@ export default function NodeName({
         <div className="flex cursor-grab items-center gap-2">
           <span
             className={cn(
-              "nodrag max-w-44 cursor-auto truncate text-[14px]",
+              "max-w-44 cursor-grab truncate text-[14px]",
               validationStatus?.data?.duration && "max-w-36",
               beta && "max-w-36",
               validationStatus?.data?.duration && beta && "max-w-20",
