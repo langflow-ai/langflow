@@ -378,6 +378,7 @@ function NodeOutputField({
                   : "Inspect output"
                 : "Please build the component first"
             }
+            styleClasses="z-40"
           >
             <div className="flex items-center gap-2">
               <OutputModal
