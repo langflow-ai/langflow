@@ -5,9 +5,7 @@ from langflow.base.data import BaseFileComponent
 from langflow.io import (
     DictInput,
     IntInput,
-    MessageTextInput,
     MultilineInput,
-    Output,
     SecretStrInput,
 )
 from langflow.schema import Data
@@ -20,12 +18,7 @@ class AgentQLQueryDoc(BaseFileComponent):
     icon = "AgentQL"
     name = "AgentQL"
 
-    VALID_EXTENSIONS = [
-        "jpeg",
-        "png",
-        "pdf",
-        "png"
-    ]
+    VALID_EXTENSIONS = ["jpeg", "png", "pdf", "png"]
 
     SUPPORTED_BUNDLE_EXTENSIONS = []
 
@@ -39,7 +32,7 @@ class AgentQLQueryDoc(BaseFileComponent):
         ),
         *BaseFileComponent._base_inputs,
         MultilineInput(
-            name="query", 
+            name="query",
             display_name="AgentQL Query",
             required=True,
             info="The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
@@ -72,7 +65,6 @@ class AgentQLQueryDoc(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-
         endpoint = "https://api.agentql.com/v1/query-doc"
         headers = {
             "X-API-Key": self.api_key,
@@ -85,9 +77,9 @@ class AgentQLQueryDoc(BaseFileComponent):
 
         if not file.path.endswith(tuple(self.VALID_EXTENSIONS)):
             raise ValueError(f"File extension {file.path} is not supported for AgentQL Query Doc.")
-        
-        with open(file.path, 'rb') as f:
-            files = {'file': f}
+
+        with open(file.path, "rb") as f:
+            files = {"file": f}
 
         data = {
             "query": self.query,
