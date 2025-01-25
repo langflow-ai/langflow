@@ -188,7 +188,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Embedding Model",
             input_types=["Embeddings"],
             info="Allows an embedding model configuration.",
-            required=True,
+            required=False,
         ),
         *LCVectorStoreComponent.inputs,
         IntInput(
@@ -570,11 +570,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             if value_of_provider:
                 build_config["embedding_model"]["advanced"] = True
-                build_config["embedding_model"]["required"] = False
                 build_config["embedding_choice"]["value"] = "Astra Vectorize"
             else:
                 build_config["embedding_model"]["advanced"] = False
-                build_config["embedding_model"]["required"] = True
                 build_config["embedding_choice"]["value"] = "Embedding Model"
 
         # For the final step, get the list of vectorize providers
