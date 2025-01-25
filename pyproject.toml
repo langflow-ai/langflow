@@ -111,7 +111,7 @@ dependencies = [
     "scrapegraph-py>=1.10.2",
     "pydantic-ai>=0.0.19",
     "arize[Datasets]>=1.0.0",
-    "nv-ingest-client @ git+https://github.com/jdye64/nv-ingest.git@pydantic_2_update#egg=nv-ingest-client&subdirectory=client", #"nv-ingest-client @ git+https://github.com/NVIDIA/nv-ingest.git@24.12-rc0#egg=nv-ingest-client&subdirectory=client",
+    "nv-ingest-client @ git+https://github.com/NVIDIA/nv-ingest.git@04aa2802094a9ee563b45db35b7b11a453548363#egg=nv-ingest-client&subdirectory=client",
     "python-pptx==0.6.23",
 ]
 
