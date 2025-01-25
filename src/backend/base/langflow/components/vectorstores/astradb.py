@@ -168,26 +168,26 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ],
             value="",
         ),
-        DropdownInput(
-            name="embedding_choice",
-            display_name="Embedding Model or Astra Vectorize",
-            info="Choose an embedding model or use Astra Vectorize.",
-            options=["Embedding Model", "Astra Vectorize"],
-            value="Embedding Model",
-            advanced=os.getenv("LANGFLOW_HOST") is None,
-            real_time_refresh=True,
-        ),
         StrInput(
             name="keyspace",
             display_name="Keyspace",
             info="Optional keyspace within Astra DB to use for the collection.",
             advanced=True,
         ),
+        DropdownInput(
+            name="embedding_choice",
+            display_name="Embedding Model or Astra Vectorize",
+            info="Choose an embedding model or use Astra Vectorize.",
+            options=["Embedding Model", "Astra Vectorize"],
+            value="Embedding Model",
+            advanced=True,
+            real_time_refresh=True,
+        ),
         HandleInput(
             name="embedding_model",
             display_name="Embedding Model",
             input_types=["Embeddings"],
-            info="Allows an embedding model configuration.",
+            info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
             required=False,
         ),
         *LCVectorStoreComponent.inputs,
@@ -507,34 +507,25 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name == "embedding_choice":
-            if field_value == "Astra Vectorize":
-                build_config["embedding_model"]["show"] = False
-                build_config["embedding_model"]["required"] = False
-            else:
-                build_config["embedding_model"]["show"] = True
-                build_config["embedding_model"]["required"] = True
-
-            return build_config
-
-        if not self.token or not self.token.startswith("AstraCS:"):
-            build_config["database_name"]["info"] = "Add a Valid Token to Select a Database"
-        else:
-            build_config["database_name"]["info"] = "Select a Database from Astra DB"
-
         # Refresh the database name options
-        if field_name in ["token", "environment"] or not build_config["database_name"]["options"]:
-            # Reset the list of collections
-            build_config["collection_name"]["options"] = []
-            build_config["collection_name"]["options_metadata"] = []
-
+        if (
+            (not os.getenv("LANGFLOW_HOST") and
+            field_name in ["token", "environment"]) or
+            (
+                field_name == "database_name" and
+            (
+                not build_config["database_name"]["options"] or
+                field_value != build_config["database_name"]["value"]
+            ))
+        ):
             # Get the list of databases
+            build_config["database_name"]["value"] = ""
+            build_config["api_endpoint"]["value"] = ""
             database_options = self._initialize_database_options()
 
-            if database_options and not os.getenv("LANGFLOW_HOST"):
+            if database_options:
                 build_config["database_name"]["show"] = True
                 build_config["api_endpoint"]["advanced"] = True
-                build_config["api_endpoint"]["value"] = ""
                 build_config["database_name"]["options"] = [db["name"] for db in database_options]
                 build_config["database_name"]["options_metadata"] = [
                     {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
@@ -557,18 +548,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             """
 
         # Refresh the collection name options
-        if field_name in ["database_name", "api_endpoint"] or not build_config["collection_name"]["options"]:
-            # Reset the list of collections
+        if (
+            field_name in ["database_name", "api_endpoint"] or
+            (
+                field_name == "collection_name" and
+            (
+                not build_config["collection_name"]["options"] or
+                field_value != build_config["collection_name"]["value"]
+            ))
+        ):
             collection_options = self._initialize_collection_options()
             build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
             build_config["collection_name"]["options_metadata"] = [
                 {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
             ]
 
-            return build_config
-
         # Hide embedding model option if opriona_metadata provider is not null
-        if field_name == "collection_name":
+        if field_name == "collection_name" and build_config["collection_name"]["options"]:
             # Find location of the name in the options list
             index_of_name = build_config["collection_name"]["options"].index(field_value)
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
