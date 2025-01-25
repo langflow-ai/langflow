@@ -8,7 +8,7 @@ import typing
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
@@ -35,7 +35,7 @@ from langflow.api.v1.schemas import (
     VertexBuildResponse,
     VerticesOrderResponse,
 )
-from langflow.events.event_manager import EventManager, create_default_event_manager
+from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
@@ -44,7 +44,14 @@ from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_chat_service, get_session, get_telemetry_service, session_scope
+from langflow.services.deps import (
+    get_chat_service,
+    get_queue_service,
+    get_session,
+    get_telemetry_service,
+    session_scope,
+)
+from langflow.services.queue.service import QueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -492,27 +499,25 @@ async def generate_flow_events(
     await event_manager.queue.put((None, None, time.time))
 
 
-async def process_flow_build(
+@router.post("/build/{flow_id}/flow")
+async def build_flow(
     *,
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    inputs: InputValueRequest | None = None,
-    data: FlowDataRequest | None = None,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     log_builds: bool = True,
     current_user: CurrentActiveUser,
-) -> StreamingResponse:
-    """Process a flow build request and return a streaming response."""
-    get_chat_service()
-    get_telemetry_service()
-    if not inputs:
-        inputs = InputValueRequest(session=str(flow_id))
+    queue_service: Annotated[QueueService, Depends(get_queue_service)],
+):
+    """Build and process a flow, returning a job ID for event polling."""
+    job_id = str(uuid.uuid4())
 
-    asyncio_queue: asyncio.Queue = asyncio.Queue()
-    asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
-    event_manager = create_default_event_manager(queue=asyncio_queue)
+    # Create queues and event manager for this job
+    main_queue, client_queue, event_manager = queue_service.create_queue(job_id)
 
     # Create task for event generation
     event_task = asyncio.create_task(
@@ -520,7 +525,7 @@ async def process_flow_build(
             flow_id=flow_id,
             background_tasks=background_tasks,
             event_manager=event_manager,
-            client_consumed_queue=asyncio_queue_client_consumed,
+            client_consumed_queue=client_queue,
             inputs=inputs,
             data=data,
             files=files,
@@ -531,39 +536,29 @@ async def process_flow_build(
         )
     )
 
-    return await create_flow_response(
-        queue=asyncio_queue,
-        client_consumed_queue=asyncio_queue_client_consumed,
-        event_manager=event_manager,
-        event_task=event_task,
-    )
+    # Store the task
+    queue_service.set_task(job_id, event_task)
+
+    return {"job_id": job_id}
 
 
-@router.post("/build/{flow_id}/flow")
-async def build_flow(
-    *,
-    background_tasks: BackgroundTasks,
-    flow_id: uuid.UUID,
-    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
-    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
-    files: list[str] | None = None,
-    stop_component_id: str | None = None,
-    start_component_id: str | None = None,
-    log_builds: bool = True,
-    current_user: CurrentActiveUser,
+@router.get("/build/{job_id}/events")
+async def get_build_events(
+    job_id: str,
+    queue_service: Annotated[QueueService, Depends(get_queue_service)],
 ):
-    """Build and process a flow, returning a streaming response of the build progress."""
-    return await process_flow_build(
-        flow_id=flow_id,
-        background_tasks=background_tasks,
-        inputs=inputs,
-        data=data,
-        files=files,
-        stop_component_id=stop_component_id,
-        start_component_id=start_component_id,
-        log_builds=log_builds,
-        current_user=current_user,
-    )
+    """Get events for a specific build job."""
+    try:
+        main_queue, client_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
+
+        return await create_flow_response(
+            queue=main_queue,
+            client_consumed_queue=client_queue,
+            event_manager=event_manager,
+            event_task=event_task,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 class DisconnectHandlerStreamingResponse(StreamingResponse):
