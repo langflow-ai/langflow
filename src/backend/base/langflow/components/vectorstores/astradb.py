@@ -508,10 +508,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Refresh the database name options
-        if not os.getenv("LANGFLOW_HOST") and (field_name in ["token", "environment"] or (
-            field_name == "database_name"
-            and (not build_config["database_name"]["options"] or field_value != build_config["database_name"]["value"])
-        ) or not build_config["database_name"]["options"]):
+        if not os.getenv("LANGFLOW_HOST") and (
+            field_name in ["token", "environment"]
+            or (
+                field_name == "database_name"
+                and (
+                    not build_config["database_name"]["options"]
+                    or field_value != build_config["database_name"]["value"]
+                )
+            )
+            or not build_config["database_name"]["options"]
+        ):
             # Get the list of databases
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
