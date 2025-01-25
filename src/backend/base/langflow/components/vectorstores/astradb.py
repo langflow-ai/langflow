@@ -343,8 +343,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         )
                     ),
                 }
-            except Exception as e:  # noqa: BLE001
-                cls.log(f"Error generating API endpoint for database {db.info.name}: {e}")
+            except Exception:  # noqa: BLE001, S110
+                pass
 
         return db_info_dict
 
