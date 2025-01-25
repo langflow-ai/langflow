@@ -95,7 +95,7 @@ dependencies = [
     "langchain-google-community==2.0.3",
     "langchain-elasticsearch==0.3.0",
     "langchain-ollama==0.2.1",
-    "langchain-sambanova==0.1.0",   
+    "langchain-sambanova==0.1.0",
     "langchain-community~=0.3.10",
     "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36,<3.0.0",
     "atlassian-python-api==3.41.16",
@@ -111,9 +111,9 @@ dependencies = [
     "ag2>=0.1.0",
     "scrapegraph-py>=1.10.2",
     "pydantic-ai>=0.0.19",
+    "arize[Datasets]>=1.0.0",
     "nv-ingest-client @ git+https://github.com/NVIDIA/nv-ingest.git@04aa2802094a9ee563b45db35b7b11a453548363#egg=nv-ingest-client&subdirectory=client",
     "python-pptx==0.6.23",
-    "arize[Datasets]>=1.0.0",
 ]
 
 [tool.uv.sources]
