@@ -193,9 +193,12 @@ def create_app():
             body = await request.body()
 
             boundary_start = f"--{boundary}".encode()
+            # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
+            # implement it that way
             boundary_end = f"--{boundary}--\r\n".encode()
+            boundary_end_no_newline = f"--{boundary}--".encode()
 
-            if not body.startswith(boundary_start) or not body.endswith(boundary_end):
+            if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
                 return JSONResponse(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     content={"detail": "Invalid multipart formatting"},
@@ -229,6 +232,11 @@ def create_app():
         from prometheus_client import start_http_server
 
         start_http_server(settings.prometheus_port)
+
+    if settings.mcp_server_enabled:
+        from langflow.api.v1 import mcp_router
+
+        router.include_router(mcp_router)
 
     app.include_router(router)
     app.include_router(health_check_router)

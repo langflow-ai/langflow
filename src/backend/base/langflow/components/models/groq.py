@@ -58,9 +58,10 @@ class GroqModel(LCModelComponent):
             name="model_name",
             display_name="Model",
             info="The name of the model to use.",
-            options=[],
+            options=GROQ_MODELS,
+            value=GROQ_MODELS[0],
             refresh_button=True,
-            real_time_refresh=True,
+            combobox=True,
         ),
         BoolInput(
             name="tool_model_enabled",

@@ -41,6 +41,7 @@ import {
   scapedJSONStringfy,
   unselectAllNodesEdges,
   updateGroupRecursion,
+  validateEdge,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
@@ -606,6 +607,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
+
+    const edges = get().edges;
+    let error = false;
+    for (const edge of edges) {
+      const errors = validateEdge(edge, get().nodes, edges);
+      if (errors.length > 0) {
+        error = true;
+        setErrorData({
+          title: MISSED_ERROR_ALERT,
+          list: errors,
+        });
+      }
+    }
+    if (error) {
+      get().setIsBuilding(false);
+      get().setLockChat(false);
+      throw new Error("Invalid components");
+    }
+
     function validateSubgraph(nodes: string[]) {
       const errorsObjs = validateNodes(
         get().nodes.filter((node) => nodes.includes(node.id)),

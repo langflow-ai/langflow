@@ -23,7 +23,9 @@ This vector data can then be retrieved for workloads like Retrieval Augmented Ge
 
 ![](/img/vector-store-retrieval.png)
 
-The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search. The results are output from the vector database component as a [Data](/configuration-objects) object, and parsed into text. This text fills the `{context}` variable in the **Prompt** component, which informs the **Open AI model** component's responses.
+The user's chat input is embedded and compared to the vectors embedded during document ingestion for a similarity search.
+The results are output from the vector database component as a [Data](/concepts-objects) object and parsed into text.
+This text fills the `{context}` variable in the **Prompt** component, which informs the **Open AI model** component's responses.
 
 Alternatively, connect the vector database component's **Retriever** port to a [retriever tool](components-tools#retriever-tool), and then to an [agent](/components-agents) component. This enables the agent to use your vector database as a tool and make decisions based on the available data.
 
@@ -340,6 +342,35 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 | vector_store  | MongoDBAtlasVectorSearch| MongoDB Atlas vector store instance       |
 | search_results| List[Data]             | Results of similarity search              |
 
+## Opensearch
+
+This component creates an Opensearch vector store with search capabilities
+For more information, see [Opensearch documentation](https://opensearch.org/platform/search/vector-database.html)
+
+### Inputs
+
+| Name                   | Type         | Description                                                                                                            |
+|------------------------|--------------|------------------------------------------------------------------------------------------------------------------------|
+| opensearch_url         | String       | URL for OpenSearch cluster (e.g. https://192.168.1.1:9200)                                                             |
+| index_name             | String       | The index name where the vectors will be stored in OpenSearch cluster                                                  |
+| search_input           | String       | Enter a search query. Leave empty to retrieve all documents or if hybrid search is being used                          |
+| ingest_data            | Data         | Data to be ingested into the vector store                                                                              |
+| embedding              | Embeddings   | Embedding function to use                                                                                              |
+| search_type            | String       | Valid values are "similarity", "similarity_score_threshold", "mmr"                                                     |
+| number_of_results      | Integer      | Number of results to return in search                                                                                  |
+| search_score_threshold | Float        | Minimum similarity score threshold for search results                                                                  |
+| username               | String       | username for the opensource cluster                                                                                    |
+| password               | SecretString | password for the opensource cluster                                                                                    |
+| use_ssl                | Boolean      | Use SSL                                                                                                                |
+| verify_certs           | Boolean      | Verify certificates                                                                                                    |
+| hybrid_search_query    | String       | Provide a custom hybrid search query in JSON format. This allows you to combine vector similarity and keyword matching |
+
+### Outputs
+
+| Name          | Type                   | Description                                 |
+| ------------- |------------------------|---------------------------------------------|
+| vector_store  | OpenSearchVectorSearch | OpenSearch vector store instance            |
+| search_results| List[Data]             | Results of similarity search                |
 
 ## PGVector
 

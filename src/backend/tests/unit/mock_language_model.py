@@ -1,17 +1,21 @@
 from unittest.mock import MagicMock
 
 from langchain_core.language_models import BaseLanguageModel
+from pydantic import BaseModel, Field
 from typing_extensions import override
 
 
-class MockLanguageModel(BaseLanguageModel):
+class MockLanguageModel(BaseLanguageModel, BaseModel):
     """A mock language model for testing purposes."""
 
-    def __init__(self, response_generator=None):
+    tools: list = Field(default_factory=list)
+    response_generator: callable = Field(default_factory=lambda: lambda msg: f"Response for {msg}")
+
+    def __init__(self, response_generator=None, **kwargs):
         """Initialize the mock model with an optional response generator function."""
-        super().__init__()
-        # Use object's __dict__ to bypass pydantic validation
-        object.__setattr__(self, "_response_generator", response_generator or (lambda msg: f"Response for {msg}"))
+        super().__init__(**kwargs)
+        if response_generator:
+            self.response_generator = response_generator
 
     @override
     def with_config(self, *args, **kwargs):
@@ -30,7 +34,7 @@ class MockLanguageModel(BaseLanguageModel):
         for msg_list in messages:
             content = msg_list[-1]["content"] if isinstance(msg_list, list) else msg_list
             mock_response = MagicMock()
-            mock_response.content = self._response_generator(content)
+            mock_response.content = self.response_generator(content)
             responses.append(mock_response)
         return responses
 
@@ -61,3 +65,8 @@ class MockLanguageModel(BaseLanguageModel):
     @override
     async def apredict_messages(self, *args, **kwargs):
         raise NotImplementedError
+
+    def bind_tools(self, tools):
+        """Bind tools to the model for testing."""
+        self.tools = tools
+        return self

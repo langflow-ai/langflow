@@ -49,7 +49,7 @@ uv run langflow run
 python -m langflow run
 ```
 
-2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
+3. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
 Now that Langflow is running, follow the [Quickstart](/get-started-quickstart) to create your first flow.
 

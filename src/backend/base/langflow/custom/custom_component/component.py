@@ -97,6 +97,9 @@ class Component(CustomComponent):
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
+        if overlap := self._there_is_overlap_in_inputs_and_outputs():
+            msg = f"Inputs and outputs have overlapping names: {overlap}"
+            raise ValueError(msg)
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
@@ -156,6 +159,19 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    def _there_is_overlap_in_inputs_and_outputs(self) -> set[str]:
+        """Check the `.name` of inputs and outputs to see if there is overlap.
+
+        Returns:
+            set[str]: Set of names that overlap between inputs and outputs.
+        """
+        # Create sets of input and output names for O(1) lookup
+        input_names = {input_.name for input_ in self.inputs if input_.name is not None}
+        output_names = {output.name for output in self.outputs}
+
+        # Return the intersection of the sets
+        return input_names & output_names
 
     @property
     def ctx(self):
@@ -389,7 +405,7 @@ class Component(CustomComponent):
         """
         for input_ in inputs:
             if input_.name is None:
-                msg = "Input name cannot be None."
+                msg = self.build_component_error_message("Input name cannot be None")
                 raise ValueError(msg)
             self._inputs[input_.name] = deepcopy(input_)
 
@@ -546,22 +562,21 @@ class Component(CustomComponent):
         # If multiple matches are found, raise an error indicating ambiguity
         if len(matching_pairs) > 1:
             matching_pairs_str = self._build_error_string_from_matching_pairs(matching_pairs)
-            msg = (
-                f"There are multiple outputs from {value.__class__.__name__} "
-                f"that can connect to inputs in {self.__class__.__name__}: {matching_pairs_str}"
+            msg = self.build_component_error_message(
+                f"There are multiple outputs from {value.display_name} that can connect to inputs: {matching_pairs_str}"
             )
+            raise ValueError(msg)
         # If no matches are found, raise an error indicating no suitable output
         if not matching_pairs:
-            msg = (
-                f"No matching output from {value.__class__.__name__} found for input '{input_name}' "
-                f"in {self.__class__.__name__}."
-            )
+            msg = self.build_input_error_message(input_name, f"No matching output from {value.display_name} found")
             raise ValueError(msg)
         # Get the matching output and input pair
         output, input_ = matching_pairs[0]
         # Ensure that the output method is a valid method name (string)
         if not isinstance(output.method, str):
-            msg = f"Method {output.method} is not a valid output of {value.__class__.__name__}"
+            msg = self.build_component_error_message(
+                f"Method {output.method} is not a valid output of {value.display_name}"
+            )
             raise TypeError(msg)
         return getattr(value, output.method)
 
@@ -677,7 +692,7 @@ class Component(CustomComponent):
             return PlaceholderGraph(
                 flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
             )
-        msg = f"{name} not found in {self.__class__.__name__}"
+        msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
     def _set_input_value(self, name: str, value: Any) -> None:
@@ -685,19 +700,25 @@ class Component(CustomComponent):
             input_value = self._inputs[name].value
             if isinstance(input_value, Component):
                 methods = ", ".join([f"'{output.method}'" for output in input_value.outputs])
-                msg = (
-                    f"You set {input_value.display_name} as value for `{name}`. "
-                    f"You should pass one of the following: {methods}"
+                msg = self.build_input_error_message(
+                    name,
+                    f"You set {input_value.display_name} as value. You should pass one of the following: {methods}",
                 )
                 raise ValueError(msg)
             if callable(input_value) and hasattr(input_value, "__self__"):
-                msg = f"Input {name} is connected to {input_value.__self__.display_name}.{input_value.__name__}"
+                msg = self.build_input_error_message(
+                    name, f"Input is connected to {input_value.__self__.display_name}.{input_value.__name__}"
+                )
                 raise ValueError(msg)
-            self._inputs[name].value = value
+            try:
+                self._inputs[name].value = value
+            except Exception as e:
+                msg = f"Error setting input value for {name}: {e}"
+                raise ValueError(msg) from e
             if hasattr(self._inputs[name], "load_from_db"):
                 self._inputs[name].load_from_db = False
         else:
-            msg = f"Input {name} not found in {self.__class__.__name__}"
+            msg = self.build_component_error_message(f"Input {name} not found")
             raise ValueError(msg)
 
     def _validate_outputs(self) -> None:
@@ -803,6 +824,7 @@ class Component(CustomComponent):
         for key, input_obj in self._inputs.items():
             if key not in attributes and key not in self._attributes:
                 attributes[key] = input_obj.value or None
+
         self._attributes.update(attributes)
 
     def _set_outputs(self, outputs: list[dict]) -> None:
@@ -928,7 +950,11 @@ class Component(CustomComponent):
         return result
 
     def _build_artifact(self, result):
-        custom_repr = self.custom_repr() or (result if isinstance(result, dict | Data | str) else str(result))
+        custom_repr = self.custom_repr()
+        if custom_repr is None and isinstance(result, dict | Data | str):
+            custom_repr = result
+        if not isinstance(custom_repr, str):
+            custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
         artifact_type = get_artifact_type(self.status or raw, result)
@@ -1252,3 +1278,87 @@ class Component(CustomComponent):
                 description=TOOLS_METADATA_INFO,
             ),
         )
+
+    def get_input_display_name(self, input_name: str) -> str:
+        """Get the display name of an input.
+
+        This is a public utility method that subclasses can use to get user-friendly
+        display names for inputs when building error messages or UI elements.
+
+        Usage:
+            msg = f"Input {self.get_input_display_name(input_name)} not found"
+
+        Args:
+            input_name (str): The name of the input.
+
+        Returns:
+            str: The display name of the input, or the input name if not found.
+        """
+        if input_name in self._inputs:
+            return getattr(self._inputs[input_name], "display_name", input_name)
+        return input_name
+
+    def get_output_display_name(self, output_name: str) -> str:
+        """Get the display name of an output.
+
+        This is a public utility method that subclasses can use to get user-friendly
+        display names for outputs when building error messages or UI elements.
+
+        Args:
+            output_name (str): The name of the output.
+
+        Returns:
+            str: The display name of the output, or the output name if not found.
+        """
+        if output_name in self._outputs_map:
+            return getattr(self._outputs_map[output_name], "display_name", output_name)
+        return output_name
+
+    def build_input_error_message(self, input_name: str, message: str) -> str:
+        """Build an error message for an input.
+
+        This is a public utility method that subclasses can use to create consistent,
+        user-friendly error messages that reference inputs by their display names.
+        The input name is placed at the beginning to ensure it's visible even if the message is truncated.
+
+        Args:
+            input_name (str): The name of the input.
+            message (str): The error message.
+
+        Returns:
+            str: The formatted error message with display name.
+        """
+        display_name = self.get_input_display_name(input_name)
+        return f"[Input: {display_name}] {message}"
+
+    def build_output_error_message(self, output_name: str, message: str) -> str:
+        """Build an error message for an output.
+
+        This is a public utility method that subclasses can use to create consistent,
+        user-friendly error messages that reference outputs by their display names.
+        The output name is placed at the beginning to ensure it's visible even if the message is truncated.
+
+        Args:
+            output_name (str): The name of the output.
+            message (str): The error message.
+
+        Returns:
+            str: The formatted error message with display name.
+        """
+        display_name = self.get_output_display_name(output_name)
+        return f"[Output: {display_name}] {message}"
+
+    def build_component_error_message(self, message: str) -> str:
+        """Build an error message for the component.
+
+        This is a public utility method that subclasses can use to create consistent,
+        user-friendly error messages that reference the component by its display name.
+        The component name is placed at the beginning to ensure it's visible even if the message is truncated.
+
+        Args:
+            message (str): The error message.
+
+        Returns:
+            str: The formatted error message with component display name.
+        """
+        return f"[Component: {self.display_name or self.__class__.__name__}] {message}"
