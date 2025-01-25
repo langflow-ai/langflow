@@ -329,19 +329,24 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         db_list = list(admin_client.list_databases())
 
         # Generate the api endpoint for each database
-        return {
-            db.info.name: {
-                "api_endpoint": (api_endpoint := f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"),
-                "collections": len(
-                    list(
-                        client.get_database(
-                            api_endpoint=api_endpoint, token=token, keyspace=db.info.keyspace
-                        ).list_collection_names(keyspace=db.info.keyspace)
-                    )
-                ),
-            }
-            for db in db_list
-        }
+        db_info_dict = {}
+        for db in db_list:
+            try:
+                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"
+                db_info_dict[db.info.name] = {
+                    "api_endpoint": api_endpoint,
+                    "collections": len(
+                        list(
+                            client.get_database(
+                                api_endpoint=api_endpoint, token=token, keyspace=db.info.keyspace
+                            ).list_collection_names(keyspace=db.info.keyspace)
+                        )
+                    ),
+                }
+            except Exception as e:  # noqa: BLE001
+                cls.log(f"Error generating API endpoint for database {db.info.name}: {e}")
+
+        return db_info_dict
 
     def get_database_list(self):
         return self.get_database_list_static(token=self.token, environment=self.environment)
