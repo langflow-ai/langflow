@@ -508,15 +508,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Refresh the database name options
-        if (
-            (not os.getenv("LANGFLOW_HOST") and
-            field_name in ["token", "environment"]) or
-            (
-                field_name == "database_name" and
-            (
-                not build_config["database_name"]["options"] or
-                field_value != build_config["database_name"]["value"]
-            ))
+        if (not os.getenv("LANGFLOW_HOST") and field_name in ["token", "environment"]) or (
+            field_name == "database_name"
+            and (not build_config["database_name"]["options"] or field_value != build_config["database_name"]["value"])
         ):
             # Get the list of databases
             build_config["database_name"]["value"] = ""
@@ -548,14 +542,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             """
 
         # Refresh the collection name options
-        if (
-            field_name in ["database_name", "api_endpoint"] or
-            (
-                field_name == "collection_name" and
-            (
-                not build_config["collection_name"]["options"] or
-                field_value != build_config["collection_name"]["value"]
-            ))
+        if field_name in ["database_name", "api_endpoint"] or (
+            field_name == "collection_name"
+            and (
+                not build_config["collection_name"]["options"]
+                or field_value != build_config["collection_name"]["value"]
+            )
         ):
             collection_options = self._initialize_collection_options()
             build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
