@@ -30,10 +30,11 @@ class SerpAPISchema(BaseModel):
 
 
 class SerpAPIComponent(LCToolComponent):
-    display_name = "Serp Search API"
+    display_name = "Serp Search API [DEPRECATED]"
     description = "Call Serp Search API with result limiting"
     name = "SerpAPI"
     icon = "SerpSearch"
+    legacy = True
 
     inputs = [
         SecretStrInput(name="serpapi_api_key", display_name="SerpAPI API Key", required=True),

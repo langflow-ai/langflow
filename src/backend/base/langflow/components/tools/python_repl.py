@@ -13,10 +13,11 @@ from langflow.schema import Data
 
 
 class PythonREPLToolComponent(LCToolComponent):
-    display_name = "Python REPL"
+    display_name = "Python REPL [DEPRECATED]"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
     icon = "Python"
+    legacy = True
 
     inputs = [
         StrInput(
@@ -70,8 +71,8 @@ class PythonREPLToolComponent(LCToolComponent):
         return global_dict
 
     def build_tool(self) -> Tool:
-        _globals = self.get_globals(self.global_imports)
-        python_repl = PythonREPL(_globals=_globals)
+        globals_ = self.get_globals(self.global_imports)
+        python_repl = PythonREPL(_globals=globals_)
 
         def run_python_code(code: str) -> str:
             try:

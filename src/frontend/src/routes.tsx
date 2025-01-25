@@ -5,11 +5,11 @@ import {
   Outlet,
   Route,
 } from "react-router-dom";
-import { ProtectedAdminRoute } from "./components/authAdminGuard";
-import { ProtectedRoute } from "./components/authGuard";
-import { ProtectedLoginRoute } from "./components/authLoginGuard";
-import { AuthSettingsGuard } from "./components/authSettingsGuard";
-import { StoreGuard } from "./components/storeGuard";
+import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
+import { ProtectedRoute } from "./components/authorization/authGuard";
+import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
+import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { StoreGuard } from "./components/authorization/storeGuard";
 import ContextWrapper from "./contexts";
 import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
@@ -33,6 +33,7 @@ import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
+import StoreApiKeyPage from "./pages/SettingsPage/pages/StoreApiKeyPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
 
@@ -40,7 +41,7 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
-const PlaygroundPage = lazy(() => import("./pages/Playground"));
+// const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
@@ -165,6 +166,7 @@ const router = createBrowserRouter(
                   />
                   <Route path="shortcuts" element={<ShortcutsPage />} />
                   <Route path="messages" element={<MessagesPage />} />
+                  <Route path="store" element={<StoreApiKeyPage />} />
                 </Route>
                 <Route
                   path="store"

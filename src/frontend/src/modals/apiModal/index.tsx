@@ -6,8 +6,8 @@ import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { ReactNode, useEffect, useState } from "react";
-import CodeTabsComponent from "../../components/codeTabsComponent";
-import IconComponent from "../../components/genericIconComponent";
+import IconComponent from "../../components/common/genericIconComponent";
+import CodeTabsComponent from "../../components/core/codeTabsComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { useTweaksStore } from "../../stores/tweaksStore";
 import { FlowType } from "../../types/flow/index";
@@ -54,15 +54,19 @@ export default function ApiModal({
         />
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
-        <CustomAPIGenerator isOpen={open} />
-        <CodeTabsComponent
-          open={open}
-          tabs={tabs!}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          activeTweaks={activeTweaks}
-          setActiveTweaks={setActiveTweaks}
-        />
+        {open && (
+          <>
+            <CustomAPIGenerator isOpen={open} />
+            <CodeTabsComponent
+              open={open}
+              tabs={tabs!}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              activeTweaks={activeTweaks}
+              setActiveTweaks={setActiveTweaks}
+            />
+          </>
+        )}
       </BaseModal.Content>
     </BaseModal>
   );

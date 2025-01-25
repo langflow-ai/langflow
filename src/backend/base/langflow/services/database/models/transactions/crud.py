@@ -1,10 +1,14 @@
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
+from langflow.services.database.models.transactions.model import (
+    TransactionBase,
+    TransactionReadResponse,
+    TransactionTable,
+)
+from langflow.services.deps import get_settings_service
 
 
 async def get_transactions_by_flow_id(
@@ -21,12 +25,55 @@ async def get_transactions_by_flow_id(
     return list(transactions)
 
 
-def log_transaction(db: Session, transaction: TransactionBase) -> TransactionTable:
+async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable:
+    """Log a transaction and maintain a maximum number of transactions in the database.
+
+    This function logs a new transaction into the database and ensures that the number of transactions
+    does not exceed the maximum limit specified in the settings. If the number of transactions exceeds
+    the limit, the oldest transactions are deleted to maintain the limit.
+
+    Args:
+        db: Database session
+        transaction: Transaction data to log
+
+    Returns:
+        The created TransactionTable entry
+
+    Raises:
+        IntegrityError: If there is a database integrity error
+    """
     table = TransactionTable(**transaction.model_dump())
-    db.add(table)
+
     try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
+        # Get max entries setting
+        max_entries = get_settings_service().settings.max_transactions_to_keep
+
+        # Delete older entries in a single transaction
+        delete_older = delete(TransactionTable).where(
+            TransactionTable.flow_id == transaction.flow_id,
+            col(TransactionTable.id).in_(
+                select(TransactionTable.id)
+                .where(TransactionTable.flow_id == transaction.flow_id)
+                .order_by(col(TransactionTable.timestamp).desc())
+                .offset(max_entries - 1)  # Keep newest max_entries-1 plus the one we're adding
+            ),
+        )
+
+        # Add new entry and execute delete in same transaction
+        db.add(table)
+        await db.exec(delete_older)
+        await db.commit()
+        await db.refresh(table)
+
+    except Exception:
+        await db.rollback()
         raise
     return table
+
+
+def transform_transaction_table(
+    transaction: list[TransactionTable] | TransactionTable,
+) -> list[TransactionReadResponse]:
+    if isinstance(transaction, list):
+        return [TransactionReadResponse.model_validate(t, from_attributes=True) for t in transaction]
+    return TransactionReadResponse.model_validate(transaction, from_attributes=True)

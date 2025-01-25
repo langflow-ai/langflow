@@ -2,15 +2,17 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
-import { cloneDeep } from "lodash";
+import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   Connection,
   Edge,
+  getOutgoers,
   Node,
   OnSelectionChangeParams,
   ReactFlowJsonObject,
   XYPosition,
-} from "reactflow";
+} from "@xyflow/react";
+import { cloneDeep } from "lodash";
 import ShortUniqueId from "short-unique-id";
 import getFieldTitle from "../CustomNodes/utils/get-field-title";
 import {
@@ -18,8 +20,8 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  SUCCESS_BUILD,
   specialCharsRegex,
+  SUCCESS_BUILD,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
@@ -31,9 +33,10 @@ import {
   OutputFieldType,
 } from "../types/api";
 import {
+  AllNodeType,
+  EdgeType,
   FlowType,
   NodeDataType,
-  NodeType,
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
@@ -51,7 +54,7 @@ export function checkChatInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "ChatInput");
 }
 
-export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
+export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   let newEdges = cloneDeep(edges);
   edges.forEach((edge) => {
     // check if the source and target node still exists
@@ -67,14 +70,39 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
-      const id: targetHandleType = {
-        type: targetNode.data.node!.template[field]?.type,
-        fieldName: field,
-        id: targetNode.data.id,
-        inputTypes: targetNode.data.node!.template[field]?.input_types,
-      };
-      if (targetNode.data.node!.template[field]?.proxy) {
-        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      let id: targetHandleType | sourceHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
+      if (
+        !field &&
+        targetHandleObject.name &&
+        targetNode.type === "genericNode"
+      ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
+        id = {
+          dataType: dataType ?? "",
+          name: targetHandleObject.name,
+          id: targetNode.data.id,
+          output_types: outputTypes,
+        };
+      } else {
+        id = {
+          type: templateFieldType,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: inputTypes,
+        };
+        if (hasProxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
+        }
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -83,31 +111,33 @@ export function cleanEdges(nodes: NodeType[], edges: Edge[]) {
     if (sourceHandle) {
       const parsedSourceHandle = scapeJSONParse(sourceHandle);
       const name = parsedSourceHandle.name;
-      const output = sourceNode.data.node!.outputs?.find(
-        (output) => output.name === name,
-      );
-      if (output) {
-        const outputTypes =
-          output!.types.length === 1 ? output!.types : [output!.selected!];
+      if (sourceNode.type == "genericNode") {
+        const output = sourceNode.data.node!.outputs?.find(
+          (output) => output.name === name,
+        );
+        if (output) {
+          const outputTypes =
+            output!.types.length === 1 ? output!.types : [output!.selected!];
 
-        const id: sourceHandleType = {
-          id: sourceNode.data.id,
-          name: name,
-          output_types: outputTypes,
-          dataType: sourceNode.data.type,
-        };
-        if (scapedJSONStringfy(id) !== sourceHandle) {
+          const id: sourceHandleType = {
+            id: sourceNode.data.id,
+            name: name,
+            output_types: outputTypes,
+            dataType: sourceNode.data.type,
+          };
+          if (scapedJSONStringfy(id) !== sourceHandle) {
+            newEdges = newEdges.filter((e) => e.id !== edge.id);
+          }
+        } else {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
         }
-      } else {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
       }
     }
   });
   return newEdges;
 }
 
-export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
+export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
   function generateAlertObject(sourceNode, targetNode, edge) {
     const targetHandleObject: targetHandleType = scapeJSONParse(
       edge.targetHandle,
@@ -129,7 +159,9 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
         displayName: targetNode.data.node!.display_name,
         field:
           targetNode.data.node!.template[targetHandleObject.fieldName]
-            ?.display_name ?? targetHandleObject.fieldName,
+            ?.display_name ??
+          targetHandleObject.fieldName ??
+          targetHandleObject.name,
       },
     };
   }
@@ -158,14 +190,39 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
-      const id: targetHandleType = {
-        type: targetNode.data.node!.template[field]?.type,
-        fieldName: field,
-        id: targetNode.data.id,
-        inputTypes: targetNode.data.node!.template[field]?.input_types,
-      };
-      if (targetNode.data.node!.template[field]?.proxy) {
-        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      let id: sourceHandleType | targetHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
+      if (
+        !field &&
+        targetHandleObject.name &&
+        targetNode.type === "genericNode"
+      ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
+        id = {
+          dataType: dataType ?? "",
+          name: targetHandleObject.name,
+          id: targetNode.data.id,
+          output_types: outputTypes,
+        };
+      } else {
+        id = {
+          type: templateFieldType,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: inputTypes,
+        };
+        if (hasProxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
+        }
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -175,26 +232,28 @@ export function detectBrokenEdgesEdges(nodes: NodeType[], edges: Edge[]) {
     if (sourceHandle) {
       const parsedSourceHandle = scapeJSONParse(sourceHandle);
       const name = parsedSourceHandle.name;
-      const output = sourceNode.data.node!.outputs?.find(
-        (output) => output.name === name,
-      );
-      if (output) {
-        const outputTypes =
-          output!.types.length === 1 ? output!.types : [output!.selected!];
+      if (sourceNode.type == "genericNode") {
+        const output = sourceNode.data.node!.outputs?.find(
+          (output) => output.name === name,
+        );
+        if (output) {
+          const outputTypes =
+            output!.types.length === 1 ? output!.types : [output!.selected!];
 
-        const id: sourceHandleType = {
-          id: sourceNode.data.id,
-          name: name,
-          output_types: outputTypes,
-          dataType: sourceNode.data.type,
-        };
-        if (scapedJSONStringfy(id) !== sourceHandle) {
+          const id: sourceHandleType = {
+            id: sourceNode.data.id,
+            name: name,
+            output_types: outputTypes,
+            dataType: sourceNode.data.type,
+          };
+          if (scapedJSONStringfy(id) !== sourceHandle) {
+            newEdges = newEdges.filter((e) => e.id !== edge.id);
+            BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+          }
+        } else {
           newEdges = newEdges.filter((e) => e.id !== edge.id);
           BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
-      } else {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
-        BrokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       }
     }
   });
@@ -212,9 +271,9 @@ export function unselectAllNodesEdges(nodes: Node[], edges: Edge[]) {
 
 export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
-  nodes: Node[],
-  edges: Edge[],
-) {
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): boolean {
   if (source === target) {
     return false;
   }
@@ -224,6 +283,13 @@ export function isValidConnection(
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||
+    (targetHandleObject.output_types &&
+      (targetHandleObject.output_types?.some(
+        (n) => n === sourceHandleObject.dataType,
+      ) ||
+        sourceHandleObject.output_types.some((t) =>
+          targetHandleObject.output_types?.some((n) => n === t),
+        ))) ||
     sourceHandleObject.output_types.some(
       (t) =>
         targetHandleObject.inputTypes?.some((n) => n === t) ||
@@ -236,9 +302,15 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandleObject.fieldName].list &&
+      targetHandleObject.output_types &&
+      !edges.find((e) => e.targetHandle === targetHandle)
+    ) {
+      return true;
+    } else if (
+      !targetHandleObject.output_types &&
+      ((!targetNode.template[targetHandleObject.fieldName].list &&
         !edges.find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandleObject.fieldName].list
+        targetNode.template[targetHandleObject.fieldName].list)
     ) {
       return true;
     }
@@ -249,9 +321,10 @@ export function isValidConnection(
 export function removeApiKeys(flow: FlowType): FlowType {
   let cleanFLow = cloneDeep(flow);
   cleanFLow.data!.nodes.forEach((node) => {
-    for (const key in node.data.node.template) {
-      if (node.data.node.template[key].password) {
-        node.data.node.template[key].value = "";
+    if (node.type !== "genericNode") return;
+    for (const key in node.data.node!.template) {
+      if (node.data.node!.template[key].password) {
+        node.data.node!.template[key].value = "";
       }
     }
   });
@@ -309,14 +382,14 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
   return { data: savedComponents, flows: DbData };
 };
 
-export const needsLayout = (nodes: NodeType[]) => {
+export const needsLayout = (nodes: AllNodeType[]) => {
   return nodes.some((node) => !node.position);
 };
 
 export async function processDataFromFlow(
   flow: FlowType,
   refreshIds = true,
-): Promise<ReactFlowJsonObject | null> {
+): Promise<ReactFlowJsonObject<AllNodeType, EdgeType> | null> {
   let data = flow?.data ? flow.data : null;
   if (data) {
     processFlowEdges(flow);
@@ -336,13 +409,13 @@ export async function processDataFromFlow(
 }
 
 export function updateIds(
-  { edges, nodes }: { edges: Edge[]; nodes: Node[] },
-  selection?: { edges: Edge[]; nodes: Node[] },
+  { edges, nodes }: { edges: EdgeType[]; nodes: AllNodeType[] },
+  selection?: OnSelectionChangeParams,
 ) {
   let idsMap = {};
   const selectionIds = selection?.nodes.map((n) => n.id);
   if (nodes) {
-    nodes.forEach((node: NodeType) => {
+    nodes.forEach((node: AllNodeType) => {
       // Generate a unique node ID
       let newId = getNodeId(node.data.type);
       if (selection && !selectionIds?.includes(node.id)) {
@@ -353,15 +426,17 @@ export function updateIds(
       node.data.id = newId;
       // Add the new node to the list of nodes in state
     });
-    selection?.nodes.forEach((sNode: NodeType) => {
-      let newId = idsMap[sNode.id];
-      sNode.id = newId;
-      sNode.data.id = newId;
+    selection?.nodes.forEach((sNode: Node) => {
+      if (sNode.type === "genericNode") {
+        let newId = idsMap[sNode.id];
+        sNode.id = newId;
+        sNode.data.id = newId;
+      }
     });
   }
-  const concatedEdges = [...edges, ...(selection?.edges ?? [])];
+  const concatedEdges = [...edges, ...((selection?.edges as EdgeType[]) ?? [])];
   if (concatedEdges)
-    concatedEdges.forEach((edge: Edge) => {
+    concatedEdges.forEach((edge: EdgeType) => {
       edge.source = idsMap[edge.source];
       edge.target = idsMap[edge.target];
 
@@ -396,7 +471,7 @@ export function updateIds(
   return idsMap;
 }
 
-export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
+export function validateNode(node: AllNodeType, edges: Edge[]): Array<string> {
   if (!node.data?.node?.template || !Object.keys(node.data.node.template)) {
     return [
       "We've noticed a potential issue with a Component in the flow. Please review it and, if necessary, submit a bug report with your exported flow file. Thank you for your help!",
@@ -412,7 +487,9 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
 
   return Object.keys(template).reduce((errors: Array<string>, t) => {
     if (
+      node.type === "genericNode" &&
       template[t].required &&
+      !(template[t].tool_mode && node?.data?.node?.tool_mode) &&
       template[t].show &&
       (template[t].value === undefined ||
         template[t].value === null ||
@@ -456,8 +533,8 @@ export function validateNode(node: NodeType, edges: Edge[]): Array<string> {
 }
 
 export function validateNodes(
-  nodes: Node[],
-  edges: Edge[],
+  nodes: AllNodeType[],
+  edges: EdgeType[],
 ): // this returns an array of tuples with the node id and the errors
 Array<{ id: string; errors: Array<string> }> {
   if (nodes.length === 0) {
@@ -475,10 +552,67 @@ Array<{ id: string; errors: Array<string> }> {
     id: n.id,
     errors: validateNode(n, edges),
   }));
+
   return nodeMap.filter((n) => n.errors?.length);
 }
 
-export function updateEdges(edges: Edge[]) {
+export function validateEdge(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): Array<string> {
+  const targetHandleObject: targetHandleType = scapeJSONParse(e.targetHandle!);
+
+  const loop = hasLoop(e, nodes, edges);
+  if (targetHandleObject.output_types && !loop) {
+    return [INCOMPLETE_LOOP_ERROR_ALERT];
+  }
+  return [];
+}
+
+function hasLoop(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): boolean {
+  const source = e.source;
+  const target = e.target;
+
+  // Check if this connection would create a cycle
+  const targetNode = nodes.find((n) => n.id === target);
+
+  const hasCycle = (
+    node,
+    visited = new Set(),
+    firstEdge: EdgeType | null = null,
+  ): boolean => {
+    if (visited.has(node.id)) return false;
+
+    visited.add(node.id);
+
+    for (const outgoer of getOutgoers(node, nodes, edges)) {
+      const edge = edges.find(
+        (e) => e.source === node.id && e.target === outgoer.id,
+      );
+      if (outgoer.id === source) {
+        const sourceHandleObject = scapeJSONParse(
+          firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
+        );
+        const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
+        if (sourceHandleParsed === e.targetHandle) {
+          return true;
+        }
+      }
+      if (hasCycle(outgoer, visited, firstEdge || edge)) return true;
+    }
+    return false;
+  };
+
+  if (targetNode?.id === source) return false;
+  return hasCycle(targetNode);
+}
+
+export function updateEdges(edges: EdgeType[]) {
   if (edges)
     edges.forEach((edge) => {
       const targetHandleObject: targetHandleType = scapeJSONParse(
@@ -505,20 +639,24 @@ export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
 
 export function addEscapedHandleIdsToEdges({
   edges,
-}: addEscapedHandleIdsToEdgesType): Edge[] {
+}: addEscapedHandleIdsToEdgesType): EdgeType[] {
   let newEdges = cloneDeep(edges);
   newEdges.forEach((edge) => {
     let escapedSourceHandle = edge.sourceHandle;
     let escapedTargetHandle = edge.targetHandle;
     if (!escapedSourceHandle) {
       let sourceHandle = edge.data?.sourceHandle;
-      escapedSourceHandle = getRightHandleId(sourceHandle);
-      edge.sourceHandle = escapedSourceHandle;
+      if (sourceHandle) {
+        escapedSourceHandle = getRightHandleId(sourceHandle);
+        edge.sourceHandle = escapedSourceHandle;
+      }
     }
     if (!escapedTargetHandle) {
       let targetHandle = edge.data?.targetHandle;
-      escapedTargetHandle = getLeftHandleId(targetHandle);
-      edge.targetHandle = escapedTargetHandle;
+      if (targetHandle) {
+        escapedTargetHandle = getLeftHandleId(targetHandle);
+        edge.targetHandle = escapedTargetHandle;
+      }
     }
   });
   return newEdges;
@@ -526,7 +664,7 @@ export function addEscapedHandleIdsToEdges({
 export function updateEdgesHandleIds({
   edges,
   nodes,
-}: updateEdgesHandleIdsType): Edge[] {
+}: updateEdgesHandleIdsType): EdgeType[] {
   let newEdges = cloneDeep(edges);
   newEdges.forEach((edge) => {
     const sourceNodeId = edge.source;
@@ -548,7 +686,7 @@ export function updateEdgesHandleIds({
         inputTypes: targetNode.data.node!.template[field].input_types,
       };
     }
-    if (source && sourceNode) {
+    if (source && sourceNode && sourceNode.type === "genericNode") {
       const output_types =
         sourceNode.data.node!.output_types ??
         sourceNode.data.node!.base_classes!;
@@ -579,61 +717,64 @@ export function updateNewOutput({ nodes, edges }: updateEdgesHandleIdsType) {
       let newTargetHandle: targetHandleType = scapeJSONParse(edge.targetHandle);
       const id = newSourceHandle.id;
       const sourceNodeIndex = newNodes.findIndex((node) => node.id === id);
-      let sourceNode: NodeType | undefined = undefined;
+      let sourceNode: AllNodeType | undefined = undefined;
       if (sourceNodeIndex !== -1) {
         sourceNode = newNodes[sourceNodeIndex];
       }
-
-      let intersection;
-      //@ts-ignore
-      if (newSourceHandle.baseClasses) {
-        if (!newSourceHandle.output_types) {
-          if (sourceNode?.data.node!.output_types) {
-            newSourceHandle.output_types = sourceNode?.data.node!.output_types;
-          } else {
-            //@ts-ignore
-            newSourceHandle.output_types = newSourceHandle.baseClasses;
+      if (sourceNode?.type === "genericNode") {
+        let intersection;
+        if (newSourceHandle.baseClasses) {
+          if (!newSourceHandle.output_types) {
+            if (sourceNode?.data.node!.output_types) {
+              newSourceHandle.output_types =
+                sourceNode?.data.node!.output_types;
+            } else {
+              newSourceHandle.output_types = newSourceHandle.baseClasses;
+            }
+          }
+          delete newSourceHandle.baseClasses;
+        }
+        if (
+          newTargetHandle.inputTypes &&
+          newTargetHandle.inputTypes.length > 0
+        ) {
+          intersection = newSourceHandle.output_types.filter((type) =>
+            newTargetHandle.inputTypes!.includes(type),
+          );
+        } else {
+          intersection = newSourceHandle.output_types.filter(
+            (type) => type === newTargetHandle.type,
+          );
+        }
+        const selected = intersection[0];
+        newSourceHandle.name = newSourceHandle.output_types.join(" | ");
+        newSourceHandle.output_types = [selected];
+        if (sourceNode) {
+          if (!sourceNode.data.node?.outputs) {
+            sourceNode.data.node!.outputs = [];
+          }
+          const types =
+            sourceNode.data.node!.output_types ??
+            sourceNode.data.node!.base_classes!;
+          if (
+            !sourceNode.data.node!.outputs.some(
+              (output) => output.selected === selected,
+            )
+          ) {
+            sourceNode.data.node!.outputs.push({
+              types,
+              selected: selected,
+              name: types.join(" | "),
+              display_name: types.join(" | "),
+            });
           }
         }
-        //@ts-ignore
-        delete newSourceHandle.baseClasses;
-      }
-      if (newTargetHandle.inputTypes && newTargetHandle.inputTypes.length > 0) {
-        //conjuction subtraction
-        intersection = newSourceHandle.output_types.filter((type) =>
-          newTargetHandle.inputTypes!.includes(type),
-        );
-      } else {
-        intersection = newSourceHandle.output_types.filter(
-          (type) => type === newTargetHandle.type,
-        );
-      }
-      const selected = intersection[0];
-      newSourceHandle.name = newSourceHandle.output_types.join(" | ");
-      newSourceHandle.output_types = [selected];
-      if (sourceNode) {
-        if (!sourceNode.data.node?.outputs) {
-          sourceNode.data.node!.outputs = [];
-        }
-        const types =
-          sourceNode.data.node!.output_types ??
-          sourceNode.data.node!.base_classes!;
-        if (
-          !sourceNode.data.node!.outputs.some(
-            (output) => output.selected === selected,
-          )
-        ) {
-          sourceNode.data.node!.outputs.push({
-            types,
-            selected: selected,
-            name: types.join(" | "),
-            display_name: types.join(" | "),
-          });
-        }
-      }
 
-      edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
-      edge.data.sourceHandle = newSourceHandle;
+        edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
+        if (edge.data) {
+          edge.data.sourceHandle = newSourceHandle;
+        }
+      }
     }
   });
   return { nodes: newNodes, edges: newEdges };
@@ -683,8 +824,8 @@ export function handleOnlyIntegerInput(
 
 export function getConnectedNodes(
   edge: Edge,
-  nodes: Array<NodeType>,
-): Array<NodeType> {
+  nodes: Array<AllNodeType>,
+): Array<AllNodeType> {
   const sourceId = edge.source;
   const targetId = edge.target;
   return nodes.filter((node) => node.id === targetId || node.id === sourceId);
@@ -795,10 +936,10 @@ export function checkEdgeWithoutEscapedHandleIds(edges: Edge[]): boolean {
   );
 }
 
-export function checkOldNodesOutput(nodes: NodeType[]): boolean {
+export function checkOldNodesOutput(nodes: AllNodeType[]): boolean {
   return nodes.some(
     (node) =>
-      node.data.node?.outputs === undefined && node.type === "genericNode",
+      node.type === "genericNode" && node.data.node?.outputs === undefined,
   );
 }
 
@@ -859,8 +1000,8 @@ export function getHandleId(
 
 export function generateFlow(
   selection: OnSelectionChangeParams,
-  nodes: Node[],
-  edges: Edge[],
+  nodes: AllNodeType[],
+  edges: EdgeType[],
   name: string,
 ): generateFlowType {
   const newFlowData = { nodes, edges, viewport: { zoom: 1, x: 0, y: 0 } };
@@ -871,7 +1012,7 @@ export function generateFlow(
       selection.nodes.some((node) => node.id === edge.target) &&
       selection.nodes.some((node) => node.id === edge.source),
   );
-  newFlowData.nodes = selection.nodes;
+  newFlowData.nodes = selection.nodes as AllNodeType[];
 
   const newFlow: FlowType = {
     data: newFlowData,
@@ -895,8 +1036,11 @@ export function generateFlow(
   };
 }
 
-export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
-  if (!groupNode.data.node!.flow) return [];
+export function reconnectEdges(
+  groupNode: AllNodeType,
+  excludedEdges: EdgeType[],
+) {
+  if (groupNode.type !== "genericNode" || !groupNode.data.node!.flow) return [];
   let newEdges = cloneDeep(excludedEdges);
   const { nodes, edges } = groupNode.data.node!.flow!.data!;
   const lastNode = findLastNode(groupNode.data.node!.flow!.data!);
@@ -904,26 +1048,32 @@ export function reconnectEdges(groupNode: NodeType, excludedEdges: Edge[]) {
     (e) => !(nodes.some((n) => n.id === e.source) && e.source !== lastNode?.id),
   );
   newEdges.forEach((edge) => {
+    const newSourceHandle: sourceHandleType = scapeJSONParse(
+      edge.sourceHandle!,
+    );
+    const newTargetHandle: targetHandleType = scapeJSONParse(
+      edge.targetHandle!,
+    );
     if (lastNode && edge.source === lastNode.id) {
       edge.source = groupNode.id;
-      let newSourceHandle: sourceHandleType = scapeJSONParse(
-        edge.sourceHandle!,
-      );
       newSourceHandle.id = groupNode.id;
       edge.sourceHandle = scapedJSONStringfy(newSourceHandle);
-      edge.data.sourceHandle = newSourceHandle;
     }
     if (nodes.some((node) => node.id === edge.target)) {
       const targetNode = nodes.find((node) => node.id === edge.target)!;
-      const targetHandle: targetHandleType = scapeJSONParse(edge.targetHandle!);
-      const proxy = { id: targetNode.id, field: targetHandle.fieldName };
-      let newTargetHandle: targetHandleType = cloneDeep(targetHandle);
+      const proxy = { id: targetNode.id, field: newTargetHandle.fieldName };
       newTargetHandle.id = groupNode.id;
       newTargetHandle.proxy = proxy;
       edge.target = groupNode.id;
-      newTargetHandle.fieldName = targetHandle.fieldName + "_" + targetNode.id;
+      newTargetHandle.fieldName =
+        newTargetHandle.fieldName + "_" + targetNode.id;
       edge.targetHandle = scapedJSONStringfy(newTargetHandle);
-      edge.data.targetHandle = newTargetHandle;
+    }
+    if (newSourceHandle && newTargetHandle) {
+      edge.data = {
+        sourceHandle: newSourceHandle,
+        targetHandle: newTargetHandle,
+      };
     }
   });
   return newEdges;
@@ -1057,7 +1207,7 @@ export function mergeNodeTemplates({
   nodes,
   edges,
 }: {
-  nodes: NodeType[];
+  nodes: AllNodeType[];
   edges: Edge[];
 }): APITemplateType {
   /* this function receives a flow and iterate throw each node
@@ -1071,10 +1221,13 @@ export function mergeNodeTemplates({
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
       .forEach((key) => {
-        if (!isTargetHandleConnected(edges, key, nodeTemplate[key], node.id)) {
+        if (
+          node.type === "genericNode" &&
+          !isTargetHandleConnected(edges, key, nodeTemplate[key], node.id)
+        ) {
           template[key + "_" + node.id] = nodeTemplate[key];
           template[key + "_" + node.id].proxy = { id: node.id, field: key };
-          if (node.type === "groupNode") {
+          if (node.data.type === "GroupNode") {
             template[key + "_" + node.id].display_name =
               node.data.node!.flow!.name + " - " + nodeTemplate[key].name;
           } else {
@@ -1151,13 +1304,13 @@ export function generateNodeTemplate(Flow: FlowType) {
 export function generateNodeFromFlow(
   flow: FlowType,
   getNodeId: (type: string) => string,
-): NodeType {
+): AllNodeType {
   const { nodes } = flow.data!;
   const outputNode = cloneDeep(findLastNode(flow.data!));
   const position = getMiddlePoint(nodes);
   let data = cloneDeep(flow);
   const id = getNodeId("groupComponent");
-  const newGroupNode: NodeType = {
+  const newGroupNode: AllNodeType = {
     data: {
       id,
       type: "GroupNode",
@@ -1180,8 +1333,8 @@ export function generateNodeFromFlow(
 function generateNodeOutputs(flow: FlowType) {
   const { nodes, edges } = flow.data!;
   const outputs: Array<OutputFieldType> = [];
-  nodes.forEach((node: NodeType) => {
-    if (node.data.node?.outputs) {
+  nodes.forEach((node: AllNodeType) => {
+    if (node.type === "genericNode" && node.data.node?.outputs) {
       const nodeOutputs = node.data.node.outputs;
       nodeOutputs.forEach((output) => {
         //filter outputs that are not connected
@@ -1189,7 +1342,8 @@ function generateNodeOutputs(flow: FlowType) {
           !edges.some(
             (edge) =>
               edge.source === node.id &&
-              (edge.data.sourceHandle as sourceHandleType).name === output.name,
+              (edge.data?.sourceHandle as sourceHandleType).name ===
+                output.name,
           )
         ) {
           outputs.push(
@@ -1210,44 +1364,6 @@ function generateNodeOutputs(flow: FlowType) {
     }
   });
   return outputs;
-}
-
-export function connectedInputNodesOnHandle(
-  nodeId: string,
-  handleId: string,
-  { nodes, edges }: { nodes: NodeType[]; edges: Edge[] },
-) {
-  const connectedNodes: Array<{ name: string; id: string; isGroup: boolean }> =
-    [];
-  // return the nodes connected to the input handle of the node
-  const TargetEdges = edges.filter((e) => e.target === nodeId);
-  TargetEdges.forEach((edge) => {
-    if (edge.targetHandle === handleId) {
-      const sourceNode = nodes.find((n) => n.id === edge.source);
-      if (sourceNode) {
-        if (sourceNode.type === "groupNode") {
-          let lastNode = findLastNode(sourceNode.data.node!.flow!.data!);
-          while (lastNode && lastNode.type === "groupNode") {
-            lastNode = findLastNode(lastNode.data.node!.flow!.data!);
-          }
-          if (lastNode) {
-            connectedNodes.push({
-              name: sourceNode.data.node!.flow!.name,
-              id: lastNode.id,
-              isGroup: true,
-            });
-          }
-        } else {
-          connectedNodes.push({
-            name: sourceNode.data.type,
-            id: sourceNode.id,
-            isGroup: false,
-          });
-        }
-      }
-    }
-  });
-  return connectedNodes;
 }
 
 export function updateProxyIdsOnTemplate(
@@ -1274,15 +1390,15 @@ export function updateProxyIdsOnOutputs(
 }
 
 export function updateEdgesIds(
-  edges: Edge[],
+  edges: EdgeType[],
   idsMap: { [key: string]: string },
 ) {
   edges.forEach((edge) => {
-    let targetHandle: targetHandleType = edge.data.targetHandle;
+    let targetHandle: targetHandleType = edge.data!.targetHandle;
     if (targetHandle.proxy && idsMap[targetHandle.proxy!.id]) {
       targetHandle.proxy!.id = idsMap[targetHandle.proxy!.id];
     }
-    edge.data.targetHandle = targetHandle;
+    edge.data!.targetHandle = targetHandle;
     edge.targetHandle = scapedJSONStringfy(targetHandle);
   });
 }
@@ -1311,17 +1427,21 @@ export function expandGroupNode(
   id: string,
   flow: FlowType,
   template: APITemplateType,
-  nodes: Node[],
-  edges: Edge[],
-  setNodes: (update: Node[] | ((oldState: Node[]) => Node[])) => void,
-  setEdges: (update: Edge[] | ((oldState: Edge[]) => Edge[])) => void,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+  setNodes: (
+    update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
+  ) => void,
+  setEdges: (
+    update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+  ) => void,
   outputs?: OutputFieldType[],
 ) {
   const idsMap = updateIds(flow!.data!);
   updateProxyIdsOnTemplate(template, idsMap);
   let flowEdges = edges;
   updateEdgesIds(flowEdges, idsMap);
-  const gNodes: NodeType[] = cloneDeep(flow?.data?.nodes!);
+  const gNodes: AllNodeType[] = cloneDeep(flow?.data?.nodes!);
   const gEdges = cloneDeep(flow!.data!.edges);
   // //redirect edges to correct proxy node
   // let updatedEdges: Edge[] = [];
@@ -1405,13 +1525,16 @@ export function expandGroupNode(
   outputs?.forEach((output) => {
     let nodeIndex = gNodes.findIndex((n) => n.id === output.proxy!.id);
     if (nodeIndex !== -1) {
-      if (gNodes[nodeIndex].data.node?.outputs) {
-        const nodeOutputIndex = gNodes[nodeIndex].data.node!.outputs!.findIndex(
-          (o) => o.name === output.proxy?.name,
-        );
-        if (nodeOutputIndex !== -1 && output.selected) {
-          gNodes[nodeIndex].data.node!.outputs![nodeOutputIndex].selected =
-            output.selected;
+      const node = gNodes[nodeIndex];
+      if (node.type === "genericNode") {
+        if (node.data.node?.outputs) {
+          const nodeOutputIndex = node.data.node!.outputs!.findIndex(
+            (o) => o.name === output.proxy?.name,
+          );
+          if (nodeOutputIndex !== -1 && output.selected) {
+            node.data.node!.outputs![nodeOutputIndex].selected =
+              output.selected;
+          }
         }
       }
     }
@@ -1431,7 +1554,7 @@ export function getGroupStatus(
 ) {
   let status = { valid: true, params: SUCCESS_BUILD };
   const { nodes } = flow.data!;
-  const ids = nodes.map((n: NodeType) => n.data.id);
+  const ids = nodes.map((n: AllNodeType) => n.data.id);
   ids.forEach((id) => {
     if (!ssData[id]) {
       status = ssData[id];
@@ -1486,28 +1609,32 @@ export function updateComponentNameAndType(
 ) {}
 
 export function removeFileNameFromComponents(flow: FlowType) {
-  flow.data!.nodes.forEach((node: NodeType) => {
-    Object.keys(node.data.node!.template).forEach((field) => {
-      if (node.data.node?.template[field].type === "file") {
-        node.data.node!.template[field].value = "";
+  flow.data!.nodes.forEach((node: AllNodeType) => {
+    if (node.type === "genericNode") {
+      Object.keys(node.data.node!.template).forEach((field) => {
+        if (node.data.node?.template[field].type === "file") {
+          node.data.node!.template[field].value = "";
+        }
+      });
+      if (node.data.node?.flow) {
+        removeFileNameFromComponents(node.data.node.flow);
       }
-    });
-    if (node.data.node?.flow) {
-      removeFileNameFromComponents(node.data.node.flow);
     }
   });
 }
 
 export function removeGlobalVariableFromComponents(flow: FlowType) {
-  flow.data!.nodes.forEach((node: NodeType) => {
-    Object.keys(node.data.node!.template).forEach((field) => {
-      if (node.data?.node?.template[field]?.load_from_db) {
-        node.data.node!.template[field].value = "";
-        node.data.node!.template[field].load_from_db = false;
+  flow.data!.nodes.forEach((node: AllNodeType) => {
+    if (node.type === "genericNode") {
+      Object.keys(node.data.node!.template).forEach((field) => {
+        if (node.data?.node?.template[field]?.load_from_db) {
+          node.data.node!.template[field].value = "";
+          node.data.node!.template[field].load_from_db = false;
+        }
+      });
+      if (node.data.node?.flow) {
+        removeGlobalVariableFromComponents(node.data.node.flow);
       }
-    });
-    if (node.data.node?.flow) {
-      removeGlobalVariableFromComponents(node.data.node.flow);
     }
   });
 }
@@ -1591,7 +1718,7 @@ export function getRandomDescription(): string {
 }
 
 export const createNewFlow = (
-  flowData: ReactFlowJsonObject,
+  flowData: ReactFlowJsonObject<AllNodeType, EdgeType>,
   folderId: string,
   flow?: FlowType,
 ) => {
@@ -1625,8 +1752,8 @@ export function isOutputType(type: string): boolean {
 }
 
 export function updateGroupRecursion(
-  groupNode: NodeType,
-  edges: Edge[],
+  groupNode: AllNodeType,
+  edges: EdgeType[],
   unavailableFields:
     | {
         [name: string]: string;
@@ -1634,31 +1761,34 @@ export function updateGroupRecursion(
     | undefined,
   globalVariablesEntries: string[] | undefined,
 ) {
-  updateGlobalVariables(
-    groupNode.data.node,
-    unavailableFields,
-    globalVariablesEntries,
-  );
-  if (groupNode.data.node?.flow) {
-    groupNode.data.node.flow.data!.nodes.forEach((node) => {
-      if (node.data.node?.flow) {
-        updateGroupRecursion(
-          node,
-          node.data.node.flow.data!.edges,
-          unavailableFields,
-          globalVariablesEntries,
-        );
-      }
-    });
-    let newFlow = groupNode.data.node!.flow;
-    const idsMap = updateIds(newFlow.data!);
-    updateProxyIdsOnTemplate(groupNode.data.node!.template, idsMap);
-    updateProxyIdsOnOutputs(groupNode.data.node.outputs, idsMap);
-    let flowEdges = edges;
-    updateEdgesIds(flowEdges, idsMap);
+  if (groupNode.type === "genericNode") {
+    updateGlobalVariables(
+      groupNode.data.node,
+      unavailableFields,
+      globalVariablesEntries,
+    );
+    if (groupNode.data.node?.flow) {
+      groupNode.data.node.flow.data!.nodes.forEach((node) => {
+        if (node.type === "genericNode") {
+          if (node.data.node?.flow) {
+            updateGroupRecursion(
+              node,
+              node.data.node.flow.data!.edges,
+              unavailableFields,
+              globalVariablesEntries,
+            );
+          }
+        }
+      });
+      let newFlow = groupNode.data.node!.flow;
+      const idsMap = updateIds(newFlow.data!);
+      updateProxyIdsOnTemplate(groupNode.data.node!.template, idsMap);
+      updateProxyIdsOnOutputs(groupNode.data.node.outputs, idsMap);
+      let flowEdges = edges;
+      updateEdgesIds(flowEdges, idsMap);
+    }
   }
 }
-
 export function updateGlobalVariables(
   node: APIClassType | undefined,
   unavailableFields:
@@ -1699,10 +1829,10 @@ export function getGroupOutputNodeId(
   p_name: string,
   p_node_id: string,
 ) {
-  let node: NodeType | undefined = flow.data?.nodes.find(
+  let node: AllNodeType | undefined = flow.data?.nodes.find(
     (n) => n.id === p_node_id,
   );
-  if (!node) return;
+  if (!node || node.type !== "genericNode") return;
   if (node.data.node?.flow) {
     let output = node.data.node.outputs?.find((o) => o.name === p_name);
     if (output && output.proxy) {
@@ -1727,7 +1857,7 @@ export function checkOldComponents({ nodes }: { nodes: any[] }) {
 }
 
 export function someFlowTemplateFields(
-  { nodes }: { nodes: NodeType[] },
+  { nodes }: { nodes: AllNodeType[] },
   validateFn: (field: InputFieldType) => boolean,
 ): boolean {
   return nodes.some((node) => {
@@ -1735,4 +1865,16 @@ export function someFlowTemplateFields(
       return validateFn((node.data.node?.template ?? {})[field]);
     });
   });
+}
+
+export function checkHasToolMode(template: APITemplateType) {
+  return template && Object.values(template).some((field) => field.tool_mode);
+}
+
+export function buildPositionDictionary(nodes: AllNodeType[]) {
+  const positionDictionary = {};
+  nodes.forEach((node) => {
+    positionDictionary[node.position.x] = node.position.y;
+  });
+  return positionDictionary;
 }

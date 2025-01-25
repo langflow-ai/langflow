@@ -79,14 +79,17 @@ def serialize_field(value):
     if isinstance(value, Document):
         return value.to_json()
     if isinstance(value, BaseModel):
-        return value.model_dump()
+        return serialize_field(value.model_dump())
+    if isinstance(value, dict):
+        return {k: serialize_field(v) for k, v in value.items()}
     if isinstance(value, V1BaseModel):
         if hasattr(value, "to_json"):
             return value.to_json()
         return value.dict()
-    if isinstance(value, str):
-        return {"result": value}
-    return value
+    # Handle datetime objects
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
 
 
 def get_artifact_type(value, build_result) -> str:
@@ -157,14 +160,14 @@ async def log_transaction(
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_transaction(session, transaction)
+        async with session_getter(get_db_service()) as session:
+            inserted = await crud_log_transaction(session, transaction)
             logger.debug(f"Logged transaction: {inserted.id}")
     except Exception:  # noqa: BLE001
         logger.exception("Error logging transaction")
 
 
-def log_vertex_build(
+async def log_vertex_build(
     *,
     flow_id: str,
     vertex_id: str,
@@ -176,18 +179,19 @@ def log_vertex_build(
     try:
         if not get_settings_service().settings.vertex_builds_storage_enabled:
             return
+
         vertex_build = VertexBuildBase(
             flow_id=flow_id,
             id=vertex_id,
             valid=valid,
             params=str(params) if params else None,
-            # ugly hack to get the model dump with weird datatypes
-            data=json.loads(data.model_dump_json()),
-            # ugly hack to get the model dump with weird datatypes
-            artifacts=json.loads(json.dumps(artifacts, default=str)),
+            # Serialize data using our custom serializer
+            data=serialize_field(data),
+            # Serialize artifacts using our custom serializer
+            artifacts=serialize_field(artifacts) if artifacts else None,
         )
-        with session_getter(get_db_service()) as session:
-            inserted = crud_log_vertex_build(session, vertex_build)
+        async with session_getter(get_db_service()) as session:
+            inserted = await crud_log_vertex_build(session, vertex_build)
             logger.debug(f"Logged vertex build: {inserted.build_id}")
     except Exception:  # noqa: BLE001
         logger.exception("Error logging vertex build")
@@ -207,3 +211,13 @@ def rewrite_file_path(file_path: str):
         consistent_file_path = "/".join(file_path_split)
 
     return [consistent_file_path]
+
+
+def has_output_vertex(vertices: dict[Vertex, int]):
+    return any(vertex.is_output for vertex in vertices)
+
+
+def has_chat_output(vertices: dict[Vertex, int]):
+    from langflow.graph.schema import InterfaceComponentTypes
+
+    return any(InterfaceComponentTypes.ChatOutput in vertex.id for vertex in vertices)

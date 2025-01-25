@@ -1,6 +1,6 @@
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import IconComponent from "../../components/genericIconComponent";
 import { cn } from "../../utils/utils";
+import IconComponent from "../common/genericIconComponent";
 import { Button } from "./button";
 
 function RefreshButton({
@@ -48,6 +48,7 @@ function RefreshButton({
       id={id}
       size={"icon"}
       loading={isLoading}
+      data-testid={id}
     >
       {button_text && <span className="mr-1">{button_text}</span>}
       <IconComponent

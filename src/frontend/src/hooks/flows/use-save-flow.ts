@@ -3,9 +3,9 @@ import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-up
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { FlowType } from "@/types/flow";
+import { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
-import { ReactFlowJsonObject } from "reactflow";
+import { ReactFlowJsonObject } from "@xyflow/react";
 
 const useSaveFlow = () => {
   const flows = useFlowsManagerStore((state) => state.flows);
@@ -52,17 +52,35 @@ const useSaveFlow = () => {
               { id: flow!.id },
               {
                 onSuccess: (flowResponse) => {
-                  flow!.data = flowResponse.data as ReactFlowJsonObject;
+                  flow!.data = flowResponse.data as ReactFlowJsonObject<
+                    AllNodeType,
+                    EdgeType
+                  >;
                 },
               },
             );
           }
 
-          const { id, name, data, description, folder_id, endpoint_name } =
-            flow;
+          const {
+            id,
+            name,
+            data,
+            description,
+            folder_id,
+            endpoint_name,
+            locked,
+          } = flow;
           if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
             mutate(
-              { id, name, data: data!, description, folder_id, endpoint_name },
+              {
+                id,
+                name,
+                data: data!,
+                description,
+                folder_id,
+                endpoint_name,
+                locked,
+              },
               {
                 onSuccess: (updatedFlow) => {
                   setSaveLoading(false);

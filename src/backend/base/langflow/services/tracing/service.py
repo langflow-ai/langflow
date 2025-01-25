@@ -40,6 +40,12 @@ def _get_langfuse_tracer():
     return LangFuseTracer
 
 
+def _get_arize_phoenix_tracer():
+    from langflow.services.tracing.arize_phoenix import ArizePhoenixTracer
+
+    return ArizePhoenixTracer
+
+
 class TracingService(Service):
     name = "tracing_service"
 
@@ -71,7 +77,7 @@ class TracingService(Service):
                 self.logs_queue.task_done()
 
     async def start(self) -> None:
-        if self.running or self.deactivated:
+        if self.running:
             return
         try:
             self.running = True
@@ -106,11 +112,15 @@ class TracingService(Service):
         self.outputs_metadata = defaultdict(dict)
 
     async def initialize_tracers(self) -> None:
+        if self.deactivated:
+            return
         try:
             await self.start()
-            await asyncio.to_thread(self._initialize_langsmith_tracer)
-            await asyncio.to_thread(self._initialize_langwatch_tracer)
-            await asyncio.to_thread(self._initialize_langfuse_tracer)
+
+            self._initialize_langsmith_tracer()
+            self._initialize_langwatch_tracer()
+            self._initialize_langfuse_tracer()
+            self._initialize_arize_phoenix_tracer()
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error initializing tracers: {e}")
 
@@ -139,6 +149,16 @@ class TracingService(Service):
         self.project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
         langfuse_tracer = _get_langfuse_tracer()
         self._tracers["langfuse"] = langfuse_tracer(
+            trace_name=self.run_name,
+            trace_type="chain",
+            project_name=self.project_name,
+            trace_id=self.run_id,
+        )
+
+    def _initialize_arize_phoenix_tracer(self) -> None:
+        self.project_name = os.getenv("ARIZE_PHOENIX_PROJECT", "Langflow")
+        arize_phoenix_tracer = _get_arize_phoenix_tracer()
+        self._tracers["arize_phoenix"] = arize_phoenix_tracer(
             trace_name=self.run_name,
             trace_type="chain",
             project_name=self.project_name,
@@ -247,7 +267,8 @@ class TracingService(Service):
         self.outputs[trace_name] |= outputs or {}
         self.outputs_metadata[trace_name] |= output_metadata or {}
 
-    def _cleanup_inputs(self, inputs: dict[str, Any]):
+    @staticmethod
+    def _cleanup_inputs(inputs: dict[str, Any]):
         inputs = inputs.copy()
         for key in inputs:
             if "api_key" in key:

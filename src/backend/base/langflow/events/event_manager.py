@@ -55,14 +55,14 @@ class EventManager:
             msg = "Event name must start with 'on_'"
             raise ValueError(msg)
         if callback is None:
-            _callback = partial(self.send_event, event_type=event_type)
+            callback_ = partial(self.send_event, event_type=event_type)
         else:
-            _callback = partial(callback, manager=self, event_type=event_type)
-        self.events[name] = _callback
+            callback_ = partial(callback, manager=self, event_type=event_type)
+        self.events[name] = callback_
 
     def send_event(self, *, event_type: Literal["message", "error", "warning", "info", "token"], data: LoggableType):
         try:
-            if isinstance(data, dict) and event_type in ["message", "error", "warning", "info", "token"]:
+            if isinstance(data, dict) and event_type in {"message", "error", "warning", "info", "token"}:
                 data = create_event_by_type(event_type, **data)
         except TypeError as e:
             logger.debug(f"Error creating playground event: {e}")
@@ -92,4 +92,12 @@ def create_default_event_manager(queue):
     manager.register_event("on_end_vertex", "end_vertex")
     manager.register_event("on_build_start", "build_start")
     manager.register_event("on_build_end", "build_end")
+    return manager
+
+
+def create_stream_tokens_event_manager(queue):
+    manager = EventManager(queue)
+    manager.register_event("on_message", "add_message")
+    manager.register_event("on_token", "token")
+    manager.register_event("on_end", "end")
     return manager

@@ -7,8 +7,8 @@ import {
 } from "@/customization/components/custom-parameter";
 import { cn } from "@/utils/utils";
 import { useEffect, useRef } from "react";
-import { default as IconComponent } from "../../../../components/genericIconComponent";
-import ShadTooltip from "../../../../components/shadTooltipComponent";
+import { default as IconComponent } from "../../../../components/common/genericIconComponent";
+import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
   DEFAULT_TOOLSET_PLACEHOLDER,
   FLEX_VIEW_TYPES,
@@ -108,8 +108,8 @@ export default function NodeInputField({
     <div
       ref={ref}
       className={cn(
-        "relative mt-1 flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
-        lastInput ? "rounded-b-[0.69rem]" : "",
+        "relative flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
+        lastInput ? "rounded-b-[0.69rem] pb-5" : "",
         isToolMode && "bg-primary/10",
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"
@@ -187,7 +187,11 @@ export default function NodeInputField({
             handleNodeClass={handleNodeClass}
             nodeClass={data.node!}
             disabled={disabled}
-            placeholder={isToolMode ? DEFAULT_TOOLSET_PLACEHOLDER : undefined}
+            placeholder={
+              isToolMode
+                ? DEFAULT_TOOLSET_PLACEHOLDER
+                : data.node?.template[name].placeholder
+            }
             isToolMode={isToolMode}
           />
         )}

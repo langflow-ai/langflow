@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from langflow.api.utils import AsyncDbSession, CurrentActiveUser
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import ApiKeyCreateRequest, ApiKeysResponse
 from langflow.services.auth import utils as auth_utils
 
@@ -16,7 +16,7 @@ router = APIRouter(tags=["APIKey"], prefix="/api_key")
 
 @router.get("/")
 async def get_api_keys_route(
-    db: AsyncDbSession,
+    db: DbSession,
     current_user: CurrentActiveUser,
 ) -> ApiKeysResponse:
     try:
@@ -32,7 +32,7 @@ async def get_api_keys_route(
 async def create_api_key_route(
     req: ApiKeyCreate,
     current_user: CurrentActiveUser,
-    db: AsyncDbSession,
+    db: DbSession,
 ) -> UnmaskedApiKeyRead:
     try:
         user_id = current_user.id
@@ -44,7 +44,7 @@ async def create_api_key_route(
 @router.delete("/{api_key_id}", dependencies=[Depends(auth_utils.get_current_active_user)])
 async def delete_api_key_route(
     api_key_id: UUID,
-    db: AsyncDbSession,
+    db: DbSession,
 ):
     try:
         await delete_api_key(db, api_key_id)
@@ -58,7 +58,7 @@ async def save_store_api_key(
     api_key_request: ApiKeyCreateRequest,
     response: Response,
     current_user: CurrentActiveUser,
-    db: AsyncDbSession,
+    db: DbSession,
 ):
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings

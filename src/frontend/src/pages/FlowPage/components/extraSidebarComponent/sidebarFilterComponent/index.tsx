@@ -1,5 +1,5 @@
-import ForwardedIconComponent from "@/components/genericIconComponent";
-import ShadTooltip from "@/components/shadTooltipComponent";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 
 export function SidebarFilterComponent({
@@ -13,6 +13,8 @@ export function SidebarFilterComponent({
   color: string;
   resetFilters: () => void;
 }) {
+  const tooltips = type.split("\n");
+  const plural = tooltips.length > 1 ? "s" : "";
   return (
     <div
       className={`mb-0.5 flex w-full items-center justify-between rounded border p-2 text-sm text-foreground`}
@@ -26,9 +28,10 @@ export function SidebarFilterComponent({
           className={`h-4 w-4 shrink-0 stroke-2`}
         />
         <div className="flex flex-1">
-          {isInput ? "Input" : "Output"}:{" "}
+          {isInput ? "Input" : "Output"}
+          {plural}:{" "}
           <div className="w-[5.7rem] flex-1 overflow-hidden truncate pl-1">
-            {type}
+            {tooltips.join(", ")}
           </div>
         </div>
       </div>

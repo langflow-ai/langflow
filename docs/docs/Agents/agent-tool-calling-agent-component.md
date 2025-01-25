@@ -1,6 +1,5 @@
 ---
 title: Create a problem-solving agent
-sidebar_position: 2
 slug: /agents-tool-calling-agent-component
 ---
 
@@ -150,18 +149,18 @@ Current Date and Time: I can retrieve the current date and time in various time 
 
 ## Make any component a tool
 
-These components support **Tool Mode**:
+If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs, and connect the new **Toolset** output to the agent's **Tools** input.
 
-* **URL**
-* **API request**
-* **Calculator**
-* **Current date**
+Langflow supports **Tool Mode** for the following data types:
 
-If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to the component's code under `MessageTextInput`.
+* `DataInput`
+* `DataFrameInput`
+* `PromptInput`
+* `MessageTextInput`
+* `MultilineInput`
+* `DropdownInput`
 
-For example, in the [components as tools](#components-as-tools) example above, `tool_mode=True,` is added so the custom component can be used as a tool.
-
-**Tool Mode** supports the `MessageTextInput` type.
+For example, the [components as tools](#components-as-tools) example above adds `tool_mode=True` to the `MessageTextInput` input so the custom component can be used as a tool.
 
 ```python
 inputs = [

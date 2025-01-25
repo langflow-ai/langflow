@@ -94,15 +94,9 @@ class AstraDBCQLToolComponent(LCToolComponent):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
         astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
         key = []
+
         # Partition keys are mandatory
-        for k in self.partition_keys:
-            if k in args:
-                key.append(args[k])
-            elif self.static_filters[k] is not None:
-                key.append(self.static_filters[k])
-            else:
-                # TO-DO: Raise error - Missing information
-                key.append("none")
+        key = [self.partition_keys[k] for k in self.partition_keys]
 
         # Clustering keys are optional
         for k in self.clustering_keys:
@@ -111,10 +105,10 @@ class AstraDBCQLToolComponent(LCToolComponent):
             elif self.static_filters[k] is not None:
                 key.append(self.static_filters[k])
 
-        url = f'{astra_url}{"/".join(key)}?page-size={self.number_of_results}'
+        url = f"{astra_url}{'/'.join(key)}?page-size={self.number_of_results}"
 
         if self.projection_fields != "*":
-            url += f'&fields={urllib.parse.quote(self.projection_fields.replace(" ", ""))}'
+            url += f"&fields={urllib.parse.quote(self.projection_fields.replace(' ', ''))}"
 
         res = requests.request("GET", url=url, headers=headers, timeout=10)
 

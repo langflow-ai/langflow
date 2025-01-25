@@ -1,6 +1,5 @@
 ---
 title: Run Langflow in backend-only mode
-sidebar_position: 4
 slug: /configuration-backend-only
 ---
 
@@ -22,7 +21,7 @@ However, you can use these same instructions as guidelines for using any type of
 
 ### Prerequisites
 
-- [Langflow is installed](/getting-started-installation)
+- [Langflow is installed](/get-started-installation)
 - [You have an OpenAI API key](https://platform.openai.com/)
 - [You have a Langflow Basic Prompting flow](/starter-projects-basic-prompting)
 

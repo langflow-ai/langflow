@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import os
 import platform
 import signal
 import socket
@@ -26,8 +27,8 @@ from sqlmodel import select
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
 from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
-from langflow.services.database.utils import async_session_getter
-from langflow.services.deps import async_session_scope, get_db_service, get_settings_service
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -167,6 +168,11 @@ def run(
     set_var_for_macos_issue()
     settings_service = get_settings_service()
 
+    for key, value in os.environ.items():
+        new_key = key.replace("LANGFLOW_", "")
+        if hasattr(settings_service.auth_settings, new_key):
+            setattr(settings_service.auth_settings, new_key, value)
+
     frame = inspect.currentframe()
     valid_args: list = []
     values: dict = {}
@@ -179,6 +185,8 @@ def run(
             settings_service.settings.update_settings(components_path=components_path)
         elif hasattr(settings_service.settings, arg):
             settings_service.set(arg, values[arg])
+        elif hasattr(settings_service.auth_settings, arg):
+            settings_service.auth_settings.set(arg, values[arg])
         logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
     host = settings_service.settings.host
@@ -423,7 +431,7 @@ def superuser(
 
     async def _create_superuser():
         await initialize_services()
-        async with async_session_getter(db_service) as session:
+        async with session_getter(db_service) as session:
             from langflow.services.auth.utils import create_super_user
 
             if await create_super_user(db=session, username=username, password=password):
@@ -485,6 +493,15 @@ def copy_db() -> None:
         typer.echo("Pre-release database not found in the cache directory.")
 
 
+async def _migration(*, test: bool, fix: bool) -> None:
+    await initialize_services(fix_migration=fix)
+    db_service = get_db_service()
+    if not test:
+        await db_service.run_migrations()
+    results = await db_service.run_migrations_test()
+    display_results(results)
+
+
 @app.command()
 def migration(
     test: bool = typer.Option(default=True, help="Run migrations in test mode."),  # noqa: FBT001
@@ -499,12 +516,7 @@ def migration(
     ):
         raise typer.Abort
 
-    asyncio.run(initialize_services(fix_migration=fix))
-    db_service = get_db_service()
-    if not test:
-        db_service.run_migrations()
-    results = db_service.run_migrations_test()
-    display_results(results)
+    asyncio.run(_migration(test=test, fix=fix))
 
 
 @app.command()
@@ -529,7 +541,7 @@ def api_key(
             typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
             return None
 
-        async with async_session_scope() as session:
+        async with session_scope() as session:
             from langflow.services.database.models.user.model import User
 
             stmt = select(User).where(User.username == DEFAULT_SUPERUSER)

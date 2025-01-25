@@ -12,18 +12,12 @@ import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
-from fastapi_pagination import Page, Params, add_pagination
+from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import (
-    AsyncDbSession,
-    CurrentActiveUser,
-    cascade_delete_flow,
-    remove_api_keys,
-    validate_is_component,
-)
+from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
@@ -31,8 +25,6 @@ from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.transactions.crud import get_transactions_by_flow_id
-from langflow.services.database.models.vertex_builds.crud import get_vertex_builds_by_flow_id
 from langflow.services.deps import get_settings_service
 from langflow.services.settings.service import SettingsService
 
@@ -124,7 +116,7 @@ async def _new_flow(
 @router.post("/", response_model=FlowRead, status_code=201)
 async def create_flow(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
 ):
@@ -154,7 +146,7 @@ async def create_flow(
 async def read_flows(
     *,
     current_user: CurrentActiveUser,
-    session: AsyncDbSession,
+    session: DbSession,
     remove_example_flows: bool = False,
     components_only: bool = False,
     get_all: bool = True,
@@ -221,10 +213,7 @@ async def read_flows(
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
             if header_flows:
-                return [
-                    {"id": flow.id, "name": flow.name, "folder_id": flow.folder_id, "is_component": flow.is_component}
-                    for flow in flows
-                ]
+                return [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
             return flows
 
         stmt = stmt.where(Flow.folder_id == folder_id)
@@ -255,7 +244,7 @@ async def _read_flow(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
@@ -268,7 +257,7 @@ async def read_flow(
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
 async def update_flow(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     flow_id: UUID,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
@@ -282,18 +271,18 @@ async def update_flow(
             user_id=current_user.id,
             settings_service=settings_service,
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
 
-    if not db_flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
+        if not db_flow:
+            raise HTTPException(status_code=404, detail="Flow not found")
 
-    try:
-        flow_data = flow.model_dump(exclude_unset=True)
+        update_data = flow.model_dump(exclude_unset=True, exclude_none=True)
+
         if settings_service.settings.remove_api_keys:
-            flow_data = remove_api_keys(flow_data)
-        for key, value in flow_data.items():
+            update_data = remove_api_keys(update_data)
+
+        for key, value in update_data.items():
             setattr(db_flow, key, value)
+
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
@@ -302,13 +291,12 @@ async def update_flow(
             default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
             if default_folder:
                 db_flow.folder_id = default_folder.id
+
         session.add(db_flow)
         await session.commit()
         await session.refresh(db_flow)
+
     except Exception as e:
-        # If it is a validation error, return the error message
-        if hasattr(e, "errors"):
-            raise HTTPException(status_code=400, detail=str(e)) from e
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
             columns = str(e).split("UNIQUE constraint failed: ")[1].split(".")[1].split("\n")[0]
@@ -316,10 +304,12 @@ async def update_flow(
             # or UNIQUE constraint failed: flow.name
             # if the column has id in it, we want the other column
             column = columns.split(",")[1] if "id" in columns.split(",")[0] else columns.split(",")[0]
-
             raise HTTPException(
                 status_code=400, detail=f"{column.capitalize().replace('_', ' ')} must be unique"
             ) from e
+
+        if hasattr(e, "status_code"):
+            raise HTTPException(status_code=e.status_code, detail=str(e)) from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return db_flow
@@ -328,7 +318,7 @@ async def update_flow(
 @router.delete("/{flow_id}", status_code=200)
 async def delete_flow(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     flow_id: UUID,
     current_user: CurrentActiveUser,
 ):
@@ -349,7 +339,7 @@ async def delete_flow(
 @router.post("/batch/", response_model=list[FlowRead], status_code=201)
 async def create_flows(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     flow_list: FlowListCreate,
     current_user: CurrentActiveUser,
 ):
@@ -369,7 +359,7 @@ async def create_flows(
 @router.post("/upload/", response_model=list[FlowRead], status_code=201)
 async def upload_file(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
     file: Annotated[UploadFile, File(...)],
     current_user: CurrentActiveUser,
     folder_id: UUID | None = None,
@@ -414,7 +404,7 @@ async def upload_file(
 async def delete_multiple_flows(
     flow_ids: list[UUID],
     user: CurrentActiveUser,
-    db: AsyncDbSession,
+    db: DbSession,
 ):
     """Delete multiple flows by their IDs.
 
@@ -432,15 +422,7 @@ async def delete_multiple_flows(
             await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
         ).all()
         for flow in flows_to_delete:
-            transactions_to_delete = await get_transactions_by_flow_id(db, flow.id)
-            for transaction in transactions_to_delete:
-                await db.delete(transaction)
-
-            builds_to_delete = await get_vertex_builds_by_flow_id(db, flow.id)
-            for build in builds_to_delete:
-                await db.delete(build)
-
-            await db.delete(flow)
+            await cascade_delete_flow(db, flow.id)
 
         await db.commit()
         return {"deleted": len(flows_to_delete)}
@@ -452,7 +434,7 @@ async def delete_multiple_flows(
 async def download_multiple_file(
     flow_ids: list[UUID],
     user: CurrentActiveUser,
-    db: AsyncDbSession,
+    db: DbSession,
 ):
     """Download all flows as a zip file."""
     flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
@@ -493,7 +475,7 @@ async def download_multiple_file(
 @router.get("/basic_examples/", response_model=list[FlowRead], status_code=200)
 async def read_basic_examples(
     *,
-    session: AsyncDbSession,
+    session: DbSession,
 ):
     """Retrieve a list of basic example flows.
 
@@ -515,6 +497,3 @@ async def read_basic_examples(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-add_pagination(router)

@@ -1,24 +1,10 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readFileSync } from "fs";
+import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test("user must be able outdated message on error", async ({ page }) => {
-  await page.goto("/");
+  await awaitBootstrapTest(page);
 
-  let modalCount = 0;
-  try {
-    const modalTitleElement = await page?.getByTestId("modal-title");
-    if (modalTitleElement) {
-      modalCount = await modalTitleElement.count();
-    }
-  } catch (error) {
-    modalCount = 0;
-  }
-
-  while (modalCount === 0) {
-    await page.getByText("New Flow", { exact: true }).click();
-    await page.waitForTimeout(3000);
-    modalCount = await page.getByTestId("modal-title")?.count();
-  }
   await page.locator("span").filter({ hasText: "Close" }).first().click();
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
@@ -41,7 +27,9 @@ test("user must be able outdated message on error", async ({ page }) => {
     dataTransfer,
   });
 
-  await page.waitForTimeout(3000);
+  await page.waitForSelector("data-testid=list-card", {
+    timeout: 3000,
+  });
 
   await page.getByTestId("list-card").first().click();
 
@@ -51,8 +39,7 @@ test("user must be able outdated message on error", async ({ page }) => {
 
   await page.getByTestId("button_run_chat output").click();
 
-  await page.waitForSelector("text=there are outdated components in the flow", {
-    timeout: 30000,
-    state: "visible",
-  });
+  await expect(
+    page.getByText("there are outdated components in the flow"),
+  ).toBeVisible({ timeout: 30000 });
 });

@@ -1,4 +1,5 @@
 import pytest
+from aiofile import async_open
 from langflow.components.inputs import ChatInput, TextInputComponent
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
@@ -29,17 +30,15 @@ class TestChatInput(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.15", "module": "inputs", "file_name": "ChatInput"},
-            {"version": "1.0.16", "module": "inputs", "file_name": "ChatInput"},
-            {"version": "1.0.17", "module": "inputs", "file_name": "ChatInput"},
-            {"version": "1.0.18", "module": "inputs", "file_name": "ChatInput"},
             {"version": "1.0.19", "module": "inputs", "file_name": "ChatInput"},
+            {"version": "1.1.0", "module": "inputs", "file_name": "chat"},
+            {"version": "1.1.1", "module": "inputs", "file_name": "chat"},
         ]
 
-    def test_message_response(self, component_class, default_kwargs):
+    async def test_message_response(self, component_class, default_kwargs):
         """Test that the message_response method returns a valid Message object."""
         component = component_class(**default_kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert message.text == default_kwargs["input_value"]
@@ -51,6 +50,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "background_color": default_kwargs["background_color"],
             "text_color": default_kwargs["text_color"],
             "icon": default_kwargs["chat_icon"],
+            "positive_feedback": None,
             "edited": False,
             "source": {"id": None, "display_name": None, "source": None},
             "allow_markdown": False,
@@ -58,7 +58,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "targets": [],
         }
 
-    def test_message_response_ai_sender(self, component_class):
+    async def test_message_response_ai_sender(self, component_class):
         """Test message response with AI sender type."""
         kwargs = {
             "input_value": "I am an AI assistant",
@@ -67,13 +67,13 @@ class TestChatInput(ComponentTestBaseWithClient):
             "session_id": "test_session_123",
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert message.sender == MESSAGE_SENDER_AI
         assert message.sender_name == "AI Assistant"
 
-    def test_message_response_without_session(self, component_class):
+    async def test_message_response_without_session(self, component_class):
         """Test message response without session ID."""
         kwargs = {
             "input_value": "Test message",
@@ -82,16 +82,17 @@ class TestChatInput(ComponentTestBaseWithClient):
             "session_id": "",  # Empty session ID
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert message.session_id == ""
 
-    def test_message_response_with_files(self, component_class, tmp_path):
+    async def test_message_response_with_files(self, component_class, tmp_path):
         """Test message response with file attachments."""
         # Create a temporary test file
         test_file = tmp_path / "test.txt"
-        test_file.write_text("Test content")
+        async with async_open(test_file, "w") as f:
+            await f.write("Test content")
 
         kwargs = {
             "input_value": "Message with file",
@@ -101,13 +102,13 @@ class TestChatInput(ComponentTestBaseWithClient):
             "files": [str(test_file)],
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         assert len(message.files) == 1
         assert message.files[0] == str(test_file)
 
-    def test_message_storage_disabled(self, component_class):
+    async def test_message_storage_disabled(self, component_class):
         """Test message response when storage is disabled."""
         kwargs = {
             "input_value": "Test message",
@@ -117,7 +118,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "session_id": "test_session_123",
         }
         component = component_class(**kwargs)
-        message = component.message_response()
+        message = await component.message_response()
 
         assert isinstance(message, Message)
         # The message should still be created but not stored
@@ -139,9 +140,7 @@ class TestTextInputComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.15", "module": "inputs", "file_name": "TextInput"},
-            {"version": "1.0.16", "module": "inputs", "file_name": "TextInput"},
-            {"version": "1.0.17", "module": "inputs", "file_name": "TextInput"},
-            {"version": "1.0.18", "module": "inputs", "file_name": "TextInput"},
             {"version": "1.0.19", "module": "inputs", "file_name": "TextInput"},
+            {"version": "1.1.0", "module": "inputs", "file_name": "text"},
+            {"version": "1.1.1", "module": "inputs", "file_name": "text"},
         ]

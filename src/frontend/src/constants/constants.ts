@@ -104,7 +104,7 @@ export const EXPORT_DIALOG_SUBTITLE = "Export flow as JSON file.";
  * @constant
  */
 export const SETTINGS_DIALOG_SUBTITLE =
-  "Customize workspace settings and preferences.";
+  "Customize your flow details and settings.";
 
 /**
  * The base text for subtitle of Flow Logs (Menubar)
@@ -629,7 +629,7 @@ export const TIMEOUT_ERROR_DESCRIPION = "Server is busy.";
 export const SIGN_UP_SUCCESS = "Account created! Await admin activation. ";
 
 export const API_PAGE_PARAGRAPH =
-  "Your secret API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
+  "Your secret Langflow API keys are listed below. Do not share your API key with others, or expose it in the browser or other client-side code.";
 
 export const API_PAGE_USER_KEYS =
   "This user does not have any keys assigned at the moment.";
@@ -686,8 +686,8 @@ export const TOOLTIP_OUTDATED_NODE =
 
 export const CHAT_SECOND_INITIAL_TEXT = "to inspect previous messages.";
 
-export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Show hidden outputs";
-export const TOOLTIP_HIDDEN_OUTPUTS = "Hide outputs";
+export const TOOLTIP_OPEN_HIDDEN_OUTPUTS = "Expand hidden outputs";
+export const TOOLTIP_HIDDEN_OUTPUTS = "Collapse hidden outputs";
 
 export const ZERO_NOTIFICATIONS = "No new notifications";
 
@@ -740,6 +740,10 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "Notion",
   "AssemblyAI",
   "assemblyai",
+  "LangWatch",
+  "langwatch",
+  "Youtube",
+  "youtube",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
@@ -760,104 +764,144 @@ export const IS_MAC = navigator.userAgent.toUpperCase().includes("MAC");
 
 export const defaultShortcuts = [
   {
+    display_name: "Controls",
     name: "Advanced Settings",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + A`,
+    shortcut: "mod+shift+a",
   },
   {
+    display_name: "Search Components on Sidebar",
+    name: "Search Components Sidebar",
+    shortcut: "/",
+  },
+  {
+    display_name: "Minimize",
     name: "Minimize",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Q`,
+    shortcut: "mod+.",
   },
   {
+    display_name: "Code",
     name: "Code",
-    shortcut: `Space`,
+    shortcut: "space",
   },
   {
+    display_name: "Copy",
     name: "Copy",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + C`,
+    shortcut: "mod+c",
   },
   {
+    display_name: "Duplicate",
     name: "Duplicate",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + D`,
+    shortcut: "mod+d",
   },
   {
+    display_name: "Component Share",
     name: "Component Share",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + S`,
+    shortcut: "mod+shift+s",
   },
   {
+    display_name: "Docs",
     name: "Docs",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + D`,
+    shortcut: "mod+shift+d",
   },
   {
+    display_name: "Changes Save",
     name: "Changes Save",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + S`,
+    shortcut: "mod+s",
   },
   {
+    display_name: "Save Component",
     name: "Save Component",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Alt + S`,
+    shortcut: "mod+alt+s",
   },
   {
+    display_name: "Delete",
     name: "Delete",
-    shortcut: "Backspace",
+    shortcut: "backspace",
   },
   {
+    display_name: "Open playground",
     name: "Open playground",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + K`,
+    shortcut: "mod+k",
   },
   {
+    display_name: "Undo",
     name: "Undo",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Z`,
+    shortcut: "mod+z",
   },
   {
+    display_name: "Redo",
     name: "Redo",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Y`,
+    shortcut: "mod+y",
   },
   {
+    display_name: "Redo (alternative)",
+    name: "Redo Alt",
+    shortcut: "mod+shift+z",
+  },
+  {
+    display_name: "Group",
     name: "Group",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + G`,
+    shortcut: "mod+g",
   },
   {
+    display_name: "Cut",
     name: "Cut",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + X`,
+    shortcut: "mod+x",
   },
   {
+    display_name: "Paste",
     name: "Paste",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + V`,
+    shortcut: "mod+v",
   },
   {
+    display_name: "API",
     name: "API",
-    shortcut: `R`,
+    shortcut: "r",
   },
   {
+    display_name: "Download",
     name: "Download",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + J`,
+    shortcut: "mod+j",
   },
   {
+    display_name: "Update",
     name: "Update",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + U`,
+    shortcut: "mod+u",
   },
   {
+    display_name: "Freeze",
     name: "Freeze",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + F`,
+    shortcut: "mod+f",
   },
   {
+    display_name: "Freeze Path",
     name: "Freeze Path",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + F`,
+    shortcut: "mod+shift+f",
   },
   {
+    display_name: "Flow Share",
     name: "Flow Share",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + B`,
+    shortcut: "mod+shift+b",
   },
   {
+    display_name: "Play",
     name: "Play",
-    shortcut: `P`,
+    shortcut: "p",
   },
   {
+    display_name: "Output Inspection",
     name: "Output Inspection",
-    shortcut: `O`,
+    shortcut: "o",
   },
   {
+    display_name: "Tool Mode",
     name: "Tool Mode",
-    shortcut: `${IS_MAC ? "Cmd" : "Ctrl"} + Shift + M`,
+    shortcut: "mod+shift+m",
+  },
+  {
+    display_name: "Toggle Sidebar",
+    name: "Toggle Sidebar",
+    shortcut: "mod+b",
   },
 ];
 
@@ -916,7 +960,7 @@ export const TEXT_FIELD_TYPES: string[] = ["str", "SecretStr"];
 export const NODE_WIDTH = 384;
 export const NODE_HEIGHT = NODE_WIDTH * 3;
 
-export const SHORTCUT_KEYS = ["cmd", "ctrl", "alt", "shift"];
+export const SHORTCUT_KEYS = ["cmd", "ctrl", "mod", "alt", "shift"];
 
 export const SERVER_HEALTH_INTERVAL = 10000;
 export const REFETCH_SERVER_HEALTH_INTERVAL = 20000;
@@ -943,13 +987,13 @@ export const maxSizeFilesInBytes = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_TEXT_LENGTH = 99999;
 
 export const SEARCH_TABS = ["All", "Flows", "Components"];
-export const PAGINATION_SIZE = 10;
+export const PAGINATION_SIZE = 12;
 export const PAGINATION_PAGE = 1;
 
 export const STORE_PAGINATION_SIZE = 12;
 export const STORE_PAGINATION_PAGE = 1;
 
-export const PAGINATION_ROWS_COUNT = [10, 20, 50, 100];
+export const PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 
 export const GRADIENT_CLASS =
@@ -957,7 +1001,7 @@ export const GRADIENT_CLASS =
 
 export const RECEIVING_INPUT_VALUE = "Receiving input";
 
-export const ICON_STROKE_WIDTH = 1.25;
+export const ICON_STROKE_WIDTH = 1.5;
 
 export const DEFAULT_PLACEHOLDER = "Type something...";
 

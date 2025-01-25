@@ -1,4 +1,4 @@
-import TableComponent from "@/components/tableComponent";
+import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { APIClassType } from "@/types/api";
 import { ColDef } from "ag-grid-community";
 import { useMemo } from "react";
@@ -34,6 +34,7 @@ export function EditNodeComponent({
         <div className="h-full">
           {nodeClass && (
             <TableComponent
+              tableOptions={{ hide_options: true, block_hide: true }}
               domLayout={autoHeight ? "autoHeight" : undefined}
               key={"editNode"}
               tooltipShowDelay={0.5}

@@ -1,6 +1,8 @@
 import asyncio
+import time
 from typing import Any
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from langflow.custom.custom_component.component import Component
@@ -8,13 +10,13 @@ from langflow.events.event_manager import EventManager
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
 from langflow.schema.message import Message
-from langflow.schema.properties import Source
+from langflow.schema.properties import Properties, Source
 from langflow.template.field.base import Output
 
 
-async def create_event_queue():
-    """Create a queue for testing events."""
-    return asyncio.Queue()
+def blocking_cb(manager, event_type, data):
+    time.sleep(0.01)
+    manager.send_event(event_type=event_type, data=data)
 
 
 class ComponentForTesting(Component):
@@ -36,23 +38,27 @@ class ComponentForTesting(Component):
 async def test_component_message_sending():
     """Test component's message sending functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
+
+    event_manager.register_event("on_message", "message", callback=blocking_cb)
 
     # Create component
     component = ComponentForTesting()
     component.set_event_manager(event_manager)
 
     # Create a message
+    properties = Properties()
     message = Message(
         sender="test_sender",
         session_id="test_session",
         sender_name="test_sender_name",
         content_blocks=[ContentBlock(title="Test Block", contents=[TextContent(type="text", text="Test message")])],
+        properties=properties,
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message was sent
     assert sent_message.id is not None
@@ -64,7 +70,7 @@ async def test_component_message_sending():
 async def test_component_tool_output():
     """Test component's tool output functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -72,6 +78,7 @@ async def test_component_tool_output():
     component.set_event_manager(event_manager)
 
     # Create a message with tool content
+    properties = Properties()
     message = Message(
         sender="test_sender",
         session_id="test_session",
@@ -82,10 +89,11 @@ async def test_component_tool_output():
                 contents=[ToolContent(type="tool_use", name="test_tool", tool_input={"query": "test input"})],
             )
         ],
+        properties=properties,
     )
 
     # Send the message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message was stored and processed
     assert sent_message.id is not None
@@ -97,7 +105,7 @@ async def test_component_tool_output():
 async def test_component_error_handling():
     """Test component's error handling."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -112,8 +120,7 @@ async def test_component_error_handling():
         msg = "Test error"
         raise CustomError(msg)
     except CustomError as e:
-        sent_message = await asyncio.to_thread(
-            component.send_error,
+        sent_message = await component.send_error(
             exception=e,
             session_id="test_session",
             trace_name="test_trace",
@@ -129,7 +136,7 @@ async def test_component_error_handling():
 async def test_component_build_results():
     """Test component's build_results functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -161,7 +168,7 @@ async def test_component_build_results():
 async def test_component_logging():
     """Test component's logging functionality."""
     # Create event queue and manager
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
 
     # Create component
@@ -195,14 +202,15 @@ async def test_component_logging():
 @pytest.mark.usefixtures("client")
 async def test_component_streaming_message():
     """Test component's streaming message functionality."""
-    queue = await create_event_queue()
+    queue = asyncio.Queue()
     event_manager = EventManager(queue)
-    event_manager.register_event("on_token", "token")
+
+    event_manager.register_event("on_token", "token", blocking_cb)
 
     # Create a proper mock vertex with graph and flow_id
     vertex = MagicMock()
     mock_graph = MagicMock()
-    mock_graph.flow_id = "12345678-1234-5678-1234-567812345678"  # Valid UUID string
+    mock_graph.flow_id = str(uuid4())
     vertex.graph = mock_graph
 
     component = ComponentForTesting(_vertex=vertex)
@@ -219,15 +227,17 @@ async def test_component_streaming_message():
             yield StreamChunk(chunk)
 
     # Create a streaming message
+    properties = Properties()
     message = Message(
         sender="test_sender",
         session_id="test_session",
         sender_name="test_sender_name",
         text=text_generator(),
+        properties=properties,
     )
 
     # Send the streaming message
-    sent_message = await asyncio.to_thread(component.send_message, message)
+    sent_message = await component.send_message(message)
 
     # Verify the message
     assert sent_message.id is not None
