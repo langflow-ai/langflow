@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from loguru import logger
 from sqlmodel import col, delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -42,6 +43,9 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
     Raises:
         IntegrityError: If there is a database integrity error
     """
+    if not transaction.flow_id:
+        logger.debug("Transaction flow_id is None")
+        return None
     table = TransactionTable(**transaction.model_dump())
 
     try:
@@ -64,7 +68,7 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         await db.exec(delete_older)
         await db.commit()
         await db.refresh(table)
-
+        logger.debug(f"Logged transaction: {table.id}")
     except Exception:
         await db.rollback()
         raise
