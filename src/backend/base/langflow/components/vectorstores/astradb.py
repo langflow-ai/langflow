@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -435,15 +436,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def _initialize_database_options(self):
         try:
             return [
-                {"name": name, "collections": info["collections"]} for name, info in self.get_database_list().items()
+                {"name": name, "collections": info["collections"]} for name, info in self._get_database_list().items()
             ]
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching databases: {e}")
-
             return []
 
     def _initialize_collection_options(self):
-        database = self.get_database_object()
+        database = self._get_database_object()
         if database is None:
             return []
 
@@ -470,7 +470,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ]
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching collections: {e}")
-
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
@@ -500,19 +499,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["api_endpoint"]["options"] = []
                 build_config["api_endpoint"]["options_metadata"] = []
 
-            # Get list of regions for a given cloud provider
-            """
-            cloud_provider = (
-                build_config["api_endpoint"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["cloud_provider"][
-                    "value"
-                ]
-                or "Amazon Web Services"
-            )
-            build_config["api_endpoint"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
-                "options"
-            ] = self.map_cloud_providers()[cloud_provider]["regions"]
-            """
-
         # Define variables for common collection conditions a user may experience
         no_collections = not build_config["collection_name"]["options"]
         different_collection = field_value != build_config["collection_name"]["value"]
@@ -531,7 +517,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
             ]
 
-        # Hide embedding model option if opriona_metadata provider is not null
+        # Hide embedding model option if provider is not null
         if field_name == "collection_name" and build_config["collection_name"]["options"]:
             # Find location of the name in the options list
             index_of_name = build_config["collection_name"]["options"].index(field_value)
@@ -543,36 +529,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 build_config["embedding_model"]["advanced"] = False
                 build_config["embedding_choice"]["value"] = "Embedding Model"
-
-        # For the final step, get the list of vectorize providers
-        """
-        vectorize_providers = self.get_vectorize_providers()
-        if not vectorize_providers:
-            return build_config
-
-        # Allow the user to see the embedding provider options
-        provider_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_provider"
-        ]["options"]
-        if not provider_options:
-            # If the collection is set, allow user to see embedding options
-            build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "embedding_generation_provider"
-            ]["options"] = ["Bring your own", "Nvidia", *[key for key in vectorize_providers if key != "Nvidia"]]
-
-        # And allow the user to see the models based on a selected provider
-        model_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_model"
-        ]["options"]
-        if not model_options:
-            embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "embedding_generation_provider"
-            ]["value"]
-
-            build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "embedding_generation_model"
-            ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
-        """
 
         return build_config
 
@@ -745,3 +701,25 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    @lru_cache(maxsize=128)
+    def _get_database_list(self):
+        try:
+            return self.get_database_list()
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error fetching databases: {e}")
+            return {}
+
+    @lru_cache(maxsize=128)
+    def _get_database_object(self):
+        return self.get_database_object()
+
+    @lru_cache(maxsize=128)
+    def _get_build_config(self, api_endpoint, collection_name):
+        build_config = {
+            "api_endpoint": {"name": api_endpoint, "display_name": "Database", "options": [], "options_metadata": []},
+            "collection_name": {"value": collection_name, "options": [], "options_metadata": []},
+            "embedding_model": {"advanced": False},
+            "embedding_choice": {"value": "Embedding Model"},
+        }
+        return build_config
