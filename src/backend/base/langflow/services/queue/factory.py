@@ -1,4 +1,5 @@
-from langflow.services.base import Service, ServiceFactory
+from langflow.services.base import Service
+from langflow.services.factory import ServiceFactory
 from langflow.services.queue.service import QueueService
 
 
