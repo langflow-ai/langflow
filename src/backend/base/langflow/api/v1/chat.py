@@ -149,48 +149,31 @@ async def retrieve_vertices_order(
 
 async def create_flow_response(
     queue: asyncio.Queue,
-    client_consumed_queue: asyncio.Queue,
     event_manager: EventManager,
     event_task: asyncio.Task,
 ) -> DisconnectHandlerStreamingResponse:
-    """Create a streaming response for the flow build process.
+    """Create a streaming response for the flow build process."""
 
-    Args:
-        queue: The queue for events
-        client_consumed_queue: The queue for client consumption tracking
-        event_manager: The event manager instance
-        event_task: The task generating events
-
-    Returns:
-        DisconnectHandlerStreamingResponse: A streaming response that handles disconnection
-    """
-
-    async def consume_and_yield(
-        queue: asyncio.Queue, client_consumed_queue: asyncio.Queue
-    ) -> typing.AsyncIterator[str]:
+    async def consume_and_yield() -> typing.AsyncIterator[str]:
         while True:
-            event_id, value, put_time = await queue.get()
-            if value is None:
+            try:
+                event_id, value, put_time = await queue.get()
+                if value is None:
+                    break
+                get_time = time.time()
+                yield value.decode("utf-8")
+                logger.debug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+            except Exception as exc:  # noqa: BLE001
+                logger.exception(f"Error consuming event: {exc}")
                 break
-            get_time = time.time()
-            yield value
-            get_time_yield = time.time()
-            client_consumed_queue.put_nowait(event_id)
-            logger.debug(
-                f"consumed event {event_id} "
-                f"(time in queue, {get_time - put_time:.4f}, "
-                f"client {get_time_yield - get_time:.4f})"
-            )
 
     def on_disconnect() -> None:
         logger.debug("Client disconnected, closing tasks")
-        # Cancel the event generation task
         event_task.cancel()
-        # Signal event manager to stop
         event_manager.on_end(data={})
 
     return DisconnectHandlerStreamingResponse(
-        consume_and_yield(queue, client_consumed_queue),
+        consume_and_yield(),
         media_type="application/x-ndjson",
         on_disconnect=on_disconnect,
     )
@@ -201,7 +184,6 @@ async def generate_flow_events(
     flow_id: uuid.UUID,
     background_tasks: BackgroundTasks,
     event_manager: EventManager,
-    client_consumed_queue: asyncio.Queue,
     inputs: InputValueRequest | None,
     data: FlowDataRequest | None,
     files: list[str] | None,
@@ -408,7 +390,6 @@ async def generate_flow_events(
     async def build_vertices(
         vertex_id: str,
         graph: Graph,
-        client_consumed_queue: asyncio.Queue,
         event_manager: EventManager,
     ) -> None:
         """Build vertices and handle their events.
@@ -437,7 +418,6 @@ async def generate_flow_events(
             raise ValueError(msg) from exc
 
         event_manager.on_end_vertex(data={"build_data": build_data})
-        await client_consumed_queue.get()
 
         if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
             tasks = []
@@ -446,7 +426,6 @@ async def generate_flow_events(
                     build_vertices(
                         next_vertex_id,
                         graph,
-                        client_consumed_queue,
                         event_manager,
                     )
                 )
@@ -469,11 +448,10 @@ async def generate_flow_events(
         raise
 
     event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
-    await client_consumed_queue.get()
 
     tasks = []
     for vertex_id in ids:
-        task = asyncio.create_task(build_vertices(vertex_id, graph, client_consumed_queue, event_manager))
+        task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager))
         tasks.append(task)
     try:
         await asyncio.gather(*tasks)
@@ -495,8 +473,9 @@ async def generate_flow_events(
         event_manager.on_error(data=error_message.data)
         raise
 
+    # Send the end event and signal stream termination
     event_manager.on_end(data={})
-    await event_manager.queue.put((None, None, time.time))
+    await event_manager.queue.put((None, None, time.time()))
 
 
 @router.post("/build/{flow_id}/flow")
@@ -514,18 +493,23 @@ async def build_flow(
     queue_service: Annotated[QueueService, Depends(get_queue_service)],
 ):
     """Build and process a flow, returning a job ID for event polling."""
+    # First verify the flow exists
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        if not flow:
+            raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
     job_id = str(uuid.uuid4())
 
-    # Create queues and event manager for this job
-    main_queue, client_queue, event_manager = queue_service.create_queue(job_id)
+    try:
+        # Create the queue and event manager
+        _, event_manager = queue_service.create_queue(job_id)
 
-    # Create task for event generation
-    event_task = asyncio.create_task(
-        generate_flow_events(
+        # Create the task coroutine with all required arguments
+        task_coro = generate_flow_events(
             flow_id=flow_id,
             background_tasks=background_tasks,
             event_manager=event_manager,
-            client_consumed_queue=client_queue,
             inputs=inputs,
             data=data,
             files=files,
@@ -534,10 +518,13 @@ async def build_flow(
             log_builds=log_builds,
             current_user=current_user,
         )
-    )
 
-    # Store the task
-    queue_service.set_task(job_id, event_task)
+        # Start the task
+        queue_service.start_job(job_id, task_coro)
+
+    except Exception as e:
+        logger.exception("Failed to create queue and start task")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
     return {"job_id": job_id}
 
@@ -549,11 +536,10 @@ async def get_build_events(
 ):
     """Get events for a specific build job."""
     try:
-        main_queue, client_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
+        main_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
 
         return await create_flow_response(
             queue=main_queue,
-            client_consumed_queue=client_queue,
             event_manager=event_manager,
             event_task=event_task,
         )
