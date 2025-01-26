@@ -123,13 +123,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="The environment for the Astra DB API Endpoint.",
             advanced=True,
         ),
-        DropdownInput(
+        StrInput(
             name="api_endpoint",
-            display_name="Database",
-            info="The Database / API endpoint for the Astra DB instance.",
+            display_name="Astra DB API Endpoint",
+            info="The Database / API Endpoint for the Astra DB instance.",
             refresh_button=True,
             real_time_refresh=True,
-            combobox=True,
         ),
         DropdownInput(
             name="collection_name",
@@ -476,7 +475,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Define variables for common database conditions a user may experience
         is_hosted = os.getenv("LANGFLOW_HOST") is not None
-        no_databases = not build_config["api_endpoint"]["options"]
+        no_databases = "options" not in build_config["api_endpoint"] or not build_config["api_endpoint"]["options"]
 
         # Refresh the database name options
         if not is_hosted and (field_name in ["token", "environment"] or no_databases):
@@ -485,7 +484,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             if database_options:
                 # Reset the selected database
-                build_config["api_endpoint"]["name"] = "database"
+                build_config["api_endpoint"]["name"] = "Database"
                 build_config["api_endpoint"]["display_name"] = "Database"
 
                 # If we retrieved options based on the token, show the dropdown
@@ -494,11 +493,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
                 ]
             else:
-                build_config["api_endpoint"]["name"] = "api_endpoint"
+                build_config["api_endpoint"]["value"] = ""
+                build_config["api_endpoint"]["name"] = "API Endpoint"
                 build_config["api_endpoint"]["display_name"] = "Astra DB API Endpoint"
 
-                build_config["api_endpoint"]["options"] = []
-                build_config["api_endpoint"]["options_metadata"] = []
+                # If we didn't retrieve options based on the token, show the text input
+                if "options" in build_config["api_endpoint"]:
+                    del build_config["api_endpoint"]["options"]
 
             # Get list of regions for a given cloud provider
             """
