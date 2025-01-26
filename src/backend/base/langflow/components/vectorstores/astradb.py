@@ -507,23 +507,20 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        # Define variables for common database conditions a user may experience
+        is_hosted = os.getenv("LANGFLOW_HOST") is not None
+        no_databases = not build_config["database_name"]["options"]
+
         # Refresh the database name options
-        if not os.getenv("LANGFLOW_HOST") and (
-            field_name in ["token", "environment"]
-            or (
-                field_name == "database_name"
-                and (
-                    not build_config["database_name"]["options"]
-                    or field_value != build_config["database_name"]["value"]
-                )
-            )
-            or not build_config["database_name"]["options"]
-        ):
-            # Get the list of databases
+        if not is_hosted and (field_name in ["token", "environment"] or no_databases):
+            # Reset the selected database
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
+
+            # Get the list of options we have based on the token provided
             database_options = self._initialize_database_options()
 
+            # If we retrieved options based on the token, show the dropdown
             if database_options:
                 build_config["database_name"]["show"] = True
                 build_config["api_endpoint"]["advanced"] = True
@@ -531,6 +528,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["database_name"]["options_metadata"] = [
                     {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
                 ]
+            # If we did not, show the API endpoint (token scope might be limited)
             else:
                 build_config["database_name"]["show"] = False
                 build_config["api_endpoint"]["advanced"] = False
@@ -548,14 +546,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
             """
 
+        # Define variables for common collection conditions a user may experience
+        no_collections = not build_config["collection_name"]["options"]
+        different_collection = field_value != build_config["collection_name"]["value"]
+
         # Refresh the collection name options
         if field_name in ["database_name", "api_endpoint"] or (
             field_name == "collection_name"
-            and (
-                not build_config["collection_name"]["options"]
-                or field_value != build_config["collection_name"]["value"]
-            )
+            and (no_collections or different_collection)
         ):
+            # Reset the selected collection
+            build_config["collection_name"]["value"] = ""
+
+            # Reload the list of collections and metadata associated
             collection_options = self._initialize_collection_options()
             build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
             build_config["collection_name"]["options_metadata"] = [
