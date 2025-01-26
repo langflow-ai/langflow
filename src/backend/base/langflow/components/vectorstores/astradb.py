@@ -481,7 +481,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if not is_hosted and (field_name in ["token", "environment"] or no_databases):
             # Get the list of options we have based on the token provided
             database_options = self._initialize_database_options()
+            build_config["collection_name"]["options"] = []
 
+            # Scenario #1: We have database options from the provided token
             if database_options:
                 # Reset the selected database
                 build_config["api_endpoint"]["name"] = "Database"
@@ -492,7 +494,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["api_endpoint"]["options_metadata"] = [
                     {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
                 ]
+            # Scenario #2: We have no options from the provided token
             else:
+                # Fallback to an API Endpoint if we couldn't retrieve options
                 build_config["api_endpoint"]["value"] = ""
                 build_config["api_endpoint"]["name"] = "API Endpoint"
                 build_config["api_endpoint"]["display_name"] = "Astra DB API Endpoint"
@@ -538,6 +542,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             index_of_name = build_config["collection_name"]["options"].index(field_value)
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
 
+            # If we were able to determine the Vectorize provider, set it accordingly
             if value_of_provider:
                 build_config["embedding_model"]["advanced"] = True
                 build_config["embedding_choice"]["value"] = "Astra Vectorize"
