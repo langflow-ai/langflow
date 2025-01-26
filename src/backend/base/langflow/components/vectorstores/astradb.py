@@ -123,12 +123,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="The environment for the Astra DB API Endpoint.",
             advanced=True,
         ),
-        StrInput(
+        DropdownInput(
             name="api_endpoint",
-            display_name="Astra DB API Endpoint",
+            display_name="Database",
             info="The Database / API Endpoint for the Astra DB instance.",
+            required=True,
             refresh_button=True,
             real_time_refresh=True,
+            combobox=True,
         ),
         DropdownInput(
             name="collection_name",
@@ -481,7 +483,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if not is_hosted and (field_name in ["token", "environment"] or no_databases):
             # Get the list of options we have based on the token provided
             database_options = self._initialize_database_options()
+
+            # Reset the collection values selected
             build_config["collection_name"]["options"] = []
+            build_config["collection_name"]["options_metadata"] = []
+            build_config["collection_name"]["value"] = ""
 
             # Scenario #1: We have database options from the provided token
             if database_options:
