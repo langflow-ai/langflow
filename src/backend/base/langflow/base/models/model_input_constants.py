@@ -8,6 +8,8 @@ from langflow.components.models.google_generative_ai import GoogleGenerativeAICo
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
+from langflow.components.models.deepseek import DeepSeekModelComponent
+from langflow.components.models.ollama import ChatOllamaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -147,6 +149,17 @@ def _get_amazon_bedrock_inputs_and_fields():
     return amazon_bedrock_inputs, create_input_fields_dict(amazon_bedrock_inputs, "")
 
 
+def _get_deepseek_inputs_and_fields():
+    try:
+        from langflow.components.models.deepseek import DeepSeekModelComponent
+
+        deepseek_inputs = get_filtered_inputs(DeepSeekModelComponent)
+    except ImportError as e:
+        msg = "DeepSeek is not installed. Please install it with `pip install langchain-deepseek`."
+        raise ImportError(msg) from e
+    return deepseek_inputs, create_input_fields_dict(deepseek_inputs, "")
+
+
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
@@ -223,6 +236,17 @@ try:
         "inputs": google_generative_ai_inputs,
         "prefix": "",
         "component_class": GoogleGenerativeAIComponent(),
+    }
+except ImportError:
+    pass
+
+try:
+    deepseek_inputs, deepseek_fields = _get_deepseek_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["DeepSeek"] = {
+        "fields": deepseek_fields,
+        "inputs": deepseek_inputs,
+        "prefix": "",
+        "component_class": DeepSeekModelComponent(),
     }
 except ImportError:
     pass
