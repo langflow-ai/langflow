@@ -169,7 +169,7 @@ class LCAgentComponent(Component):
             )
         except ExceptionWithMessageError as e:
             # Only try to delete the message if it has an id
-            if hasattr(e.agent_message, 'id') and e.agent_message.id:
+            if hasattr(e.agent_message, "id") and e.agent_message.id:
                 await delete_message(id_=e.agent_message.id)
                 await self._send_message_event(e.agent_message, category="remove_message")
             raise

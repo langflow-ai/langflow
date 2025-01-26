@@ -4,12 +4,11 @@ from langflow.base.models.model import LCModelComponent
 from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
+from langflow.components.models.deepseek import DeepSeekModelComponent
 from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
-from langflow.components.models.deepseek import DeepSeekModelComponent
-from langflow.components.models.ollama import ChatOllamaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
