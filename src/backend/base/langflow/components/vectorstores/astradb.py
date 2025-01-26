@@ -552,8 +552,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Refresh the collection name options
         if field_name in ["database_name", "api_endpoint"] or (
-            field_name == "collection_name"
-            and (no_collections or different_collection)
+            field_name == "collection_name" and (no_collections or different_collection)
         ):
             # Reset the selected collection
             build_config["collection_name"]["value"] = ""
