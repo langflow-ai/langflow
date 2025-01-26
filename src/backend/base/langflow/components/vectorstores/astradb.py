@@ -123,22 +123,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             info="The environment for the Astra DB API Endpoint.",
             advanced=True,
         ),
-        StrInput(
-            name="api_endpoint",
-            display_name="Astra DB API Endpoint" if os.getenv("LANGFLOW_HOST") is None else "Database",
-            info="The API endpoint for the Astra DB instance.",
-            refresh_button=True,
-            real_time_refresh=True,
-        ),
         DropdownInput(
-            name="database_name",
+            name="api_endpoint",
             display_name="Database",
-            info="Select a database in Astra DB.",
+            info="The Database / API endpoint for the Astra DB instance.",
             refresh_button=True,
             real_time_refresh=True,
-            # dialog_inputs=asdict(NewDatabaseInput()),
             combobox=True,
-            show=False,
         ),
         DropdownInput(
             name="collection_name",
@@ -338,13 +329,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         cls,
         token: str,
         environment: str | None = None,
-        api_endpoint: str | None = None,
         database_name: str | None = None,
     ):
-        # Check if an api endpoint is provided
-        if api_endpoint:
-            return api_endpoint
-
         # Check if the database_name is like a url
         if database_name and database_name.startswith("https://"):
             return database_name
@@ -360,8 +346,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return self.get_api_endpoint_static(
             token=self.token,
             environment=self.environment,
-            api_endpoint=self.api_endpoint,
-            database_name=self.database_name,
+            database_name=self.api_endpoint,
         )
 
     def get_keyspace(self):
@@ -491,39 +476,39 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Define variables for common database conditions a user may experience
         is_hosted = os.getenv("LANGFLOW_HOST") is not None
-        no_databases = not build_config["database_name"]["options"]
+        no_databases = not build_config["api_endpoint"]["options"]
 
         # Refresh the database name options
         if not is_hosted and (field_name in ["token", "environment"] or no_databases):
-            # Reset the selected database
-            build_config["database_name"]["value"] = ""
-            build_config["api_endpoint"]["value"] = ""
-
             # Get the list of options we have based on the token provided
             database_options = self._initialize_database_options()
 
-            # If we retrieved options based on the token, show the dropdown
             if database_options:
-                build_config["database_name"]["show"] = True
-                build_config["api_endpoint"]["advanced"] = True
-                build_config["database_name"]["options"] = [db["name"] for db in database_options]
-                build_config["database_name"]["options_metadata"] = [
+                # Reset the selected database
+                build_config["api_endpoint"]["name"] = "database"
+                build_config["api_endpoint"]["display_name"] = "Database"
+
+                # If we retrieved options based on the token, show the dropdown
+                build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
+                build_config["api_endpoint"]["options_metadata"] = [
                     {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
                 ]
-            # If we did not, show the API endpoint (token scope might be limited)
             else:
-                build_config["database_name"]["show"] = False
-                build_config["api_endpoint"]["advanced"] = False
+                build_config["api_endpoint"]["name"] = "api_endpoint"
+                build_config["api_endpoint"]["display_name"] = "Astra DB API Endpoint"
+
+                build_config["api_endpoint"]["options"] = []
+                build_config["api_endpoint"]["options_metadata"] = []
 
             # Get list of regions for a given cloud provider
             """
             cloud_provider = (
-                build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["cloud_provider"][
+                build_config["api_endpoint"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["cloud_provider"][
                     "value"
                 ]
                 or "Amazon Web Services"
             )
-            build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
+            build_config["api_endpoint"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
                 "options"
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
             """
@@ -533,7 +518,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         different_collection = field_value != build_config["collection_name"]["value"]
 
         # Refresh the collection name options
-        if field_name in ["database_name", "api_endpoint"] or (
+        if field_name == "api_endpoint" or (
             field_name == "collection_name" and (no_collections or different_collection)
         ):
             # Reset the selected collection
