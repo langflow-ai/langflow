@@ -295,26 +295,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def get_database_list_static(cls, token: str, environment: str | None = None):
         client = DataAPIClient(token=token, environment=environment)
 
-        # Get the admin object
+        # Get the admin object and the list of databases
         admin_client = client.get_admin(token=token)
-
-        # Get the list of databases
         db_list = list(admin_client.list_databases())
 
-        # Generate the api endpoint for each database
         db_info_dict = {}
         for db in db_list:
             try:
-                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"
-                db_info_dict[db.info.name] = {
+                db_info = db.info
+                api_endpoint = f"https://{db_info.id}-{db_info.region}.apps.astra.datastax.com"
+                db_client = client.get_database(api_endpoint=api_endpoint, token=token, keyspace=db_info.keyspace)
+
+                # Pre-fetch the collection names in a single call
+                collections = list(db_client.list_collection_names(keyspace=db_info.keyspace))
+
+                db_info_dict[db_info.name] = {
                     "api_endpoint": api_endpoint,
-                    "collections": len(
-                        list(
-                            client.get_database(
-                                api_endpoint=api_endpoint, token=token, keyspace=db.info.keyspace
-                            ).list_collection_names(keyspace=db.info.keyspace)
-                        )
-                    ),
+                    "collections": len(collections),
                 }
             except Exception:  # noqa: BLE001, S110
                 pass
