@@ -127,7 +127,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="api_endpoint",
             display_name="Astra DB API Endpoint" if os.getenv("LANGFLOW_HOST") is None else "Database",
             info="The API endpoint for the Astra DB instance.",
-            advanced=os.getenv("LANGFLOW_HOST") is None,  # TODO: Clean up all examples of these
             refresh_button=True,
             real_time_refresh=True,
         ),
@@ -135,19 +134,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             name="database_name",
             display_name="Database",
             info="Select a database in Astra DB.",
-            required=True,
             refresh_button=True,
             real_time_refresh=True,
             # dialog_inputs=asdict(NewDatabaseInput()),
-            options=[],
-            options_metadata=[
-                {
-                    "collections": 0,
-                }
-            ],
-            value="",
             combobox=True,
-            show=os.getenv("LANGFLOW_HOST") is None,
+            show=False,
         ),
         DropdownInput(
             name="collection_name",
@@ -157,16 +148,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             refresh_button=True,
             real_time_refresh=True,
             # dialog_inputs=asdict(NewCollectionInput()),
-            options=[],
-            options_metadata=[
-                {
-                    "provider": None,
-                    "model": None,
-                    "records": 0,
-                    "icon": "",
-                }
-            ],
-            value="",
+            combobox=True,
         ),
         StrInput(
             name="keyspace",
