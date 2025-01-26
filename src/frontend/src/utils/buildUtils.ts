@@ -158,16 +158,23 @@ export async function buildFlowVertices({
   session,
 }: BuildVerticesParams) {
   const inputs = {};
-  let url = `${BASE_URL_API}build/${flowId}/flow?`;
+  let buildUrl = `${BASE_URL_API}build/${flowId}/flow`;
+  const queryParams = new URLSearchParams();
+
   if (startNodeId) {
-    url = `${url}&start_component_id=${startNodeId}`;
+    queryParams.append("start_component_id", startNodeId);
   }
   if (stopNodeId) {
-    url = `${url}&stop_component_id=${stopNodeId}`;
+    queryParams.append("stop_component_id", stopNodeId);
   }
   if (logBuilds !== undefined) {
-    url = `${url}&log_builds=${logBuilds}`;
+    queryParams.append("log_builds", logBuilds.toString());
   }
+
+  if (queryParams.toString()) {
+    buildUrl = `${buildUrl}?${queryParams.toString()}`;
+  }
+
   const postData = {};
   if (files) {
     postData["files"] = files;
@@ -188,182 +195,246 @@ export async function buildFlowVertices({
     postData["inputs"] = inputs;
   }
 
-  const buildResults: Array<boolean> = [];
+  try {
+    // First, start the build and get the job ID
+    const buildResponse = await fetch(buildUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(postData),
+    });
 
-  const verticesStartTimeMs: Map<string, number> = new Map();
-
-  const onEvent = async (type, data): Promise<boolean> => {
-    const onStartVertices = (ids: Array<string>) => {
-      useFlowStore.getState().updateBuildStatus(ids, BuildStatus.TO_BUILD);
-      if (onBuildStart)
-        onBuildStart(ids.map((id) => ({ id: id, reference: id })));
-      ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
-    };
-
-    switch (type) {
-      case "vertices_sorted": {
-        const verticesToRun = data.to_run;
-        const verticesIds = data.ids;
-
-        onStartVertices(verticesIds);
-
-        let verticesLayers: Array<Array<VertexLayerElementType>> =
-          verticesIds.map((id: string) => {
-            return [{ id: id, reference: id }];
-          });
-
-        useFlowStore.getState().updateVerticesBuild({
-          verticesLayers,
-          verticesIds,
-          verticesToRun,
-        });
-        if (onValidateNodes) {
-          try {
-            onValidateNodes(data.to_run);
-            if (onGetOrderSuccess) onGetOrderSuccess();
-            useFlowStore.getState().setIsBuilding(true);
-            return true;
-          } catch (e) {
-            useFlowStore.getState().setIsBuilding(false);
-            setLockChat && setLockChat(false);
-            return false;
-          }
-        }
-        return true;
+    if (!buildResponse.ok) {
+      if (buildResponse.status === 404) {
+        throw new Error("Flow not found");
       }
-      case "end_vertex": {
-        const buildData = data.build_data;
-        const startTimeMs = verticesStartTimeMs.get(buildData.id);
-        if (startTimeMs) {
-          const delta = Date.now() - startTimeMs;
-          if (delta < MIN_VISUAL_BUILD_TIME_MS) {
-            // this is a visual trick to make the build process look more natural
-            await new Promise((resolve) =>
-              setTimeout(resolve, MIN_VISUAL_BUILD_TIME_MS - delta),
-            );
-          }
-        }
-
-        if (onBuildUpdate) {
-          if (!buildData.valid) {
-            // lots is a dictionary with the key the output field name and the value the log object
-            // logs: { [key: string]: { message: any; type: string }[] };
-            const errorMessages = Object.keys(buildData.data.outputs).flatMap(
-              (key) => {
-                const outputs = buildData.data.outputs[key];
-                if (Array.isArray(outputs)) {
-                  return outputs
-                    .filter((log) => isErrorLogType(log.message))
-                    .map((log) => log.message.errorMessage);
-                }
-                if (!isErrorLogType(outputs.message)) {
-                  return [];
-                }
-                return [outputs.message.errorMessage];
-              },
-            );
-            onBuildError!("Error Building Component", errorMessages, [
-              { id: buildData.id },
-            ]);
-            onBuildUpdate(buildData, BuildStatus.ERROR, "");
-            buildResults.push(false);
-            return false;
-          } else {
-            onBuildUpdate(buildData, BuildStatus.BUILT, "");
-            buildResults.push(true);
-          }
-        }
-
-        await useFlowStore.getState().clearEdgesRunningByNodes();
-
-        if (buildData.next_vertices_ids) {
-          if (isStringArray(buildData.next_vertices_ids)) {
-            useFlowStore
-              .getState()
-              .setCurrentBuildingNodeId(buildData?.next_vertices_ids ?? []);
-            useFlowStore
-              .getState()
-              .updateEdgesRunningByNodes(
-                buildData?.next_vertices_ids ?? [],
-                true,
-              );
-          }
-          onStartVertices(buildData.next_vertices_ids);
-        }
-        return true;
-      }
-      case "add_message": {
-        //adds a message to the messsage table
-        useMessagesStore.getState().addMessage(data);
-        return true;
-      }
-      case "token": {
-        // flushSync and timeout is needed to avoid react batched updates
-        setTimeout(() => {
-          flushSync(() => {
-            useMessagesStore.getState().updateMessageText(data.id, data.chunk);
-          });
-        }, 10);
-        return true;
-      }
-      case "remove_message": {
-        useMessagesStore.getState().removeMessage(data);
-        return true;
-      }
-      case "end": {
-        const allNodesValid = buildResults.every((result) => result);
-        onBuildComplete!(allNodesValid);
-        useFlowStore.getState().setIsBuilding(false);
-        return true;
-      }
-      case "error": {
-        if (data?.category === "error") {
-          useMessagesStore.getState().addMessage(data);
-          if (data?.properties?.source?.id === null) {
-            onBuildError!("Error Building Flow", [data.text]);
-          }
-        }
-        buildResults.push(false);
-        return true;
-      }
-      case "build_start":
-        useFlowStore
-          .getState()
-          .updateBuildStatus([data.id], BuildStatus.BUILDING);
-        break;
-      case "build_end":
-        useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
-        break;
-      default:
-        return true;
+      throw new Error("Error starting build process");
     }
-    return true;
+
+    const { job_id } = await buildResponse.json();
+
+    // Then stream the events
+    const eventsUrl = `${BASE_URL_API}build/${job_id}/events`;
+    const buildResults: Array<boolean> = [];
+    const verticesStartTimeMs: Map<string, number> = new Map();
+
+    return performStreamingRequest({
+      method: "GET",
+      url: eventsUrl,
+      onData: async (event) => {
+        const type = event["event"];
+        const data = event["data"];
+        return await onEvent(type, data, buildResults, verticesStartTimeMs, {
+          onBuildStart,
+          onBuildUpdate,
+          onBuildComplete,
+          onBuildError,
+          onGetOrderSuccess,
+          onValidateNodes,
+          setLockChat,
+        });
+      },
+      onError: (statusCode) => {
+        if (statusCode === 404) {
+          throw new Error("Build job not found");
+        }
+        throw new Error("Error processing build events");
+      },
+      onNetworkError: (error: Error) => {
+        if (error.name === "AbortError") {
+          onBuildStopped && onBuildStopped();
+          return;
+        }
+        onBuildError!("Error Building Component", [
+          "Network error. Please check the connection to the server.",
+        ]);
+      },
+    });
+  } catch (error) {
+    console.error("Build process error:", error);
+    onBuildError!("Error Building Flow", [
+      error.message || "An unexpected error occurred",
+    ]);
+    throw error;
+  }
+}
+
+// Move the event handling logic to a separate function for clarity
+async function onEvent(
+  type: string,
+  data: any,
+  buildResults: boolean[],
+  verticesStartTimeMs: Map<string, number>,
+  callbacks: {
+    onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
+    onBuildComplete?: (allNodesValid: boolean) => void;
+    onBuildError?: (
+      title: string,
+      list: string[],
+      idList?: VertexLayerElementType[],
+    ) => void;
+    onGetOrderSuccess?: () => void;
+    onValidateNodes?: (nodes: string[]) => void;
+    setLockChat?: (lock: boolean) => void;
+  },
+): Promise<boolean> {
+  const {
+    onBuildStart,
+    onBuildUpdate,
+    onBuildComplete,
+    onBuildError,
+    onGetOrderSuccess,
+    onValidateNodes,
+    setLockChat,
+  } = callbacks;
+
+  const onStartVertices = (ids: Array<string>) => {
+    useFlowStore.getState().updateBuildStatus(ids, BuildStatus.TO_BUILD);
+    if (onBuildStart)
+      onBuildStart(ids.map((id) => ({ id: id, reference: id })));
+    ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
   };
-  return performStreamingRequest({
-    method: "POST",
-    url,
-    body: postData,
-    onData: async (event) => {
-      const type = event["event"];
-      const data = event["data"];
-      return await onEvent(type, data);
-    },
-    onError: (statusCode) => {
-      if (statusCode === 404) {
-        throw new Error("Endpoint not available");
+
+  switch (type) {
+    case "vertices_sorted": {
+      const verticesToRun = data.to_run;
+      const verticesIds = data.ids;
+
+      onStartVertices(verticesIds);
+
+      let verticesLayers: Array<Array<VertexLayerElementType>> =
+        verticesIds.map((id: string) => {
+          return [{ id: id, reference: id }];
+        });
+
+      useFlowStore.getState().updateVerticesBuild({
+        verticesLayers,
+        verticesIds,
+        verticesToRun,
+      });
+      if (onValidateNodes) {
+        try {
+          onValidateNodes(data.to_run);
+          if (onGetOrderSuccess) onGetOrderSuccess();
+          useFlowStore.getState().setIsBuilding(true);
+          return true;
+        } catch (e) {
+          useFlowStore.getState().setIsBuilding(false);
+          setLockChat && setLockChat(false);
+          return false;
+        }
       }
-      throw new Error("Error Building Component");
-    },
-    onNetworkError: (error: Error) => {
-      if (error.name === "AbortError") {
-        onBuildStopped && onBuildStopped();
-        return;
+      return true;
+    }
+    case "end_vertex": {
+      const buildData = data.build_data;
+      const startTimeMs = verticesStartTimeMs.get(buildData.id);
+      if (startTimeMs) {
+        const delta = Date.now() - startTimeMs;
+        if (delta < MIN_VISUAL_BUILD_TIME_MS) {
+          // this is a visual trick to make the build process look more natural
+          await new Promise((resolve) =>
+            setTimeout(resolve, MIN_VISUAL_BUILD_TIME_MS - delta),
+          );
+        }
       }
-      onBuildError!("Error Building Component", [
-        "Network error. Please check the connection to the server.",
-      ]);
-    },
-  });
+
+      if (onBuildUpdate) {
+        if (!buildData.valid) {
+          // lots is a dictionary with the key the output field name and the value the log object
+          // logs: { [key: string]: { message: any; type: string }[] };
+          const errorMessages = Object.keys(buildData.data.outputs).flatMap(
+            (key) => {
+              const outputs = buildData.data.outputs[key];
+              if (Array.isArray(outputs)) {
+                return outputs
+                  .filter((log) => isErrorLogType(log.message))
+                  .map((log) => log.message.errorMessage);
+              }
+              if (!isErrorLogType(outputs.message)) {
+                return [];
+              }
+              return [outputs.message.errorMessage];
+            },
+          );
+          onBuildError!("Error Building Component", errorMessages, [
+            { id: buildData.id },
+          ]);
+          onBuildUpdate(buildData, BuildStatus.ERROR, "");
+          buildResults.push(false);
+          return false;
+        } else {
+          onBuildUpdate(buildData, BuildStatus.BUILT, "");
+          buildResults.push(true);
+        }
+      }
+
+      await useFlowStore.getState().clearEdgesRunningByNodes();
+
+      if (buildData.next_vertices_ids) {
+        if (isStringArray(buildData.next_vertices_ids)) {
+          useFlowStore
+            .getState()
+            .setCurrentBuildingNodeId(buildData?.next_vertices_ids ?? []);
+          useFlowStore
+            .getState()
+            .updateEdgesRunningByNodes(
+              buildData?.next_vertices_ids ?? [],
+              true,
+            );
+        }
+        onStartVertices(buildData.next_vertices_ids);
+      }
+      return true;
+    }
+    case "add_message": {
+      //adds a message to the messsage table
+      useMessagesStore.getState().addMessage(data);
+      return true;
+    }
+    case "token": {
+      // flushSync and timeout is needed to avoid react batched updates
+      setTimeout(() => {
+        flushSync(() => {
+          useMessagesStore.getState().updateMessageText(data.id, data.chunk);
+        });
+      }, 10);
+      return true;
+    }
+    case "remove_message": {
+      useMessagesStore.getState().removeMessage(data);
+      return true;
+    }
+    case "end": {
+      const allNodesValid = buildResults.every((result) => result);
+      onBuildComplete!(allNodesValid);
+      useFlowStore.getState().setIsBuilding(false);
+      return true;
+    }
+    case "error": {
+      if (data?.category === "error") {
+        useMessagesStore.getState().addMessage(data);
+        if (data?.properties?.source?.id === null) {
+          onBuildError!("Error Building Flow", [data.text]);
+        }
+      }
+      buildResults.push(false);
+      return true;
+    }
+    case "build_start":
+      useFlowStore
+        .getState()
+        .updateBuildStatus([data.id], BuildStatus.BUILDING);
+      break;
+    case "build_end":
+      useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
+      break;
+    default:
+      return true;
+  }
+  return true;
 }
 
 export async function buildVertices({
