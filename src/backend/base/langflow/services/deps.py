@@ -243,11 +243,7 @@ def get_store_service() -> StoreService:
 
 
 def get_queue_service() -> QueueService:
-    """Retrieves the QueueService instance from the service manager.
-
-    Returns:
-        The QueueService instance.
-    """
+    """Retrieves the QueueService instance from the service manager."""
     from langflow.services.queue.factory import QueueServiceFactory
 
     return get_service(ServiceType.QUEUE_SERVICE, QueueServiceFactory())
