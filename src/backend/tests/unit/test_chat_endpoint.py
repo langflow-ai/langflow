@@ -1,42 +1,62 @@
 import json
+import uuid
+from typing import Any
 from uuid import UUID
 
 import pytest
+from httpx import AsyncClient
 from langflow.memory import aget_messages
-from langflow.services.database.models.flow import FlowCreate, FlowUpdate
-from orjson import orjson
+from langflow.services.database.models.flow import FlowUpdate
 
 
 @pytest.mark.benchmark
 async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test the build flow endpoint with the new two-step process."""
+    # First create the flow
     flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-    async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
-        await consume_and_assert_stream(r)
+    # Start the build and get job_id
+    build_response = await _build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
 
-    await check_messages(flow_id)
+    # Get the events stream
+    events_response = await _get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == 200
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
 
 
 @pytest.mark.benchmark
 async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test building a flow from request data."""
     flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
-    response = await client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers)
+    response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     flow_data = response.json()
 
-    async with client.stream(
-        "POST", f"api/v1/build/{flow_id}/flow", json={"data": flow_data["data"]}, headers=logged_in_headers
-    ) as r:
-        await consume_and_assert_stream(r)
+    # Start the build and get job_id
+    build_response = await _build_flow(client, flow_id, logged_in_headers, json={"data": flow_data["data"]})
+    job_id = build_response["job_id"]
 
+    # Get the events stream
+    events_response = await _get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == 200
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
     await check_messages(flow_id)
 
 
 async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test building a flow with a frozen path."""
     flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
-    response = await client.get("api/v1/flows/" + str(flow_id), headers=logged_in_headers)
+    response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     flow_data = response.json()
     flow_data["data"]["nodes"][0]["data"]["node"]["frozen"] = True
+
+    # Update the flow with frozen path
     response = await client.patch(
         f"api/v1/flows/{flow_id}",
         json=FlowUpdate(name="Flow", description="description", data=flow_data["data"]).model_dump(),
@@ -44,32 +64,49 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
     )
     response.raise_for_status()
 
-    async with client.stream("POST", f"api/v1/build/{flow_id}/flow", json={}, headers=logged_in_headers) as r:
-        await consume_and_assert_stream(r)
+    # Start the build and get job_id
+    build_response = await _build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
 
+    # Get the events stream
+    events_response = await _get_build_events(client, job_id, logged_in_headers)
+    assert events_response.status_code == 200
+
+    # Consume and verify the events
+    await consume_and_assert_stream(events_response, job_id)
     await check_messages(flow_id)
 
 
 async def check_messages(flow_id):
-    messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
+    if isinstance(flow_id, str):
+        flow_id = UUID(flow_id)
+    messages = await aget_messages(flow_id=flow_id, order="ASC")
+    flow_id_str = str(flow_id)
     assert len(messages) == 2
-    assert messages[0].session_id == flow_id
+    assert messages[0].session_id == flow_id_str
     assert messages[0].sender == "User"
     assert messages[0].sender_name == "User"
     assert messages[0].text == ""
-    assert messages[1].session_id == flow_id
+    assert messages[1].session_id == flow_id_str
     assert messages[1].sender == "Machine"
     assert messages[1].sender_name == "AI"
 
 
-async def consume_and_assert_stream(r):
+async def consume_and_assert_stream(response, job_id):
+    """Consume the event stream and assert the expected event structure."""
     count = 0
-    async for line in r.aiter_lines():
-        # httpx split by \n, but ndjson sends two \n for each line
+    async for line in response.aiter_lines():
+        # Skip empty lines (ndjson uses double newlines)
         if not line:
             continue
+
         parsed = json.loads(line)
+        if "job_id" in parsed:
+            assert parsed["job_id"] == job_id
+            continue
+
         if count == 0:
+            # First event should be vertices_sorted
             assert parsed["event"] == "vertices_sorted"
             ids = parsed["data"]["ids"]
             ids.sort()
@@ -79,9 +116,11 @@ async def consume_and_assert_stream(r):
             to_run.sort()
             assert to_run == ["ChatInput-CIGht", "ChatOutput-QA7ej", "Memory-amN4Z", "Prompt-iWbCC"]
         elif count > 0 and count < 5:
+            # Next events should be end_vertex events
             assert parsed["event"] == "end_vertex"
             assert parsed["data"]["build_data"] is not None
         elif count == 5:
+            # Final event should be end
             assert parsed["event"] == "end"
         else:
             msg = f"Unexpected line: {line}"
@@ -89,13 +128,26 @@ async def consume_and_assert_stream(r):
         count += 1
 
 
-async def _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
-    vector_store = orjson.loads(json_memory_chatbot_no_llm)
-    data = vector_store["data"]
-    vector_store = FlowCreate(name="Flow", description="description", data=data, endpoint_name="f")
-    response = await client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
-    response.raise_for_status()
-    return response.json()["id"]
+async def _create_flow(client: AsyncClient, flow_data: str, headers: dict[str, str]) -> uuid.UUID:
+    response = await client.post("api/v1/flows/", json=json.loads(flow_data), headers=headers)
+    assert response.status_code == 201
+    return uuid.UUID(response.json()["id"])
+
+
+async def _build_flow(
+    client: AsyncClient, flow_id: uuid.UUID, headers: dict[str, str], json: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Start a flow build and return the job_id."""
+    if json is None:
+        json = {}
+    response = await client.post(f"api/v1/build/{flow_id}/flow", json=json, headers=headers)
+    assert response.status_code == 200
+    return response.json()
+
+
+async def _get_build_events(client: AsyncClient, job_id: str, headers: dict[str, str]):
+    """Get events for a build job."""
+    return await client.get(f"api/v1/build/{job_id}/events", headers=headers)
 
 
 # TODO: Fix this test
@@ -192,3 +244,51 @@ async def _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers):
 #             f"({max_vertex_builds} builds/vertex * {num_nodes} nodes = {expected_total})"
 #         )
 #         assert all(vertex_build.get("valid") for vertex_build in vertex_builds)
+
+
+@pytest.mark.benchmark
+async def test_build_flow_invalid_job_id(client, logged_in_headers):
+    """Test getting events for an invalid job ID."""
+    invalid_job_id = str(uuid.uuid4())
+    response = await _get_build_events(client, invalid_job_id, logged_in_headers)
+    assert response.status_code == 404
+    assert "No queue found for job_id" in response.json()["detail"]
+
+
+@pytest.mark.benchmark
+async def test_build_flow_invalid_flow_id(client, logged_in_headers):
+    """Test starting a build with an invalid flow ID."""
+    invalid_flow_id = uuid.uuid4()
+    response = await client.post(f"api/v1/build/{invalid_flow_id}/flow", json={}, headers=logged_in_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.benchmark
+async def test_build_flow_start_only(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test only the build flow start endpoint."""
+    # First create the flow
+    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await _build_flow(client, flow_id, logged_in_headers)
+
+    # Assert response structure
+    assert "job_id" in build_response
+    assert isinstance(build_response["job_id"], str)
+    # Verify it's a valid UUID
+    assert uuid.UUID(build_response["job_id"])
+
+
+@pytest.mark.benchmark
+async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test the build flow start endpoint with input data."""
+    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start build with some input data
+    test_inputs = {"inputs": {"session": "test_session", "input_value": "test message"}}
+
+    build_response = await _build_flow(client, flow_id, logged_in_headers, json=test_inputs)
+
+    assert "job_id" in build_response
+    assert isinstance(build_response["job_id"], str)
+    assert uuid.UUID(build_response["job_id"])
