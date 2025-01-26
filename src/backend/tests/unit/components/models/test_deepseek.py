@@ -85,13 +85,13 @@ def test_deepseek_get_models(mocker):
     # Mock requests.get
     mock_get = mocker.patch("requests.get")
     mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"id": "deepseek-chat"}, {"id": "deepseek-coder"}]}
+    mock_response.json.return_value = {"data": [{"id": "deepseek-chat"}, {"id": "deepseek-reasoner"}]}
     mock_get.return_value = mock_response
 
     # Test with API key
     component.api_key = "test-key"
     models = component.get_models()
-    assert models == ["deepseek-chat", "deepseek-coder"]
+    assert models == ["deepseek-chat", "deepseek-reasoner"]
 
     # Verify API call
     mock_get.assert_called_once_with(
