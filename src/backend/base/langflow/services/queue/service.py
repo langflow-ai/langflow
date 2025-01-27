@@ -97,25 +97,42 @@ class QueueService(Service):
 
     async def cleanup_job(self, job_id: str) -> None:
         """Remove a queue set for a job and cleanup its resources."""
-        if job_id in self._queues:
-            main_queue, event_manager, task = self._queues[job_id]
+        if job_id not in self._queues:
+            logger.debug(f"No queue found for job_id {job_id} during cleanup")
+            return
 
-            # Cancel the task if it exists and is still running
-            if task and not task.done():
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
+        logger.info(f"Starting cleanup for job_id {job_id}")
+        main_queue, event_manager, task = self._queues[job_id]
 
+        # Cancel the task if it exists and is still running
+        if task and not task.done():
+            logger.debug(f"Cancelling running task for job_id {job_id}")
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+            logger.debug(f"Task cancelled for job_id {job_id}")
+
+        # Only clear queues after task is fully completed
+        if task is None or task.done():
             # Clear the queues
+            items_cleared = 0
             while not main_queue.empty():
                 try:
                     main_queue.get_nowait()
+                    items_cleared += 1
                 except asyncio.QueueEmpty:
                     break
 
+            logger.debug(f"Cleared {items_cleared} items from queue for job_id {job_id}")
+
             # Remove from storage
             del self._queues[job_id]
-            logger.debug(f"Cleaned up queue for job_id {job_id}")
+            logger.info(f"Successfully cleaned up queue and resources for job_id {job_id}")
+        else:
+            logger.warning(
+                f"Could not clean up queue for job_id {job_id} - task still running. "
+                "Will retry during next cleanup cycle"
+            )
 
     async def _periodic_cleanup(self) -> None:
         """Periodically clean up completed or cancelled queues."""
