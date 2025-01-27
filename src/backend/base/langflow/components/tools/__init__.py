@@ -13,6 +13,7 @@ from .google_search_api import GoogleSearchAPIComponent
 from .google_search_api_core import GoogleSearchAPICore
 from .google_serper_api import GoogleSerperAPIComponent
 from .google_serper_api_core import GoogleSerperAPICore
+from .http_request_tool import HttpRequestTool
 from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
@@ -31,7 +32,6 @@ from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
 from .yahoo import YfinanceComponent
 from .yahoo_finance import YfinanceToolComponent
-from .http_request_tool import HttpRequestTool
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
@@ -45,7 +45,6 @@ __all__ = [
     "BingSearchAPIComponent",
     "CalculatorComponent",
     "CalculatorToolComponent",
-    "HttpRequestTool",
     "DuckDuckGoSearchComponent",
     "ExaSearchToolkit",
     "GleanSearchAPIComponent",
@@ -53,6 +52,7 @@ __all__ = [
     "GoogleSearchAPICore",
     "GoogleSerperAPIComponent",
     "GoogleSerperAPICore",
+    "HttpRequestTool",
     "MCPStdio",
     "PythonCodeStructuredTool",
     "PythonREPLComponent",
