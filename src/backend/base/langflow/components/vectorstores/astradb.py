@@ -526,12 +526,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Define variables for common collection conditions a user may experience
         no_collections = not build_config["collection_name"]["options"]
-        different_collection = field_value != build_config["collection_name"]["value"]
 
         # Refresh the collection name options
-        if field_name == "api_endpoint" or (
-            field_name == "collection_name" and (no_collections or different_collection)
-        ):
+        if field_name == "api_endpoint" or (field_name == "collection_name" and no_collections):
             # Reset the selected collection
             build_config["collection_name"]["value"] = ""
 
@@ -542,8 +539,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
             ]
 
+        # Define variables for common collection choice conditions a user may experience
+        collection_chosen = field_value and build_config["collection_name"]["options"]
+
         # Hide embedding model option if opriona_metadata provider is not null
-        if field_name == "collection_name" and build_config["collection_name"]["options"]:
+        if field_name == "collection_name" and collection_chosen:
             # Find location of the name in the options list
             index_of_name = build_config["collection_name"]["options"].index(field_value)
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
