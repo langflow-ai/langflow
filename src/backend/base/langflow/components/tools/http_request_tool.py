@@ -4,6 +4,7 @@ from langflow.io import MessageTextInput, Output, IntInput
 from langflow.schema import Data
 import requests
 from langflow.custom import Component
+from langflow.io import Message
 
 
 class HttpRequestTool(Component):
@@ -17,7 +18,13 @@ class HttpRequestTool(Component):
             name="curl",
             display_name="cURL",
             info="Paste a curl command to populate the fields.",
-            value="write your curl for example: curl --location 'https://host/todos' --header 'some-header: some-value' --header 'Content-Type: application\/json' --data '{\"product_id\": \"{product_id}\"}'",
+            value=(
+                "write your curl for example: "
+                "curl --location 'https://host/todos' "
+                "--header 'some-header: some-value' "
+                "--header 'Content-Type: application/json' "
+                "--data '{\"product_id\": \"{product_id}\"}'"
+            ),
             tool_mode=True,
         ),
         IntInput(

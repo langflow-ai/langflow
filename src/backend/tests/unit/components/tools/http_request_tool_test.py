@@ -22,7 +22,7 @@ def test_http_request_tool_get(mock_get, api_request):
     mock_get.return_value = mock_response
 
     # Cargar el valor curl
-    api_request.curl = "curl --location 'https://example.com/api/test' --header 'Content-Type: application/json'"
+    api_request.curl = "curl --location 'https://host/test' --header 'Content-Type: application/json'"
 
     # Llamar al método make_request
     result = api_request.make_request()
@@ -45,7 +45,11 @@ def test_http_request_tool_post(mock_post, api_request):
     mock_post.return_value = mock_response
 
     # Cargar el valor curl con --data para POST
-    api_request.curl = "curl --location 'https://example.com/api/test' --header 'Content-Type: application/json' --data '{\"product_id\": \"123\"}'"
+    api_request.curl = (
+        "curl --location 'https://host/test' "
+        "--header 'Content-Type: application/json' "
+        "--data '{\"product_id\": \"123\"}'"
+    )
 
     # Llamar al método make_request
     result = api_request.make_request()
