@@ -551,7 +551,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # If we were able to determine the Vectorize provider, set it accordingly
             if value_of_provider:
                 build_config["embedding_model"]["advanced"] = True
-                build_config["embedding_choice"][   "value"] = "Astra Vectorize"
+                build_config["embedding_choice"]["value"] = "Astra Vectorize"
             else:
                 build_config["embedding_model"]["advanced"] = False
                 build_config["embedding_choice"]["value"] = "Embedding Model"
