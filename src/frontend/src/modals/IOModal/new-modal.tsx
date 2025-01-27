@@ -22,6 +22,8 @@ import { SidebarOpenView } from "./components/sidebar-open-view";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
+import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
+import { track } from "@/customization/utils/analytics";
 export default function IOModal({
   children,
   open,
@@ -252,6 +254,11 @@ export default function IOModal({
 
   const showPublishOptions = playgroundPage && ENABLE_PUBLISH;
 
+  const LangflowButtonClick = () => {
+    track("LangflowButtonClick");
+    window.open(LangflowButtonRedirectTarget(), "_blank");
+  };
+
   return (
     <BaseModal
       open={open}
@@ -313,7 +320,7 @@ export default function IOModal({
                       <div className="text-sm">Theme</div>
                       <ThemeButtons />
                     </div>
-                    <Button variant="primary" className="w-full !rounded-xl shadow-lg">
+                    <Button onClick={LangflowButtonClick} variant="primary" className="w-full !rounded-xl shadow-lg">
                       <LangflowLogoColor />
                       <div className="text-sm">Built with Langflow</div>
                     </Button>
@@ -326,9 +333,9 @@ export default function IOModal({
                 <ShadTooltip
                   styleClasses="z-50"
                   side="right"
-                  content="Publish"
+                  content="Built with Langflow"
                 >
-                  <Button variant="primary" className="shadow-lg !rounded-xl !p-4 w-12 h-12">
+                  <Button variant="primary" className="shadow-lg !rounded-xl !p-4 w-12 h-12" onClick={LangflowButtonClick}>
                     <LangflowLogoColor className="scale-150 w-[18px] h-[18px]" />
                   </Button>
                 </ShadTooltip>
