@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
-from sqlalchemy import event, exc, inspect
+from sqlalchemy import AsyncAdaptedQueuePool, event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
@@ -39,6 +39,7 @@ class DatabaseService(Service):
     name = "database_service"
 
     def __init__(self, settings_service: SettingsService):
+        self._logged_pragma = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -66,8 +67,6 @@ class DatabaseService(Service):
             self.alembic_log_path = Path(alembic_log_file)
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
-
-        self._logged_pragma = False
 
     async def initialize_alembic_log_file(self):
         # Ensure the directory and file for the alembic log file exists
@@ -119,13 +118,19 @@ class DatabaseService(Service):
 
         if url_components[0].startswith("sqlite"):
             scheme = "sqlite+aiosqlite"
+            # Even though the docs say this is the default, it raises an error
+            # if we don't specify it.
+            # https://docs.sqlalchemy.org/en/20/errors.html#pool-class-cannot-be-used-with-asyncio-engine-or-vice-versa
+            pool = AsyncAdaptedQueuePool
         else:
             scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
+            pool = None
 
         database_url = f"{scheme}://{url_components[1]}"
         return create_async_engine(
             database_url,
             connect_args=self._get_connect_args(),
+            poolclass=pool,
             **kwargs,
         )
 
