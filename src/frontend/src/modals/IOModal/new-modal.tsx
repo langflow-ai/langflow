@@ -19,7 +19,9 @@ import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import ChatView from "./components/chatView/chat-view";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
-
+import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
+import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 export default function IOModal({
   children,
   open,
@@ -27,6 +29,7 @@ export default function IOModal({
   disable,
   isPlayground,
   canvasOpen,
+  playgroundPage
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
@@ -247,6 +250,8 @@ export default function IOModal({
     };
   }, []);
 
+  const showPublishOptions = playgroundPage && ENABLE_PUBLISH;
+
   return (
     <BaseModal
       open={open}
@@ -270,7 +275,7 @@ export default function IOModal({
                   : "w-0",
               )}
             >
-              <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
+              <div className="flex relative h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
                 <div className="flex items-center gap-2 pb-8">
                   <ShadTooltip
                     styleClasses="z-50"
@@ -302,8 +307,33 @@ export default function IOModal({
                     selectedViewField={selectedViewField}
                   />
                 )}
+                {sidebarOpen && showPublishOptions && (
+                  <div className="absolute bottom-2 left-0 border-t border-border py-4 px-2 flex flex-col gap-8 w-full transition-all">
+                    <div className="flex items-center justify-between px-2">
+                      <div className="text-sm">Theme</div>
+                      <ThemeButtons />
+                    </div>
+                    <Button variant="primary" className="w-full !rounded-xl shadow-lg">
+                      <LangflowLogoColor />
+                      <div className="text-sm">Built with Langflow</div>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
+            {!sidebarOpen && showPublishOptions && (
+              <div className="absolute left-4 bottom-6 transition-all hidden md:block">
+                <ShadTooltip
+                  styleClasses="z-50"
+                  side="right"
+                  content="Publish"
+                >
+                  <Button variant="primary" className="shadow-lg !rounded-xl !p-4 w-12 h-12">
+                    <LangflowLogoColor className="scale-150 w-[18px] h-[18px]" />
+                  </Button>
+                </ShadTooltip>
+              </div>
+            )}
             <div className="flex h-full min-w-96 flex-grow bg-background">
               {selectedViewField && (
                 <SelectedViewField
