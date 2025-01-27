@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, KeyboardEvent } from "react";
+import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   Content,
   createJSONEditor,
   JsonEditor as VanillaJsonEditor,
 } from "vanilla-jsoneditor";
-import { Input } from "../../ui/input";
 import { Button } from "../../ui/button";
+import { Input } from "../../ui/input";
 
 interface JsonEditorProps {
   data?: Content;
@@ -39,10 +39,10 @@ const JsonEditor = ({
 
     try {
       const content = newRef.current.get();
-      const json = 'json' in content ? content.json : JSON.parse(content.text!);
+      const json = "json" in content ? content.json : JSON.parse(content.text!);
 
       // Convert jQuery-style path to nested property access
-      const path = transformQuery.trim().split('.').filter(Boolean);
+      const path = transformQuery.trim().split(".").filter(Boolean);
       let result = json;
 
       for (const key of path) {
@@ -55,7 +55,7 @@ const JsonEditor = ({
             continue;
           }
           // Apply operation to all array items
-          result = result.map(item => item[key]);
+          result = result.map((item) => item[key]);
         } else {
           result = result[key];
         }
@@ -67,7 +67,7 @@ const JsonEditor = ({
         setTransformQuery("");
       }
     } catch (error) {
-      console.error('Error applying transform:', error);
+      console.error("Error applying transform:", error);
     }
   };
 
@@ -79,7 +79,7 @@ const JsonEditor = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleTransform();
     }
