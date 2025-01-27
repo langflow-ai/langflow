@@ -8,6 +8,7 @@ interface UseChangeOnUnfocusProps<T> {
   shouldChangeValue?: (value: T) => boolean;
   nodeRef: RefObject<HTMLDivElement>;
   callback?: () => void;
+  callbackEscape?: () => void;
 }
 
 export function useChangeOnUnfocus<T>({
@@ -24,13 +25,6 @@ export function useChangeOnUnfocus<T>({
       onChange?.(defaultValue);
     }
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && shouldChangeValue?.(value)) {
-        onChange?.(defaultValue);
-        callback?.();
-      }
-    };
-
     const handleVisibilityChange = () => {
       if (document.hidden && shouldChangeValue?.(value)) {
         onChange?.(defaultValue);
@@ -38,30 +32,10 @@ export function useChangeOnUnfocus<T>({
       }
     };
 
-    const handleBlur = (event: FocusEvent) => {
-      if (
-        shouldChangeValue?.(value) &&
-        nodeRef.current &&
-        !nodeRef.current.contains(event.relatedTarget as Node)
-      ) {
-        onChange?.(defaultValue);
-        callback?.();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    const node = nodeRef.current;
-    if (node) {
-      node.addEventListener("focusout", handleBlur);
-    }
 
     return () => {
-      document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (node) {
-        node.removeEventListener("focusout", handleBlur);
-      }
     };
   }, [
     selected,

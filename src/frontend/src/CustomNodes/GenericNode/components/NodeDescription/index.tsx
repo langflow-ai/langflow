@@ -86,7 +86,6 @@ export default function NodeDescription({
   );
 
   const handleBlurFn = () => {
-    setEditNameDescription?.(false);
     setNodeDescription(nodeDescription);
     setNode(nodeId, (old) => ({
       ...old,
@@ -98,23 +97,31 @@ export default function NodeDescription({
         },
       },
     }));
+    if (stickyNote) {
+      setEditNameDescription?.(false);
+    }
   };
 
   const handleKeyDownFn = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     handleKeyDown(e, nodeDescription, "");
+
     if (e.key === "Escape") {
       setEditNameDescription?.(false);
-      setNodeDescription(nodeDescription);
-      setNode(nodeId, (old) => ({
-        ...old,
-        data: {
-          ...old.data,
-          node: {
-            ...old.data.node,
-            description: nodeDescription,
+      setNodeDescription(description ?? "");
+
+      if (stickyNote) {
+        setNodeDescription(nodeDescription);
+        setNode(nodeId, (old) => ({
+          ...old,
+          data: {
+            ...old.data,
+            node: {
+              ...old.data.node,
+              description: nodeDescription,
+            },
           },
-        },
-      }));
+        }));
+      }
     }
   };
 

@@ -14,6 +14,7 @@ export default function NodeName({
   isOutdated,
   beta,
   editNameDescription,
+  toggleEditNameDescription,
 }: {
   display_name?: string;
   selected?: boolean;
@@ -23,6 +24,7 @@ export default function NodeName({
   isOutdated: boolean;
   beta: boolean;
   editNameDescription: boolean;
+  toggleEditNameDescription: () => void;
 }) {
   const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -38,30 +40,44 @@ export default function NodeName({
     setNodeName(display_name ?? "");
   }, [display_name]);
 
+  const handleBlur = () => {
+    if (nodeName?.trim() !== "") {
+      setNodeName(nodeName);
+      setNode(nodeId, (old) => ({
+        ...old,
+        data: {
+          ...old.data,
+          node: {
+            ...old.data.node,
+            display_name: nodeName,
+          },
+        },
+      }));
+    } else {
+      setNodeName(display_name ?? "");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleBlur();
+      toggleEditNameDescription();
+    }
+    if (e.key === "Escape") {
+      setNodeName(display_name ?? "");
+      toggleEditNameDescription();
+    }
+  };
+
   return editNameDescription ? (
     <div className="m-[1px] w-full">
       <Input
-        onBlur={() => {
-          if (nodeName?.trim() !== "") {
-            setNodeName(nodeName);
-            setNode(nodeId, (old) => ({
-              ...old,
-              data: {
-                ...old.data,
-                node: {
-                  ...old.data.node,
-                  display_name: nodeName,
-                },
-              },
-            }));
-          } else {
-            setNodeName(display_name ?? "");
-          }
-        }}
+        onBlur={handleBlur}
         value={nodeName}
         autoFocus
         onChange={(e) => setNodeName(e.target.value)}
         data-testid={`input-title-${display_name}`}
+        onKeyDown={handleKeyDown}
       />
     </div>
   ) : (

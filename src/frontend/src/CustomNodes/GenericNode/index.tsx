@@ -343,6 +343,7 @@ function GenericNode({
         isOutdated={isOutdated}
         beta={data.node?.beta || false}
         editNameDescription={editNameDescription}
+        toggleEditNameDescription={toggleEditNameDescription}
       />
     );
   }, [
@@ -391,6 +392,7 @@ function GenericNode({
         nodeId={data.id}
         selected={selected}
         editNameDescription={editNameDescription}
+        setEditNameDescription={set}
       />
     );
   }, [
