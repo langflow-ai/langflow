@@ -6,7 +6,7 @@ from defusedxml.ElementTree import fromstring
 
 from langflow.custom import Component
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import DataFrame
 
 
 class ArXivComponent(Component):
@@ -20,6 +20,7 @@ class ArXivComponent(Component):
             display_name="Search Query",
             info="The search query for arXiv papers (e.g., 'quantum computing')",
             tool_mode=True,
+            required=True,
         ),
         DropdownInput(
             name="search_type",
@@ -32,12 +33,18 @@ class ArXivComponent(Component):
             name="max_results",
             display_name="Max Results",
             info="Maximum number of results to return",
-            value=10,
+            value=5,
+            advanced=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Papers", name="papers", method="search_papers"),
+        Output(
+            display_name="Papers", 
+            name="papers", 
+            method="search_papers",
+            type_=DataFrame
+        ),
     ]
 
     def build_query_url(self) -> str:
@@ -75,13 +82,13 @@ class ArXivComponent(Component):
                 "summary": self._get_text(entry, "atom:summary", ns),
                 "published": self._get_text(entry, "atom:published", ns),
                 "updated": self._get_text(entry, "atom:updated", ns),
-                "authors": [author.find("atom:name", ns).text for author in entry.findall("atom:author", ns)],
+                "authors": ', '.join([author.find("atom:name", ns).text for author in entry.findall("atom:author", ns)]),
                 "arxiv_url": self._get_link(entry, "alternate", ns),
                 "pdf_url": self._get_link(entry, "related", ns),
                 "comment": self._get_text(entry, "arxiv:comment", ns),
                 "journal_ref": self._get_text(entry, "arxiv:journal_ref", ns),
                 "primary_category": self._get_category(entry, ns),
-                "categories": [cat.get("term") for cat in entry.findall("atom:category", ns)],
+                "categories": ', '.join([cat.get("term") for cat in entry.findall("atom:category", ns)]),
             }
             papers.append(paper)
 
@@ -92,10 +99,10 @@ class ArXivComponent(Component):
         el = element.find(path, ns)
         return el.text.strip() if el is not None and el.text else None
 
-    def _get_link(self, element: Element, rel: str, ns: dict) -> str | None:
+    def _get_link(self, element: Element, path: str, ns: dict) -> str | None:
         """Get link URL based on relation type."""
         for link in element.findall("atom:link", ns):
-            if link.get("rel") == rel:
+            if link.get("rel") == path:
                 return link.get("href")
         return None
 
@@ -104,7 +111,7 @@ class ArXivComponent(Component):
         cat = element.find("arxiv:primary_category", ns)
         return cat.get("term") if cat is not None else None
 
-    def search_papers(self) -> list[Data]:
+    def search_papers(self) -> DataFrame:
         """Search arXiv and return results."""
         try:
             # Build the query URL
@@ -139,12 +146,12 @@ class ArXivComponent(Component):
             # Parse the response
             papers = self.parse_atom_response(response_text)
 
-            # Convert to Data objects
-            results = [Data(data=paper) for paper in papers]
-            self.status = results
+            # Convert to DataFrame
+            result = DataFrame(papers)
+            self.status = result
         except (urllib.error.URLError, ValueError) as e:
-            error_data = Data(data={"error": f"Request error: {e!s}"})
-            self.status = error_data
-            return [error_data]
+            result = DataFrame([{"error": f"Request error: {e!s}"}])
+            self.status = result
+            return result
         else:
-            return results
+            return result
