@@ -146,7 +146,7 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel h-full w-full focus:border-black focus:ring-0",
+              "nowheel h-full w-full focus:border-primary focus:ring-0",
               inputClassName,
             )}
             autoFocus

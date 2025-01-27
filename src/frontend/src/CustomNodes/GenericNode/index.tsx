@@ -281,6 +281,11 @@ function GenericNode({
               "nodrag absolute left-1/2 top-0 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-zinc-foreground",
               showNode ? "translate-x-44" : "translate-x-28",
             )}
+            data-testid={
+              editNameDescription
+                ? "save-name-description-button"
+                : "edit-name-description-button"
+            }
           >
             <ForwardedIconComponent
               name={editNameDescription ? "Check" : "PencilLine"}
