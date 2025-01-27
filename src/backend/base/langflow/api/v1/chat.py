@@ -9,7 +9,7 @@ import uuid
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from loguru import logger
 from sqlmodel import select
 from starlette.background import BackgroundTask
@@ -533,16 +533,34 @@ async def build_flow(
 async def get_build_events(
     job_id: str,
     queue_service: Annotated[QueueService, Depends(get_queue_service)],
+    *,
+    stream: bool = True,
 ):
     """Get events for a specific build job."""
     try:
         main_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
 
-        return await create_flow_response(
-            queue=main_queue,
-            event_manager=event_manager,
-            event_task=event_task,
-        )
+        if stream:
+            # Original streaming behavior
+            return await create_flow_response(
+                queue=main_queue,
+                event_manager=event_manager,
+                event_task=event_task,
+            )
+
+        # Polling mode - get exactly one event
+        try:
+            event_id, value, put_time = await main_queue.get()
+            if value is None:
+                # End of stream, trigger end event
+                event_task.cancel()
+                event_manager.on_end(data={})
+
+            return JSONResponse({"event": value.decode("utf-8") if value else None})
+
+        except asyncio.QueueEmpty:
+            return JSONResponse({"event": None})
+
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
