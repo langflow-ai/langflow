@@ -244,7 +244,13 @@ def prepare_global_scope(module):
                     warnings.simplefilter("ignore", LangChainDeprecationWarning)
                     imported_module = importlib.import_module(node.module)
                     for alias in node.names:
-                        exec_globals[alias.name] = getattr(imported_module, alias.name)
+                        try:
+                            # First try getting it as an attribute
+                            exec_globals[alias.name] = getattr(imported_module, alias.name)
+                        except AttributeError:
+                            # If that fails, try importing the full module path
+                            full_module_path = f"{node.module}.{alias.name}"
+                            exec_globals[alias.name] = importlib.import_module(full_module_path)
             except ModuleNotFoundError as e:
                 msg = f"Module {node.module} not found. Please install it and try again"
                 raise ModuleNotFoundError(msg) from e
