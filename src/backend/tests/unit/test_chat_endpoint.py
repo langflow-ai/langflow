@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from uuid import UUID
 
@@ -137,3 +138,57 @@ async def test_build_flow_start_with_inputs(client, json_memory_chatbot_no_llm, 
     assert "job_id" in build_response
     assert isinstance(build_response["job_id"], str)
     assert uuid.UUID(build_response["job_id"])
+
+
+@pytest.mark.benchmark
+async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Test the build flow endpoint with polling (non-streaming)."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Create a response object that mimics a streaming response but uses polling
+    class PollingResponse:
+        def __init__(self, client, job_id, headers):
+            self.client = client
+            self.job_id = job_id
+            self.headers = headers
+            self.status_code = 200
+
+        async def aiter_lines(self):
+            try:
+                sleeps = 0
+                max_sleeps = 100
+                while True:
+                    response = await self.client.get(
+                        f"api/v1/build/{self.job_id}/events?stream=false", headers=self.headers
+                    )
+                    assert response.status_code == 200
+                    data = response.json()
+
+                    if data["event"] is None:
+                        # No event available, add delay to prevent tight polling
+                        await asyncio.sleep(0.1)
+                        sleeps += 1
+                        continue
+
+                    yield data["event"]
+
+                    # If this was the end event, stop polling
+                    if '"end"' in data["event"]:
+                        break
+                    if sleeps > max_sleeps:
+                        msg = "Build event polling timed out."
+                        raise TimeoutError(msg)
+            except asyncio.TimeoutError as e:
+                msg = "Build event polling timed out."
+                raise TimeoutError(msg) from e
+
+    polling_response = PollingResponse(client, job_id, logged_in_headers)
+
+    # Use the same consume_and_assert_stream function to verify the events
+    await consume_and_assert_stream(polling_response, job_id)
