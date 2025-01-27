@@ -4,6 +4,7 @@ import {
   createJSONEditor,
   JsonEditor as VanillaJsonEditor,
 } from "vanilla-jsoneditor";
+import { jsonquery } from '@jsonquerylang/jsonquery';
 import useAlertStore from "../../../stores/alertStore";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
@@ -63,7 +64,21 @@ const JsonEditor = ({
       // Always start with original data for transformation
       const json = 'json' in originalData ? originalData.json : JSON.parse(originalData.text!);
 
-      // Normalize the path to handle both data[0] and data.[0] syntax
+      // Try JSONQuery first
+      try {
+        const result = jsonquery(json, transformQuery);
+        if (result !== undefined) {
+          newRef.current.set({ json: result });
+          onChange?.({ json: result });
+          setFilter?.(transformQuery.trim());
+          return;
+        }
+      } catch (jsonQueryError) {
+        // If JSONQuery fails, continue with our path-based method
+        console.debug('JSONQuery parsing failed, falling back to path-based method:', jsonQueryError);
+      }
+
+      // Fallback to our path-based method
       const normalizedQuery = transformQuery.replace(/\[/g, '.[');
       const path = normalizedQuery.trim().split(".").filter(Boolean);
       let result = json;
@@ -221,7 +236,7 @@ const JsonEditor = ({
       {allowFilter && (
         <div className="flex gap-2">
           <Input
-            placeholder="Enter path (e.g. users[0].name or results.data)"
+            placeholder="Enter path (e.g. users[0].name) or JSONQuery (e.g. .users | filter(.age > 25))"
             value={transformQuery}
             onChange={(e) => setTransformQuery(e.target.value)}
             onKeyDown={handleKeyDown}
