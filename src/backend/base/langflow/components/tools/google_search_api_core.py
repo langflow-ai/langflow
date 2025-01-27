@@ -30,7 +30,7 @@ class GoogleSearchAPICore(Component):
             name="k",
             display_name="Number of results",
             value=4,
-            required=True,
+            advanced=True,
         ),
     ]
 
