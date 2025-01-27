@@ -17,6 +17,8 @@ export default function NodeDescription({
   mdClassName,
   style,
   editNameDescription,
+  setEditNameDescription,
+  stickyNote,
 }: {
   description?: string;
   selected?: boolean;
@@ -28,6 +30,8 @@ export default function NodeDescription({
   mdClassName?: string;
   style?: React.CSSProperties;
   editNameDescription: boolean;
+  setEditNameDescription?: (value: boolean) => void;
+  stickyNote?: boolean;
 }) {
   const [nodeDescription, setNodeDescription] = useState<string>(
     description ?? "",
@@ -81,6 +85,46 @@ export default function NodeDescription({
     [description, emptyPlaceholder, mdClassName],
   );
 
+  const handleBlurFn = () => {
+    setEditNameDescription?.(false);
+    setNodeDescription(nodeDescription);
+    setNode(nodeId, (old) => ({
+      ...old,
+      data: {
+        ...old.data,
+        node: {
+          ...old.data.node,
+          description: nodeDescription,
+        },
+      },
+    }));
+  };
+
+  const handleKeyDownFn = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    handleKeyDown(e, nodeDescription, "");
+    if (e.key === "Escape") {
+      setEditNameDescription?.(false);
+      setNodeDescription(nodeDescription);
+      setNode(nodeId, (old) => ({
+        ...old,
+        data: {
+          ...old.data,
+          node: {
+            ...old.data.node,
+            description: nodeDescription,
+          },
+        },
+      }));
+    }
+  };
+
+  const handleDoubleClickFn = () => {
+    if (stickyNote) {
+      setEditNameDescription?.(true);
+      takeSnapshot();
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -95,42 +139,15 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel h-full w-full focus:border-border focus:ring-0",
+              "nowheel h-full w-full focus:border-black focus:ring-0",
               inputClassName,
             )}
             autoFocus
             style={style}
-            onBlur={() => {
-              setNodeDescription(nodeDescription);
-              setNode(nodeId, (old) => ({
-                ...old,
-                data: {
-                  ...old.data,
-                  node: {
-                    ...old.data.node,
-                    description: nodeDescription,
-                  },
-                },
-              }));
-            }}
+            onBlur={handleBlurFn}
             value={nodeDescription}
             onChange={(e) => setNodeDescription(e.target.value)}
-            onKeyDown={(e) => {
-              handleKeyDown(e, nodeDescription, "");
-              if (e.key === "Escape") {
-                setNodeDescription(nodeDescription);
-                setNode(nodeId, (old) => ({
-                  ...old,
-                  data: {
-                    ...old.data,
-                    node: {
-                      ...old.data.node,
-                      description: nodeDescription,
-                    },
-                  },
-                }));
-              }
-            }}
+            onKeyDown={handleKeyDownFn}
           />
           {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (
             <div
@@ -156,6 +173,7 @@ export default function NodeDescription({
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}
+          onDoubleClick={handleDoubleClickFn}
         >
           {renderedDescription}
         </div>
