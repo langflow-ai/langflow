@@ -29,7 +29,6 @@ export default function NodeDescription({
   style?: React.CSSProperties;
   editNameDescription: boolean;
 }) {
-  const [inputDescription, setInputDescription] = useState(false);
   const [nodeDescription, setNodeDescription] = useState<string>(
     description ?? "",
   );
@@ -57,13 +56,7 @@ export default function NodeDescription({
         }
       }
     }, 200);
-  }, [inputDescription]);
-
-  useEffect(() => {
-    if (!selected) {
-      setInputDescription(false);
-    }
-  }, [selected]);
+  }, [editNameDescription]);
 
   useEffect(() => {
     setNodeDescription(description ?? "");
@@ -91,7 +84,7 @@ export default function NodeDescription({
   return (
     <div
       className={cn(
-        !inputDescription ? "overflow-auto" : "",
+        !editNameDescription ? "overflow-auto" : "",
         hasScroll ? "nowheel" : "",
         charLimit ? "px-2 pb-4" : "",
         "w-full",
@@ -108,7 +101,6 @@ export default function NodeDescription({
             autoFocus
             style={style}
             onBlur={() => {
-              setInputDescription(false);
               setNodeDescription(nodeDescription);
               setNode(nodeId, (old) => ({
                 ...old,
@@ -126,7 +118,6 @@ export default function NodeDescription({
             onKeyDown={(e) => {
               handleKeyDown(e, nodeDescription, "");
               if (e.key === "Escape") {
-                setInputDescription(false);
                 setNodeDescription(nodeDescription);
                 setNode(nodeId, (old) => ({
                   ...old,
