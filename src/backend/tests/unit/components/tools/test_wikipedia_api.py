@@ -1,11 +1,11 @@
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from langflow.components.tools import WikipediaComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
-from langflow.schema import Data
-from langflow.schema.message import Message
+from langflow.schema import DataFrame
 
 # Import the base test class
 from tests.base import ComponentTestBaseWithoutClient
@@ -23,7 +23,7 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
         return {
             "input_value": "test query",
             "lang": "en",
-            "k": 3,
+            "k": 4,
         }
 
     @pytest.fixture
@@ -57,10 +57,10 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
     def mock_wikipedia_wrapper(self, mocker):
         return mocker.patch("langchain_community.utilities.wikipedia.WikipediaAPIWrapper")
 
-    def test_fetch_content(self, component_class, mock_wikipedia_wrapper):
+    def test_search_wikipedia_success(self, component_class, mock_wikipedia_wrapper):
         component = component_class()
         component.input_value = "test query"
-        component.k = 3
+        component.k = 4
         component.lang = "en"
 
         # Mock the WikipediaAPIWrapper and its load method
@@ -74,28 +74,48 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
         # Mock the _build_wrapper method to return our mock instance
         component._build_wrapper = MagicMock(return_value=mock_instance)
 
-        result = component.fetch_content()
+        result = component.search_wikipedia()
 
-        # Verify wrapper was built with correct params
-        component._build_wrapper.assert_called_once()
-        mock_instance.load.assert_called_once_with("test query")
-        assert isinstance(result, list)
+        assert isinstance(result, DataFrame)
         assert len(result) == 1
-        assert result[0].text == "Test content"
+        assert result.iloc[0]["title"] == "Test Page"
+        assert result.iloc[0]["content"] == "Test content"
+        assert result.iloc[0]["summary"] == "Test content"
 
-    def test_fetch_content_text(self, component_class):
+    def test_search_wikipedia_empty_response(self, component_class, mock_wikipedia_wrapper):
         component = component_class()
-        component.fetch_content = MagicMock(return_value=[Data(text="First result"), Data(text="Second result")])
+        component.input_value = "test query"
 
-        result = component.fetch_content_text()
+        # Mock empty response
+        mock_instance = MagicMock()
+        mock_wikipedia_wrapper.return_value = mock_instance
+        mock_instance.load.return_value = []
 
-        assert isinstance(result, Message)
-        assert result.text == "First result\nSecond result\n"
+        # Mock the _build_wrapper method
+        component._build_wrapper = MagicMock(return_value=mock_instance)
 
-    def test_wikipedia_error_handling(self, component_class):
+        result = component.search_wikipedia()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1
+        assert "error" in result.columns
+        assert "No Wikipedia articles found" in result.iloc[0]["error"]
+
+    def test_search_wikipedia_request_error(self, component_class, mock_wikipedia_wrapper):
         component = component_class()
-        # Mock _build_wrapper to raise exception
-        component._build_wrapper = MagicMock(side_effect=Exception("API Error"))
+        component.input_value = "test query"
 
-        with pytest.raises(Exception, match="API Error"):
-            component.fetch_content()
+        # Mock request error
+        mock_instance = MagicMock()
+        mock_wikipedia_wrapper.return_value = mock_instance
+        mock_instance.load.side_effect = requests.RequestException("Connection error")
+
+        # Mock the _build_wrapper method
+        component._build_wrapper = MagicMock(return_value=mock_instance)
+
+        result = component.search_wikipedia()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1
+        assert "error" in result.columns
+        assert "Error making request to Wikipedia" in result.iloc[0]["error"]
