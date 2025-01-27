@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.user import User
     from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+    from langflow.services.database.models.flows_share.model import FlowShare
 
 HEX_COLOR_LENGTH = 7
 
@@ -173,6 +174,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     messages: list["MessageTable"] = Relationship(back_populates="flow")
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
     vertex_builds: list["VertexBuildTable"] = Relationship(back_populates="flow")
+    flow_shares: list["FlowShare"] = Relationship(back_populates="flow")
 
     def to_data(self):
         serialized = self.model_dump()
