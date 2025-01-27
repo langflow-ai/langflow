@@ -99,7 +99,11 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         />
       </Case>
       <Case condition={JSON_TYPES.includes(resultType)}>
-        <JsonOutputViewComponent data={resultMessageMemoized} />
+        <JsonOutputViewComponent
+          nodeId={nodeId}
+          outputName={outputName}
+          data={resultMessageMemoized}
+        />
       </Case>
 
       <Case condition={resultType === "stream"}>

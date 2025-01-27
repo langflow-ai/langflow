@@ -17,6 +17,9 @@ interface JsonEditorProps {
   width?: string;
   height?: string;
   className?: string;
+  setFilter?: (filter: string) => void;
+  allowFilter?: boolean;
+  initialFilter?: string;
 }
 
 const JsonEditor = ({
@@ -28,13 +31,24 @@ const JsonEditor = ({
   width = "100%",
   height = "400px",
   className,
+  setFilter,
+  allowFilter = false,
+  initialFilter,
 }: JsonEditorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
   const newRef = jsonRef ?? jsonEditorRef;
-  const [transformQuery, setTransformQuery] = useState("");
+  const [transformQuery, setTransformQuery] = useState(initialFilter ?? "");
   const [originalData, setOriginalData] = useState(data);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  // Apply initial filter when component mounts
+  useEffect(() => {
+    if (initialFilter && newRef.current) {
+      setTransformQuery(initialFilter);
+      handleTransform();
+    }
+  }, [initialFilter, newRef.current]);
 
   const handleTransform = () => {
     if (!newRef.current) return;
@@ -46,8 +60,8 @@ const JsonEditor = ({
     }
 
     try {
-      const content = newRef.current.get();
-      const json = "json" in content ? content.json : JSON.parse(content.text!);
+      // Always start with original data for transformation
+      const json = 'json' in originalData ? originalData.json : JSON.parse(originalData.text!);
 
       // Convert jQuery-style path to nested property access
       const path = transformQuery.trim().split(".").filter(Boolean);
@@ -106,6 +120,7 @@ const JsonEditor = ({
       if (result !== undefined) {
         newRef.current.set({ json: result });
         onChange?.({ json: result });
+        setFilter?.(transformQuery.trim());
       } else {
         setErrorData({
           title: "Invalid Result",
@@ -126,6 +141,7 @@ const JsonEditor = ({
     newRef.current.set(originalData);
     onChange?.(originalData);
     setTransformQuery("");
+    setFilter?.("");
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -146,7 +162,6 @@ const JsonEditor = ({
         mode: "text",
         content: data,
         readOnly,
-
         onChange: (content) => {
           onChange?.(content);
         },
@@ -167,31 +182,33 @@ const JsonEditor = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        <Input
-          placeholder="Enter path (e.g. users[0].name or results.data)"
-          value={transformQuery}
-          onChange={(e) => setTransformQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="font-mono text-sm"
-        />
-        <Button
-          onClick={handleTransform}
-          variant="primary"
-          size="sm"
-          className="whitespace-nowrap"
-        >
-          Filter
-        </Button>
-        <Button
-          onClick={handleReset}
-          variant="outline"
-          size="sm"
-          className="whitespace-nowrap"
-        >
-          Reset
-        </Button>
-      </div>
+      {allowFilter && (
+        <div className="flex gap-2">
+          <Input
+            placeholder="Enter path (e.g. users[0].name or results.data)"
+            value={transformQuery}
+            onChange={(e) => setTransformQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="font-mono text-sm"
+          />
+          <Button
+            onClick={handleTransform}
+            variant="primary"
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            Filter
+          </Button>
+          <Button
+            onClick={handleReset}
+            variant="outline"
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            Reset
+          </Button>
+        </div>
+      )}
       <div ref={containerRef} style={{ width, height }} className={className} />
     </div>
   );
