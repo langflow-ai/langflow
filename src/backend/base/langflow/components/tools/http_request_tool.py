@@ -1,9 +1,11 @@
 import json
-from langflow.base.curl.parse import parse_context
-from langflow.io import MessageTextInput, Output, IntInput
-from langflow.schema import Data
+
 import requests
+
+from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
+from langflow.io import IntInput, MessageTextInput, Output
+from langflow.schema import Data
 
 
 class HttpRequestTool(Component):
@@ -17,7 +19,7 @@ class HttpRequestTool(Component):
             name="curl",
             display_name="cURL",
             info="Paste a curl command to populate the fields.",
-            value="write your curl for example: curl --location 'https://host/todos' --header 'some-header: some-value' --header 'Content-Type: application\/json' --data '{\"product_id\": \"{product_id}\"}'",
+            value="write your curl for example: curl --location 'https://host/todos' --header 'some-header: some-value' --header 'Content-Type: application\\/json' --data '{\"product_id\": \"{product_id}\"}'",
             tool_mode=True,
         ),
         IntInput(
@@ -39,15 +41,10 @@ class HttpRequestTool(Component):
         method = context.method.upper()
         headers = context.headers
         body = context.data
-        if '--data' in curl:
+        if "--data" in curl:
             method = "POST"
 
-        methods = {
-            "GET": requests.get,
-            "POST": requests.post,
-            "PUT": requests.put,
-            "PATCH": requests.patch
-        }
+        methods = {"GET": requests.get, "POST": requests.post, "PUT": requests.put, "PATCH": requests.patch}
 
         request_function = methods.get(method, requests.get)
         response = request_function(
@@ -59,8 +56,9 @@ class HttpRequestTool(Component):
 
         result = {
             "status_code": response.status_code,
-            "data": response.json() if "application/json" in response.headers.get("Content-Type",
-                                                                                  "") else response.text,
+            "data": response.json()
+            if "application/json" in response.headers.get("Content-Type", "")
+            else response.text,
         }
 
         return Message(text=json.dumps(result, indent=4))

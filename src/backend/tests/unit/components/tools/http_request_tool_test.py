@@ -1,6 +1,7 @@
-import pytest
-from unittest.mock import patch, Mock
 import json
+from unittest.mock import Mock, patch
+
+import pytest
 
 from src.backend.base.langflow.components.tools import HttpRequestTool
 
@@ -12,7 +13,7 @@ def api_request():
 
 
 # Mocking una respuesta HTTP GET
-@patch('requests.get')
+@patch("requests.get")
 def test_http_request_tool_get(mock_get, api_request):
     # Mockear la respuesta
     mock_response = Mock()
@@ -28,14 +29,11 @@ def test_http_request_tool_get(mock_get, api_request):
     result = api_request.make_request()
 
     # Verificar que la respuesta mockeada sea la correcta
-    assert result.text == json.dumps({
-        "status_code": 200,
-        "data": {"key": "value"}
-    }, indent=4)
+    assert result.text == json.dumps({"status_code": 200, "data": {"key": "value"}}, indent=4)
 
 
 # Mocking una respuesta HTTP POST
-@patch('requests.post')
+@patch("requests.post")
 def test_http_request_tool_post(mock_post, api_request):
     # Mockear la respuesta
     mock_response = Mock()
@@ -51,7 +49,4 @@ def test_http_request_tool_post(mock_post, api_request):
     result = api_request.make_request()
 
     # Verificar que la respuesta mockeada sea la correcta
-    assert result.text == json.dumps({
-        "status_code": 201,
-        "data": {"created": True}
-    }, indent=4)
+    assert result.text == json.dumps({"status_code": 201, "data": {"created": True}}, indent=4)
