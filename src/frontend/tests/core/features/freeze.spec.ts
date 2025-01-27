@@ -56,13 +56,13 @@ test(
     //fourth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector('[data-testid="processingParse Data"]', {
+    await page.getByTestId("sidebar-search-input").fill("data to message");
+    await page.waitForSelector('[data-testid="processingData to Message"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
@@ -126,7 +126,7 @@ test(
 
     //connection 2
     const textOutput = await page
-      .getByTestId("handle-textinput-shownode-text-right")
+      .getByTestId("handle-textinput-shownode-message-right")
       .nth(0);
     await textOutput.hover();
     await page.mouse.down();
@@ -150,7 +150,7 @@ test(
 
     //connection 4
     const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0);
     await parseDataOutput.hover();
     await page.mouse.down();
@@ -177,11 +177,17 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
     await page.getByRole("gridcell").nth(4).click();
 
@@ -203,11 +209,17 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
     await page.getByRole("gridcell").nth(4).click();
 
@@ -253,11 +265,17 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
     await page.getByRole("gridcell").nth(4).click();
 
@@ -292,11 +310,17 @@ test(
       timeout: 15000,
     });
 
-    await page.waitForSelector('[data-testid="output-inspection-message"]', {
-      timeout: 1000,
-    });
+    await page.waitForSelector(
+      '[data-testid="output-inspection-message-chatoutput"]',
+      {
+        timeout: 1000,
+      },
+    );
 
-    await page.getByTestId("output-inspection-message").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
     await page.getByRole("gridcell").nth(4).click();
 

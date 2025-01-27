@@ -68,13 +68,13 @@ test(
     //sisxth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector("text=Parse Data", {
+    await page.getByTestId("sidebar-search-input").fill("data to message");
+    await page.waitForSelector("text=Data to Message", {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 100 },
       });
@@ -229,7 +229,7 @@ test(
 
     //connection 7
     const parseDataOutput = await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0);
     await parseDataOutput.hover();
     await page.mouse.down();
@@ -245,7 +245,7 @@ test(
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
-      .getByTestId("output-inspection-text")
+      .getByTestId("output-inspection-message-textoutput")
       .first()
       .click();
     const valueSimilarity = await page.getByTestId("textarea").textContent();

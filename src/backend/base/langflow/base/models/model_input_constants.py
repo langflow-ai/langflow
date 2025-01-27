@@ -4,10 +4,12 @@ from langflow.base.models.model import LCModelComponent
 from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
+from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
+from langflow.template.field.base import Input
 
 
 class ModelProvidersDict(TypedDict):
@@ -24,12 +26,20 @@ def get_filtered_inputs(component_class):
     return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
 
 
-def process_inputs(component_data):
+def process_inputs(component_data: Input):
     if isinstance(component_data, SecretStrInput):
         component_data.value = ""
         component_data.load_from_db = False
-    elif component_data.name == "temperature":
+    elif component_data.name in {"temperature", "tool_model_enabled", "base_url"}:
         component_data = set_advanced_true(component_data)
+    elif component_data.name == "model_name":
+        component_data = set_real_time_refresh_false(component_data)
+        component_data = add_combobox_true(component_data)
+        component_data = add_info(
+            component_data,
+            "To see the model names, first choose a provider. Then, enter your API key and click the refresh button "
+            "next to the model name.",
+        )
     return component_data
 
 
@@ -38,8 +48,37 @@ def set_advanced_true(component_input):
     return component_input
 
 
-def create_input_fields_dict(inputs, prefix):
-    return {f"{prefix}{input_.name}": input_ for input_ in inputs}
+def set_real_time_refresh_false(component_input):
+    component_input.real_time_refresh = False
+    return component_input
+
+
+def add_info(component_input, info_str: str):
+    component_input.info = info_str
+    return component_input
+
+
+def add_combobox_true(component_input):
+    component_input.combobox = True
+    return component_input
+
+
+def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Input]:
+    return {f"{prefix}{input_.name}": input_.to_dict() for input_ in inputs}
+
+
+def _get_google_generative_ai_inputs_and_fields():
+    try:
+        from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
+
+        google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
+    except ImportError as e:
+        msg = (
+            "Google Generative AI is not installed. Please install it with "
+            "`pip install langchain-google-generative-ai`."
+        )
+        raise ImportError(msg) from e
+    return google_generative_ai_inputs, create_input_fields_dict(google_generative_ai_inputs, "")
 
 
 def _get_openai_inputs_and_fields():
@@ -50,7 +89,7 @@ def _get_openai_inputs_and_fields():
     except ImportError as e:
         msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
         raise ImportError(msg) from e
-    return openai_inputs, {input_.name: input_ for input_ in openai_inputs}
+    return openai_inputs, create_input_fields_dict(openai_inputs, "")
 
 
 def _get_azure_inputs_and_fields():
@@ -177,6 +216,18 @@ try:
 except ImportError:
     pass
 
+try:
+    google_generative_ai_inputs, google_generative_ai_fields = _get_google_generative_ai_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Google Generative AI"] = {
+        "fields": google_generative_ai_fields,
+        "inputs": google_generative_ai_inputs,
+        "prefix": "",
+        "component_class": GoogleGenerativeAIComponent(),
+    }
+except ImportError:
+    pass
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
+
+MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]

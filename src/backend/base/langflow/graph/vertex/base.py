@@ -105,6 +105,9 @@ class Vertex:
         self.build_times: list[float] = []
         self.state = VertexStates.ACTIVE
         self.log_transaction_tasks: set[asyncio.Task] = set()
+        self.output_names: list[str] = [
+            output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
+        ]
 
     def set_input_value(self, name: str, value: Any) -> None:
         if self.custom_component is None:
@@ -262,19 +265,18 @@ class Vertex:
                     self.base_type = base_type
                     break
 
+    def get_value_from_output_names(self, key: str):
+        if key in self.output_names:
+            return self.graph.get_vertex(key)
+        return None
+
     def get_value_from_template_dict(self, key: str):
         template_dict = self.data.get("node", {}).get("template", {})
+
         if key not in template_dict:
             msg = f"Key {key} not found in template dict"
             raise ValueError(msg)
         return template_dict.get(key, {}).get("value")
-
-    def get_task(self):
-        # using the task_id, get the task from celery
-        # and return it
-        from celery.result import AsyncResult
-
-        return AsyncResult(self.task_id)
 
     def _set_params_from_normal_edge(self, params: dict, edge: Edge, template_dict: dict):
         param_key = edge.target_param
@@ -299,6 +301,8 @@ class Vertex:
 
                 else:
                     params[param_key] = self.graph.get_vertex(edge.source_id)
+        elif param_key in self.output_names:
+            params[param_key] = self.graph.get_vertex(edge.source_id)
         return params
 
     def build_params(self) -> None:
@@ -395,7 +399,7 @@ class Vertex:
                         params[field_name] = int(val)
                     except ValueError:
                         params[field_name] = val
-                elif field.get("type") == "float" and val is not None:
+                elif field.get("type") in {"float", "slider"} and val is not None:
                     try:
                         params[field_name] = float(val)
                     except ValueError:
@@ -616,9 +620,24 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
-    def _log_transaction_async(
+    async def _log_transaction_async(
         self, flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
     ) -> None:
+        """Log a transaction asynchronously with proper task handling and cancellation.
+
+        Args:
+            flow_id: The ID of the flow
+            source: Source vertex
+            status: Transaction status
+            target: Optional target vertex
+            error: Optional error information
+        """
+        if self.log_transaction_tasks:
+            # Safely await and remove completed tasks
+            task = self.log_transaction_tasks.pop()
+            await task
+
+            # Create and track new task
         task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
         self.log_transaction_tasks.add(task)
         task.add_done_callback(self.log_transaction_tasks.discard)
@@ -638,13 +657,13 @@ class Vertex:
         flow_id = self.graph.flow_id
         if not self.built:
             if flow_id:
-                self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
+                await self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
         result = self.built_result if self.use_result else self.built_object
         if flow_id:
-            self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
+            await self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:

@@ -18,7 +18,6 @@ import {
 } from "../../ui/card";
 import { Checkbox } from "../../ui/checkbox";
 import { FormControl, FormField } from "../../ui/form";
-import Loading from "../../ui/loading";
 import useDragStart from "./hooks/use-on-drag-start";
 import { convertTestName } from "./utils/convert-test-name";
 

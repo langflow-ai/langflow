@@ -10,6 +10,7 @@ import { GRADIENT_CLASS } from "@/constants/constants";
 import { cn } from "../../../../../utils/utils";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputListComponentType, InputProps } from "../../types";
+import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({
   value = [""],
@@ -66,16 +67,16 @@ export default function InputListComponent({
     [value, handleOnNewValue],
   );
 
-  const handleDuplicateInput = useCallback(
-    (index: number, e: React.MouseEvent | KeyboardEvent) => {
-      e.preventDefault();
-      const newInputList = _.cloneDeep(value);
-      newInputList.splice(index, 0, newInputList[index]);
-      handleOnNewValue({ value: newInputList });
-      setDropdownOpen(null);
-    },
-    [value, handleOnNewValue],
-  );
+  // const handleDuplicateInput = useCallback(
+  //   (index: number, e: React.MouseEvent | KeyboardEvent) => {
+  //     e.preventDefault();
+  //     const newInputList = _.cloneDeep(value);
+  //     newInputList.splice(index, 0, newInputList[index]);
+  //     handleOnNewValue({ value: newInputList });
+  //     setDropdownOpen(null);
+  //   },
+  //   [value, handleOnNewValue],
+  // );
 
   return (
     <div className={cn("w-full", editNode && "max-h-52")}>
@@ -86,24 +87,36 @@ export default function InputListComponent({
           disabled={disabled}
           editNode={editNode}
           componentName={componentName || ""}
+          listAddLabel={listAddLabel || "Add More"}
         />
       )}
 
       <div className="mt-2 flex w-full flex-col gap-3">
         {value.map((singleValue, index) => (
-          <div key={index} className="relative flex w-full items-center gap-2">
-            <div className="group flex flex-1 items-center rounded-md bg-background">
+          <div key={index} className="flex w-full items-center">
+            {focusedIndex !== index && !disabled && (
+              <div
+                className={cn(
+                  "absolute z-50 h-6 w-16",
+                  editNode ? "translate-x-[12rem]" : "translate-x-[11.1rem]",
+                )}
+                style={{
+                  pointerEvents: "none",
+                  background: GRADIENT_CLASS,
+                }}
+                aria-hidden="true"
+              />
+            )}
+            <div className="group relative flex-1">
               <Input
                 ref={index === 0 ? inputRef : null}
                 disabled={disabled}
                 type="text"
                 value={singleValue}
                 className={cn(
-                  editNode ? "input-edit-node pr-6" : "pr-10",
+                  "w-full pr-10 text-primary",
+                  editNode ? "input-edit-node" : "",
                   disabled ? "disabled-state" : "",
-                  focusedIndex === index
-                    ? "text-primary"
-                    : "text-muted-foreground",
                 )}
                 placeholder={getPlaceholder(disabled, placeholder)}
                 onChange={(event) =>
@@ -114,20 +127,20 @@ export default function InputListComponent({
                 onBlur={() => setFocusedIndex(null)}
               />
 
-              {focusedIndex !== index && !disabled && (
-                <div
-                  className={cn(
-                    "absolute h-6 w-16",
-                    editNode ? "translate-x-[12rem]" : "translate-x-[11.1rem]",
-                  )}
-                  style={{
-                    pointerEvents: "none",
-                    background: GRADIENT_CLASS,
-                  }}
-                  aria-hidden="true"
-                />
+              {value.length > 1 && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <DeleteButtonInputList
+                    index={index}
+                    removeInput={(e) => removeInput(index, e)}
+                    disabled={disabled}
+                    editNode={editNode}
+                    componentName={componentName || ""}
+                  />
+                </div>
               )}
 
+              {/* 
+              We will add this back in a future release
               {!disabled && (
                 <DropdownMenuInputList
                   index={index}
@@ -136,23 +149,23 @@ export default function InputListComponent({
                   editNode={editNode}
                   handleDuplicateInput={handleDuplicateInput}
                   removeInput={removeInput}
+                  canDelete={value.length > 1}
                 />
-              )}
+              )} */}
             </div>
           </div>
         ))}
+        {editNode && !disabled && (
+          <Button
+            unstyled
+            onClick={addNewInput}
+            className="btn-add-input-list"
+            data-testid={`input-list-add-more-${editNode ? "edit" : "view"}`}
+          >
+            <span className="mr-2 text-lg">+</span> {listAddLabel || "Add More"}
+          </Button>
+        )}
       </div>
-
-      {!disabled && (
-        <Button
-          unstyled
-          onClick={addNewInput}
-          className="btn-add-input-list"
-          data-testid={`input-list-add-more-${editNode ? "edit" : "view"}`}
-        >
-          <span className="mr-2 text-lg">+</span> {listAddLabel ?? "Add More"}
-        </Button>
-      )}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 {
-    "openapi": "3.1.0",
+    "openapi": "3.0.2",
     "info": {
         "title": "Langflow",
-        "version": "1.1.0"
+        "version": "1.1.1"
     },
     "paths": {
         "/api/v1/build/{flow_id}/vertices": {
@@ -32,12 +32,10 @@
                             "anyOf": [
                                 {
                                     "$ref": "#/components/schemas/FlowDataRequest"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Data"
+                            "title": "Data",
+                            "nullable": true
                         }
                     },
                     {
@@ -48,12 +46,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Stop Component Id"
+                            "title": "Stop Component Id",
+                            "nullable": true
                         }
                     },
                     {
@@ -64,12 +60,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Start Component Id"
+                            "title": "Start Component Id",
+                            "nullable": true
                         }
                     }
                 ],
@@ -134,12 +128,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Stop Component Id"
+                            "title": "Stop Component Id",
+                            "nullable": true
                         }
                     },
                     {
@@ -150,12 +142,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Start Component Id"
+                            "title": "Start Component Id",
+                            "nullable": true
                         }
                     },
                     {
@@ -166,13 +156,11 @@
                             "anyOf": [
                                 {
                                     "type": "boolean"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
                             "default": true,
-                            "title": "Log Builds"
+                            "title": "Log Builds",
+                            "nullable": true
                         }
                     }
                 ],
@@ -362,7 +350,7 @@
                     "Base"
                 ],
                 "summary": "Simplified Run Flow",
-                "description": "Executes a specified flow by ID.\n\nExecutes a specified flow by ID with input customization, performance enhancements through caching,\nand optional data streaming.\n\n### Parameters:\n- `db` (Session): Database session for executing queries.\n- `flow_id_or_name` (str): ID or endpoint name of the flow to run.\n- `input_request` (SimplifiedAPIRequest): Request object containing input values, types, output selection, tweaks,\n  and session ID.\n- `api_key_user` (User): User object derived from the provided API key, used for authentication.\n- `session_service` (SessionService): Service for managing flow sessions, essential for session reuse and caching.\n\n### SimplifiedAPIRequest:\n- `input_value` (Optional[str], default=\"\"): Input value to pass to the flow.\n- `input_type` (Optional[Literal[\"chat\", \"text\", \"any\"]], default=\"chat\"): Type of the input value,\n  determining how the input is interpreted.\n- `output_type` (Optional[Literal[\"chat\", \"text\", \"any\", \"debug\"]], default=\"chat\"): Desired type of output,\n  affecting which components' outputs are included in the response. If set to \"debug\", all outputs are returned.\n- `output_component` (Optional[str], default=None): Specific component output to retrieve. If provided,\n  only the output of the specified component is returned. This overrides the `output_type` parameter.\n- `tweaks` (Optional[Tweaks], default=None): Adjustments to the flow's behavior, allowing for custom execution\n  parameters.\n- `session_id` (Optional[str], default=None): An identifier for reusing session data, aiding in performance for\n  subsequent requests.\n\n\n### Tweaks\nA dictionary of tweaks to customize the flow execution.\nThe tweaks can be used to modify the flow's parameters and components.\nTweaks can be overridden by the input values.\nYou can use Component's `id` or Display Name as key to tweak a specific component\n(e.g., `{\"Component Name\": {\"parameter_name\": \"value\"}}`).\nYou can also use the parameter name as key to tweak all components with that parameter\n(e.g., `{\"parameter_name\": \"value\"}`).\n\n### Returns:\n- A `RunResponse` object containing the execution results, including selected (or all, based on `output_type`)\n  outputs of the flow and the session ID, facilitating result retrieval and further interactions in a session\n  context.\n\n### Raises:\n- HTTPException: 404 if the specified flow ID curl -X 'POST' \n### Example:\n```bash\ncurl -X 'POST'       'http://<your_server>/run/{flow_id}'       -H 'accept: application/json'       -H 'Content-Type: application/json'       -H 'x-api-key: YOU_API_KEY'       -H '\n  -d '{\n        \"input_value\": \"Sample input\",\n        \"input_type\": \"chat\",\n        \"output_type\": \"chat\",\n        \"tweaks\": {},\n      }'\n```\n\nThis endpoint provides a powerful interface for executing flows with enhanced flexibility and efficiency,\nsupporting a wide range of applications by allowing for dynamic input and output configuration along with\nperformance optimizations through session management and caching.",
+                "description": "Executes a specified flow by ID with support for streaming and telemetry.\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    request (Request): The incoming HTTP request\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result",
                 "operationId": "simplified_run_flow_api_v1_run__flow_id_or_name__post",
                 "security": [
                     {
@@ -399,14 +387,15 @@
                         "schema": {
                             "anyOf": [
                                 {
-                                    "type": "string",
-                                    "format": "uuid"
+                                    "type": "string"
                                 },
                                 {
-                                    "type": "null"
+                                    "type": "string",
+                                    "format": "uuid"
                                 }
                             ],
-                            "title": "User Id"
+                            "title": "User Id",
+                            "nullable": true
                         }
                     }
                 ],
@@ -417,12 +406,10 @@
                                 "anyOf": [
                                     {
                                         "$ref": "#/components/schemas/SimplifiedAPIRequest"
-                                    },
-                                    {
-                                        "type": "null"
                                     }
                                 ],
-                                "title": "Input Request"
+                                "title": "Input Request",
+                                "nullable": true
                             }
                         }
                     }
@@ -432,9 +419,7 @@
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/RunResponse"
-                                }
+                                "schema": {}
                             }
                         }
                     },
@@ -476,14 +461,15 @@
                         "schema": {
                             "anyOf": [
                                 {
-                                    "type": "string",
-                                    "format": "uuid"
+                                    "type": "string"
                                 },
                                 {
-                                    "type": "null"
+                                    "type": "string",
+                                    "format": "uuid"
                                 }
                             ],
-                            "title": "User Id"
+                            "title": "User Id",
+                            "nullable": true
                         }
                     }
                 ],
@@ -809,7 +795,7 @@
                     "Base"
                 ],
                 "summary": "Custom Component Update",
-                "description": "Update a custom component with the provided code request.\n\nThis endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method\non the latest version of the template.\nThis ensures that every time it runs, it has the latest version of the template.\n\nArgs:\n    code_request (CustomComponentRequest): The code request containing the updated code for the custom component.\n    user (User, optional): The user making the request. Defaults to the current active user.\n\nReturns:\n    dict: The updated custom component node.",
+                "description": "Update a custom component with the provided code request.\n\nThis endpoint generates the CustomComponentFrontendNode normally but then runs the `update_build_config` method\non the latest version of the template.\nThis ensures that every time it runs, it has the latest version of the template.\n\nArgs:\n    code_request (CustomComponentRequest): The code request containing the updated code for the custom component.\n    user (User, optional): The user making the request. Defaults to the current active user.\n\nReturns:\n    dict: The updated custom component node.\n\nRaises:\n    HTTPException: If there's an error building or updating the component\n    SerializationError: If there's an error serializing the component to JSON",
                 "operationId": "custom_component_update_api_v1_custom_component_update_post",
                 "requestBody": {
                     "content": {
@@ -1083,12 +1069,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Component Id"
+                            "title": "Component Id",
+                            "nullable": true
                         }
                     },
                     {
@@ -1099,12 +1083,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Search"
+                            "title": "Search",
+                            "nullable": true
                         }
                     },
                     {
@@ -1115,12 +1097,10 @@
                             "anyOf": [
                                 {
                                     "type": "boolean"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Private"
+                            "title": "Private",
+                            "nullable": true
                         }
                     },
                     {
@@ -1131,12 +1111,10 @@
                             "anyOf": [
                                 {
                                     "type": "boolean"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Is Component"
+                            "title": "Is Component",
+                            "nullable": true
                         }
                     },
                     {
@@ -1150,12 +1128,10 @@
                                     "items": {
                                         "type": "string"
                                     }
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Tags"
+                            "title": "Tags",
+                            "nullable": true
                         }
                     },
                     {
@@ -1169,12 +1145,10 @@
                                     "items": {
                                         "type": "string"
                                     }
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Sort"
+                            "title": "Sort",
+                            "nullable": true
                         }
                     },
                     {
@@ -1208,12 +1182,10 @@
                                     "items": {
                                         "type": "string"
                                     }
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Fields"
+                            "title": "Fields",
+                            "nullable": true
                         }
                     },
                     {
@@ -1601,12 +1573,10 @@
                                 {
                                     "type": "string",
                                     "format": "uuid"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Folder Id"
+                            "title": "Folder Id",
+                            "nullable": true
                         }
                     },
                     {
@@ -1993,12 +1963,10 @@
                                 {
                                     "type": "string",
                                     "format": "uuid"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Folder Id"
+                            "title": "Folder Id",
+                            "nullable": true
                         }
                     }
                 ],
@@ -3362,13 +3330,12 @@
                         "schema": {
                             "anyOf": [
                                 {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "null"
+                                    "type": "string",
+                                    "format": "uuid"
                                 }
                             ],
-                            "title": "Flow Id"
+                            "title": "Flow Id",
+                            "nullable": true
                         }
                     },
                     {
@@ -3379,12 +3346,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Session Id"
+                            "title": "Session Id",
+                            "nullable": true
                         }
                     },
                     {
@@ -3395,12 +3360,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Sender"
+                            "title": "Sender",
+                            "nullable": true
                         }
                     },
                     {
@@ -3411,12 +3374,10 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Sender Name"
+                            "title": "Sender Name",
+                            "nullable": true
                         }
                     },
                     {
@@ -3427,13 +3388,11 @@
                             "anyOf": [
                                 {
                                     "type": "string"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
                             "default": "timestamp",
-                            "title": "Order By"
+                            "title": "Order By",
+                            "nullable": true
                         }
                     }
                 ],
@@ -3697,6 +3656,33 @@
                             "format": "uuid",
                             "title": "Flow Id"
                         }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Page number",
+                            "default": 1,
+                            "title": "Page"
+                        },
+                        "description": "Page number"
+                    },
+                    {
+                        "name": "size",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "description": "Page size",
+                            "default": 50,
+                            "title": "Size"
+                        },
+                        "description": "Page size"
                     }
                 ],
                 "responses": {
@@ -3705,11 +3691,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/TransactionReadResponse"
-                                    },
-                                    "title": "Response Get Transactions Api V1 Monitor Transactions Get"
+                                    "$ref": "#/components/schemas/Page_TransactionTable_"
                                 }
                             }
                         }
@@ -3838,6 +3820,7 @@
                         "required": true,
                         "schema": {
                             "type": "string",
+                            "format": "uuid",
                             "title": "Folder Id"
                         }
                     },
@@ -3879,12 +3862,10 @@
                             "anyOf": [
                                 {
                                     "type": "integer"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Page"
+                            "title": "Page",
+                            "nullable": true
                         }
                     },
                     {
@@ -3895,12 +3876,10 @@
                             "anyOf": [
                                 {
                                     "type": "integer"
-                                },
-                                {
-                                    "type": "null"
                                 }
                             ],
-                            "title": "Size"
+                            "title": "Size",
+                            "nullable": true
                         }
                     }
                 ],
@@ -3959,6 +3938,7 @@
                         "required": true,
                         "schema": {
                             "type": "string",
+                            "format": "uuid",
                             "title": "Folder Id"
                         }
                     }
@@ -4020,6 +4000,7 @@
                         "required": true,
                         "schema": {
                             "type": "string",
+                            "format": "uuid",
                             "title": "Folder Id"
                         }
                     }
@@ -4067,6 +4048,7 @@
                         "required": true,
                         "schema": {
                             "type": "string",
+                            "format": "uuid",
                             "title": "Folder Id"
                         }
                     }
@@ -4185,6 +4167,50 @@
                         "API key header": []
                     }
                 ]
+            }
+        },
+        "/api/v1/mcp/sse": {
+            "get": {
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Handle Sse",
+                "operationId": "handle_sse_api_v1_mcp_sse_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response"
+                    }
+                },
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    },
+                    {
+                        "API key query": []
+                    },
+                    {
+                        "API key header": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mcp/": {
+            "post": {
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Handle Messages",
+                "operationId": "handle_messages_api_v1_mcp__post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
             }
         },
         "/health": {
@@ -4323,24 +4349,20 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "last_used_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Last Used At"
+                        "title": "Last Used At",
+                        "nullable": true
                     },
                     "total_uses": {
                         "type": "integer",
@@ -4356,36 +4378,30 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Api Key"
+                        "title": "Api Key",
+                        "nullable": true
                     },
                     "user_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "User Id"
+                        "title": "User Id",
+                        "nullable": true
                     },
                     "created_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Created At"
+                        "title": "Created At",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -4410,24 +4426,20 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "last_used_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Last Used At"
+                        "title": "Last Used At",
+                        "nullable": true
                     },
                     "total_uses": {
                         "type": "integer",
@@ -4506,21 +4518,17 @@
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/InputValueRequest"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "data": {
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/FlowDataRequest"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "files": {
                         "anyOf": [
@@ -4529,12 +4537,10 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Files"
+                        "title": "Files",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -4546,11 +4552,9 @@
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/InputValueRequest"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "files": {
                         "anyOf": [
@@ -4559,12 +4563,10 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Files"
+                        "title": "Files",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -4593,12 +4595,10 @@
                                     "$ref": "#/components/schemas/InputValueRequest"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Inputs"
+                        "title": "Inputs",
+                        "nullable": true
                     },
                     "outputs": {
                         "anyOf": [
@@ -4607,22 +4607,18 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Outputs"
+                        "title": "Outputs",
+                        "nullable": true
                     },
                     "tweaks": {
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/Tweaks"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "stream": {
                         "type": "boolean",
@@ -4633,12 +4629,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Session Id"
+                        "title": "Session Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -4651,12 +4645,10 @@
                             {
                                 "type": "string",
                                 "pattern": "password"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Grant Type"
+                        "title": "Grant Type",
+                        "nullable": true
                     },
                     "username": {
                         "type": "string",
@@ -4675,23 +4667,19 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Client Id"
+                        "title": "Client Id",
+                        "nullable": true
                     },
                     "client_secret": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Client Secret"
+                        "title": "Client Secret",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -4770,58 +4758,48 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Sender",
-                        "default": "Machine"
+                        "default": "Machine",
+                        "nullable": true
                     },
                     "sender_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Sender Name",
-                        "default": "AI"
+                        "default": "AI",
+                        "nullable": true
                     },
                     "session_id": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Session Id"
+                        "title": "Session Id",
+                        "nullable": true
                     },
                     "stream_url": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Stream Url"
+                        "title": "Stream Url",
+                        "nullable": true
                     },
                     "component_id": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Component Id"
+                        "title": "Component Id",
+                        "nullable": true
                     },
                     "files": {
                         "items": {
@@ -4858,9 +4836,7 @@
                 "title": "Code"
             },
             "CodeContent": {
-                "type": "object",
-                "title": "CodeContent",
-                "description": "Content type for code snippets."
+                "type": "object"
             },
             "CodeValidationResponse": {
                 "properties": {
@@ -4942,12 +4918,10 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Media Url"
+                        "title": "Media Url",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -4982,12 +4956,10 @@
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Frontend Node"
+                        "title": "Frontend Node",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5025,57 +4997,47 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "description": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "data": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Data"
+                        "title": "Data",
+                        "nullable": true
                     },
                     "is_component": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Component"
+                        "title": "Is Component",
+                        "nullable": true
                     },
                     "metadata": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Metadata",
-                        "default": {}
+                        "default": {},
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5122,9 +5084,7 @@
                 "title": "EdgeDataDetails"
             },
             "ErrorContent": {
-                "type": "object",
-                "title": "ErrorContent",
-                "description": "Content type for error messages."
+                "type": "object"
             },
             "ErrorLog": {
                 "properties": {
@@ -5190,104 +5150,86 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "icon": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon"
+                        "title": "Icon",
+                        "nullable": true
                     },
                     "icon_bg_color": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon Bg Color"
+                        "title": "Icon Bg Color",
+                        "nullable": true
                     },
                     "gradient": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Gradient"
+                        "title": "Gradient",
+                        "nullable": true
                     },
                     "data": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Data"
+                        "title": "Data",
+                        "nullable": true
                     },
                     "is_component": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Is Component",
-                        "default": false
+                        "default": false,
+                        "nullable": true
                     },
                     "updated_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Updated At"
+                        "title": "Updated At",
+                        "nullable": true
                     },
                     "webhook": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Webhook",
                         "description": "Can be used on the webhook endpoint",
-                        "default": false
+                        "default": false,
+                        "nullable": true
                     },
                     "endpoint_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Endpoint Name"
+                        "title": "Endpoint Name",
+                        "nullable": true
                     },
                     "tags": {
                         "anyOf": [
@@ -5296,13 +5238,21 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Tags",
-                        "default": []
+                        "default": [],
+                        "nullable": true
+                    },
+                    "locked": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            }
+                        ],
+                        "title": "Locked",
+                        "default": false,
+                        "nullable": true
                     },
                     "id": {
                         "type": "string",
@@ -5314,24 +5264,20 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "User Id"
+                        "title": "User Id",
+                        "nullable": true
                     },
                     "folder_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Folder Id"
+                        "title": "Folder Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5351,104 +5297,86 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "icon": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon"
+                        "title": "Icon",
+                        "nullable": true
                     },
                     "icon_bg_color": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon Bg Color"
+                        "title": "Icon Bg Color",
+                        "nullable": true
                     },
                     "gradient": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Gradient"
+                        "title": "Gradient",
+                        "nullable": true
                     },
                     "data": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Data"
+                        "title": "Data",
+                        "nullable": true
                     },
                     "is_component": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Is Component",
-                        "default": false
+                        "default": false,
+                        "nullable": true
                     },
                     "updated_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Updated At"
+                        "title": "Updated At",
+                        "nullable": true
                     },
                     "webhook": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Webhook",
                         "description": "Can be used on the webhook endpoint",
-                        "default": false
+                        "default": false,
+                        "nullable": true
                     },
                     "endpoint_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Endpoint Name"
+                        "title": "Endpoint Name",
+                        "nullable": true
                     },
                     "tags": {
                         "anyOf": [
@@ -5457,36 +5385,40 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Tags"
+                        "title": "Tags",
+                        "nullable": true
+                    },
+                    "locked": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            }
+                        ],
+                        "title": "Locked",
+                        "default": false,
+                        "nullable": true
                     },
                     "user_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "User Id"
+                        "title": "User Id",
+                        "nullable": true
                     },
                     "folder_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Folder Id"
+                        "title": "Folder Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5515,12 +5447,10 @@
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Viewport"
+                        "title": "Viewport",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5535,56 +5465,64 @@
                     "id": {
                         "type": "string",
                         "format": "uuid",
-                        "title": "Id"
+                        "title": "Id",
+                        "description": "Unique identifier for the flow"
                     },
                     "name": {
                         "type": "string",
-                        "title": "Name"
+                        "title": "Name",
+                        "description": "The name of the flow"
                     },
                     "folder_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Folder Id"
+                        "title": "Folder Id",
+                        "description": "The ID of the folder containing the flow. None if not associated with a folder",
+                        "nullable": true
                     },
                     "is_component": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Component"
+                        "title": "Is Component",
+                        "description": "Flag indicating whether the flow is a component",
+                        "nullable": true
                     },
                     "endpoint_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Endpoint Name"
+                        "title": "Endpoint Name",
+                        "description": "The name of the endpoint associated with this flow",
+                        "nullable": true
                     },
                     "description": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "description": "A description of the flow",
+                        "nullable": true
+                    },
+                    "data": {
+                        "anyOf": [
+                            {
+                                "type": "object"
+                            }
+                        ],
+                        "title": "Data",
+                        "description": "The data of the component, if is_component is True",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5593,7 +5531,7 @@
                     "name"
                 ],
                 "title": "FlowHeader",
-                "description": "Model representing a header for a flow - Without the data.\n\nAttributes:\n-----------\nid : UUID\n    Unique identifier for the flow.\nname : str\n    The name of the flow.\nfolder_id : UUID | None, optional\n    The ID of the folder containing the flow. None if not associated with a folder.\nis_component : bool | None, optional\n    Flag indicating whether the flow is a component.\nendpoint_name : str | None, optional\n    The name of the endpoint associated with this flow.\ndescription : str | None, optional\n    A description of the flow."
+                "description": "Model representing a header for a flow - Without the data."
             },
             "FlowListCreate": {
                 "properties": {
@@ -5621,104 +5559,86 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "icon": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon"
+                        "title": "Icon",
+                        "nullable": true
                     },
                     "icon_bg_color": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon Bg Color"
+                        "title": "Icon Bg Color",
+                        "nullable": true
                     },
                     "gradient": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Gradient"
+                        "title": "Gradient",
+                        "nullable": true
                     },
                     "data": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Data"
+                        "title": "Data",
+                        "nullable": true
                     },
                     "is_component": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Is Component",
-                        "default": false
+                        "default": false,
+                        "nullable": true
                     },
                     "updated_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Updated At"
+                        "title": "Updated At",
+                        "nullable": true
                     },
                     "webhook": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Webhook",
                         "description": "Can be used on the webhook endpoint",
-                        "default": false
+                        "default": false,
+                        "nullable": true
                     },
                     "endpoint_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Endpoint Name"
+                        "title": "Endpoint Name",
+                        "nullable": true
                     },
                     "tags": {
                         "anyOf": [
@@ -5727,12 +5647,20 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Tags"
+                        "title": "Tags",
+                        "nullable": true
+                    },
+                    "locked": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            }
+                        ],
+                        "title": "Locked",
+                        "default": false,
+                        "nullable": true
                     },
                     "id": {
                         "type": "string",
@@ -5744,24 +5672,20 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "User Id"
+                        "title": "User Id",
+                        "nullable": true
                     },
                     "folder_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Folder Id"
+                        "title": "Folder Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5779,57 +5703,56 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "description": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "data": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Data"
+                        "title": "Data",
+                        "nullable": true
                     },
                     "folder_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Folder Id"
+                        "title": "Folder Id",
+                        "nullable": true
                     },
                     "endpoint_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Endpoint Name"
+                        "title": "Endpoint Name",
+                        "nullable": true
+                    },
+                    "locked": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            }
+                        ],
+                        "title": "Locked",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5845,12 +5768,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "components_list": {
                         "anyOf": [
@@ -5860,12 +5781,10 @@
                                     "format": "uuid"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Components List"
+                        "title": "Components List",
+                        "nullable": true
                     },
                     "flows_list": {
                         "anyOf": [
@@ -5875,12 +5794,10 @@
                                     "format": "uuid"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Flows List"
+                        "title": "Flows List",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5899,12 +5816,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "id": {
                         "type": "string",
@@ -5916,12 +5831,10 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Parent Id"
+                        "title": "Parent Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -5942,12 +5855,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "id": {
                         "type": "string",
@@ -5959,12 +5870,10 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Parent Id"
+                        "title": "Parent Id",
+                        "nullable": true
                     },
                     "flows": {
                         "items": {
@@ -5989,35 +5898,29 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "description": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "parent_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Parent Id"
+                        "title": "Parent Id",
+                        "nullable": true
                     },
                     "components": {
                         "items": {
@@ -6065,56 +5968,46 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "icon": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon"
+                        "title": "Icon",
+                        "nullable": true
                     },
                     "is_input": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Input"
+                        "title": "Is Input",
+                        "nullable": true
                     },
                     "is_output": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Output"
+                        "title": "Is Output",
+                        "nullable": true
                     },
                     "is_composition": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Composition"
+                        "title": "Is Composition",
+                        "nullable": true
                     },
                     "base_classes": {
                         "items": {
@@ -6132,29 +6025,30 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Display Name",
-                        "default": ""
+                        "default": "",
+                        "nullable": true
                     },
                     "documentation": {
                         "type": "string",
                         "title": "Documentation",
                         "default": ""
                     },
+                    "minimized": {
+                        "type": "boolean",
+                        "title": "Minimized",
+                        "default": false
+                    },
                     "custom_fields": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Custom Fields"
+                        "title": "Custom Fields",
+                        "nullable": true
                     },
                     "output_types": {
                         "items": {
@@ -6168,12 +6062,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Full Path"
+                        "title": "Full Path",
+                        "nullable": true
                     },
                     "pinned": {
                         "type": "boolean",
@@ -6223,12 +6115,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Error"
+                        "title": "Error",
+                        "nullable": true
                     },
                     "edited": {
                         "type": "boolean",
@@ -6263,56 +6153,46 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "icon": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon"
+                        "title": "Icon",
+                        "nullable": true
                     },
                     "is_input": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Input"
+                        "title": "Is Input",
+                        "nullable": true
                     },
                     "is_output": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Output"
+                        "title": "Is Output",
+                        "nullable": true
                     },
                     "is_composition": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Composition"
+                        "title": "Is Composition",
+                        "nullable": true
                     },
                     "base_classes": {
                         "items": {
@@ -6335,16 +6215,19 @@
                         "title": "Documentation",
                         "default": ""
                     },
+                    "minimized": {
+                        "type": "boolean",
+                        "title": "Minimized",
+                        "default": false
+                    },
                     "custom_fields": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Custom Fields"
+                        "title": "Custom Fields",
+                        "nullable": true
                     },
                     "output_types": {
                         "items": {
@@ -6358,12 +6241,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Full Path"
+                        "title": "Full Path",
+                        "nullable": true
                     },
                     "pinned": {
                         "type": "boolean",
@@ -6413,12 +6294,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Error"
+                        "title": "Error",
+                        "nullable": true
                     },
                     "edited": {
                         "type": "boolean",
@@ -6514,23 +6393,19 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Title"
+                        "title": "Title",
+                        "nullable": true
                     },
                     "icon": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon"
+                        "title": "Icon",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -6566,35 +6441,29 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Components",
-                        "default": []
+                        "default": [],
+                        "nullable": true
                     },
                     "input_value": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Input Value"
+                        "title": "Input Value",
+                        "nullable": true
                     },
                     "session": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Session"
+                        "title": "Session",
+                        "nullable": true
                     },
                     "type": {
                         "anyOf": [
@@ -6605,62 +6474,28 @@
                                     "text",
                                     "any"
                                 ]
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Type",
                         "description": "Defines on which components the input value should be applied. 'any' applies to all input components.",
-                        "default": "any"
+                        "default": "any",
+                        "nullable": true
                     }
                 },
                 "additionalProperties": false,
                 "type": "object",
                 "title": "InputValueRequest",
-                "examples": [
-                    {
-                        "components": [
-                            "components_id",
-                            "Component Name"
-                        ],
-                        "input_value": "input_value",
-                        "session": "session_id"
-                    },
-                    {
-                        "components": [
-                            "Component Name"
-                        ],
-                        "input_value": "input_value"
-                    },
-                    {
-                        "input_value": "input_value"
-                    },
-                    {
-                        "components": [
-                            "Component Name"
-                        ],
-                        "input_value": "input_value",
-                        "session": "session_id"
-                    },
-                    {
-                        "input_value": "input_value",
-                        "session": "session_id"
-                    },
-                    {
-                        "input_value": "input_value",
-                        "type": "chat"
-                    },
-                    {
-                        "input_value": "{\"key\": \"value\"}",
-                        "type": "json"
-                    }
-                ]
+                "example": {
+                    "components": [
+                        "components_id",
+                        "Component Name"
+                    ],
+                    "input_value": "input_value",
+                    "session": "session_id"
+                }
             },
             "JSONContent": {
-                "type": "object",
-                "title": "JSONContent",
-                "description": "Content type for JSON content."
+                "type": "object"
             },
             "ListComponentResponse": {
                 "properties": {
@@ -6669,91 +6504,75 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Id"
+                        "title": "Id",
+                        "nullable": true
                     },
                     "name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "description": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "liked_by_count": {
                         "anyOf": [
                             {
                                 "type": "integer"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Liked By Count"
+                        "title": "Liked By Count",
+                        "nullable": true
                     },
                     "liked_by_user": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Liked By User"
+                        "title": "Liked By User",
+                        "nullable": true
                     },
                     "is_component": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Component"
+                        "title": "Is Component",
+                        "nullable": true
                     },
                     "metadata": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Metadata",
-                        "default": {}
+                        "default": {},
+                        "nullable": true
                     },
                     "user_created": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "User Created",
-                        "default": {}
+                        "default": {},
+                        "nullable": true
                     },
                     "tags": {
                         "anyOf": [
@@ -6762,45 +6581,37 @@
                                     "$ref": "#/components/schemas/TagResponse"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Tags"
+                        "title": "Tags",
+                        "nullable": true
                     },
                     "downloads_count": {
                         "anyOf": [
                             {
                                 "type": "integer"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Downloads Count"
+                        "title": "Downloads Count",
+                        "nullable": true
                     },
                     "last_tested_version": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Last Tested Version"
+                        "title": "Last Tested Version",
+                        "nullable": true
                     },
                     "private": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Private"
+                        "title": "Private",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -6812,13 +6623,11 @@
                         "anyOf": [
                             {
                                 "type": "integer"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Count",
-                        "default": 0
+                        "default": 0,
+                        "nullable": true
                     },
                     "authorized": {
                         "type": "boolean",
@@ -6831,12 +6640,10 @@
                                     "$ref": "#/components/schemas/ListComponentResponse"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Results"
+                        "title": "Results",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -6878,12 +6685,10 @@
                             },
                             {
                                 "$ref": "#/components/schemas/PlaygroundEvent"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Message"
+                        "title": "Message",
+                        "nullable": true
                     },
                     "type": {
                         "type": "string",
@@ -6899,9 +6704,7 @@
                 "title": "Log"
             },
             "MediaContent": {
-                "type": "object",
-                "title": "MediaContent",
-                "description": "Content type for media content."
+                "type": "object"
             },
             "MessageRead": {
                 "properties": {
@@ -6968,12 +6771,10 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Flow Id"
+                        "title": "Flow Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -6997,24 +6798,20 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Id"
+                        "title": "Id",
+                        "nullable": true
                     },
                     "flow_id": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Flow Id"
+                        "title": "Flow Id",
+                        "nullable": true
                     },
                     "timestamp": {
                         "type": "string",
@@ -7053,22 +6850,18 @@
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/Properties"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "category": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Category"
+                        "title": "Category",
+                        "nullable": true
                     },
                     "content_blocks": {
                         "anyOf": [
@@ -7077,12 +6870,10 @@
                                     "$ref": "#/components/schemas/ContentBlock"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Content Blocks"
+                        "title": "Content Blocks",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -7101,45 +6892,37 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Text"
+                        "title": "Text",
+                        "nullable": true
                     },
                     "sender": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Sender"
+                        "title": "Sender",
+                        "nullable": true
                     },
                     "sender_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Sender Name"
+                        "title": "Sender Name",
+                        "nullable": true
                     },
                     "session_id": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Session Id"
+                        "title": "Session Id",
+                        "nullable": true
                     },
                     "files": {
                         "anyOf": [
@@ -7148,34 +6931,36 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Files"
+                        "title": "Files",
+                        "nullable": true
                     },
                     "edit": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Edit"
+                        "title": "Edit",
+                        "nullable": true
                     },
                     "error": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Error"
+                        "title": "Error",
+                        "nullable": true
+                    },
+                    "properties": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/Properties"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -7250,12 +7035,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Selected"
+                        "title": "Selected",
+                        "nullable": true
                     },
                     "name": {
                         "type": "string",
@@ -7266,44 +7049,36 @@
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Hidden"
+                        "title": "Hidden",
+                        "nullable": true
                     },
                     "display_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Display Name"
+                        "title": "Display Name",
+                        "nullable": true
                     },
                     "method": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Method"
+                        "title": "Method",
+                        "nullable": true
                     },
                     "value": {
                         "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
+                            {}
                         ],
                         "title": "Value",
-                        "default": "__UNDEFINED__"
+                        "default": "__UNDEFINED__",
+                        "nullable": true
                     },
                     "cache": {
                         "type": "boolean",
@@ -7317,12 +7092,15 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Required Inputs"
+                        "title": "Required Inputs",
+                        "nullable": true
+                    },
+                    "allows_loop": {
+                        "type": "boolean",
+                        "title": "Allows Loop",
+                        "default": false
                     }
                 },
                 "type": "object",
@@ -7380,48 +7158,40 @@
                             {
                                 "type": "integer",
                                 "minimum": 0.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Total"
+                        "title": "Total",
+                        "nullable": true
                     },
                     "page": {
                         "anyOf": [
                             {
                                 "type": "integer",
                                 "minimum": 1.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Page"
+                        "title": "Page",
+                        "nullable": true
                     },
                     "size": {
                         "anyOf": [
                             {
                                 "type": "integer",
                                 "minimum": 1.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Size"
+                        "title": "Size",
+                        "nullable": true
                     },
                     "pages": {
                         "anyOf": [
                             {
                                 "type": "integer",
                                 "minimum": 0.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Pages"
+                        "title": "Pages",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -7447,48 +7217,40 @@
                             {
                                 "type": "integer",
                                 "minimum": 0.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Total"
+                        "title": "Total",
+                        "nullable": true
                     },
                     "page": {
                         "anyOf": [
                             {
                                 "type": "integer",
                                 "minimum": 1.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Page"
+                        "title": "Page",
+                        "nullable": true
                     },
                     "size": {
                         "anyOf": [
                             {
                                 "type": "integer",
                                 "minimum": 1.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Size"
+                        "title": "Size",
+                        "nullable": true
                     },
                     "pages": {
                         "anyOf": [
                             {
                                 "type": "integer",
                                 "minimum": 0.0
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Pages"
+                        "title": "Pages",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -7500,28 +7262,83 @@
                 ],
                 "title": "Page[Flow]"
             },
+            "Page_TransactionTable_": {
+                "properties": {
+                    "items": {
+                        "items": {
+                            "$ref": "#/components/schemas/TransactionTable"
+                        },
+                        "type": "array",
+                        "title": "Items"
+                    },
+                    "total": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 0.0
+                            }
+                        ],
+                        "title": "Total",
+                        "nullable": true
+                    },
+                    "page": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 1.0
+                            }
+                        ],
+                        "title": "Page",
+                        "nullable": true
+                    },
+                    "size": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 1.0
+                            }
+                        ],
+                        "title": "Size",
+                        "nullable": true
+                    },
+                    "pages": {
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "minimum": 0.0
+                            }
+                        ],
+                        "title": "Pages",
+                        "nullable": true
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "items",
+                    "total",
+                    "page",
+                    "size"
+                ],
+                "title": "Page[TransactionTable]"
+            },
             "PlaygroundEvent": {
                 "properties": {
                     "properties": {
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/Properties"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "sender_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Sender Name"
+                        "title": "Sender Name",
+                        "nullable": true
                     },
                     "content_blocks": {
                         "anyOf": [
@@ -7530,12 +7347,10 @@
                                     "$ref": "#/components/schemas/ContentBlock"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Content Blocks"
+                        "title": "Content Blocks",
+                        "nullable": true
                     },
                     "format_type": {
                         "type": "string",
@@ -7555,23 +7370,19 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Files"
+                        "title": "Files",
+                        "nullable": true
                     },
                     "text": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Text"
+                        "title": "Text",
+                        "nullable": true
                     },
                     "timestamp": {
                         "type": "string",
@@ -7585,12 +7396,10 @@
                             },
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Id"
+                        "title": "Id",
+                        "nullable": true
                     }
                 },
                 "additionalProperties": true,
@@ -7626,11 +7435,9 @@
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/FrontendNodeRequest-Output"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -7645,23 +7452,19 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Text Color"
+                        "title": "Text Color",
+                        "nullable": true
                     },
                     "background_color": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Background Color"
+                        "title": "Background Color",
+                        "nullable": true
                     },
                     "edited": {
                         "type": "boolean",
@@ -7675,17 +7478,24 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Icon"
+                        "title": "Icon",
+                        "nullable": true
                     },
                     "allow_markdown": {
                         "type": "boolean",
                         "title": "Allow Markdown",
                         "default": false
+                    },
+                    "positive_feedback": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            }
+                        ],
+                        "title": "Positive Feedback",
+                        "nullable": true
                     },
                     "state": {
                         "type": "string",
@@ -7710,43 +7520,35 @@
                 "properties": {
                     "results": {
                         "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
+                            {}
                         ],
-                        "title": "Results"
+                        "title": "Results",
+                        "nullable": true
                     },
                     "artifacts": {
                         "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
+                            {}
                         ],
-                        "title": "Artifacts"
+                        "title": "Artifacts",
+                        "nullable": true
                     },
                     "outputs": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Outputs"
+                        "title": "Outputs",
+                        "nullable": true
                     },
                     "logs": {
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Logs"
+                        "title": "Logs",
+                        "nullable": true
                     },
                     "messages": {
                         "anyOf": [
@@ -7755,156 +7557,63 @@
                                     "$ref": "#/components/schemas/ChatOutputResponse"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Messages"
+                        "title": "Messages",
+                        "nullable": true
                     },
                     "timedelta": {
                         "anyOf": [
                             {
                                 "type": "number"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Timedelta"
+                        "title": "Timedelta",
+                        "nullable": true
                     },
                     "duration": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Duration"
+                        "title": "Duration",
+                        "nullable": true
                     },
                     "component_display_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Component Display Name"
+                        "title": "Component Display Name",
+                        "nullable": true
                     },
                     "component_id": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Component Id"
+                        "title": "Component Id",
+                        "nullable": true
                     },
                     "used_frozen_result": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Used Frozen Result",
-                        "default": false
+                        "default": false,
+                        "nullable": true
                     }
                 },
                 "type": "object",
                 "title": "ResultData"
             },
             "ResultDataResponse": {
-                "properties": {
-                    "results": {
-                        "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Results"
-                    },
-                    "outputs": {
-                        "additionalProperties": {
-                            "$ref": "#/components/schemas/OutputValue"
-                        },
-                        "type": "object",
-                        "title": "Outputs"
-                    },
-                    "logs": {
-                        "additionalProperties": {
-                            "items": {
-                                "$ref": "#/components/schemas/Log"
-                            },
-                            "type": "array"
-                        },
-                        "type": "object",
-                        "title": "Logs"
-                    },
-                    "message": {
-                        "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Message"
-                    },
-                    "artifacts": {
-                        "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Artifacts"
-                    },
-                    "timedelta": {
-                        "anyOf": [
-                            {
-                                "type": "number"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Timedelta"
-                    },
-                    "duration": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Duration"
-                    },
-                    "used_frozen_result": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Used Frozen Result",
-                        "default": false
-                    }
-                },
-                "type": "object",
-                "title": "ResultDataResponse"
+                "type": "object"
             },
             "RunOutputs": {
                 "properties": {
@@ -7917,11 +7626,9 @@
                             "anyOf": [
                                 {
                                     "$ref": "#/components/schemas/ResultData"
-                                },
-                                {
-                                    "type": "null"
                                 }
-                            ]
+                            ],
+                            "nullable": true
                         },
                         "type": "array",
                         "title": "Outputs"
@@ -7939,24 +7646,20 @@
                                     "$ref": "#/components/schemas/RunOutputs"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Outputs",
-                        "default": []
+                        "default": [],
+                        "nullable": true
                     },
                     "session_id": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Session Id"
+                        "title": "Session Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -7969,13 +7672,11 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Input Value",
-                        "description": "The input value"
+                        "description": "The input value",
+                        "nullable": true
                     },
                     "input_type": {
                         "anyOf": [
@@ -7986,14 +7687,12 @@
                                     "text",
                                     "any"
                                 ]
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Input Type",
                         "description": "The input type",
-                        "default": "chat"
+                        "default": "chat",
+                        "nullable": true
                     },
                     "output_type": {
                         "anyOf": [
@@ -8005,50 +7704,42 @@
                                     "any",
                                     "debug"
                                 ]
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Output Type",
                         "description": "The output type",
-                        "default": "chat"
+                        "default": "chat",
+                        "nullable": true
                     },
                     "output_component": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Output Component",
                         "description": "If there are multiple output components, you can specify the component to get the output from.",
-                        "default": ""
+                        "default": "",
+                        "nullable": true
                     },
                     "tweaks": {
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/Tweaks"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "description": "The tweaks"
+                        "description": "The tweaks",
+                        "nullable": true
                     },
                     "session_id": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Session Id",
-                        "description": "The session id"
+                        "description": "The session id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8060,37 +7751,31 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Id",
-                        "description": "The id of the source component."
+                        "description": "The id of the source component.",
+                        "nullable": true
                     },
                     "display_name": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Display Name",
-                        "description": "The display name of the source component."
+                        "description": "The display name of the source component.",
+                        "nullable": true
                     },
                     "source": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Source",
-                        "description": "The source of the message. Normally used to display the model name (e.g. 'gpt-4o')"
+                        "description": "The source of the message. Normally used to display the model name (e.g. 'gpt-4o')",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8117,12 +7802,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "output_types": {
                         "items": {
@@ -8145,12 +7828,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Description"
+                        "title": "Description",
+                        "nullable": true
                     },
                     "data": {
                         "type": "object",
@@ -8163,58 +7844,48 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Tags"
+                        "title": "Tags",
+                        "nullable": true
                     },
                     "parent": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Parent"
+                        "title": "Parent",
+                        "nullable": true
                     },
                     "is_component": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Component"
+                        "title": "Is Component",
+                        "nullable": true
                     },
                     "last_tested_version": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Last Tested Version"
+                        "title": "Last Tested Version",
+                        "nullable": true
                     },
                     "private": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Private",
-                        "default": true
+                        "default": true,
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8251,12 +7922,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8283,12 +7952,10 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Inputtypes"
+                        "title": "Inputtypes",
+                        "nullable": true
                     },
                     "type": {
                         "type": "string",
@@ -8312,12 +7979,10 @@
                     },
                     "result": {
                         "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
+                            {}
                         ],
-                        "title": "Result"
+                        "title": "Result",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8328,9 +7993,7 @@
                 "description": "Task status response schema."
             },
             "TextContent": {
-                "type": "object",
-                "title": "TextContent",
-                "description": "Content type for simple text content."
+                "type": "object"
             },
             "Token": {
                 "properties": {
@@ -8356,11 +8019,9 @@
                 "title": "Token"
             },
             "ToolContent": {
-                "type": "object",
-                "title": "ToolContent",
-                "description": "Content type for tool start content."
+                "type": "object"
             },
-            "TransactionReadResponse": {
+            "TransactionTable": {
                 "properties": {
                     "timestamp": {
                         "type": "string",
@@ -8375,22 +8036,13 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Target Id"
+                        "title": "Target Id",
+                        "nullable": true
                     },
                     "inputs": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
+                        "type": "object",
                         "title": "Inputs"
                     },
                     "outputs": {
@@ -8405,32 +8057,34 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Error"
+                        "title": "Error",
+                        "nullable": true
                     },
                     "flow_id": {
                         "type": "string",
                         "format": "uuid",
                         "title": "Flow Id"
                     },
-                    "transaction_id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Transaction Id"
+                    "id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            }
+                        ],
+                        "title": "Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
                 "required": [
                     "vertex_id",
                     "status",
-                    "flow_id",
-                    "transaction_id"
+                    "flow_id"
                 ],
-                "title": "TransactionReadResponse"
+                "title": "TransactionTable"
             },
             "Tweaks": {
                 "additionalProperties": {
@@ -8446,17 +8100,15 @@
                 "type": "object",
                 "title": "Tweaks",
                 "description": "A dictionary of tweaks to adjust the flow's execution. Allows customizing flow behavior dynamically. All tweaks are overridden by the input values.",
-                "examples": [
-                    {
-                        "Component Name": {
-                            "parameter_name": "value"
-                        },
-                        "component_id": {
-                            "parameter_name": "value"
-                        },
+                "example": {
+                    "Component Name": {
                         "parameter_name": "value"
-                    }
-                ]
+                    },
+                    "component_id": {
+                        "parameter_name": "value"
+                    },
+                    "parameter_name": "value"
+                }
             },
             "UnmaskedApiKeyRead": {
                 "properties": {
@@ -8464,24 +8116,20 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Name"
+                        "title": "Name",
+                        "nullable": true
                     },
                     "last_used_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Last Used At"
+                        "title": "Last Used At",
+                        "nullable": true
                     },
                     "total_uses": {
                         "type": "integer",
@@ -8526,12 +8174,10 @@
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Frontend Node"
+                        "title": "Frontend Node",
+                        "nullable": true
                     },
                     "field": {
                         "type": "string",
@@ -8557,16 +8203,19 @@
                             {
                                 "items": {},
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Field Value"
+                        "title": "Field Value",
+                        "nullable": true
                     },
                     "template": {
                         "type": "object",
                         "title": "Template"
+                    },
+                    "tool_mode": {
+                        "type": "boolean",
+                        "title": "Tool Mode",
+                        "default": false
                     }
                 },
                 "type": "object",
@@ -8630,23 +8279,19 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Profile Image"
+                        "title": "Profile Image",
+                        "nullable": true
                     },
                     "store_api_key": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Store Api Key"
+                        "title": "Store Api Key",
+                        "nullable": true
                     },
                     "is_active": {
                         "type": "boolean",
@@ -8671,12 +8316,10 @@
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Last Login At"
+                        "title": "Last Login At",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8698,68 +8341,56 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Username"
+                        "title": "Username",
+                        "nullable": true
                     },
                     "profile_image": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Profile Image"
+                        "title": "Profile Image",
+                        "nullable": true
                     },
                     "password": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Password"
+                        "title": "Password",
+                        "nullable": true
                     },
                     "is_active": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Active"
+                        "title": "Is Active",
+                        "nullable": true
                     },
                     "is_superuser": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Is Superuser"
+                        "title": "Is Superuser",
+                        "nullable": true
                     },
                     "last_login_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Last Login At"
+                        "title": "Last Login At",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8771,23 +8402,19 @@
                         "anyOf": [
                             {
                                 "type": "integer"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Likes Count"
+                        "title": "Likes Count",
+                        "nullable": true
                     },
                     "liked_by_user": {
                         "anyOf": [
                             {
                                 "type": "boolean"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Liked By User"
+                        "title": "Liked By User",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8832,22 +8459,18 @@
                         "anyOf": [
                             {
                                 "type": "object"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Custom Fields"
+                        "title": "Custom Fields",
+                        "nullable": true
                     },
                     "frontend_node": {
                         "anyOf": [
                             {
                                 "$ref": "#/components/schemas/FrontendNodeRequest-Input"
-                            },
-                            {
-                                "type": "null"
                             }
-                        ]
+                        ],
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8909,50 +8532,42 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Default Fields"
+                        "title": "Default Fields",
+                        "nullable": true
                     },
                     "type": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Type",
-                        "description": "Type of the variable"
+                        "description": "Type of the variable",
+                        "nullable": true
                     },
                     "created_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Created At",
-                        "description": "Creation time of the variable"
+                        "description": "Creation time of the variable",
+                        "nullable": true
                     },
                     "updated_at": {
                         "anyOf": [
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Updated At",
-                        "description": "Creation time of the variable"
+                        "description": "Creation time of the variable",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -8974,37 +8589,31 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Name",
-                        "description": "Name of the variable"
+                        "description": "Name of the variable",
+                        "nullable": true
                     },
                     "type": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Type",
-                        "description": "Type of the variable"
+                        "description": "Type of the variable",
+                        "nullable": true
                     },
                     "value": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Value",
-                        "description": "Encrypted value of the variable"
+                        "description": "Encrypted value of the variable",
+                        "nullable": true
                     },
                     "default_fields": {
                         "anyOf": [
@@ -9013,13 +8622,11 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Default Fields",
-                        "description": "Default fields for the variable"
+                        "description": "Default fields for the variable",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -9039,25 +8646,21 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Name",
-                        "description": "Name of the variable"
+                        "description": "Name of the variable",
+                        "nullable": true
                     },
                     "value": {
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Value",
-                        "description": "Encrypted value of the variable"
+                        "description": "Encrypted value of the variable",
+                        "nullable": true
                     },
                     "default_fields": {
                         "anyOf": [
@@ -9066,13 +8669,11 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
                         "title": "Default Fields",
-                        "description": "Default fields for the variable"
+                        "description": "Default fields for the variable",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -9106,12 +8707,10 @@
                         "anyOf": [
                             {
                                 "type": "string"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Id"
+                        "title": "Id",
+                        "nullable": true
                     },
                     "inactivated_vertices": {
                         "anyOf": [
@@ -9120,12 +8719,10 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Inactivated Vertices"
+                        "title": "Inactivated Vertices",
+                        "nullable": true
                     },
                     "next_vertices_ids": {
                         "anyOf": [
@@ -9134,12 +8731,10 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Next Vertices Ids"
+                        "title": "Next Vertices Ids",
+                        "nullable": true
                     },
                     "top_level_vertices": {
                         "anyOf": [
@@ -9148,12 +8743,10 @@
                                     "type": "string"
                                 },
                                 "type": "array"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Top Level Vertices"
+                        "title": "Top Level Vertices",
+                        "nullable": true
                     },
                     "valid": {
                         "type": "boolean",
@@ -9161,12 +8754,10 @@
                     },
                     "params": {
                         "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
+                            {}
                         ],
-                        "title": "Params"
+                        "title": "Params",
+                        "nullable": true
                     },
                     "data": {
                         "type": "object"
@@ -9176,12 +8767,10 @@
                             {
                                 "type": "string",
                                 "format": "date-time"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Timestamp"
+                        "title": "Timestamp",
+                        "nullable": true
                     }
                 },
                 "type": "object",
@@ -9228,12 +8817,10 @@
                             {
                                 "type": "string",
                                 "format": "uuid"
-                            },
-                            {
-                                "type": "null"
                             }
                         ],
-                        "title": "Build Id"
+                        "title": "Build Id",
+                        "nullable": true
                     }
                 },
                 "type": "object",
