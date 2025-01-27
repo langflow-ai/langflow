@@ -63,8 +63,9 @@ const JsonEditor = ({
       // Always start with original data for transformation
       const json = 'json' in originalData ? originalData.json : JSON.parse(originalData.text!);
 
-      // Convert jQuery-style path to nested property access
-      const path = transformQuery.trim().split(".").filter(Boolean);
+      // Normalize the path to handle both data[0] and data.[0] syntax
+      const normalizedQuery = transformQuery.replace(/\[/g, '.[');
+      const path = normalizedQuery.trim().split(".").filter(Boolean);
       let result = json;
 
       for (const key of path) {
