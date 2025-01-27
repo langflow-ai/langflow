@@ -34,7 +34,6 @@ export default function NodeName({
     }
   }, [editNameDescription]);
 
-
   useEffect(() => {
     setNodeName(display_name ?? "");
   }, [display_name]);
