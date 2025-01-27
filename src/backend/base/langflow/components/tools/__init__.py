@@ -31,6 +31,7 @@ from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
 from .yahoo import YfinanceComponent
 from .yahoo_finance import YfinanceToolComponent
+from .http_request_tool import HttpRequestTool
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
@@ -44,6 +45,7 @@ __all__ = [
     "BingSearchAPIComponent",
     "CalculatorComponent",
     "CalculatorToolComponent",
+    "HttpRequestTool",
     "DuckDuckGoSearchComponent",
     "ExaSearchToolkit",
     "GleanSearchAPIComponent",
