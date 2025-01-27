@@ -658,6 +658,7 @@ export type IOModalPropsType = {
   isPlayground?: boolean;
   cleanOnClose?: boolean;
   canvasOpen?: boolean;
+  playgroundPage?: boolean;
 };
 
 export type buttonBoxPropsType = {
