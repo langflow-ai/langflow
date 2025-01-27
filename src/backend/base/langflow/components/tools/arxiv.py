@@ -40,7 +40,7 @@ class ArXivComponent(Component):
 
     outputs = [
         Output(
-            display_name="Papers", 
+            display_name="Results", 
             name="papers", 
             method="search_papers",
             type_=DataFrame
