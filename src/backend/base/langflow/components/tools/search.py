@@ -20,12 +20,7 @@ class SearchComponent(Component):
     icon = "SearchAPI"
 
     inputs = [
-        DropdownInput(
-            name="engine",
-            display_name="Engine",
-            value="google",
-            options=["google", "bing", "duckduckgo"]
-        ),
+        DropdownInput(name="engine", display_name="Engine", value="google", options=["google", "bing", "duckduckgo"]),
         SecretStrInput(
             name="api_key",
             display_name="SearchAPI API Key",
@@ -73,24 +68,21 @@ class SearchComponent(Component):
 
         try:
             # Prepare wrapper with parameters
-            wrapper = SearchApiAPIWrapper(
-                engine=self.engine,
-                searchapi_api_key=self.api_key
-            )
+            wrapper = SearchApiAPIWrapper(engine=self.engine, searchapi_api_key=self.api_key)
 
             # Prepare search parameters
             params = self.search_params or {}
 
             # Perform search
             full_results = wrapper.results(query=self.input_value, **params)
-            organic_results = full_results.get("organic_results", [])[:self.max_results]
+            organic_results = full_results.get("organic_results", [])[: self.max_results]
 
             # Prepare results
             results = [
                 {
-                    "title": result.get("title", "")[:self.max_snippet_length],
+                    "title": result.get("title", "")[: self.max_snippet_length],
                     "link": result.get("link", ""),
-                    "snippet": result.get("snippet", "")[:self.max_snippet_length],
+                    "snippet": result.get("snippet", "")[: self.max_snippet_length],
                 }
                 for result in organic_results
             ]

@@ -39,12 +39,7 @@ class ArXivComponent(Component):
     ]
 
     outputs = [
-        Output(
-            display_name="Results",
-            name="papers",
-            method="search_papers",
-            type_=DataFrame
-        ),
+        Output(display_name="Results", name="papers", method="search_papers", type_=DataFrame),
     ]
 
     def build_query_url(self) -> str:
