@@ -154,13 +154,48 @@ const JsonEditor = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // If we have an initial filter, apply it to the data before creating the editor
+    let initialContent = data;
+    if (initialFilter) {
+      try {
+        const json = 'json' in data ? data.json : JSON.parse(data.text!);
+        const path = initialFilter.trim().split(".").filter(Boolean);
+        let result = json;
+
+        for (const key of path) {
+          if (result === undefined || result === null) break;
+          if (Array.isArray(result)) {
+            const indexMatch = key.match(/\[(\d+)\]/);
+            if (indexMatch) {
+              const index = parseInt(indexMatch[1]);
+              if (index < result.length) {
+                result = result[index];
+              }
+              continue;
+            }
+            result = result.map((item) => item[key]).filter((item) => item !== undefined);
+          } else {
+            if (key in result) {
+              result = result[key];
+            }
+          }
+        }
+
+        if (result !== undefined) {
+          initialContent = { json: result };
+        }
+      } catch (error) {
+        console.error('Error applying initial filter:', error);
+      }
+    }
+
     const editor = createJSONEditor({
       target: containerRef.current,
       props: {
         ...options,
         navigationBar: false,
         mode: "text",
-        content: data,
+        content: initialContent,
         readOnly,
         onChange: (content) => {
           onChange?.(content);
