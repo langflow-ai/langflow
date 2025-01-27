@@ -23,7 +23,7 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="Base URL",
-            info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
+            info="Endpoint of the Ollama API.",
             value="",
         ),
         DropdownInput(
@@ -114,9 +114,6 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="system", display_name="System", info="System to use for generating text.", advanced=True
         ),
-        MessageTextInput(
-            name="template", display_name="Template", info="Template to use for generating text.", advanced=True
-        ),
         BoolInput(
             name="tool_model_enabled",
             display_name="Tool Model Enabled",
@@ -160,7 +157,6 @@ class ChatOllamaComponent(LCModelComponent):
             "temperature": self.temperature or None,
             "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
             "system": self.system,
-            "template": self.template,
             "tfs_z": self.tfs_z or None,
             "timeout": self.timeout or None,
             "top_k": self.top_k or None,
@@ -215,7 +211,11 @@ class ChatOllamaComponent(LCModelComponent):
                 if await self.is_valid_ollama_url(url):
                     valid_url = url
                     break
-            build_config["base_url"]["value"] = valid_url
+            if valid_url:
+                build_config["base_url"]["value"] = valid_url
+            else:
+                msg = "No valid Ollama URL found."
+                raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
