@@ -1,7 +1,7 @@
 from typing import Any
 
-from langflow.field_typing import BaseDocumentCompressor
 from langflow.base.compressors.model import LCCompressorComponent
+from langflow.field_typing import BaseDocumentCompressor
 from langflow.io import DropdownInput, StrInput
 from langflow.schema.dotdict import dotdict
 from langflow.template.field.base import Output
@@ -26,7 +26,7 @@ class NvidiaRerankComponent(LCCompressorComponent):
             display_name="Model",
             options=["nv-rerank-qa-mistral-4b:1"],
             value="nv-rerank-qa-mistral-4b:1",
-        )
+        ),
     ]
 
     outputs = [

@@ -1,13 +1,13 @@
 from abc import abstractmethod
+
 from langflow.custom import Component
 from langflow.field_typing import BaseDocumentCompressor
-from langflow.io import MultilineInput, DataInput, SecretStrInput, IntInput
-from langflow.template.field.base import Output
+from langflow.io import DataInput, IntInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
+from langflow.template.field.base import Output
 
 
 class LCCompressorComponent(Component):
-
     inputs = [
         MultilineInput(
             name="search_query",
@@ -24,12 +24,7 @@ class LCCompressorComponent(Component):
             info="Search Results from a Vector Store.",
             is_list=True,
         ),
-        IntInput(
-            name="top_n",
-            display_name="Top N",
-            value=3,
-            advanced=True
-        ),
+        IntInput(name="top_n", display_name="Top N", value=3, advanced=True),
     ]
 
     outputs = [

@@ -1,5 +1,5 @@
-from langflow.field_typing import BaseDocumentCompressor
 from langflow.base.compressors.model import LCCompressorComponent
+from langflow.field_typing import BaseDocumentCompressor
 from langflow.io import DropdownInput
 from langflow.template.field.base import Output
 
