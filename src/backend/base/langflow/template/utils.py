@@ -103,3 +103,68 @@ def extract_tool_modes(data: dict | list) -> list[bool | None]:
             tool_models.extend(extract_tool_modes(item))
 
     return tool_models
+
+
+def apply_json_filter(result, filter_):
+    """Apply a json filter to the result.
+
+    Args:
+        result (dict): The JSON data to filter
+        filter_ (str): The filter query string in jsonquery format
+
+    Returns:
+        Any: The filtered result
+    """
+    if not filter_ or not filter_.strip():
+        return result
+
+    try:
+        from jsonquerylang import jsonquery
+
+        # Convert result to string if it's a dict
+        if isinstance(result, dict):
+            import json
+
+            result_str = json.dumps(result)
+        else:
+            result_str = str(result)
+
+        # Apply the filter using jsonquery
+        return jsonquery(result_str, filter_)
+
+    except ImportError:
+        # Fallback to basic path-based filtering if jsonquery is not available
+        # Normalize array access notation
+        normalized_query = filter_.replace("[", ".[")
+        path = normalized_query.strip().split(".")
+        path = [p for p in path if p]
+
+        current = result
+        for key in path:
+            if current is None:
+                return None
+
+            # Handle array access
+            if key.startswith("[") and key.endswith("]"):
+                try:
+                    index = int(key[1:-1])
+                    if not isinstance(current, list) or index >= len(current):
+                        return None
+                    current = current[index]
+                except (ValueError, TypeError):
+                    return None
+            # Handle object access
+            elif isinstance(current, dict):
+                if key not in current:
+                    return None
+                current = current[key]
+            # Handle array operation
+            elif isinstance(current, list):
+                try:
+                    current = [item[key] for item in current if isinstance(item, dict) and key in item]
+                except (TypeError, KeyError):
+                    return None
+            else:
+                return None
+
+        return current
