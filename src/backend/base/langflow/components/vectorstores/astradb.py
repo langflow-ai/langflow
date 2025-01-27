@@ -541,8 +541,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if field_name == "collection_name" and field_value:
             # Set the options for collection name to be the field value if its a new collection
             if not is_hosted and field_value not in build_config["collection_name"]["options"]:
-                build_config["collection_name"]["options"] = [field_value]
-                build_config["collection_name"]["options_metadata"] = [{"provider": None}]
+                build_config["collection_name"]["options"].append(field_value)
+                build_config["collection_name"]["options_metadata"].append(
+                    {"records": 0, "provider": None, "icon": "", "model": None}
+                )
 
             # Find location of the name in the options list
             index_of_name = build_config["collection_name"]["options"].index(field_value)
