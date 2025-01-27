@@ -102,7 +102,7 @@ class TestArXivComponent(ComponentTestBaseWithClient):
         paper = papers[0]
         assert paper["title"] == "Test Paper"
         assert paper["summary"] == "Test summary"
-        assert paper["authors"] == ["Test Author"]
+        assert paper["authors"] == "Test Author"
         assert paper["arxiv_url"] == "http://arxiv.org/abs/quant-ph/0000001"
         assert paper["pdf_url"] == "http://arxiv.org/pdf/quant-ph/0000001"
         assert paper["comment"] == "Test comment"
@@ -120,5 +120,5 @@ class TestArXivComponent(ComponentTestBaseWithClient):
 
         # Assert
         assert len(results) == 1
-        assert hasattr(results[0], "error")
-        assert "Invalid URL" in results[0].error
+        assert "error" in results.columns
+        assert "Request error: Invalid URL" in results["error"].values[0]
