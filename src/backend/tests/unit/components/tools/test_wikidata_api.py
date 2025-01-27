@@ -99,7 +99,7 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
         mock_httpx.side_effect = httpx.RequestError("API Error")
 
         result = component.search_wikidata()
-        
+
         assert isinstance(result, DataFrame)
         assert len(result) == 1
         assert "error" in result.columns
