@@ -211,7 +211,7 @@ export default function NodeStatus({
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center self-center pr-1">
+                <div className="flex items-center self-center">
                   {iconStatus}
                 </div>
               )}
