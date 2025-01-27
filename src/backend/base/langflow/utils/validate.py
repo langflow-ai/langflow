@@ -2,6 +2,7 @@ import ast
 import contextlib
 import importlib
 import warnings
+from collections import defaultdict
 from types import FunctionType
 from typing import Optional, Union
 
@@ -230,40 +231,52 @@ def prepare_global_scope(module):
         ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
+    import_statements = defaultdict(list)
+
     for node in module.body:
         if isinstance(node, ast.Import):
-            for alias in node.names:
-                try:
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
-                except ModuleNotFoundError as e:
-                    msg = f"Module {alias.name} not found. Please install it and try again."
-                    raise ModuleNotFoundError(msg) from e
-        elif isinstance(node, ast.ImportFrom) and node.module is not None:
+            import_statements["import"].append(node)
+        elif isinstance(node, ast.ImportFrom):
+            import_statements["importfrom"].append(node)
+        else:
+            first_statement = isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.Assign))
+            other_statements = node if first_statement else []
+            exec_globals["code_statements"] = exec_globals.get("code_statements", []) + [other_statements]
+
+    # Process imports
+    for import_node in import_statements["import"]:
+        for alias in import_node.names:
+            try:
+                exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
+            except ModuleNotFoundError as e:
+                msg = f"Module {alias.name} not found. Please install it and try again."
+                raise ModuleNotFoundError(msg) from e
+
+    for importfrom_node in import_statements["importfrom"]:
+        if importfrom_node.module is not None:
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", LangChainDeprecationWarning)
-                    imported_module = importlib.import_module(node.module)
-                    for alias in node.names:
+                    imported_module = importlib.import_module(importfrom_node.module)
+                    for alias in importfrom_node.names:
                         try:
-                            # First try getting it as an attribute
                             exec_globals[alias.name] = getattr(imported_module, alias.name)
                         except AttributeError:
-                            # If that fails, try importing the full module path
-                            full_module_path = f"{node.module}.{alias.name}"
+                            full_module_path = f"{importfrom_node.module}.{alias.name}"
                             exec_globals[alias.name] = importlib.import_module(full_module_path)
             except ModuleNotFoundError as e:
-                msg = f"Module {node.module} not found. Please install it and try again"
+                msg = f"Module {importfrom_node.module} not found. Please install it and try again."
                 raise ModuleNotFoundError(msg) from e
-        elif isinstance(node, ast.ClassDef):
-            # Compile and execute the class definition to properly create the class
-            class_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            exec(class_code, exec_globals)
-        elif isinstance(node, ast.FunctionDef):
-            function_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            exec(function_code, exec_globals)
-        elif isinstance(node, ast.Assign):
-            assign_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            exec(assign_code, exec_globals)
+
+    # Unfold and compile blocks of statements
+    try:
+        code_statements = exec_globals.pop("code_statements", [])
+        if code_statements:
+            code = compile(ast.Module(body=code_statements, type_ignores=[]), "<string>", "exec")
+            exec(code, exec_globals)
+    except SyntaxError as e:
+        raise e
+
     return exec_globals
 
 
