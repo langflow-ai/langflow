@@ -14,7 +14,7 @@ interface JsonOutputViewComponentProps {
 const JsonOutputViewComponent: React.FC<JsonOutputViewComponentProps> = ({
   data,
   width = "100%",
-  height = "600px",
+  height = "580px",
   nodeId,
   outputName,
 }) => {
