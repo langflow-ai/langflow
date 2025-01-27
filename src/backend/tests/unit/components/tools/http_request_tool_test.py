@@ -46,7 +46,7 @@ def test_http_request_tool_post(mock_post, api_request):
     api_request.curl = (
         "curl --location 'https://host/test' "
         "--header 'Content-Type: application/json' "
-        "--data '{\"product_id\": \"123\"}'"
+        '--data \'{"product_id": "123"}\''
     )
 
     # Llamar al método make_request

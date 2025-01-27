@@ -4,7 +4,7 @@ import requests
 
 from langflow.base.curl.parse import parse_context
 from langflow.custom import Component
-from langflow.io import IntInput, MessageTextInput, Output, Message
+from langflow.io import IntInput, Message, MessageTextInput, Output
 from langflow.schema import Data
 
 
@@ -24,7 +24,7 @@ class HttpRequestTool(Component):
                 "curl --location 'https://host/todos' "
                 "--header 'some-header: some-value' "
                 "--header 'Content-Type: application/json' "
-                "--data '{\"product_id\": \"{product_id}\"}'"
+                '--data \'{"product_id": "{product_id}"}\''
             ),
             tool_mode=True,
         ),
