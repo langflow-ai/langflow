@@ -40,8 +40,8 @@ class ArXivComponent(Component):
 
     outputs = [
         Output(
-            display_name="Results", 
-            name="papers", 
+            display_name="Results",
+            name="papers",
             method="search_papers",
             type_=DataFrame
         ),
@@ -82,13 +82,15 @@ class ArXivComponent(Component):
                 "summary": self._get_text(entry, "atom:summary", ns),
                 "published": self._get_text(entry, "atom:published", ns),
                 "updated": self._get_text(entry, "atom:updated", ns),
-                "authors": ', '.join([author.find("atom:name", ns).text for author in entry.findall("atom:author", ns)]),
+                "authors": ", ".join(
+                    [author.find("atom:name", ns).text for author in entry.findall("atom:author", ns)]
+                ),
                 "arxiv_url": self._get_link(entry, "alternate", ns),
                 "pdf_url": self._get_link(entry, "related", ns),
                 "comment": self._get_text(entry, "arxiv:comment", ns),
                 "journal_ref": self._get_text(entry, "arxiv:journal_ref", ns),
                 "primary_category": self._get_category(entry, ns),
-                "categories": ', '.join([cat.get("term") for cat in entry.findall("atom:category", ns)]),
+                "categories": ", ".join([cat.get("term") for cat in entry.findall("atom:category", ns)]),
             }
             papers.append(paper)
 
