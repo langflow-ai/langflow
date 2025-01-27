@@ -31,11 +31,13 @@ async def get_build_events(client: AsyncClient, job_id: str, headers: dict[str, 
 async def consume_and_assert_stream(response, job_id):
     """Consume the event stream and assert the expected event structure."""
     count = 0
+    lines = []
     async for line in response.aiter_lines():
         # Skip empty lines (ndjson uses double newlines)
         if not line:
             continue
 
+        lines.append(line)
         parsed = json.loads(line)
         if "job_id" in parsed:
             assert parsed["job_id"] == job_id
@@ -43,22 +45,31 @@ async def consume_and_assert_stream(response, job_id):
 
         if count == 0:
             # First event should be vertices_sorted
-            assert parsed["event"] == "vertices_sorted"
+            assert parsed["event"] == "vertices_sorted", (
+                "Invalid first event. Expected 'vertices_sorted'. Full event stream:\n" + "\n".join(lines)
+            )
             ids = parsed["data"]["ids"]
             ids.sort()
-            assert ids == ["ChatInput-CIGht"]
+            assert ids == ["ChatInput-CIGht"], "Invalid ids in first event. Full event stream:\n" + "\n".join(lines)
 
             to_run = parsed["data"]["to_run"]
             to_run.sort()
-            assert to_run == ["ChatInput-CIGht", "ChatOutput-QA7ej", "Memory-amN4Z", "Prompt-iWbCC"]
+            assert to_run == ["ChatInput-CIGht", "ChatOutput-QA7ej", "Memory-amN4Z", "Prompt-iWbCC"], (
+                "Invalid to_run list in first event. Full event stream:\n" + "\n".join(lines)
+            )
         elif count > 0 and count < 5:
             # Next events should be end_vertex events
-            assert parsed["event"] == "end_vertex"
-            assert parsed["data"]["build_data"] is not None
+            assert parsed["event"] == "end_vertex", (
+                f"Invalid event at position {count}. Expected 'end_vertex'. Full event stream:\n" + "\n".join(lines)
+            )
+            assert parsed["data"]["build_data"] is not None, (
+                f"Missing build_data at position {count}. Full event stream:\n" + "\n".join(lines)
+            )
         elif count == 5:
             # Final event should be end
-            assert parsed["event"] == "end"
+            assert parsed["event"] == "end", "Invalid final event. Expected 'end'. Full event stream:\n" + "\n".join(
+                lines
+            )
         else:
-            msg = f"Unexpected line: {line}"
-            raise ValueError(msg)
+            raise ValueError(f"Unexpected event at position {count}. Full event stream:\n" + "\n".join(lines))
         count += 1
