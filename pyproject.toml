@@ -96,7 +96,6 @@ dependencies = [
     "langchain-elasticsearch==0.3.0",
     "langchain-ollama==0.2.1",
     "langchain-community~=0.3.10",
-    "langchain-voyageai==0.1.4",
     "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.36,<3.0.0",
     "atlassian-python-api==3.41.16",
     "mem0ai==0.1.34",

@@ -1,5 +1,3 @@
-from typing import cast
-
 from langflow.field_typing import BaseDocumentCompressor
 from langflow.base.compressors.model import LCCompressorComponent
 from langflow.io import DropdownInput
