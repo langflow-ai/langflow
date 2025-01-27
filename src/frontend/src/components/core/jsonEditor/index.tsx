@@ -4,9 +4,9 @@ import {
   createJSONEditor,
   JsonEditor as VanillaJsonEditor,
 } from "vanilla-jsoneditor";
+import useAlertStore from "../../../stores/alertStore";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
-import useAlertStore from "../../../stores/alertStore";
 
 interface JsonEditorProps {
   data?: Content;
@@ -57,7 +57,7 @@ const JsonEditor = ({
         if (result === undefined || result === null) {
           setErrorData({
             title: "Invalid Path",
-            list: [`Path '${transformQuery}' led to undefined or null value`]
+            list: [`Path '${transformQuery}' led to undefined or null value`],
           });
           return;
         }
@@ -69,7 +69,9 @@ const JsonEditor = ({
             if (index >= result.length) {
               setErrorData({
                 title: "Invalid Array Index",
-                list: [`Index ${index} is out of bounds for array of length ${result.length}`]
+                list: [
+                  `Index ${index} is out of bounds for array of length ${result.length}`,
+                ],
               });
               return;
             }
@@ -77,21 +79,23 @@ const JsonEditor = ({
             continue;
           }
           // Apply operation to all array items
-          result = result.map(item => {
-            if (!(key in item)) {
-              setErrorData({
-                title: "Invalid Property",
-                list: [`Property '${key}' does not exist in array items`]
-              });
-              return undefined;
-            }
-            return item[key];
-          }).filter(item => item !== undefined);
+          result = result
+            .map((item) => {
+              if (!(key in item)) {
+                setErrorData({
+                  title: "Invalid Property",
+                  list: [`Property '${key}' does not exist in array items`],
+                });
+                return undefined;
+              }
+              return item[key];
+            })
+            .filter((item) => item !== undefined);
         } else {
           if (!(key in result)) {
             setErrorData({
               title: "Invalid Property",
-              list: [`Property '${key}' does not exist in object`]
+              list: [`Property '${key}' does not exist in object`],
             });
             return;
           }
@@ -105,14 +109,14 @@ const JsonEditor = ({
       } else {
         setErrorData({
           title: "Invalid Result",
-          list: ["Transform resulted in undefined value"]
+          list: ["Transform resulted in undefined value"],
         });
       }
     } catch (error) {
-      console.error('Error applying transform:', error);
+      console.error("Error applying transform:", error);
       setErrorData({
         title: "Transform Error",
-        list: [(error as Error).message]
+        list: [(error as Error).message],
       });
     }
   };
