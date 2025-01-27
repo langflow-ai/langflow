@@ -24,7 +24,6 @@ export default function NodeName({
   beta: boolean;
   editNameDescription: boolean;
 }) {
-  const [inputName, setInputName] = useState(editNameDescription);
   const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
@@ -35,11 +34,6 @@ export default function NodeName({
     }
   }, [editNameDescription]);
 
-  useEffect(() => {
-    if (!selected) {
-      setInputName(false);
-    }
-  }, [selected]);
 
   useEffect(() => {
     setNodeName(display_name ?? "");
@@ -49,7 +43,6 @@ export default function NodeName({
     <div className="m-[1px] w-full">
       <Input
         onBlur={() => {
-          setInputName(false);
           if (nodeName?.trim() !== "") {
             setNodeName(nodeName);
             setNode(nodeId, (old) => ({
