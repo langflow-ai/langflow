@@ -33,8 +33,7 @@ function NoteNode({
     }
   }, []);
 
-  const [editNameDescription, toggleEditNameDescription, set] =
-    useAlternate(false);
+  const [editNameDescription, set] = useAlternate(false);
 
   const MemoNoteToolbarComponent = useMemo(
     () =>
