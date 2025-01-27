@@ -1,5 +1,6 @@
 import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
@@ -35,6 +36,7 @@ type BuildVerticesParams = {
   edges?: Edge[];
   logBuilds?: boolean;
   session?: string;
+  stream?: boolean;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -123,20 +125,89 @@ export async function updateVerticesOrder(
   });
 }
 
+const shouldUsePolling = () => {
+  // Get from useGetConfig store
+  return useGetConfig().data?.event_delivery === "polling";
+};
+
 export async function buildFlowVerticesWithFallback(
   params: BuildVerticesParams,
 ) {
   try {
-    return await buildFlowVertices(params);
+    // Use shouldUsePolling() to determine stream mode
+    return await buildFlowVertices({ ...params, stream: !shouldUsePolling() });
   } catch (e: any) {
-    if (e.message === "Endpoint not available") {
-      return await buildVertices(params);
+    if (
+      e.message === "Endpoint not available" ||
+      e.message === "Streaming not supported"
+    ) {
+      // Fallback to polling
+      return await buildFlowVertices({ ...params, stream: false });
     }
     throw e;
   }
 }
 
 const MIN_VISUAL_BUILD_TIME_MS = 300;
+
+async function pollBuildEvents(
+  url: string,
+  buildResults: Array<boolean>,
+  verticesStartTimeMs: Map<string, number>,
+  callbacks: {
+    onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
+    onBuildComplete?: (allNodesValid: boolean) => void;
+    onBuildError?: (
+      title: string,
+      list: string[],
+      idList?: VertexLayerElementType[],
+    ) => void;
+    onGetOrderSuccess?: () => void;
+    onValidateNodes?: (nodes: string[]) => void;
+    setLockChat?: (lock: boolean) => void;
+  },
+): Promise<void> {
+  let isDone = false;
+  while (!isDone) {
+    const response = await fetch(`${url}?stream=false`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Error polling build events");
+    }
+
+    const data = await response.json();
+    console.log("Polling build events", data);
+    if (!data.event) {
+      // No event in this request, try again
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      continue;
+    }
+
+    // Process the event
+    const event = JSON.parse(data.event);
+    await onEvent(
+      event.event,
+      event.data,
+      buildResults,
+      verticesStartTimeMs,
+      callbacks,
+    );
+
+    // Check if this was the end event or if we got a null value
+    if (event.event === "end" || data.event === null) {
+      isDone = true;
+    }
+
+    // Add a small delay between polls to avoid overwhelming the server
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
 
 export async function buildFlowVertices({
   flowId,
@@ -156,6 +227,7 @@ export async function buildFlowVertices({
   logBuilds,
   setLockChat,
   session,
+  stream = true,
 }: BuildVerticesParams) {
   const inputs = {};
   let buildUrl = `${BASE_URL_API}build/${flowId}/flow`;
@@ -219,38 +291,56 @@ export async function buildFlowVertices({
     const buildResults: Array<boolean> = [];
     const verticesStartTimeMs: Map<string, number> = new Map();
 
-    return performStreamingRequest({
-      method: "GET",
-      url: eventsUrl,
-      onData: async (event) => {
-        const type = event["event"];
-        const data = event["data"];
-        return await onEvent(type, data, buildResults, verticesStartTimeMs, {
-          onBuildStart,
-          onBuildUpdate,
-          onBuildComplete,
-          onBuildError,
-          onGetOrderSuccess,
-          onValidateNodes,
-          setLockChat,
-        });
-      },
-      onError: (statusCode) => {
-        if (statusCode === 404) {
-          throw new Error("Build job not found");
-        }
-        throw new Error("Error processing build events");
-      },
-      onNetworkError: (error: Error) => {
-        if (error.name === "AbortError") {
-          onBuildStopped && onBuildStopped();
-          return;
-        }
-        onBuildError!("Error Building Component", [
-          "Network error. Please check the connection to the server.",
-        ]);
-      },
-    });
+    if (stream) {
+      return performStreamingRequest({
+        method: "GET",
+        url: eventsUrl,
+        onData: async (event) => {
+          const type = event["event"];
+          const data = event["data"];
+          return await onEvent(type, data, buildResults, verticesStartTimeMs, {
+            onBuildStart,
+            onBuildUpdate,
+            onBuildComplete,
+            onBuildError,
+            onGetOrderSuccess,
+            onValidateNodes,
+            setLockChat,
+          });
+        },
+        onError: (statusCode) => {
+          if (statusCode === 404) {
+            throw new Error("Build job not found");
+          }
+          throw new Error("Error processing build events");
+        },
+        onNetworkError: (error: Error) => {
+          if (error.name === "AbortError") {
+            onBuildStopped && onBuildStopped();
+            return;
+          }
+          onBuildError!("Error Building Component", [
+            "Network error. Please check the connection to the server.",
+          ]);
+        },
+      });
+    } else {
+      const callbacks = {
+        onBuildStart,
+        onBuildUpdate,
+        onBuildComplete,
+        onBuildError,
+        onGetOrderSuccess,
+        onValidateNodes,
+        setLockChat,
+      };
+      return pollBuildEvents(
+        eventsUrl,
+        buildResults,
+        verticesStartTimeMs,
+        callbacks,
+      );
+    }
   } catch (error) {
     console.error("Build process error:", error);
     onBuildError!("Error Building Flow", [

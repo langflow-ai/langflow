@@ -13,6 +13,7 @@ export interface ConfigResponse {
   health_check_max_retries: number;
   max_file_size_upload: number;
   feature_flags: Record<string, any>;
+  event_delivery: string;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
