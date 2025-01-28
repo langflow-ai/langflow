@@ -156,6 +156,22 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | doc_titles | List[str] | Titles of the found documents                   |
 | Data       | Data      | Document titles and URLs in a structured format |
 
+## URL
+
+This component fetches content from one or more URLs, processes the content, and returns it as a list of [Data](/concepts-objects) objects.
+
+### Inputs
+
+| Name | Display Name | Info                   |
+| ---- | ------------ | ---------------------- |
+| urls | URLs         | Enter one or more URLs |
+
+### Outputs
+
+| Name | Display Name | Info                                                         |
+| ---- | ------------ | ------------------------------------------------------------ |
+| data | Data         | List of Data objects containing fetched content and metadata |
+
 ## Webhook
 
 This component defines a webhook input for the flow. The flow can be triggered by an external HTTP POST request (webhook) sending a JSON payload.
