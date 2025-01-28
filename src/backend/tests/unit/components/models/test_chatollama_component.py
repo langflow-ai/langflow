@@ -88,9 +88,8 @@ async def test_update_build_config_model_name(mock_get, component):
     field_value = None
     field_name = "model_name"
 
-    updated_config = await component.update_build_config(build_config, field_value, field_name)
-
-    assert updated_config["model_name"]["options"] == []
+    with pytest.raises(ValueError, match="No valid Ollama URL found"):
+        await component.update_build_config(build_config, field_value, field_name)
 
 
 async def test_update_build_config_keep_alive(component):
