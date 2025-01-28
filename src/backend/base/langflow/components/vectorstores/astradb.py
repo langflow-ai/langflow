@@ -478,9 +478,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Define variables for common database conditions a user may experience
         is_hosted = os.getenv("LANGFLOW_HOST") is not None
         no_databases = "options" not in build_config["api_endpoint"] or not build_config["api_endpoint"]["options"]
+        no_api_endpoint = not build_config["api_endpoint"]["value"]
 
         # Refresh the database name options
-        if not is_hosted and (field_name in ["token", "environment"] or no_databases):
+        if not is_hosted and (field_name in ["token", "environment"] or (no_databases and no_api_endpoint)):
             # Get the list of options we have based on the token provided
             database_options = self._initialize_database_options()
 
@@ -524,11 +525,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
             """
 
-        # Define variables for common collection conditions a user may experience
-        no_collections = not build_config["collection_name"]["options"]
-
         # Refresh the collection name options
-        if field_name == "api_endpoint" or (field_name == "collection_name" and no_collections):
+        if field_name == "api_endpoint":
             # Reset the selected collection
             build_config["collection_name"]["value"] = ""
 
@@ -539,11 +537,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
             ]
 
-        # Define variables for common collection choice conditions a user may experience
-        collection_chosen = field_value and build_config["collection_name"]["options"]
-
         # Hide embedding model option if opriona_metadata provider is not null
-        if field_name == "collection_name" and collection_chosen:
+        if field_name == "collection_name" and field_value:
+            # Set the options for collection name to be the field value if its a new collection
+            if not is_hosted and field_value not in build_config["collection_name"]["options"]:
+                build_config["collection_name"]["options"].append(field_value)
+                build_config["collection_name"]["options_metadata"].append(
+                    {"records": 0, "provider": None, "icon": "", "model": None}
+                )
+
             # Find location of the name in the options list
             index_of_name = build_config["collection_name"]["options"].index(field_value)
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
