@@ -418,6 +418,31 @@ For more information, see the [Chroma documentation](https://docs.trychroma.com/
 
 </details>
 
+## CrateDB
+
+This component creates a CrateDB Vector Store with search capabilities.
+For more information, see the documentation about the
+[CrateDB LangChain adapter](https://cratedb.com/docs/guide/integrate/langchain/).
+
+### Inputs
+
+| Name                             | Type          | Description                                                      |
+|----------------------------------|---------------|------------------------------------------------------------------|
+| collection_name                  | String        | The name of the collection. Default: "langflow".                 |
+| search_query                     | String        | The query to search for in the vector store.                     |
+| ingest_data                      | Data          | The data to ingest into the vector store (list of Data objects). |
+| embedding                        | Embeddings    | The embedding function to use for the vector store.              |
+| server_url                       | String        | SQLAlchemy URL to connect to CrateDB.                            |
+| search_type                      | String        | Type of search to perform: "Similarity" or "MMR".                |
+| number_of_results                | Integer       | Number of results to return from the search. Default: 10.        |
+
+### Outputs
+
+| Name           | Type               | Description                   |
+|----------------|--------------------|-------------------------------|
+| vector_store   | CrateDBVectorStore | CrateDB vector store instance |
+| search_results | List[Data]         | Results of similarity search  |
+
 ## Elasticsearch
 
 This component creates an Elasticsearch Vector Store with search capabilities.
