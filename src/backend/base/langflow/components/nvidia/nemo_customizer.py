@@ -6,6 +6,8 @@ from io import BytesIO
 
 import httpx
 import pandas as pd
+from huggingface_hub import HfApi
+
 
 from langflow.custom import Component
 from langflow.io import (
@@ -19,6 +21,8 @@ from langflow.io import (
 )
 from langflow.schema import Data
 
+from scripts.factory_restart_space import hf_api
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +35,7 @@ class NVIDIANeMoCustomizerComponent(Component):
 
     headers = {"accept": "application/json", "Content-Type": "application/json"}
     chunk_number = 1
+    hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
 
     inputs = [
         StrInput(
@@ -42,6 +47,12 @@ class NVIDIANeMoCustomizerComponent(Component):
             name="datastore_base_url",
             display_name="NVIDIA NeMo Datastore Base URL",
             info="The nemo datastore base URL of the NVIDIA NeMo Datastore API.",
+            advanced=True,
+        ),
+        StrInput(
+            name="entity_store_base_url",
+            display_name="NVIDIA NeMo EntityStore Base URL",
+            info="The nemo datastore base URL of the NVIDIA NeMo EntityStore API.",
             advanced=True,
         ),
         StrInput(
@@ -66,30 +77,17 @@ class NVIDIANeMoCustomizerComponent(Component):
             name="model_name",
             display_name="Model Name",
             info="Model to train",
-            options=[
-                "codellama-70b",
-                "gemma-7b",
-                "gpt-43b-002",
-                "gpt8b-4k",
-                "llama-2-13b",
-                "llama-2-70b",
-                "llama-2-7b",
-                "meta/llama-3_1-70b-instruct",
-                "meta/llama-3_1-8b-instruct",
-                "meta/llama3-70b-instruct",
-                "meta/llama3-8b-instruct",
-                "mistral-7b",
-                "mixtral-8x7b",
-            ],
-            value="mixtral-8x7b",
             refresh_button=True,
         ),
         DropdownInput(
             name="training_type",
             display_name="Training Type",
-            info="Select the type of training to use",
-            options=["p-tuning", "lora", "fine-tuning"],
-            value="lora",  # Default value
+            info="Select the training type to use for fine tuning",
+        ),
+        DropdownInput(
+            name="fine_tuning_type",
+            display_name="Fine tuning Type",
+            info="Select the fine tuning type to use",
         ),
         IntInput(
             name="epochs", display_name="Epochs", info="Number of times to cycle through the training data", value=5
@@ -112,23 +110,51 @@ class NVIDIANeMoCustomizerComponent(Component):
         Output(display_name="Job Result", name="data", method="customize"),
     ]
 
-    async def update_build_config(self, build_config, field_value, field_name=None):
+    def update_build_config(self, build_config, field_value, field_name=None):
         """Updates the component's configuration based on the selected option or refresh button."""
-        models_url = f"{self.base_url}/v2/availableParentModels"
+        models_url = f"{self.base_url}/v1/customization/configs"
         try:
             if field_name == "model_name":
                 self.log(f"Refreshing model names from endpoint {models_url}, value: {field_value}")
 
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    response = await client.get(models_url, headers=self.headers)
+                # Use a synchronous HTTP client
+                with httpx.Client(timeout=5.0) as client:
+                    response = client.get(models_url, headers=self.headers)
                     response.raise_for_status()
 
                     models_data = response.json()
-                    model_names = [model["name"] for model in models_data.get("models", [])]
+                    model_names = [model["base_model"] for model in models_data.get("models", [])]
 
                     build_config["model_name"]["options"] = model_names
 
-                    self.log("Updated model_name dropdown options.")
+                self.log("Updated model_name dropdown options.")
+
+            if field_name == "training_type":
+                # Use a synchronous HTTP client
+                with httpx.Client(timeout=5.0) as client:
+                    response = client.get(models_url, headers=self.headers)
+                    response.raise_for_status()
+
+                    models_data = response.json()
+
+                    # Logic to update `training_type` dropdown based on selected model
+                    selected_model_name = getattr(self, "model_name", None)
+                    if selected_model_name:
+                        # Find the selected model in the response
+                        selected_model = next(
+                            (model for model in models_data.get("models", []) if model["base_model"] == selected_model_name),
+                            None
+                        )
+
+                        if selected_model:
+                            # Update `training_type` dropdown with training types of the selected model
+                            training_types = selected_model.get("training_types", [])
+                            build_config["training_type"]["options"] = training_types
+                            self.log(f"Updated training_type dropdown options: {training_types}")
+                            fine_tuning_type = selected_model.get("finetuning_types", [])
+                            build_config["fine_tuning_type"]["options"] = fine_tuning_type
+                            self.log(f"Updated training_type dropdown options: {fine_tuning_type}")
+
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
             self.log(error_msg)
@@ -145,20 +171,30 @@ class NVIDIANeMoCustomizerComponent(Component):
         dataset_name = self.dataset
         if self.training_data is not None:
             dataset_name = await self.process_and_upload_dataset()
+        output_model = dataset_name + "_" + self.model_name
         self.log(f"dataset_name: {dataset_name}")
         data = {
-            "parent_model_id": self.model_name,
-            "dataset": dataset_name,
+            "config": self.model_name,
+            "dataset": {
+                "name": dataset_name,
+               "namespace": self.tenant_id if self.tenant_id else "tenant"
+            },
+            "description" : self.description,
             "hyperparameters": {
                 "training_type": self.training_type,
+                "finetuning_type": self.fine_tuning_type,
                 "epochs": int(self.epochs),
                 "batch_size": int(self.batch_size),
                 "learning_rate": float(self.learning_rate),
-                "adapter_dim": 16,
             },
-            "sha": "main",
+            "output_model": output_model,
         }
-        customizations_url = f"{self.base_url}/v2/customizations"
+
+        # Add `adapter_dim` only if training_type is "lora"
+        if self.fine_tuning_type == "lora":
+            data["hyperparameters"]["lora"] = {"adapter_dim": 16}
+
+        customizations_url = f"{self.base_url}/v1/customization/jobs"
         try:
             formatted_data = json.dumps(data, indent=2)
 
@@ -174,7 +210,7 @@ class NVIDIANeMoCustomizerComponent(Component):
 
                 result_dict = {**result}
                 id_value = result_dict["id"]
-                result_dict["url"] = f"{customizations_url}/{id_value}"
+                result_dict["url"] = f"{customizations_url}/{id_value}/status"
                 return result_dict
 
         except httpx.TimeoutException as exc:
@@ -201,8 +237,8 @@ class NVIDIANeMoCustomizerComponent(Component):
         # Use the user-provided name if available, otherwise the default
         return user_dataset_name if user_dataset_name else default_name
 
-    async def get_dataset_id(self, tenant_id: str, user_dataset_name: str) -> str:
-        """Fetches the dataset ID by checking if a dataset with the constructed name exists.
+    async def get_repo_id(self, tenant_id: str, user_dataset_name: str) -> str:
+        """Fetches the repo id by checking if a dataset with the constructed name exists.
 
         If the dataset does not exist, creates a new dataset and returns its ID.
 
@@ -213,41 +249,37 @@ class NVIDIANeMoCustomizerComponent(Component):
         Returns:
             str: The dataset ID if found or created, or None if an error occurs.
         """
-        appender = self.get_dataset_name(user_dataset_name)
-        tenant = tenant_id if tenant_id else "tenant"
-        dataset_name = f"{tenant}-{appender}"
-        url = f"{self.datastore_base_url}/v1/datasets"
+        dataset_name = self.get_dataset_name(user_dataset_name)
+        namespace = tenant_id if tenant_id else "tenant"
+
+        url = f"{self.datastore_base_url}/v1/datastore/namespaces"
         page = 1
 
         try:
             async with httpx.AsyncClient() as client:
-                while True:
-                    response = await client.get(f"{url}?page_size=10&page={page}")
-                    no_more_pages = 422
-                    if response.status_code == no_more_pages:
-                        self.log(f"No more pages to fetch, page: {page}")
-                        break
-                    response.raise_for_status()
-                    self.log(f"returned data {response}")
-                    datasets = response.json().get("datasets", [])
-                    for dataset in datasets:
-                        if dataset.get("name") == dataset_name:
-                            return dataset.get("id")
-                    if not datasets:
-                        break  # No more datasets to process
+                response = await client.get(f"{url}/{namespace}")
+                response.raise_for_status()
+                self.log(f"returned data {response}")
 
-                    page += 1
+                namespace_from_ds = response.get("namespace", None)
+                # namespace not found, create it
+                if not namespace_from_ds:
+                    create_payload = {"namespace": namespace}
+                    create_response = await client.post(url, json=create_payload)
+                    create_response.raise_for_status()
+                    created_namespace_response = create_response.json()
 
-                # If dataset not found, create it
-                create_payload = {"name": dataset_name, "description": f"{dataset_name} for {tenant_id}"}
-                create_response = await client.post(url, json=create_payload)
-                create_response.raise_for_status()
-                created_dataset = create_response.json()
-                return created_dataset.get("id")
+                repo_id = f"{namespace}/{dataset_name}"
+                repo_type = "dataset"
+                self.hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
 
+                return repo_id
         except httpx.HTTPStatusError as e:
-            self.log(f"Error processing datasets: {e}")
-            return None
+            exception_str = str(exc)
+            error_msg = f"Error processing namespace: {exception_str}"
+            self.log(error_msg)
+            raise ValueError(error_msg) from exc
+
 
     async def process_and_upload_dataset(self) -> str:
         """Asynchronously processes and uploads the dataset to the API in chunks.
@@ -257,11 +289,11 @@ class NVIDIANeMoCustomizerComponent(Component):
         try:
             # Inputs
             user_dataset_name = getattr(self, "dataset", None)
-            dataset_name = await self.get_dataset_id(self.tenant_id, user_dataset_name)
+            repo_id = await self.get_repo_id(self.tenant_id, user_dataset_name)
             chunk_size = 10000  # Ensure chunk_size is an integer
-            self.log(f"dataset_name : {dataset_name}")
-            if not dataset_name:
-                err_msg = "dataset_name must be provided."
+            self.log(f"repo_id : {repo_id}")
+            if not repo_id:
+                err_msg = "repo_id must be provided."
                 raise ValueError(err_msg)
 
             # Endpoint configuration
@@ -277,20 +309,20 @@ class NVIDIANeMoCustomizerComponent(Component):
                     self.log(f"Skipping non-Data object in training data, but got: {data_obj}")
                     continue
 
-                # Extract only "input" and "completion" fields if present
+                # Extract only "prompt" and "completion" fields if present
                 filtered_data = {
-                    "input": getattr(data_obj, "input", None),
+                    "prompt": getattr(data_obj, "prompt", None),
                     "completion": getattr(data_obj, "completion", None),
                 }
 
                 # Check if both fields are present
-                if filtered_data["input"] is not None and filtered_data["completion"] is not None:
+                if filtered_data["prompt"] is not None and filtered_data["completion"] is not None:
                     chunk.append(filtered_data)
 
                 # Process the chunk when it reaches the specified size
                 if len(chunk) == chunk_size:
                     chunk_df = pd.DataFrame(chunk)
-                    task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, dataset_name, url)
+                    task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, url)
                     tasks.append(task)
                     chunk = []  # Reset the chunk
                     self.chunk_number += 1
@@ -298,34 +330,25 @@ class NVIDIANeMoCustomizerComponent(Component):
             # Process the remaining rows in the last chunk
             if chunk:
                 chunk_df = pd.DataFrame(chunk)
-                task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, dataset_name, url)
+                task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, url)
                 tasks.append(task)
 
             # Await all upload tasks
             await asyncio.gather(*tasks)
 
-            logger.info("All data has been processed and uploaded successfully.")
-        except Exception:
-            logger.exception("An error occurred")
-            return "An error occurred"
+            file_url = f"hf://datasets/{repo_id}"
 
-        return dataset_name
+            entity_registry_url = f"https://{self.entity_store_base_url}/v1/datasets"
+            create_payload = {
+                "name": user_dataset_name,
+                "namespace": self.tenant_id,
+                "description": f"Dataset loaded using the input data {user_dataset_name}",
+                "files_url": file_url,
+                "project": "user_dataset_name"
+            }
 
-    async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, dataset_id, base_url):
-        """Asynchronously uploads a chunk of data to the REST API."""
-        try:
-            # Serialize the chunk DataFrame to JSONL format
-            json_content = chunk_df.to_json(orient="records", lines=True)
-            file_name = f"{file_name_prefix}_chunk_{chunk_number}.jsonl"
-            file_in_memory = BytesIO(json_content.encode("utf-8"))
-
-            filepath = f"training/{file_name}"
-            url = f"{base_url}/datasets/{dataset_id}/files/contents/{filepath}"
-
-            files = {"file": (file_name, file_in_memory, "application/json")}
-            logger.info("Chunk %s uploaded successfully!", chunk_number)
             async with httpx.AsyncClient() as client:
-                response = await client.post(url, files=files)
+                response = await client.post(entity_registry_url, json=create_payload)
 
             status_ok = 200
             if response.status_code == status_ok:
@@ -334,7 +357,31 @@ class NVIDIANeMoCustomizerComponent(Component):
                 logger.warning("Failed to upload chunk %s. Status code: %s", chunk_number, response.status_code)
                 logger.warning(response.text)
 
+            logger.info("All data has been processed and uploaded successfully.")
+        except Exception as exc:
+            exception_str = str(exc)
+            error_msg = f"An unexpected error : {exception_str}"
+            self.log(error_msg)
+            raise ValueError(error_msg) from exc
+        return repo_id
+
+    async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, repo_id, base_url):
+        """Asynchronously uploads a chunk of data to the REST API."""
+        try:
+            # Serialize the chunk DataFrame to JSONL format
+            json_content = chunk_df.to_json(orient="records", lines=True)
+            file_name = f"{file_name_prefix}_chunk_{chunk_number}.jsonl"
+            file_in_memory = BytesIO(json_content.encode("utf-8"))
+            try:
+                self.hf_api.upload_file(
+                    path_or_fileobj=file_in_memory,
+                    path_in_repo=file_name,
+                    repo_id=repo_id,
+                    repo_type="dataset",
+                    commit_message=f"Updated file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                )
+            finally:
+                file_in_memory.close()
+
         except Exception:
             logger.exception("An error occurred while uploading chunk %s", chunk_number)
-        finally:
-            file_in_memory.close()
