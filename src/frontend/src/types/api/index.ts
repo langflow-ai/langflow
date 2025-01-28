@@ -203,7 +203,6 @@ export type ErrorLogType = {
 export type OutputLogType = {
   message: any | ErrorLogType;
   type: string;
-  text?: string;
 };
 export type LogsLogType = {
   name: string;
