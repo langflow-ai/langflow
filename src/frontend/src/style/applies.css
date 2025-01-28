@@ -1299,7 +1299,7 @@
 }
 
 .deploy-dropdown-item > :first-child {
-  @apply flex items-center hover:bg-accent w-full px-2 py-1.5 rounded-md !important;
+  @apply flex items-center w-full px-2 py-1.5 rounded-md !important;
 }
 
 :root {

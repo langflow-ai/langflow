@@ -1,6 +1,6 @@
 import useFlowStore from "@/stores/flowStore";
 import { useState } from "react";
-import DeployDropdown from "./deploy-dropdown";
+import PublishDropdown from "./deploy-dropdown";
 import PlaygroundButton from "./playground-button";
 
 export default function FlowToolbarOptions() {
@@ -17,7 +17,7 @@ export default function FlowToolbarOptions() {
           canvasOpen
         />
       </div>
-      <DeployDropdown />
+      <PublishDropdown />
     </div>
   );
 }
