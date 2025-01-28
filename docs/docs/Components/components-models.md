@@ -110,6 +110,12 @@ For more information, see the [Azure OpenAI documentation](https://learn.microso
 | Input Value         | Input Value         | Specifies the input text for text generation.                                    |
 | Stream              | Stream              | Specifies whether to stream the response from the model. Defaults to `False`.    |
 
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of AzureOpenAI configured with the specified parameters. |
+
 ## Cohere
 
 This component generates text using Cohere's language models.
@@ -131,6 +137,31 @@ For more information, see the [Cohere documentation](https://cohere.ai/).
 |-------|---------------|------------------------------------------------------------------|
 | model | LanguageModel | An instance of the Cohere model configured with the specified parameters. |
 
+## DeepSeek
+
+This component generates text using DeepSeek's language models.
+
+For more information, see the [DeepSeek documentation](https://api-docs.deepseek.com/).
+
+### Inputs
+
+| Name           | Type          | Description                                                     |
+|----------------|---------------|-----------------------------------------------------------------|
+| max_tokens     | Integer       | Maximum number of tokens to generate. Set to `0` for unlimited. Range: `0-128000`. |
+| model_kwargs   | Dictionary    | Additional keyword arguments for the model.          |
+| json_mode      | Boolean       | If `True`, outputs JSON regardless of passing a schema. |
+| model_name     | String        | The DeepSeek model to use. Default: `deepseek-chat`.         |
+| api_base       | String        | Base URL for API requests. Default: `https://api.deepseek.com`. |
+| api_key        | SecretString  | Your DeepSeek API key for authentication.                      |
+| temperature    | Float         | Controls randomness in responses. Range: `[0.0, 2.0]`. Default: `1.0`. |
+| seed           | Integer       | Number initialized for random number generation. Use the same seed integer for more reproducible results, and use a different seed number for more random results.     |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
+
 ## Google Generative AI
 
 This component generates text using Google's Generative AI models.
@@ -148,6 +179,12 @@ For more information, see the [Google Generative AI documentation](https://cloud
 | Top K               | Top K              | Consider the set of top K most probable tokens.                       |
 | Top P               | Top P              | The maximum cumulative probability of tokens to consider when sampling. |
 | N                   | N                  | Number of chat completions to generate for each prompt.                |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of ChatGoogleGenerativeAI configured with the specified parameters. |
 
 ## Groq
 
@@ -187,6 +224,31 @@ For more information, see the [Hugging Face documentation](https://huggingface.c
 | API Token           | API Token         | The API token required for authentication.|
 | Model Kwargs        | Model Kwargs      | Additional keyword arguments for the model.|
 | Input Value         | Input Value       | The input text for text generation.       |
+
+## LMStudio
+
+This component generates text using LM Studio's local language models.
+
+For more information, see [LM Studio documentation](https://lmstudio.ai/).
+
+### Inputs
+
+| Name           | Type          | Description                                                     |
+|----------------|---------------|-----------------------------------------------------------------|
+| base_url       | String        | The URL where LM Studio is running. Default: `"http://localhost:1234"`. |
+| max_tokens     | Integer       | Maximum number of tokens to generate in the response. Default: `512`. |
+| temperature    | Float         | Controls randomness in the output. Range: `[0.0, 2.0]`. Default: `0.7`. |
+| top_p          | Float         | Controls diversity via nucleus sampling. Range: `[0.0, 1.0]`. Default: `1.0`. |
+| stop          | List[String]  | List of strings that will stop generation when encountered (advanced). |
+| stream        | Boolean       | Whether to stream the response. Default: `False`. |
+| presence_penalty | Float      | Penalizes repeated tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+| frequency_penalty | Float     | Penalizes frequent tokens. Range: `[-2.0, 2.0]`. Default: `0.0`. |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of LMStudio configured with the specified parameters. |
 
 ## Maritalk
 
@@ -237,6 +299,30 @@ For more information, see [Mistral AI documentation](https://docs.mistral.ai/).
 | Name   | Type          | Description                                         |
 |--------|---------------|-----------------------------------------------------|
 | model  | LanguageModel | An instance of ChatMistralAI configured with the specified parameters. |
+
+## Novita AI
+
+This component generates text using Novita AI's language models.
+
+For more information, see [Novita AI documentation](https://novita.ai/docs/model-api/reference/llm/llm.html?utm_source=github_langflow&utm_medium=github_readme&utm_campaign=link).
+
+### Inputs
+
+| Name                | Type          | Description                                                      |
+|---------------------|---------------|------------------------------------------------------------------|
+| api_key             | SecretString   | Your Novita AI API Key.                                             |
+| model               | String         | The id of the Novita AI model to use. |
+| max_tokens          | Integer        | The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
+| temperature         | Float          | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| top_p               | Float          | Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
+| frequency_penalty   | Float          | Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
+| presence_penalty    | Float          | Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of Novita AI model configured with the specified parameters. |
 
 ## NVIDIA
 
@@ -305,11 +391,6 @@ For more information, see [OpenAI documentation](https://beta.openai.com/docs/).
 |-------|---------------|------------------------------------------------------------------|
 | model | LanguageModel | An instance of OpenAI model configured with the specified parameters. |
 
-## Qianfan
-
-This component generates text using Qianfan's language models.
-
-For more information, see [Qianfan documentation](https://github.com/baidubce/bce-qianfan-sdk).
 
 ## OpenRouter
 
@@ -358,6 +439,13 @@ For more information, see [Perplexity documentation](https://perplexity.ai/).
 | Name   | Type          | Description                                         |
 |--------|---------------|-----------------------------------------------------|
 | model  | LanguageModel | An instance of ChatPerplexity configured with the specified parameters. |
+
+
+## Qianfan
+
+This component generates text using Qianfan's language models.
+
+For more information, see [Qianfan documentation](https://github.com/baidubce/bce-qianfan-sdk).
 
 ## SambaNova
 
@@ -408,22 +496,4 @@ For more information, see [Google Vertex AI documentation](https://cloud.google.
 |--------|---------------|-----------------------------------------------------|
 | model  | LanguageModel | An instance of ChatVertexAI configured with the specified parameters. |
 
-## Novita AI
 
-This component generates text using Novita AI's language models.
-
-For more information, see [Novita AI documentation](https://novita.ai/docs/model-api/reference/llm/llm.html?utm_source=github_langflow&utm_medium=github_readme&utm_campaign=link).
-
-### Parameters
-
-#### Inputs
-
-| Name                | Type          | Description                                                      |
-|---------------------|---------------|------------------------------------------------------------------|
-| api_key             | SecretString   | Your Novita AI API Key.                                             |
-| model               | String         | The id of the Novita AI model to use. |
-| max_tokens          | Integer        | The maximum number of tokens to generate. Set to 0 for unlimited tokens. |
-| temperature         | Float          | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
-| top_p               | Float          | Controls the nucleus sampling. Range: [0.0, 1.0]. Default: 1.0. |
-| frequency_penalty   | Float          | Controls the frequency penalty. Range: [0.0, 2.0]. Default: 0.0. |
-| presence_penalty    | Float          | Controls the presence penalty. Range: [0.0, 2.0]. Default: 0.0. |
