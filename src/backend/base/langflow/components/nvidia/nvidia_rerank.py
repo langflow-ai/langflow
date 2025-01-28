@@ -53,7 +53,7 @@ class NvidiaRerankComponent(LCVectorStoreComponent):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         if field_name == "base_url" and field_value:
             try:
-                build_model = self.build_model()
+                build_model = self.build_reranker()
                 ids = [model.id for model in build_model.available_models]
                 build_config["model"]["options"] = ids
                 build_config["model"]["value"] = ids[0]
