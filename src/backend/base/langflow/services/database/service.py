@@ -364,7 +364,7 @@ class DatabaseService(Service):
         ]
         async with self.with_session() as session, session.bind.connect() as conn:
             return [
-                TableResults(sql_model.__tablename__, conn.run_sync(self.check_table, sql_model))
+                TableResults(sql_model.__tablename__, await conn.run_sync(self.check_table, sql_model))
                 for sql_model in sql_models
             ]
 
