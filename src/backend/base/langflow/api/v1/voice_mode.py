@@ -22,8 +22,11 @@ SILENCE_THRESHOLD = 0.5
 PREFIX_PADDING_MS = 300
 SILENCE_DURATION_MS = 500
 SESSION_INSTRUCTIONS = (
-    "Always call the execute_flow function with the user's question "
+    "Converse with the user to assist with their question."
+    "When appropriate, call the execute_flow function to assist with the user's question "
     "as the input parameter and use that to craft your responses."
+    "Always tell the user before you call a function to assist with their question."
+    "and let them know what it does."
 )
 
 
@@ -209,19 +212,20 @@ async def websocket_endpoint(
                         function_call_args += event.get("delta", "")
                     elif event_type == "response.function_call_arguments.done":
                         if function_call:
-                            await handle_function_call(
-                                websocket,
-                                openai_ws,
-                                function_call,
-                                function_call_args,
-                                flow_id,
-                                background_tasks,
-                                current_user,
-                                session,
+                            asyncio.create_task(
+                                handle_function_call(
+                                    websocket,
+                                    openai_ws,
+                                    function_call,
+                                    function_call_args,
+                                    flow_id,
+                                    background_tasks,
+                                    current_user,
+                                    session,
+                                )
                             )
                             function_call = None
                             function_call_args = ""
-                            continue
 
                     # Forward OpenAI messages to client
                     await websocket.send_text(data)
