@@ -67,6 +67,8 @@ This component recursively loads files from a directory, with options for file t
 
 The FileComponent is a class that loads and parses text files of various supported formats, converting the content into a Data object. It supports multiple file types and provides an option for silent error handling.
 
+The maximum supported file size is 100 MB.
+
 ### Inputs
 
 | Name          | Display Name  | Info                                         |
@@ -79,22 +81,6 @@ The FileComponent is a class that loads and parses text files of various support
 | Name | Display Name | Info                                         |
 | ---- | ------------ | -------------------------------------------- |
 | data | Data         | Parsed content of the file as a Data object. |
-
-## URL
-
-The URLComponent is a class that fetches content from one or more URLs, processes the content, and returns it as a list of Data objects. It ensures that the provided URLs are valid and uses WebBaseLoader to fetch the content.
-
-### Inputs
-
-| Name | Display Name | Info                   |
-| ---- | ------------ | ---------------------- |
-| urls | URLs         | Enter one or more URLs |
-
-### Outputs
-
-| Name | Display Name | Info                                                         |
-| ---- | ------------ | ------------------------------------------------------------ |
-| data | Data         | List of Data objects containing fetched content and metadata |
 
 ## Gmail Loader
 
