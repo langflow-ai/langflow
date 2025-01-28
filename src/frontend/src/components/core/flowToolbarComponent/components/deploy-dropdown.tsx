@@ -44,44 +44,54 @@ export default function PublishDropdown() {
               : "Add a Chat Input or Chat Output to access your flow"
           }
         >
-          <div
-          className={!hasIO ? "cursor-not-allowed" : ""}
-          >
-          <DropdownMenuItem
-          disabled={!hasIO}
-            className="deploy-dropdown-item group"
-            onClick={() => {
-              if (hasIO) {
-                window.open(`${domain}/playground/${flowId}`, "_blank");
-              }
-            }}
-          >
-            <div className="group-hover:bg-accent">
-              <IconComponent name="Globe" className={`${groupStyle} icon-size mr-2 `} />
-              <span>Standalone app</span>
-              <IconComponent
-                name="ExternalLink"
-                className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
-              />
-            </div>
-          </DropdownMenuItem>
+          <div className={!hasIO ? "cursor-not-allowed" : ""}>
+            <DropdownMenuItem
+              disabled={!hasIO}
+              className="deploy-dropdown-item group"
+              onClick={() => {
+                if (hasIO) {
+                  window.open(`${domain}/playground/${flowId}`, "_blank");
+                }
+              }}
+            >
+              <div className="group-hover:bg-accent">
+                <IconComponent
+                  name="Globe"
+                  className={`${groupStyle} icon-size mr-2`}
+                />
+                <span>Standalone app</span>
+                <IconComponent
+                  name="ExternalLink"
+                  className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
+                />
+              </div>
+            </DropdownMenuItem>
           </div>
         </ShadTooltipComponent>
         <DropdownMenuItem className="deploy-dropdown-item group">
           <div className="group-hover:bg-accent">
-            <IconComponent name="Code2" className={`${groupStyle} icon-size mr-2 `} />
+            <IconComponent
+              name="Code2"
+              className={`${groupStyle} icon-size mr-2`}
+            />
             <span>API access</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem className="deploy-dropdown-item group">
           <div className="group-hover:bg-accent">
-            <IconComponent name="Columns2" className={`${groupStyle} icon-size mr-2 `} />
+            <IconComponent
+              name="Columns2"
+              className={`${groupStyle} icon-size mr-2`}
+            />
             <span>Embed into site</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem className="deploy-dropdown-item group">
           <div className="group-hover:bg-accent">
-            <IconComponent name="FileCode2" className={`${groupStyle} icon-size mr-2 `} />
+            <IconComponent
+              name="FileCode2"
+              className={`${groupStyle} icon-size mr-2`}
+            />
             <span>Langflow SDK</span>
             <IconComponent
               name="ExternalLink"
