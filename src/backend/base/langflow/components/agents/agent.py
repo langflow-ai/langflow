@@ -264,4 +264,4 @@ class AgentComponent(ToolCallingAgentComponent):
                     build_config = await update_component_build_config(
                         component_class, build_config, field_value, "model_name"
                     )
-        return {k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()}
+        return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})

@@ -4,6 +4,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
+from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
@@ -64,6 +65,20 @@ def add_combobox_true(component_input):
 
 def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Input]:
     return {f"{prefix}{input_.name}": input_.to_dict() for input_ in inputs}
+
+
+def _get_google_generative_ai_inputs_and_fields():
+    try:
+        from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
+
+        google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
+    except ImportError as e:
+        msg = (
+            "Google Generative AI is not installed. Please install it with "
+            "`pip install langchain-google-generative-ai`."
+        )
+        raise ImportError(msg) from e
+    return google_generative_ai_inputs, create_input_fields_dict(google_generative_ai_inputs, "")
 
 
 def _get_openai_inputs_and_fields():
@@ -201,6 +216,16 @@ try:
 except ImportError:
     pass
 
+try:
+    google_generative_ai_inputs, google_generative_ai_fields = _get_google_generative_ai_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Google Generative AI"] = {
+        "fields": google_generative_ai_fields,
+        "inputs": google_generative_ai_inputs,
+        "prefix": "",
+        "component_class": GoogleGenerativeAIComponent(),
+    }
+except ImportError:
+    pass
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
