@@ -75,8 +75,9 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             raise ImportError(msg) from e
 
         try:
-            client = clickhouse_connect.get_client(host=self.host, port=self.port,
-                                                   username=self.username, password=self.password)
+            client = clickhouse_connect.get_client(
+                host=self.host, port=self.port, username=self.username, password=self.password
+            )
             client.command("SELECT 1")
         except Exception as e:
             msg = f"Failed to connect to Clickhouse: {e}"
