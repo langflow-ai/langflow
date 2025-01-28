@@ -144,7 +144,11 @@ class DatabaseService(Service):
                 "timeout": self.settings_service.settings.db_connect_timeout,
             }
         else:
-            connect_args = {}
+            if self.settings_service.settings.disable_prepared_statements:
+                # If using a proxy with a transaction pool mode, we need to disable prepared statements
+                connect_args = {"prepare_threshold": None}
+            else:
+                connect_args = {}
         return connect_args
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
