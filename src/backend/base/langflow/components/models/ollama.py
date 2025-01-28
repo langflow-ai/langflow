@@ -181,7 +181,7 @@ class ChatOllamaComponent(LCModelComponent):
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
-                return (await client.get(f"{url}/api/tags")).status_code == HTTP_STATUS_OK
+                return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
@@ -204,7 +204,7 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url"} and not await self.is_valid_ollama_url(
+        if field_name in {"base_url","model_name"} and not await self.is_valid_ollama_url(
             build_config["base_url"].get("value", "")
         ):
             # Check if any URL in the list is valid
@@ -213,7 +213,7 @@ class ChatOllamaComponent(LCModelComponent):
                 if await self.is_valid_ollama_url(url):
                     valid_url = url
                     break
-            if valid_url:
+            if valid_url!="":
                 build_config["base_url"]["value"] = valid_url
             else:
                 msg = "No valid Ollama URL found."
@@ -243,7 +243,7 @@ class ChatOllamaComponent(LCModelComponent):
 
     async def get_model(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
         try:
-            url = urljoin(base_url_value, "/api/tags")
+            url = urljoin(base_url_value, "api/tags")
             async with httpx.AsyncClient() as client:
                 response = await client.get(url)
                 response.raise_for_status()
