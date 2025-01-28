@@ -119,7 +119,7 @@ class AstraDBToolComponent(LCToolComponent):
         """
         schema_dict = self.create_args_schema()
 
-        structured_tool = StructuredTool.from_function(
+        tool = StructuredTool.from_function(
             name=self.tool_name,
             args_schema=schema_dict["ToolInput"],
             description=self.tool_description,
@@ -128,12 +128,7 @@ class AstraDBToolComponent(LCToolComponent):
         )
         self.status = "Astra DB Tool created"
 
-        # Convert the StructuredTool to a regular Tool
-        return Tool(
-            name=structured_tool.name,
-            func=structured_tool.func,
-            description=structured_tool.description,
-        )
+        return tool
 
     def projection_args(self, input_str: str) -> dict:
         elements = input_str.split(",")

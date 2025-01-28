@@ -150,19 +150,12 @@ class AstraDBCQLToolComponent(LCToolComponent):
             Tool: The built AstraDB tool.
         """
         schema_dict = self.create_args_schema()
-        structured_tool = StructuredTool.from_function(
+        return StructuredTool.from_function(
             name=self.tool_name,
             args_schema=schema_dict["ToolInput"],
             description=self.tool_description,
             func=self.run_model,
             return_direct=False,
-        )
-
-        # Convert the StructuredTool to a regular Tool
-        return Tool(
-            name=structured_tool.name,
-            func=structured_tool.func,
-            description=structured_tool.description,
         )
 
     def projection_args(self, input_str: str) -> dict:
