@@ -24,20 +24,30 @@ In this example of a document ingestion pipeline, the URL component outputs raw 
 
 ## API Request
 
-This component sends HTTP requests to the specified URLs.
-
-Use this component to interact with external APIs or services and retrieve data. Ensure that the URLs are valid and that you configure the method, headers, body, and timeout correctly.
+This component makes HTTP requests using URLs or cURL commands.
 
 ### Inputs
 
-| Name    | Display Name | Info                                                                       |
-| ------- | ------------ | -------------------------------------------------------------------------- |
-| URLs    | URLs         | The URLs to target                                                         |
-| curl    | curl         | Paste a curl command to fill in the dictionary fields for headers and body |
-| Method  | HTTP Method  | The HTTP method to use, such as GET or POST                                |
-| Headers | Headers      | The headers to include with the request                                    |
-| Body    | Request Body | The data to send with the request (for methods like POST, PATCH, PUT)      |
-| Timeout | Timeout      | The maximum time to wait for a response                                    |
+| Name | Display Name | Info |
+|------|--------------|------|
+| urls | URLs | Enter one or more URLs, separated by commas. |
+| curl | cURL | Paste a curl command to populate the fields. This will fill in the dictionary fields for headers and body. |
+| method | Method | The HTTP method to use. |
+| use_curl | Use cURL | Enable cURL mode to populate fields from a cURL command. |
+| query_params | Query Parameters | The query parameters to append to the URL. |
+| body | Body | The body to send with the request as a dictionary (for `POST`, `PATCH`, `PUT`). |
+| headers | Headers | The headers to send with the request as a dictionary. |
+| timeout | Timeout | The timeout to use for the request. |
+| follow_redirects | Follow Redirects | Whether to follow http redirects. |
+| save_to_file | Save to File | Save the API response to a temporary file |
+| include_httpx_metadata | Include HTTPx Metadata | Include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The result of the API requests. |
+
 
 ## Directory
 
