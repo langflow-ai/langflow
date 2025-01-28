@@ -111,7 +111,7 @@ class AstraDBToolComponent(LCToolComponent):
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
 
-    def build_tool(self) -> StructuredTool:
+    def build_tool(self) -> Tool:
         """Builds an Astra DB Collection tool.
 
         Returns:
