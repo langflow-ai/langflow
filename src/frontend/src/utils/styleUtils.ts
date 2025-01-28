@@ -253,6 +253,7 @@ import { CohereIcon } from "../icons/Cohere";
 import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
 import { CouchbaseIcon } from "../icons/Couchbase";
+import { CrateDBIcon } from "../icons/CrateDB";
 import { CrewAiIcon } from "../icons/CrewAI";
 import { DeepSeekIcon } from "../icons/DeepSeek";
 import { ElasticsearchIcon } from "../icons/ElasticsearchStore";
@@ -625,6 +626,7 @@ export const nodeIconsLucide: iconsType = {
   Couchbase: CouchbaseIcon,
   Clickhouse: ClickhouseIcon,
   Cloudflare: CloudflareIcon,
+  CrateDB: CrateDBIcon,
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
