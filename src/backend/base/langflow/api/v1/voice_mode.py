@@ -1,8 +1,10 @@
 import asyncio
+import base64
 import json
 import os
 from uuid import UUID, uuid4
 
+import webrtcvad
 import websockets
 from fastapi import APIRouter, BackgroundTasks
 from loguru import logger
@@ -15,9 +17,6 @@ from langflow.api.v1.schemas import InputValueRequest
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
-
-import base64
-import webrtcvad
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -46,17 +45,16 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
 
 
 async def handle_function_call(
-        websocket: WebSocket,
-        openai_ws: websockets.WebSocketClientProtocol,
-        function_call: dict,
-        function_call_args: str,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        current_user: CurrentActiveUser,
-        session: DbSession,
+    websocket: WebSocket,
+    openai_ws: websockets.WebSocketClientProtocol,
+    function_call: dict,
+    function_call_args: str,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentActiveUser,
+    session: DbSession,
 ):
-    """
-    Execute the flow, gather the streaming response,
+    """Execute the flow, gather the streaming response,
     and send the result back to OpenAI as a function_call_output.
     """
     try:
@@ -64,10 +62,7 @@ async def handle_function_call(
         args = json.loads(function_call_args) if function_call_args else {}
 
         input_request = InputValueRequest(
-            input_value=args.get("input"),
-            components=[],
-            type="chat",
-            session=conversation_id
+            input_value=args.get("input"), components=[], type="chat", session=conversation_id
         )
 
         # Get streaming response from build_flow
@@ -115,7 +110,7 @@ async def handle_function_call(
         await openai_ws.send(json.dumps(function_output))
         await openai_ws.send(json.dumps({"type": "response.create"}))
 
-    except Exception as e: # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Error executing flow: {e!s}")
         function_output = {
             "type": "conversation.item.create",
@@ -130,13 +125,12 @@ async def handle_function_call(
 
 @router.websocket("/ws/{flow_id}")
 async def websocket_endpoint(
-        websocket: WebSocket,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        session: DbSession,
+    websocket: WebSocket,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
 ):
-    """
-    Main WebSocket endpoint.
+    """Main WebSocket endpoint.
     - Connects to OpenAI Realtime
     - Integrates local WebRTC VAD to handle barge-in
       for base64-encoded PCM16 audio from the client.
@@ -172,16 +166,11 @@ async def websocket_endpoint(
             "description": flow_description or "Execute the flow with the given input",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "input": {
-                        "type": "string",
-                        "description": "The input to send to the flow"
-                    }
-                },
+                "properties": {"input": {"type": "string", "description": "The input to send to the flow"}},
                 "required": ["input"],
             },
         }
-    except Exception as e: # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
         await websocket.send_json({"error": f"Failed to load flow: {e!s}"})
         logger.error(e)
         return
@@ -231,9 +220,7 @@ async def websocket_endpoint(
         audio_buffer = bytearray()
 
         async def forward_to_client():
-            """
-            OpenAI -> Client. Watch for function calls, track bot_speaking.
-            """
+            """OpenAI -> Client. Watch for function calls, track bot_speaking."""
             nonlocal bot_speaking
             function_call = None
             function_call_args = ""
@@ -283,8 +270,7 @@ async def websocket_endpoint(
                 pass
 
         async def forward_to_openai():
-            """
-            Client -> OpenAI. Handle JSON messages, decode base64 PCM,
+            """Client -> OpenAI. Handle JSON messages, decode base64 PCM,
             chunk into 20ms frames, run local VAD. If user speaks mid-bot-turn,
             send 'response.stop' to barge in.
             """
@@ -328,10 +314,7 @@ async def websocket_endpoint(
                             frame_b64 = base64.b64encode(frame).decode("utf-8")
 
                             # Send event-based JSON
-                            await openai_ws.send(json.dumps({
-                                "type": "input_audio_buffer.append",
-                                "audio": frame_b64
-                            }))
+                            await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": frame_b64}))
 
                     else:
                         # If it's some other message (text, etc.),
