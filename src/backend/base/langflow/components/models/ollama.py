@@ -204,7 +204,7 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url","model_name"} and not await self.is_valid_ollama_url(
+        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(
             build_config["base_url"].get("value", "")
         ):
             # Check if any URL in the list is valid
@@ -213,7 +213,7 @@ class ChatOllamaComponent(LCModelComponent):
                 if await self.is_valid_ollama_url(url):
                     valid_url = url
                     break
-            if valid_url!="":
+            if valid_url != "":
                 build_config["base_url"]["value"] = valid_url
             else:
                 msg = "No valid Ollama URL found."
