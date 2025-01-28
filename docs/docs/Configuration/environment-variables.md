@@ -105,7 +105,6 @@ That means, if you happen to set the same environment variable in both your term
 ## Supported environment variables {#supported-variables}
 
 The following table lists the environment variables supported by Langflow.
-Here's the updated table with the requested changes:
 
 | Variable | Format / Values | Default | Description |
 |----------|---------------|---------|-------------|
