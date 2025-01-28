@@ -465,9 +465,13 @@ export const logHasMessage = (
   if (!outputs) return false;
 
   if (Array.isArray(outputs) && outputs.length > 0) {
-    return outputs.some((outputLog) => outputLog?.message);
+    return outputs.some(
+      (outputLog) =>
+        outputLog?.message ||
+        (typeof outputLog === "object" && outputLog?.text),
+    );
   }
-  return outputs?.message;
+  return outputs?.message || (typeof outputs === "object" && outputs?.text);
 };
 
 export const logTypeIsUnknown = (
