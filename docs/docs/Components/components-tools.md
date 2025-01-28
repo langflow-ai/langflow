@@ -25,6 +25,25 @@ To make a component into a tool that an agent can use, enable **Tool mode** in t
 If the component you want to connect to an agent doesn't have a **Tool mode** option, you can modify the component's inputs to become a tool.
 For an example, see [Make any component a tool](/agents-tool-calling-agent-component#make-any-component-a-tool).
 
+## arXiv
+
+This component searches and retrieves papers from [arXiv.org](arXiv.org).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| search_query | Search Query | The search query for arXiv papers (e.g., 'quantum computing') |
+| search_type | Search Field | The field to search in |
+| max_results | Max Results | Maximum number of results to return |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| papers | Papers | List of retrieved arXiv papers |
+
+
 ## Astra DB Tool
 
 The `Astra DB Tool` allows agents to connect to and query data from Astra DB collections.
@@ -140,6 +159,25 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 |---------|-----------|--------------------------------------|
 | optimized_prompt | Optimized Prompt| A message object containing the optimized prompt |
 | reasons | Selected Reasons| A list of the selected reasons that are embedded in the optimized prompt|
+
+## DuckDuckGo search
+
+This component performs web searches using the [DuckDuckGo](www.duckduckgo.com) search engine with result limiting capabilities.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Search Query | The search query to be used for the DuckDuckGo search |
+| max_results | Max Results | Maximum number of results to return |
+| max_snippet_length | Max Snippet Length | Maximum length of each result snippet |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | List of search results as Data objects |
+
 
 ## Glean Search API
 
@@ -319,6 +357,47 @@ This component creates a tool for searching using the Serp API.
 |---------|-----------|---------------------------------------------|
 | results | List[Data]| List of search results                      |
 | tool    | Tool      | Serp API search tool for use in LangChain   |
+
+## Tavily AI Search
+
+This component performs searches using the Tavily AI search engine, which is optimized for LLMs and RAG applications.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| api_key | Tavily API Key | Your Tavily API Key. |
+| query | Search Query | The search query you want to execute with Tavily. |
+| search_depth | Search Depth | The depth of the search. |
+| topic | Search Topic | The category of the search. |
+| max_results | Max Results | The maximum number of search results to return. |
+| include_images | Include Images | Include a list of query-related images in the response. |
+| include_answer | Include Answer | Include a short answer to original query. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The search results as a list of Data objects. |
+| text | Text | The search results formatted as a text string. |
+
+## Wikidata
+
+This component performs a search using the Wikidata API.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Query | The text query for similarity search on Wikidata. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The search results from Wikidata API as a list of Data objects. |
+| text | Message | The search results formatted as a text message. |
+
 
 ## Wikipedia API
 
