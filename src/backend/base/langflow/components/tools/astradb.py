@@ -3,7 +3,7 @@ from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
 from langchain.pydantic_v1 import BaseModel, Field, create_model
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import StructuredTool, Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import DictInput, IntInput, SecretStrInput, StrInput
@@ -119,7 +119,7 @@ class AstraDBToolComponent(LCToolComponent):
         """
         schema_dict = self.create_args_schema()
 
-        tool = StructuredTool.from_function(
+        structured_tool = StructuredTool.from_function(
             name=self.tool_name,
             args_schema=schema_dict["ToolInput"],
             description=self.tool_description,
@@ -128,7 +128,12 @@ class AstraDBToolComponent(LCToolComponent):
         )
         self.status = "Astra DB Tool created"
 
-        return tool
+        # Convert the StructuredTool to a regular Tool
+        return Tool(
+            name=structured_tool.name,
+            func=structured_tool.func,
+            description=structured_tool.description,
+        )
 
     def projection_args(self, input_str: str) -> dict:
         elements = input_str.split(",")
