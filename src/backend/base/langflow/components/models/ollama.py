@@ -121,6 +121,9 @@ class ChatOllamaComponent(LCModelComponent):
             value=True,
             real_time_refresh=True,
         ),
+        MessageTextInput(
+            name="template", display_name="Template", info="Template to use for generating text.", advanced=True
+        ),
         *LCModelComponent._base_inputs,
     ]
 
@@ -162,6 +165,7 @@ class ChatOllamaComponent(LCModelComponent):
             "top_k": self.top_k or None,
             "top_p": self.top_p or None,
             "verbose": self.verbose,
+            "template": self.template,
         }
 
         # Remove parameters with None values
