@@ -12,6 +12,13 @@ export const workletCode = `
           this.outputBuffers.push(event.data.audio);
           this.isPlaying = true;
         }
+        else if (event.data.type === 'stop_playback') {
+         // Immediately stop playback and clear any queued audio
+         this.outputBuffers = [];
+         this.isPlaying = false;
+         // Optionally notify main thread if you want
+         this.port.postMessage({ type: 'done' });
+        }
       };
     }
 

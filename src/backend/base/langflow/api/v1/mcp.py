@@ -45,7 +45,7 @@ if False:
 
     logger.debug("MCP module loaded - debug logging enabled")
 
-enable_progress_notifications = get_settings_service().settings.mcp_server_enable_progress_notifications
+enable_progress_notifications = None
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -177,6 +177,9 @@ async def handle_list_tools():
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool execution requests."""
+    global enable_progress_notifications
+    if enable_progress_notifications is None:
+        enable_progress_notifications = get_settings_service().settings.mcp_server_enable_progress_notifications
     try:
         session = await anext(get_session())
         background_tasks = BackgroundTasks()

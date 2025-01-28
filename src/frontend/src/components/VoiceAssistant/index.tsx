@@ -178,7 +178,14 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         }
         break;
 
+      case "response.cancelled":
+        console.log("response.cancelled");
+        // If the server acknowledges our response.cancel, forcibly stop leftover audio
+        interruptPlayback();
+        break;
+
       case "response.audio.delta":
+        console.log("response.audio.delta");
         if (data.delta && audioContextRef.current) {
           try {
             const float32Data = base64ToFloat32Array(data.delta);
@@ -267,6 +274,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         if (data.code === "api_key_missing") {
           setShowApiKeyModal(true);
         }
+        debugger;
         setStatus("Error: " + data.error);
         break;
     }
@@ -352,4 +360,18 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       />
     </div>
   );
+
+  function interruptPlayback() {
+    // Clear the queued buffers so we won't keep playing leftover audio
+    audioQueueRef.current.splice(0, audioQueueRef.current.length);
+    // Also set isPlayingRef to false to ensure we don't auto-play the next chunk
+    isPlayingRef.current = false;
+
+    // Send a message to your processor telling it to stop any currently playing audio
+    if (processorRef.current) {
+      processorRef.current.port.postMessage({ type: "stop_playback" });
+    }
+  }
+
 }
+
