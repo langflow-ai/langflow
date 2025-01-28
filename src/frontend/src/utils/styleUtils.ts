@@ -433,6 +433,7 @@ export const nodeColors: { [char: string]: string } = {
   BaseLanguageModel: "#c026d3",
   LanguageModel: "#c026d3",
   Agent: "#903BBE",
+  AgentExecutor: "#903BBE",
   Tool: "#00fbfc",
 };
 
@@ -481,6 +482,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseLanguageModel: "fuchsia",
   LanguageModel: "fuchsia",
   Agent: "purple",
+  AgentExecutor: "purple",
   Tool: "cyan",
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
