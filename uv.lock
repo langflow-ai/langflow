@@ -3789,7 +3789,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.1.2"
+version = "1.1.3"
 source = { editable = "." }
 dependencies = [
     { name = "ag2" },
@@ -4006,7 +4006,7 @@ requires-dist = [
     { name = "langsmith", specifier = "==0.1.147" },
     { name = "langwatch", specifier = "==0.1.16" },
     { name = "lark", specifier = "==1.2.2" },
-    { name = "litellm", specifier = "==1.54.1" },
+    { name = "litellm", specifier = "==1.59.8" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
     { name = "markdown", specifier = "==3.7" },
     { name = "markupsafe", specifier = "==3.0.2" },
@@ -4091,7 +4091,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.1.2"
+version = "0.1.3"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -4438,7 +4438,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.54.1"
+version = "1.59.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -4450,13 +4450,12 @@ dependencies = [
     { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
-    { name = "requests" },
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/93/e718a9de07049d8a5cdeb728ca943a8662cb14de2f9beabbd8fcc9a41270/litellm-1.54.1.tar.gz", hash = "sha256:b5a8fc99160fab0699b9258457432b3975499218ffcf1b515709808b2ce5a2d7", size = 6190398 }
+sdist = { url = "https://files.pythonhosted.org/packages/86/b0/c8ec06bd1c87a92d6d824008982b3c82b450d7bd3be850a53913f1ac4907/litellm-1.59.8.tar.gz", hash = "sha256:9d645cc4460f6a9813061f07086648c4c3d22febc8e1f21c663f2b7750d90512", size = 6428607 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f4/79/44645946d1343de9250f9d414a65fcf856027523d8a679b0f33ff3fcec92/litellm-1.54.1-py3-none-any.whl", hash = "sha256:d8e60d4a5e8decb0234a1e8c20351c904aec561fb4025df7df3d0d7ea81ca442", size = 6446858 },
+    { url = "https://files.pythonhosted.org/packages/b9/38/889da058f566ef9ea321aafa25e423249492cf2a508dfdc0e5acfcf04526/litellm-1.59.8-py3-none-any.whl", hash = "sha256:2473914bd2343485a185dfe7eedb12ee5fda32da3c9d9a8b73f6966b9b20cf39", size = 6716233 },
 ]
 
 [[package]]
