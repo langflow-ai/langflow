@@ -84,6 +84,11 @@ This component is particularly useful in workflows that require conditional rout
 
 ## Flow as Tool {#flow-as-tool}
 
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
+
 This component constructs a tool from a function that runs a loaded flow.
 
 ### Inputs
@@ -174,6 +179,11 @@ The RunFlowComponent executes a specified flow within a larger workflow. It prov
 | run_outputs | List[Data]  | The results generated from running the flow.   |
 
 ## Sub Flow
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
 
 This `SubFlowComponent` generates a component from a flow with all of its inputs and outputs.
 
