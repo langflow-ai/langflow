@@ -34,7 +34,7 @@ The use of asynchronous messaging patterns is recommended for system scalability
 It includes code examples of REST and gRPC implementations to demonstrate integration approaches.
 ```
 
-## Conditional router
+## Conditional router (If-Else component)
 
 This component routes an input message to a corresponding output based on text comparison.
 
