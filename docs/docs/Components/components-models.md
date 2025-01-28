@@ -131,6 +131,31 @@ For more information, see the [Cohere documentation](https://cohere.ai/).
 |-------|---------------|------------------------------------------------------------------|
 | model | LanguageModel | An instance of the Cohere model configured with the specified parameters. |
 
+## DeepSeek
+
+This component generates text using DeepSeek's language models.
+
+For more information, see the [DeepSeek documentation](https://api-docs.deepseek.com/).
+
+### Inputs
+
+| Name           | Type          | Description                                                     |
+|----------------|---------------|-----------------------------------------------------------------|
+| max_tokens     | Integer       | Maximum number of tokens to generate. Set to `0` for unlimited. Range: `0-128000`. |
+| model_kwargs   | Dictionary    | Additional keyword arguments for the model.          |
+| json_mode      | Boolean       | If `True`, outputs JSON regardless of passing a schema. |
+| model_name     | String        | The DeepSeek model to use. Default: `deepseek-chat`.         |
+| api_base       | String        | Base URL for API requests. Default: `https://api.deepseek.com`. |
+| api_key        | SecretString  | Your DeepSeek API key for authentication.                      |
+| temperature    | Float         | Controls randomness in responses. Range: `[0.0, 2.0]`. Default: `1.0`. |
+| seed           | Integer       | Number initialized for random number generation. Use the same seed integer for more reproducible results, and use a different seed number for more random results.     |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of ChatOpenAI configured with the specified parameters. |
+
 ## Google Generative AI
 
 This component generates text using Google's Generative AI models.
