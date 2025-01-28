@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 from astrapy import Collection, DataAPIClient, Database
 from langchain.pydantic_v1 import BaseModel, Field, create_model
@@ -100,13 +99,15 @@ class AstraDBToolComponent(LCToolComponent):
         return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:
-        args: dict[str, tuple[Any, Field] | list[str]] = {}
-
-        for key in self.tool_params:
-            if key.startswith("!"):  # Mandatory
-                args[key[1:]] = (str, Field(description=self.tool_params[key]))
-            else:  # Optional
-                args[key] = (str | None, Field(description=self.tool_params[key], default=None))
+        args = {
+            (key.removeprefix("!")): (
+                str,
+                Field(description=self.tool_params[key])
+                if key.startswith("!")
+                else Field(description=self.tool_params[key], default=None),
+            )
+            for key in self.tool_params
+        }
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
@@ -144,12 +145,11 @@ class AstraDBToolComponent(LCToolComponent):
 
     def run_model(self, **args) -> Data | list[Data]:
         collection = self._build_collection()
-        results = collection.find(
-            ({**args, **self.static_filters}),
-            projection=self.projection_args(self.projection_attributes),
-            limit=self.number_of_results,
-        )
+        query_args = {**args, **self.static_filters}
 
-        data: list[Data] = [Data(data=doc) for doc in results]
+        projection = self.projection_args(self.projection_attributes)
+        results = collection.find(query_args, projection=projection, limit=self.number_of_results)
+
+        data = [Data(data=doc) for doc in results]
         self.status = data
         return data
