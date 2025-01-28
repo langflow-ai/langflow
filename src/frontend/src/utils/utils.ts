@@ -465,13 +465,23 @@ export const logHasMessage = (
   if (!outputs) return false;
 
   if (Array.isArray(outputs) && outputs.length > 0) {
-    return outputs.some(
-      (outputLog) =>
-        outputLog?.message ||
-        (typeof outputLog === "object" && outputLog?.text),
-    );
+    return outputs.some((outputLog) => {
+      if (!outputLog) return false;
+      if (typeof outputLog === "string") return true;
+      if (typeof outputLog === "object") {
+        if ("message" in outputLog && outputLog.message) return true;
+        if ("text" in outputLog && outputLog.text) return true;
+      }
+      return false;
+    });
   }
-  return outputs?.message || (typeof outputs === "object" && outputs?.text);
+
+  if (typeof outputs === "string") return true;
+  if (typeof outputs === "object" && outputs) {
+    if ("message" in outputs && outputs.message) return true;
+    if ("text" in outputs && outputs.text) return true;
+  }
+  return false;
 };
 
 export const logTypeIsUnknown = (
