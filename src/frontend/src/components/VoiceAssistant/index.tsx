@@ -274,8 +274,12 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         if (data.code === "api_key_missing") {
           setShowApiKeyModal(true);
         }
-        debugger;
-        setStatus("Error: " + data.error);
+        if (data.error.message === "Cancellation failed: no active response found"){
+            interruptPlayback();
+        }
+        else {
+          setStatus("Error: " + data.error);
+        }
         break;
     }
   };
