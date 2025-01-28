@@ -14,7 +14,7 @@ import ShareModal from "../../../modals/shareModal";
 import useFlowStore from "../../../stores/flowStore";
 import { useShortcutsStore } from "../../../stores/shortcuts";
 import { useStoreStore } from "../../../stores/storeStore";
-import { classNames, isThereModal } from "../../../utils/utils";
+import { classNames, cn, isThereModal } from "../../../utils/utils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import FlowToolbarOptions from "./components/flow-toolbar-options";
 
@@ -121,9 +121,10 @@ export default function FlowToolbar(): JSX.Element {
     <>
       <Panel className="!m-2" position="top-right">
         <div
-          className={
-            "hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-md border bg-background p-1.5 shadow transition-all"
-          }
+          className={cn(
+            "hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-md border px-1.5 bg-background shadow transition-all",
+            ENABLE_PUBLISH ? "h-11" : "",
+          )}
         >
           {ENABLE_PUBLISH ? (
             <FlowToolbarOptions />
