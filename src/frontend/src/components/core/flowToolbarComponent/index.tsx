@@ -122,7 +122,7 @@ export default function FlowToolbar(): JSX.Element {
       <Panel className="!m-2" position="top-right">
         <div
           className={cn(
-            "hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-md border px-1.5 bg-background shadow transition-all",
+            "hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-md border bg-background px-1.5 shadow transition-all",
             ENABLE_PUBLISH ? "h-11" : "",
           )}
         >
