@@ -407,7 +407,7 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 ## Opensearch
 
 This component creates an Opensearch vector store with search capabilities
-For more information, see [Opensearch documentation](https://opensearch.org/platform/search/vector-database.html)
+For more information, see [Opensearch documentation](https://opensearch.org/platform/search/vector-database.html).
 
 ### Inputs
 
@@ -694,8 +694,6 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | Name         | Type             | Description                   |
 |--------------|------------------|-------------------------------|
 | vector_store | WeaviateVectorStore | Weaviate vector store instance |
-
-**Note:** Ensure Weaviate instance is running and accessible. Verify API key, index name, text key, and attributes are set correctly.
 
 ## Weaviate Search
 
