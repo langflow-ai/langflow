@@ -1,6 +1,5 @@
 // src/constants/constants.ts
 
-import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import custom from "../customization/config-constants";
 import { languageMap } from "../types/components";
 
@@ -1007,4 +1006,4 @@ export const DEFAULT_PLACEHOLDER = "Type something...";
 
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
 
-export const PLAYGROUND_BUTTON_NAME = ENABLE_PUBLISH ? "Test" : "Playground";
+export const PLAYGROUND_BUTTON_NAME = "Playground";
