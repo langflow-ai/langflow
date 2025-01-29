@@ -619,7 +619,7 @@ class Vertex:
     def _log_transaction_async(
         self, flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
     ) -> None:
-        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
+        task = asyncio.create_task(log_transaction(flow_id, source, status, target, error,self.graph.run_id))
         self.log_transaction_tasks.add(task)
         task.add_done_callback(self.log_transaction_tasks.discard)
 

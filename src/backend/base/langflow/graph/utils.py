@@ -136,7 +136,7 @@ def _vertex_to_primitive_dict(target: Vertex) -> dict:
 
 
 async def log_transaction(
-    flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
+    flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None, run_id:UUID | None = None
 ) -> None:
     try:
         if not get_settings_service().settings.transactions_storage_enabled:
@@ -156,6 +156,7 @@ async def log_transaction(
             status=status,
             error=error,
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
+            execution_id=run_id
         )
         async with session_getter(get_db_service()) as session:
             inserted = await crud_log_transaction(session, transaction)

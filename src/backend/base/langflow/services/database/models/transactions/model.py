@@ -20,7 +20,8 @@ class TransactionBase(SQLModel):
     status: str = Field(nullable=False)
     error: str | None = Field(default=None)
     flow_id: UUID = Field(foreign_key="flow.id")
-
+    execution_id: UUID | None = Field(default=None)
+    
     # Needed for Column(JSON)
     class Config:
         arbitrary_types_allowed = True
