@@ -35,7 +35,7 @@ Alternatively, connect the vector database component's **Retriever** port to a [
 
 This component implements a Vector Store using Astra DB with search capabilities.
 
-For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
+For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/databases/create-database.html).
 
 ### Inputs
 
@@ -70,7 +70,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 ## AstraDB Graph vector store
 
 This component implements a Vector Store using AstraDB with graph capabilities.
-For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-vector/docs/vector-overview.html).
+For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
 
 ### Inputs
 

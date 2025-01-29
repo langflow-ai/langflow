@@ -178,7 +178,24 @@ This component performs web searches using the [DuckDuckGo](www.duckduckgo.com) 
 |------|--------------|------|
 | data | Data | List of search results as Data objects |
 
+## Exa Search
 
+This component provides an [https://exa.ai/](Exa Search) toolkit for search and content retrieval.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| metaphor_api_key | Exa Search API Key | API key for Exa Search (entered as a password) |
+| use_autoprompt | Use Autoprompt | Whether to use autoprompt feature (default: true) |
+| search_num_results | Search Number of Results | Number of results to return for search (default: 5) |
+| similar_num_results | Similar Number of Results | Number of similar results to return (default: 5) |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| tools | Tools | List of search tools provided by the toolkit |
 ## Glean Search API
 
 This component allows you to call the Glean Search API.
