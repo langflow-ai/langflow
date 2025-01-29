@@ -39,7 +39,7 @@ const JsonOutputViewComponent: React.FC<JsonOutputViewComponentProps> = ({
           if (output) {
             output.options = {
               ...output.options,
-              filter: filter,
+              filter: filter !== "" ? filter : undefined,
             };
           }
           return {
