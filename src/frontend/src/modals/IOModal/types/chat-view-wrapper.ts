@@ -19,4 +19,5 @@ export type ChatViewWrapperProps = {
   canvasOpen: boolean | undefined;
   setOpen: (open: boolean) => void;
   playgroundTitle: string;
+  playgroundPage?: boolean;
 };

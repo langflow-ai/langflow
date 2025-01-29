@@ -23,7 +23,8 @@ export const ChatViewWrapper = ({
   setLockChat,
   canvasOpen,
   setOpen,
-  playgroundTitle
+  playgroundTitle,
+  playgroundPage
 }: ChatViewWrapperProps) => {
   return (
     <div
@@ -104,6 +105,7 @@ export const ChatViewWrapper = ({
                     setOpen(false);
                   }
             }
+            playgroundPage={playgroundPage}
           />
         )}
       </div>

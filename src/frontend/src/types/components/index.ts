@@ -602,6 +602,7 @@ export type chatMessagePropsType = {
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type genericModalPropsType = {
@@ -778,6 +779,7 @@ export type chatViewProps = {
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type IOFileInputProps = {

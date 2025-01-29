@@ -24,6 +24,7 @@ import EditMessageField from "./components/edit-message-field";
 import FileCardWrapper from "./components/file-card-wrapper";
 import { EditMessageButton } from "./components/message-options";
 import { convertFiles } from "./helpers/convert-files";
+import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 
 export default function ChatMessage({
   chat,
@@ -32,6 +33,7 @@ export default function ChatMessage({
   updateChat,
   setLockChat,
   closeChat,
+  playgroundPage
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -284,8 +286,10 @@ export default function ChatMessage({
                   ) : (
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
-                ) : !ENABLE_DATASTAX_LANGFLOW ? (
+                ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
                   <ProfileIcon />
+                ) : playgroundPage ? (
+                  <ForwardedIconComponent name="User" />
                 ) : (
                   <CustomProfileIcon />
                 )}

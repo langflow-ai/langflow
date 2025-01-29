@@ -358,6 +358,7 @@ export default function IOModal({
                 />
               )}
               <ChatViewWrapper
+                playgroundPage={playgroundPage}
                 selectedViewField={selectedViewField}
                 visibleSession={visibleSession}
                 sessions={sessions}
