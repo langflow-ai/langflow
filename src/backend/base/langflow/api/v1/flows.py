@@ -5,8 +5,9 @@ import json
 import re
 import zipfile
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, List
 from uuid import UUID
+from pydantic import BaseModel
 
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -497,3 +498,60 @@ async def read_basic_examples(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+def revoke_access_from_flow(user_id: UUID, shared_users: List[UUID]):
+
+    if user_id in shared_users:
+        shared_users.remove(user_id)
+        return True
+    return False
+
+class RevokeAccessRequest(BaseModel):
+    user_id: UUID
+@router.delete("/{flow_id}/revoke-access", status_code=204)
+async def revoke_flow_access_endpoint(
+        session: DbSession,
+        current_user: CurrentActiveUser,
+        flow_id: UUID,
+        share_request: List[UUID],
+        request: RevokeAccessRequest = None,
+):
+    """
+    Endpoint to revoke a user's access to a flow.
+
+    Args:
+        current_user (str): The user ID of the API caller.
+        flow_id (UUID): The ID of the flow to modify its shared users.
+        share_request: contains all user IDs with access to that specific flow.
+        request (RevokeAccessRequest): The user ID whose access needs revocation.
+
+    Returns:
+        HTTP 204: Successful revocation.
+    """
+
+    flow = await _read_flow(
+        session=session,
+        flow_id=flow_id,
+        user_id=current_user.id,
+        settings_service=get_settings_service(),
+    )
+
+    if not flow:
+        raise HTTPException(status_code=404, detail="Flow not found.")
+
+    if flow.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the owner of the flow can revoke access."
+        )
+
+    user_id = request.user_id
+    success = revoke_access_from_flow(user_id, share_request)
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail=f"User ID {user_id} does not have access to this flow."
+        )
+
+    return {"response": f"{success}Access for user ID {user_id} has been revoked."}
