@@ -151,4 +151,7 @@ This component transforms LLM responses into structured data formats.
 
 ### Output
 
-| structured_output | Structured Output | The resulting structured output based on the defined schema. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| stored_messages | Stored Messages | structured output based on the defined schema. |
+
