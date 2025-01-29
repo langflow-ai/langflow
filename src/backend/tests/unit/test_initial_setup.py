@@ -1,7 +1,10 @@
 import asyncio
+import io
 import uuid
+import zipfile
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import Mock
 
 import anyio
 import pytest
@@ -52,9 +55,9 @@ async def test_get_project_data():
         assert isinstance(updated_at_datetime, datetime), f"Project {project_name} has no updated_at_datetime"
         assert isinstance(project_data, dict), f"Project {project_name} has no data"
         assert isinstance(project_icon, str) or project_icon is None, f"Project {project_name} has no icon"
-        assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None, (
-            f"Project {project_name} has no icon_bg_color"
-        )
+        assert (
+            isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
+        ), f"Project {project_name} has no icon_bg_color"
 
 
 @pytest.mark.usefixtures("client")
@@ -215,13 +218,46 @@ async def test_detect_github_url(url, expected):
     assert await detect_github_url(url) == expected
 
 
+@pytest.fixture
+def mock_zip_content():
+    # Create a zip file in memory with test content
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        # Add a test flow file
+        flow_content = b'{"test": "flow"}'
+        zf.writestr("langflow-bundles-68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/flows/test_flow.json", flow_content)
+
+        # Add a test component file
+        component_content = b"class OpenAIEmbeddings2Component: pass"
+        zf.writestr(
+            "langflow-bundles-68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/components/embeddings/openai2.py",
+            component_content,
+        )
+
+    return zip_buffer.getvalue()
+
+
 @pytest.mark.usefixtures("client")
-async def test_load_bundles_from_urls():
+async def test_load_bundles_from_urls(mocker, mock_zip_content):
     settings_service = get_settings_service()
     settings_service.settings.bundle_urls = [
         "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9"
     ]
     settings_service.auth_settings.AUTO_LOGIN = True
+
+    # Mock the httpx.AsyncClient
+    mock_response = Mock()
+    mock_response.content = mock_zip_content
+    mock_response.raise_for_status = Mock()
+
+    mock_client = Mock()
+    mock_client.get = Mock(return_value=mock_response)
+
+    # Mock the AsyncClient context manager
+    async def mock_async_client(*args, **kwargs):  # noqa: ARG001
+        return mock_client
+
+    mocker.patch("httpx.AsyncClient", side_effect=mock_async_client)
 
     temp_dirs, components_paths = await load_bundles_from_urls()
 
