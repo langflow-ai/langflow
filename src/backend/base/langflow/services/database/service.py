@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
-from sqlalchemy import event, exc, inspect
+from sqlalchemy import AsyncAdaptedQueuePool, event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
@@ -39,6 +39,7 @@ class DatabaseService(Service):
     name = "database_service"
 
     def __init__(self, settings_service: SettingsService):
+        self._logged_pragma = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -67,8 +68,6 @@ class DatabaseService(Service):
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
-        self._logged_pragma = False
-
     async def initialize_alembic_log_file(self):
         # Ensure the directory and file for the alembic log file exists
         await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
@@ -89,22 +88,49 @@ class DatabaseService(Service):
                 "To avoid this warning, update the database URL."
             )
 
+    def _build_connection_kwargs(self):
+        """Build connection kwargs by merging deprecated settings with db_connection_settings.
+
+        Returns:
+            dict: Connection kwargs with deprecated settings overriding db_connection_settings
+        """
+        settings = self.settings_service.settings
+        # Start with db_connection_settings as base
+        connection_kwargs = settings.db_connection_settings.copy()
+
+        # Override individual settings if explicitly set
+        if "pool_size" in settings.model_fields_set:
+            logger.warning("pool_size is deprecated. Use db_connection_settings['pool_size'] instead.")
+            connection_kwargs["pool_size"] = settings.pool_size
+        if "max_overflow" in settings.model_fields_set:
+            logger.warning("max_overflow is deprecated. Use db_connection_settings['max_overflow'] instead.")
+            connection_kwargs["max_overflow"] = settings.max_overflow
+
+        return connection_kwargs
+
     def _create_engine(self) -> AsyncEngine:
         """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
+
+        # Get connection settings from config, with defaults if not specified
+        # if the user specifies an empty dict, we allow it.
+        kwargs = self._build_connection_kwargs()
+
         if url_components[0].startswith("sqlite"):
             scheme = "sqlite+aiosqlite"
-            kwargs = {}
+            # Even though the docs say this is the default, it raises an error
+            # if we don't specify it.
+            # https://docs.sqlalchemy.org/en/20/errors.html#pool-class-cannot-be-used-with-asyncio-engine-or-vice-versa
+            pool = AsyncAdaptedQueuePool
         else:
-            kwargs = {
-                "pool_size": self.settings_service.settings.pool_size,
-                "max_overflow": self.settings_service.settings.max_overflow,
-            }
             scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
+            pool = None
+
         database_url = f"{scheme}://{url_components[1]}"
         return create_async_engine(
             database_url,
             connect_args=self._get_connect_args(),
+            poolclass=pool,
             **kwargs,
         )
 

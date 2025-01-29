@@ -2,6 +2,7 @@ import asyncio
 import uuid
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import anyio
 import pytest
@@ -212,7 +213,20 @@ async def test_refresh_starter_projects():
     ],
 )
 async def test_detect_github_url(url, expected):
-    assert await detect_github_url(url) == expected
+    # Mock the GitHub API response for the default branch case
+    mock_response = AsyncMock()
+    mock_response.json = lambda: {"default_branch": "main"}  # Not async, just returns a dict
+    mock_response.raise_for_status.return_value = None
+
+    with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
+        result = await detect_github_url(url)
+        assert result == expected
+
+        # Verify the API call was only made for GitHub repo URLs
+        if "github.com" in url and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
+            mock_get.assert_called_once()
+        else:
+            mock_get.assert_not_called()
 
 
 @pytest.mark.usefixtures("client")
