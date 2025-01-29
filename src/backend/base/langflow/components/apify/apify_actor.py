@@ -68,7 +68,7 @@ class ApifyActorsComponent(Component):
         ),
         BoolInput(
             name="flatten_dataset",
-            display_name="Flatten output?",
+            display_name="Flatten output",
             info=(
                 "The output dataset will be converted from a nested format to a flat structure. "
                 "Dots in nested structure will be replaced by underscores. "
