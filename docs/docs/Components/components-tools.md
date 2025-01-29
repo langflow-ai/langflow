@@ -372,3 +372,42 @@ This component does not have any input parameters.
 | Name | Type | Description                                  |
 |------|------|----------------------------------------------|
 | tool | Tool | Yahoo Finance News tool for use in LangChain |
+
+## Docling Tools
+
+This section describes tools utilizing the Docling library for document parsing and exporting.
+
+### Document Parsing Tool
+
+The following example demonstrates how to use Docling to parse a PDF document:
+
+```python
+from docling import Docling
+
+# Initialize Docling with configuration
+docling = Docling()
+
+# Parse the PDF document
+document = docling.parse("path/to/document.pdf")
+
+print(document)
+```
+
+### Document Exporting Tool
+
+The following example demonstrates how to use Docling to export a parsed document to HTML:
+
+```python
+from docling import Docling
+
+# Initialize Docling with configuration
+docling = Docling()
+
+# Parse the document
+document = docling.parse("path/to/document.pdf")
+
+# Export the document to HTML
+html_content = docling.export(document, format="html")
+
+print(html_content)
+```

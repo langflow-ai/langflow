@@ -128,5 +128,11 @@ The dropdown menu labeled with the project name offers several management and cu
 
 Click <Icon name="Settings" aria-label="Gear icon" /> **Settings** to access **Global variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 
+## Docling Integration
 
+Langflow integrates the Docling library to enhance document parsing and exporting capabilities. Docling offers robust features for reading and exporting various document formats, including PDF, DOCX, PPTX, XLSX, Images, HTML, AsciiDoc, and Markdown, and exporting them to HTML, Markdown, and JSON with embedded and referenced images.
 
+### Benefits of Using Docling in Langflow
+
+- **Enhanced Document Handling**: Improved support for various document formats.
+- **Advanced AI Integrations**: Potential for advanced AI integrations.
