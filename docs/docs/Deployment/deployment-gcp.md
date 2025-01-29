@@ -28,4 +28,4 @@ When running a [spot (preemptible) instance](https://cloud.google.com/compute/do
 
 ## Pricing
 
-For more information, see the [GCP Pricing Calculator](https://cloud.google.com/products/calculator?hl=en).
+For more information, see the [GCP pricing calculator](https://cloud.google.com/products/calculator?hl=en).
