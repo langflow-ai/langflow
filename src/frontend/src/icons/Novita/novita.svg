@@ -1,11 +1,1 @@
-<svg width="188" height="188" viewBox="0 0 188 188" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="188" height="188" fill="white"/>
-<g clip-path="url(#clip0_1987_17498)">
-<path d="M71.8103 36V80.3795L0 152.19H71.8103V107.808L116.194 152.19H188L71.8103 36Z" fill="black"/>
-</g>
-<defs>
-<clipPath id="clip0_1987_17498">
-<rect width="188" height="116.19" fill="white" transform="translate(0 36)"/>
-</clipPath>
-</defs>
-</svg>
+<svg fill="currentColor" fill-rule="evenodd" height="1em" style="flex:none;line-height:1" viewBox="0 0 24 24" width="1em" xmlns="http://www.w3.org/2000/svg"><title>Novita AI</title><path clip-rule="evenodd" d="M9.167 4.17v5.665L0 19.003h9.167v-5.666l5.666 5.666H24L9.167 4.17z"></path></svg>
