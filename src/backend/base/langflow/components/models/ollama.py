@@ -23,7 +23,7 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="Base URL",
-            info="Endpoint of the Ollama API. Defaults to 'http://localhost:11434' if not specified.",
+            info="Endpoint of the Ollama API.",
             value="",
         ),
         DropdownInput(
@@ -114,15 +114,15 @@ class ChatOllamaComponent(LCModelComponent):
         MessageTextInput(
             name="system", display_name="System", info="System to use for generating text.", advanced=True
         ),
-        MessageTextInput(
-            name="template", display_name="Template", info="Template to use for generating text.", advanced=True
-        ),
         BoolInput(
             name="tool_model_enabled",
             display_name="Tool Model Enabled",
             info="Whether to enable tool calling in the model.",
-            value=True,
+            value=False,
             real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="template", display_name="Template", info="Template to use for generating text.", advanced=True
         ),
         *LCModelComponent._base_inputs,
     ]
@@ -160,12 +160,12 @@ class ChatOllamaComponent(LCModelComponent):
             "temperature": self.temperature or None,
             "stop": self.stop_tokens.split(",") if self.stop_tokens else None,
             "system": self.system,
-            "template": self.template,
             "tfs_z": self.tfs_z or None,
             "timeout": self.timeout or None,
             "top_k": self.top_k or None,
             "top_p": self.top_p or None,
             "verbose": self.verbose,
+            "template": self.template,
         }
 
         # Remove parameters with None values
@@ -185,7 +185,7 @@ class ChatOllamaComponent(LCModelComponent):
     async def is_valid_ollama_url(self, url: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
-                return (await client.get(f"{url}/api/tags")).status_code == HTTP_STATUS_OK
+                return (await client.get(urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
         except httpx.RequestError:
             return False
 
@@ -208,14 +208,20 @@ class ChatOllamaComponent(LCModelComponent):
                     build_config["mirostat_eta"]["value"] = 0.1
                     build_config["mirostat_tau"]["value"] = 5
 
-        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(field_value):
+        if field_name in {"base_url", "model_name"} and not await self.is_valid_ollama_url(
+            build_config["base_url"].get("value", "")
+        ):
             # Check if any URL in the list is valid
             valid_url = ""
             for url in URL_LIST:
                 if await self.is_valid_ollama_url(url):
                     valid_url = url
                     break
-            build_config["base_url"]["value"] = valid_url
+            if valid_url != "":
+                build_config["base_url"]["value"] = valid_url
+            else:
+                msg = "No valid Ollama URL found."
+                raise ValueError(msg)
         if field_name in {"model_name", "base_url", "tool_model_enabled"}:
             if await self.is_valid_ollama_url(self.base_url):
                 tool_model_enabled = build_config["tool_model_enabled"].get("value", False) or self.tool_model_enabled
@@ -241,7 +247,7 @@ class ChatOllamaComponent(LCModelComponent):
 
     async def get_model(self, base_url_value: str, tool_model_enabled: bool | None = None) -> list[str]:
         try:
-            url = urljoin(base_url_value, "/api/tags")
+            url = urljoin(base_url_value, "api/tags")
             async with httpx.AsyncClient() as client:
                 response = await client.get(url)
                 response.raise_for_status()
