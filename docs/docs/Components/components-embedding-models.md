@@ -196,6 +196,12 @@ Use this component to generate embeddings using locally downloaded Hugging Face 
 | Model Name | Model Name | Name of the HuggingFace model to use |
 | Multi Process | Multi-Process | Whether to use multiple processes |
 
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings |
+
 ## Hugging Face embeddings Inference API
 
 This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/).
@@ -213,6 +219,12 @@ Use this component to create embeddings with Hugging Face's hosted models.
 | Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process |
 | Model Kwargs | Model Arguments | Additional arguments for the model |
 | Multi Process | Multi-Process | Whether to use multiple processes |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings |
 
 ## LM Studio Embeddings
 
