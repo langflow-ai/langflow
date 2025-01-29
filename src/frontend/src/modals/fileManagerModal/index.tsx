@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
+import DragFilesComponent from "./components/dragFilesComponent";
 
 export default function FileManagerModal({
   children,
@@ -45,7 +46,9 @@ export default function FileManagerModal({
             File Manager
           </span>
         </BaseModal.Header>
-        <BaseModal.Content>Content</BaseModal.Content>
+        <BaseModal.Content>
+          <DragFilesComponent />
+        </BaseModal.Content>
 
         <BaseModal.Footer
           submit={{
