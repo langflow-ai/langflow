@@ -25,8 +25,8 @@ class NVIDIAModelComponent(LCModelComponent):
             display_name="Model Name",
             advanced=False,
             options=[],
-            real_time_refresh=True,
             refresh_button=True,
+            combobox=True,
         ),
         MessageTextInput(
             name="base_url",
@@ -43,7 +43,7 @@ class NVIDIAModelComponent(LCModelComponent):
                 "Select if you want to use models that can work with tools. If yes, only those models will be shown."
             ),
             advanced=False,
-            value=True,
+            value=False,
             real_time_refresh=True,
         ),
         SecretStrInput(
