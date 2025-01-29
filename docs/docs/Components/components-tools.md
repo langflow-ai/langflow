@@ -209,7 +209,7 @@ This component connects to an [Model Context Protocol (MCP)](https://modelcontex
 
 | Name    | Type   | Description                                |
 |---------|--------|--------------------------------------------|
-| command | String | MCP command (default: "uvx mcp-sse-shim@latest") |
+| command | String | MCP command (default: `uvx mcp-sse-shim@latest`) |
 
 ### Outputs
 
