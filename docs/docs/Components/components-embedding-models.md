@@ -257,7 +257,7 @@ This component generates embeddings using [MistralAI](https://docs.mistral.ai/) 
 
 ## NVIDIA
 
-This component generates embeddings using [NVIDIA models](docs.nvidia.).
+This component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
 
 ### Inputs
 
