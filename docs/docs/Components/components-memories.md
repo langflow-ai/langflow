@@ -15,7 +15,7 @@ Memory components provide access to their respective external databases **as mem
 
 This example flow stores and retrieves chat history from an **Astra DB Chat Memory** component with **Store Message** and **Chat Memory** components.
 
-The **Store Message** helper component stores chat memories as [Data](/configuration-objects) objects, and the **Message History** helper component retrieves chat messages as [Data](/configuration-objects) objects or strings.
+The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as [Data](/concepts-objects) objects or strings.
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
