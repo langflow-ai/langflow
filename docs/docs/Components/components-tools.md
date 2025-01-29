@@ -203,7 +203,7 @@ This component allows you to call the Serper.dev Google Search API.
 
 ## MCP Tools (stdio)
 
-This component connects to an [https://docs.anthropic.com/en/docs/build-with-claude/mcp](Model Context Protocol) server over stdio and exposes its tools as Langflow tools to be used by an Agent component.
+This component connects to an [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over `stdio` and exposes its tools as Langflow tools to be used by an Agent component.
 
 ### Inputs
 
@@ -219,13 +219,13 @@ This component connects to an [https://docs.anthropic.com/en/docs/build-with-cla
 
 ## MCP Tools (SSE)
 
-This component connects to an [https://docs.anthropic.com/en/docs/build-with-claude/mcp](MCP]) server over SSE (Server-Sent Events) and exposes its tools as Langflow tools to be used by an Agent component.
+This component connects to an [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over [SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) and exposes its tools as Langflow tools to be used by an Agent component.
 
 ### Inputs
 
 | Name | Type   | Description                                          |
 |------|--------|------------------------------------------------------|
-| url  | String | SSE URL (default: "http://localhost:7860/api/v1/mcp/sse") |
+| url  | String | SSE URL (default: `http://localhost:7860/api/v1/mcp/sse`) |
 
 ### Outputs
 
