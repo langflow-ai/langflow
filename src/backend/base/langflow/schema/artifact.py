@@ -63,6 +63,8 @@ def _to_list_of_dicts(raw):
 
 
 def post_process_raw(raw, artifact_type: str):
+    default_message = "Built Successfully ✨"
+
     if artifact_type == ArtifactType.STREAM.value:
         raw = ""
     elif artifact_type == ArtifactType.ARRAY.value:
@@ -74,7 +76,7 @@ def post_process_raw(raw, artifact_type: str):
                 artifact_type = ArtifactType.OBJECT.value
             except Exception:  # noqa: BLE001
                 logger.opt(exception=True).debug(f"Error converting to json: {raw} ({type(raw)})")
-                raw = "Built Successfully ✨"
+                raw = default_message
         else:
-            raw = "Built Successfully ✨"
+            raw = default_message
     return raw, artifact_type
