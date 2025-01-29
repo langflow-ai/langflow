@@ -239,5 +239,6 @@ class Output(BaseModel):
         if not self.options:
             return result
         if self.options.get("filter"):
-            return apply_json_filter(result, self.options["filter"])
+            filtered_result = apply_json_filter(result, self.options["filter"])
+            return filtered_result if filtered_result is not None else result
         return result
