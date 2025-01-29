@@ -127,9 +127,10 @@ export default function UpdateAllComponents() {
           variant="link"
           size="icon"
           className="shrink-0 text-sm text-warning-foreground"
-          onClick={() => {
+          onClick={(e) => {
             setDismissed(true);
             setDismissAll(true);
+            e.stopPropagation();
           }}
         >
           Dismiss

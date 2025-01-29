@@ -127,6 +127,7 @@ export default function NodeStatus({
     isOutdated,
     isUserEdited,
     frozen,
+    dismissAll,
   ]);
 
   useEffect(() => {

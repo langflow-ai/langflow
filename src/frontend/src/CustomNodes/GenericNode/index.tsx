@@ -334,6 +334,7 @@ function GenericNode({
     isOutdated,
     isUserEdited,
     getValidationStatus,
+    dismissAll,
   ]);
 
   const renderDescription = useCallback(() => {

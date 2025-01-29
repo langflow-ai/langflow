@@ -3,7 +3,6 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useState } from "react";
 
