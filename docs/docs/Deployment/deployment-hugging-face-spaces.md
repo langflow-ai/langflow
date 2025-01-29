@@ -3,8 +3,7 @@ title: HuggingFace Spaces
 slug: /deployment-hugging-face-spaces
 ---
 
-HuggingFace provides a great alternative for running Langflow in their [HuggingFace Spaces](https://huggingface.co/spaces/) environment. This means you can run Langflow in the cloud without any local installation required. Here's how you can get Langflow up and running on HuggingFace Spaces:
-
+Run Langflow in a [HuggingFace Spaces](https://huggingface.co/spaces/) environment with no local installation required.
 
 1. **Access Langflow Space**: Open a Chromium-based browser and navigate to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true). This link directs you to a pre-configured environment for Langflow.
 
