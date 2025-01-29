@@ -1,10 +1,8 @@
 import asyncio
-import io
 import uuid
-import zipfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, patch
 
 import anyio
 import pytest
@@ -215,49 +213,29 @@ async def test_refresh_starter_projects():
     ],
 )
 async def test_detect_github_url(url, expected):
-    assert await detect_github_url(url) == expected
+    # Mock the GitHub API response for the default branch case
+    mock_response = AsyncMock()
+    mock_response.json = lambda: {"default_branch": "main"}  # Not async, just returns a dict
+    mock_response.raise_for_status.return_value = None
 
+    with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
+        result = await detect_github_url(url)
+        assert result == expected
 
-@pytest.fixture
-def mock_zip_content():
-    # Create a zip file in memory with test content
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zf:
-        # Add a test flow file
-        flow_content = b'{"test": "flow"}'
-        zf.writestr("langflow-bundles-68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/flows/test_flow.json", flow_content)
-
-        # Add a test component file
-        component_content = b"class OpenAIEmbeddings2Component: pass"
-        zf.writestr(
-            "langflow-bundles-68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/components/embeddings/openai2.py",
-            component_content,
-        )
-
-    return zip_buffer.getvalue()
+        # Verify the API call was only made for GitHub repo URLs
+        if "github.com" in url and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
+            mock_get.assert_called_once()
+        else:
+            mock_get.assert_not_called()
 
 
 @pytest.mark.usefixtures("client")
-async def test_load_bundles_from_urls(mocker, mock_zip_content):
+async def test_load_bundles_from_urls():
     settings_service = get_settings_service()
     settings_service.settings.bundle_urls = [
         "https://github.com/langflow-ai/langflow-bundles/commit/68428ce16729a385fe1bcc0f1ec91fd5f5f420b9"
     ]
     settings_service.auth_settings.AUTO_LOGIN = True
-
-    # Mock the httpx.AsyncClient
-    mock_response = Mock()
-    mock_response.content = mock_zip_content
-    mock_response.raise_for_status = Mock()
-
-    mock_client = Mock()
-    mock_client.get = Mock(return_value=mock_response)
-
-    # Mock the AsyncClient context manager
-    async def mock_async_client(*args, **kwargs):  # noqa: ARG001
-        return mock_client
-
-    mocker.patch("httpx.AsyncClient", side_effect=mock_async_client)
 
     temp_dirs, components_paths = await load_bundles_from_urls()
 
