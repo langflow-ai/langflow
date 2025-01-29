@@ -345,8 +345,10 @@ def print_banner(host: str, port: int) -> None:
     langflow_version = version_info["version"]
     package_name = version_info["package"]
     is_pre_release |= langflow_is_pre_release(langflow_version)  # Update pre-release status
-
-    notice = build_version_notice(langflow_version, package_name)
+    try:
+        notice = build_version_notice(langflow_version, package_name)
+    except httpx.ConnectError:
+        notice = ""
     notice = stylize_text(notice, package_name, is_prerelease=is_pre_release)
     if notice:
         notices.append(notice)
