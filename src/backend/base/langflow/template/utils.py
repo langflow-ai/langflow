@@ -2,6 +2,8 @@ from pathlib import Path
 
 from platformdirs import user_cache_dir
 
+from langflow.schema.data import Data
+
 
 def raw_frontend_data_is_valid(raw_frontend_data):
     """Check if the raw frontend data is valid for processing."""
@@ -109,7 +111,7 @@ def apply_json_filter(result, filter_):
     """Apply a json filter to the result.
 
     Args:
-        result (dict): The JSON data to filter
+        result (dict | Data): The JSON data to filter
         filter_ (str): The filter query string in jsonquery format
 
     Returns:
@@ -117,7 +119,9 @@ def apply_json_filter(result, filter_):
     """
     if not filter_ or not filter_.strip():
         return result
-
+    # if result is a Data object, get the data
+    if isinstance(result, Data):
+        result = result.data
     try:
         from jsonquerylang import jsonquery
 
@@ -129,13 +133,17 @@ def apply_json_filter(result, filter_):
         else:
             result_str = str(result)
 
-        # Apply the filter using jsonquery
-        return jsonquery(result_str, filter_)
+        # If query doesn't start with '.', add it to match jsonquery syntax
+        query = filter_ if filter_.startswith(".") else f".{filter_}"
+        return jsonquery(result_str, query)
 
-    except ImportError:
+    except (ImportError, ValueError, TypeError):
         # Fallback to basic path-based filtering if jsonquery is not available
-        # Normalize array access notation
-        normalized_query = filter_.replace("[", ".[")
+        # or if there's an error processing the query
+        # Normalize array access notation and handle direct key access
+        filter_str = filter_.strip()
+        normalized_query = "." + filter_str if not filter_str.startswith(".") else filter_str
+        normalized_query = normalized_query.replace("[", ".[")
         path = normalized_query.strip().split(".")
         path = [p for p in path if p]
 
