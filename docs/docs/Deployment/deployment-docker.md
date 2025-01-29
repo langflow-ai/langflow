@@ -5,24 +5,16 @@ lug: /deployment-docker
 
 
 
-This guide will help you get LangFlow up and running using Docker and Docker Compose.
+This guide will help you get Langflow up and running using Docker and Docker Compose.
 
 
-## Prerequisites {#856bb2d98156402bbd1980365b98110c}
+## Prerequisites
 
 
----
+- [Docker](https://docs.docker.com/)
+- [Docker Compose](https://docs.docker.com/compose/)
 
-- Docker
-- Docker Compose
-
-## Docker {#55b5d304f2294e47b0dcd3e069cf5e67}
-
-
----
-
-
-### Clone repo and build Docker container {#ba89773aa8b8425b985bfe7ba91c35cc}
+## Clone the repo and build the Langflow Docker container
 
 1. Clone the LangFlow repository:
 
@@ -37,17 +29,14 @@ This guide will help you get LangFlow up and running using Docker and Docker Com
 	`docker compose up`
 
 
-LangFlow will now be accessible at `http://localhost:7860/`.
+Langflow will now be accessible at `http://localhost:7860/`.
 
 
-### Docker Compose configuration {#02226209cad24185a6ec5b69bd820d0f}
-
+## Configure Docker Compose
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
 
-
-### LangFlow service {#d749848451ea43bd86f6f096dc77e6e6}
-
+### Langflow service
 
 The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port 7860. It depends on the `postgres` service.
 
@@ -61,7 +50,7 @@ Volumes:
 
 - `langflow-data`: This volume is mapped to `/app/langflow` in the container.
 
-### PostgreSQL service {#121140decbfe4997b12213bdd2c4da7e}
+### PostgreSQL service
 
 
 The `postgres` service uses the `postgres:16` Docker image and exposes port 5432.
@@ -77,8 +66,9 @@ Volumes:
 
 - `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
 
-### Switch to a specific LangFlow version {#2b3e191ea48f4feab89242433cf012d5}
+
+### Deploy a specific Langflow version
 
 
-If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version 1.0-alpha, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
+If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
 
