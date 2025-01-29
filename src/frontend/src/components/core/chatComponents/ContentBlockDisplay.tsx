@@ -197,6 +197,7 @@ export function ContentBlockDisplay({
                           )}
                         </AnimatePresence>
                         <ContentDisplay
+                          playgroundPage={playgroundPage}
                           content={content}
                           chatId={`${chatId}-${index}`}
                         />
