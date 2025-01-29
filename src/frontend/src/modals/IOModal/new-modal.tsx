@@ -66,6 +66,9 @@ export default function IOModal({
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
     currentFlowId,
   );
+  const flowName = useFlowStore((state) => state.currentFlow?.name);
+  const PlaygroundTitle = (playgroundPage && ENABLE_PUBLISH && flowName) ? flowName : "Playground";
+
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -301,7 +304,7 @@ export default function IOModal({
                     </Button>
                   </ShadTooltip>
                   {sidebarOpen && (
-                    <div className="font-semibold">Playground</div>
+                    <div className="font-semibold truncate">{PlaygroundTitle}</div>
                   )}
                 </div>
                 {sidebarOpen && (
@@ -372,6 +375,7 @@ export default function IOModal({
                 setLockChat={setLockChat}
                 canvasOpen={canvasOpen}
                 setOpen={setOpen}
+                playgroundTitle={PlaygroundTitle}
               />
             </div>
           </div>

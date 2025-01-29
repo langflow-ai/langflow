@@ -18,4 +18,5 @@ export type ChatViewWrapperProps = {
   setLockChat: (locked: boolean) => void;
   canvasOpen: boolean | undefined;
   setOpen: (open: boolean) => void;
+  playgroundTitle: string;
 };
