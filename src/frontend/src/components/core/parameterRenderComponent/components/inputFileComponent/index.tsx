@@ -1,5 +1,7 @@
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { ENABLE_FILE_MANAGEMENT } from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
+import FileManagerModal from "@/modals/fileManagerModal";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
 import { useEffect } from "react";
@@ -94,49 +96,66 @@ export default function InputFileComponent({
     <div className="w-full">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
-          <div className="relative flex w-full">
-            <div className="w-full">
-              <input
-                data-testid="input-file-component"
-                type="text"
-                className={cn(
-                  "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
-                  !value && "text-placeholder-foreground",
-                  editNode && "h-6",
-                )}
-                value={value || "Upload a file..."}
-                readOnly
+          {ENABLE_FILE_MANAGEMENT ? (
+            <div className="flex w-full flex-col">
+              <FileManagerModal
+                handleSubmit={handleButtonClick}
                 disabled={isDisabled}
-                onClick={handleButtonClick}
-              />
-            </div>
-            <div>
-              <Button
-                className={cn(
-                  "h-9 w-9 rounded-l-none",
-                  value &&
-                    "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
-                  isDisabled &&
-                    "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
-                  editNode && "h-6",
-                )}
-                onClick={handleButtonClick}
-                disabled={isDisabled}
-                size="icon"
-                data-testid="button_upload_file"
               >
-                <IconComponent
-                  name={value ? "CircleCheckBig" : "Upload"}
-                  className={cn(
-                    value && "text-background",
-                    isDisabled && "text-muted-foreground",
-                    "h-4 w-4",
-                  )}
-                  strokeWidth={2}
-                />
-              </Button>
+                <Button
+                  disabled={isDisabled}
+                  className="font-semibold"
+                  data-testid="button_open_file_management"
+                >
+                  <div>Select files</div>
+                </Button>
+              </FileManagerModal>
             </div>
-          </div>
+          ) : (
+            <div className="relative flex w-full">
+              <div className="w-full">
+                <input
+                  data-testid="input-file-component"
+                  type="text"
+                  className={cn(
+                    "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                    !value && "text-placeholder-foreground",
+                    editNode && "h-6",
+                  )}
+                  value={value || "Upload a file..."}
+                  readOnly
+                  disabled={isDisabled}
+                  onClick={handleButtonClick}
+                />
+              </div>
+              <div>
+                <Button
+                  className={cn(
+                    "h-9 w-9 rounded-l-none",
+                    value &&
+                      "bg-accent-emerald-foreground ring-accent-emerald-foreground hover:bg-accent-emerald-foreground",
+                    isDisabled &&
+                      "relative top-[1px] h-9 ring-1 ring-border ring-offset-0 hover:ring-border",
+                    editNode && "h-6",
+                  )}
+                  onClick={handleButtonClick}
+                  disabled={isDisabled}
+                  size="icon"
+                  data-testid="button_upload_file"
+                >
+                  <IconComponent
+                    name={value ? "CircleCheckBig" : "Upload"}
+                    className={cn(
+                      value && "text-background",
+                      isDisabled && "text-muted-foreground",
+                      "h-4 w-4",
+                    )}
+                    strokeWidth={2}
+                  />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
