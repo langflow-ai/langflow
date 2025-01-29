@@ -44,7 +44,7 @@ Environment variables:
 
 Volumes:
 
-- `langflow-data`: This volume is mapped to `/var/lib/langflow` in the container.
+- `langflow-data`: This volume is mapped to `/app/langflow` in the container.
 
 ### PostgreSQL Service
 

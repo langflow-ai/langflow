@@ -70,6 +70,7 @@ class GoogleGenerativeAIComponent(LCModelComponent):
             name="tool_model_enabled",
             display_name="Tool Model Enabled",
             info="Whether to use the tool model.",
+            value=False,
         ),
     ]
 
