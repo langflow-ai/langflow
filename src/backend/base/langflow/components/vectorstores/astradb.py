@@ -1,4 +1,3 @@
-import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 
@@ -476,12 +475,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Define variables for common database conditions a user may experience
-        is_hosted = os.getenv("LANGFLOW_HOST") is not None
         no_databases = "options" not in build_config["api_endpoint"] or not build_config["api_endpoint"]["options"]
         no_api_endpoint = not build_config["api_endpoint"]["value"]
 
         # Refresh the database name options
-        if not is_hosted and (field_name in ["token", "environment"] or (no_databases and no_api_endpoint)):
+        if field_name in ["token", "environment"] or (no_databases and no_api_endpoint):
             # Get the list of options we have based on the token provided
             database_options = self._initialize_database_options()
 
@@ -540,7 +538,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
             # Set the options for collection name to be the field value if its a new collection
-            if not is_hosted and field_value not in build_config["collection_name"]["options"]:
+            if field_value not in build_config["collection_name"]["options"]:
                 build_config["collection_name"]["options"].append(field_value)
                 build_config["collection_name"]["options_metadata"].append(
                     {"records": 0, "provider": None, "icon": "", "model": None}
@@ -613,8 +611,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get Langflow version and platform information
         __version__ = get_version_info()["version"]
         langflow_prefix = ""
-        if os.getenv("LANGFLOW_HOST") is not None:
-            langflow_prefix = "ds-"
+        # if os.getenv("LANGFLOW_HOST") is not None:  # TODO: Restore when we can reliably detect DSLF
+        #     langflow_prefix = "ds-"
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
