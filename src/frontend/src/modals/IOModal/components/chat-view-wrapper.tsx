@@ -28,19 +28,12 @@ export const ChatViewWrapper = ({
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col justify-between p-4",
+        "flex h-full w-full flex-col justify-between px-4 pb-4 pt-0",
         selectedViewField ? "hidden" : "",
       )}
     >
-      <div className="mb-4 h-[5%] text-[16px] font-semibold">
-        {visibleSession && sessions.length > 0 && sidebarOpen && (
-          <div className="hidden lg:block">
-            {visibleSession === currentFlowId
-              ? "Default Session"
-              : `${visibleSession}`}
-          </div>
-        )}
-        <div className={cn(sidebarOpen ? "lg:hidden" : "")}>
+      <div className="flex items-center justify-center mb-4 h-[5%] text-[16px] font-semibold">
+        <div className={cn(sidebarOpen ? "lg:hidden" : "absolute left-4")}>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -56,6 +49,13 @@ export const ChatViewWrapper = ({
             <div className="font-semibold truncate">{playgroundTitle}</div>
           </div>
         </div>
+        {visibleSession && sessions.length > 0 && (
+          <div className="font-semibold truncate text-center">
+            {visibleSession === currentFlowId
+              ? "Default Session"
+              : `${visibleSession}`}
+          </div>
+        )}
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
