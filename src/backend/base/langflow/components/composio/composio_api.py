@@ -2,10 +2,12 @@
 from collections.abc import Sequence
 from typing import Any
 
+import requests
+
 # Third-party imports
 from composio.client.collections import AppAuthScheme
 from composio.client.exceptions import NoItemsFound
-from composio_langchain import Action, App, ComposioToolSet
+from composio_langchain import Action, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
 
@@ -132,6 +134,39 @@ class ComposioAPIComponent(LCToolComponent):
             logger.exception(f"Error getting auth scheme for {app_name}")
             return None
 
+    def _get_oauth_apps(self, api_key: str) -> list[str]:
+        """Fetch OAuth-enabled apps from Composio API.
+
+        Args:
+            api_key (str): The Composio API key.
+
+        Returns:
+            list[str]: A list containing OAuth-enabled app names.
+        """
+        oauth_apps = []
+        try:
+            url = "https://backend.composio.dev/api/v1/apps"
+            headers = {"x-api-key": api_key}
+            params = {
+                "includeLocal": "true",
+                "additionalFields": "auth_schemes",
+                "sortBy": "alphabet",
+            }
+
+            response = requests.get(url, headers=headers, params=params, timeout=20)
+            data = response.json()
+
+            for item in data.get("items", []):
+                for auth_scheme in item.get("auth_schemes", []):
+                    if auth_scheme.get("mode") in ["OAUTH1", "OAUTH2"]:
+                        oauth_apps.append(item["key"].upper())
+                        break
+        except requests.RequestException as e:
+            logger.error(f"Error fetching OAuth apps: {e}")
+            return []
+        else:
+            return oauth_apps
+
     def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:
         """Handle authentication based on the auth scheme.
 
@@ -225,7 +260,7 @@ class ComposioAPIComponent(LCToolComponent):
         # Update the available apps options from the API
         if hasattr(self, "api_key") and self.api_key != "":
             toolset = self._build_wrapper()
-            build_config["app_names"]["options"] = list(App.iter())
+            build_config["app_names"]["options"] = self._get_oauth_apps(api_key=self.api_key)
 
         # First, ensure all dynamic fields are hidden by default
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
