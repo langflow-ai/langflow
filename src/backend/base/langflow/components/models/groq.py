@@ -70,7 +70,7 @@ class GroqModel(LCModelComponent):
                 "Select if you want to use models that can work with tools. If yes, only those models will be shown."
             ),
             advanced=False,
-            value=True,
+            value=False,
             real_time_refresh=True,
         ),
     ]

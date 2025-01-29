@@ -118,7 +118,7 @@ class ChatOllamaComponent(LCModelComponent):
             name="tool_model_enabled",
             display_name="Tool Model Enabled",
             info="Whether to enable tool calling in the model.",
-            value=True,
+            value=False,
             real_time_refresh=True,
         ),
         MessageTextInput(
