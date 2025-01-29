@@ -109,9 +109,9 @@ This component generates embeddings using [Cloudflare Workers AI models](https:/
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| account_id | Cloudflare account ID | Find your account ID [https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/#find-account-id-workers-and-pages](https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/#find-account-id-workers-and-pages) |
-| api_token | Cloudflare API token | Create an API token [https://developers.cloudflare.com/fundamentals/api/get-started/create-token/](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) |
-| model_name | Model Name | List of supported models [https://developers.cloudflare.com/workers-ai/models/#text-embeddings](https://developers.cloudflare.com/workers-ai/models/#text-embeddings) |
+| account_id | Cloudflare account ID |[Find your Cloudflare account ID](https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/#find-account-id-workers-and-pages) |
+| api_token | Cloudflare API token | [Create an API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) |
+| model_name | Model Name | [List of supported models](https://developers.cloudflare.com/workers-ai/models/#text-embeddings) |
 | strip_new_lines | Strip New Lines | Whether to strip new lines from the input text |
 | batch_size | Batch Size | Number of texts to embed in each batch |
 | api_base_url | Cloudflare API base URL | Base URL for the Cloudflare API |
