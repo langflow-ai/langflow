@@ -312,7 +312,7 @@ export default function ChatMessage({
                 }
               >
                 {chat.sender_name}
-                {chat.properties?.source && (
+                {chat.properties?.source && !playgroundPage && (
                   <div className="text-[13px] font-normal text-muted-foreground">
                     {chat.properties?.source.source}
                   </div>
@@ -321,6 +321,7 @@ export default function ChatMessage({
             </div>
             {chat.content_blocks && chat.content_blocks.length > 0 && (
               <ContentBlockDisplay
+                playgroundPage={playgroundPage}
                 contentBlocks={chat.content_blocks}
                 isLoading={
                   chatMessage === "" &&
