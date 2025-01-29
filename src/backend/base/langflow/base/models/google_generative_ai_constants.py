@@ -11,5 +11,5 @@ GOOGLE_GENERATIVE_AI_MODELS = [
     # GEMMA
     "gemma-2-2b",
     "gemma-2-9b",
-    "gemma-2-27b"
+    "gemma-2-27b",
 ]
