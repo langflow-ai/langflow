@@ -82,7 +82,7 @@ This component is particularly useful in workflows that require conditional rout
 | false_output | Data/List   | Output when the condition is not met.                |
 
 
-## Flow as Tool {#flow-as-tool}
+## Flow as tool {#flow-as-tool}
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.
@@ -158,6 +158,23 @@ This component generates a notification for the Listen component to use.
 |--------|------|-----------------------------------------|
 | output | Data | The data stored in the notification.    |
 
+## Pass message
+
+This component forwards the input message, unchanged.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | The message to be passed forward. |
+| ignored_message | Ignored Message | A second message to be ignored. Used as a workaround for continuity. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_message | Output Message | The forwarded input message. |
+
 ## Run flow
 
 This component allows you to run a specified flow with given inputs and tweaks.
@@ -178,7 +195,7 @@ The RunFlowComponent executes a specified flow within a larger workflow. It prov
 |-------------|-------------|------------------------------------------------|
 | run_outputs | List[Data]  | The results generated from running the flow.   |
 
-## Sub Flow
+## Sub flow
 
 :::important
 This component is deprecated as of Langflow version 1.1.2.

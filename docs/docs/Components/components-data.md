@@ -156,6 +156,26 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | doc_titles | List[str] | Titles of the found documents                   |
 | Data       | Data      | Document titles and URLs in a structured format |
 
+## SQL Query
+
+This component executes SQL queries on a specified database.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Query | The SQL query to execute. |
+| database_url | Database URL | The URL of the database. |
+| include_columns | Include Columns | Include columns in the result. |
+| passthrough | Passthrough | If an error occurs, return the query instead of raising an exception. |
+| add_error | Add Error | Add the error to the result. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| result | Result | The result of the SQL query execution. |
+
 ## URL
 
 This component fetches content from one or more URLs, processes the content, and returns it as a list of [Data](/concepts-objects) objects.
