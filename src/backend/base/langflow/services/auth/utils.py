@@ -136,7 +136,7 @@ async def get_current_user_by_jwt(
                 headers={"WWW-Authenticate": "Bearer"},
             )
     except JWTError as e:
-        logger.exception("JWT decoding error")
+        logger.debug("JWT validation failed: Invalid token format or signature")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
