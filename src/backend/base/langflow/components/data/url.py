@@ -12,7 +12,7 @@ from langflow.schema.message import Message
 
 class URLComponent(Component):
     display_name = "URL"
-    description = "Load and retrive data from specified URLs."
+    description = "Retrieve data from specified URLs."
     icon = "layout-template"
     name = "URL"
 
