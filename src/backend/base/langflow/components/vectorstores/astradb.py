@@ -350,22 +350,28 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if api_endpoint:
             return api_endpoint
 
-        # Check if the database_name is like a url
+        # If database_name is a URL, return it immediately
         if database_name and database_name.startswith("https://"):
             return database_name
 
-        # If the database is not set, nothing we can do.
+        # If no database_name is provided, return None
         if not database_name:
             return None
 
         # Otherwise, get the URL from the database list
-        return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
+        db_info = cls.get_database_list_static(token=token, environment=environment).get(database_name)
+
+        # Return None if database_name is not found in the list
+        if not db_info:
+            return None
+
+        return db_info.get("api_endpoint")
 
     def get_api_endpoint(self, *, use_hidden: bool = True):
         return self.get_api_endpoint_static(
             token=self.token,
             environment=self.environment,
-            api_endpoint=self.d_api_endpoint if use_hidden else None,
+            api_endpoint=self.d_api_endpoint if use_hidden else self.api_endpoint,
             database_name=self.api_endpoint,
         )
 
