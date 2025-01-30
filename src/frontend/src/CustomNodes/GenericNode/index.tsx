@@ -364,7 +364,11 @@ function GenericNode({
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
-    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
+    <div
+      className={cn(
+        isOutdated && !isUserEdited && !dismissAll ? "relative -mt-10" : "",
+      )}
+    >
       <div
         className={cn(
           borderColor,
