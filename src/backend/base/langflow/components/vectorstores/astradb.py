@@ -537,7 +537,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Reload the list of collections and metadata associated
             collection_options = self._initialize_collection_options(
-                api_endpoint=build_config["d_api_endpoint"]["value"]
+                api_endpoint=build_config["d_api_endpoint"]["value"] if not dslf else None
             )
 
             # If we have collections, show the dropdown
@@ -562,11 +562,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["autodetect_collection"]["value"] = True
 
             # Find location of the name in the options list
-            index_of_name = build_config["collection_name"]["options"].index(field_value)
-
-            # Return if not found
-            if index_of_name == -1:
+            if field_value not in build_config["collection_name"]["options"]:
                 return build_config
+
+            # Find the position of the selected collection to align with metadata
+            index_of_name = build_config["collection_name"]["options"].index(field_value)
 
             # Check if the number of records is 0
             if build_config["collection_name"]["options_metadata"][index_of_name]["records"] == 0:
