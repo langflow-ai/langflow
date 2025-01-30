@@ -354,6 +354,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -671,6 +672,7 @@
                   "openai_api_key"
                 ],
                 "selected": "Embeddings",
+                "tool_mode": true,
                 "types": [
                   "Embeddings"
                 ],
@@ -1176,6 +1178,7 @@
                   "token"
                 ],
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -1189,6 +1192,7 @@
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
+                "tool_mode": true,
                 "types": [
                   "DataFrame"
                 ],
@@ -1687,6 +1691,7 @@
                 "method": "parse_data",
                 "name": "text",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -1699,6 +1704,7 @@
                 "method": "parse_data_as_list",
                 "name": "data_list",
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -1843,6 +1849,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -2017,6 +2024,7 @@
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -2032,6 +2040,7 @@
                   "api_key"
                 ],
                 "selected": "LanguageModel",
+                "tool_mode": true,
                 "types": [
                   "LanguageModel"
                 ],
@@ -2334,6 +2343,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -2605,6 +2615,7 @@
                 "method": "fetch_content",
                 "name": "data",
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -2617,6 +2628,7 @@
                 "method": "fetch_content_text",
                 "name": "text",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -2629,6 +2641,7 @@
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
+                "tool_mode": true,
                 "types": [
                   "DataFrame"
                 ],
@@ -2794,6 +2807,7 @@
                   "token"
                 ],
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -2807,6 +2821,7 @@
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
+                "tool_mode": true,
                 "types": [
                   "DataFrame"
                 ],
@@ -3304,6 +3319,7 @@
                 "name": "data",
                 "required_inputs": [],
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -3489,6 +3505,7 @@
                 "name": "data",
                 "required_inputs": [],
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -3650,6 +3667,7 @@
                   "openai_api_key"
                 ],
                 "selected": "Embeddings",
+                "tool_mode": true,
                 "types": [
                   "Embeddings"
                 ],

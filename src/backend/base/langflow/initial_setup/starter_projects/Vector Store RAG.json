@@ -301,6 +301,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -582,6 +583,7 @@
                 "method": "parse_data",
                 "name": "text",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -594,6 +596,7 @@
                 "method": "parse_data_as_list",
                 "name": "data_list",
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -744,6 +747,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -915,6 +919,7 @@
                 "method": "split_text",
                 "name": "chunks",
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -927,6 +932,7 @@
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
+                "tool_mode": true,
                 "types": [
                   "DataFrame"
                 ],
@@ -1160,6 +1166,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -1455,6 +1462,7 @@
                   "openai_api_key"
                 ],
                 "selected": "Embeddings",
+                "tool_mode": true,
                 "types": [
                   "Embeddings"
                 ],
@@ -1989,6 +1997,7 @@
                   "openai_api_key"
                 ],
                 "selected": "Embeddings",
+                "tool_mode": true,
                 "types": [
                   "Embeddings"
                 ],
@@ -2468,6 +2477,7 @@
                 "name": "data",
                 "required_inputs": [],
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -2818,6 +2828,7 @@
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -2833,6 +2844,7 @@
                   "api_key"
                 ],
                 "selected": "LanguageModel",
+                "tool_mode": true,
                 "types": [
                   "LanguageModel"
                 ],
@@ -3170,6 +3182,7 @@
                   "token"
                 ],
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -3183,6 +3196,7 @@
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
+                "tool_mode": true,
                 "types": [
                   "DataFrame"
                 ],
@@ -3663,6 +3677,7 @@
                   "token"
                 ],
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -3676,6 +3691,7 @@
                 "name": "dataframe",
                 "required_inputs": [],
                 "selected": "DataFrame",
+                "tool_mode": true,
                 "types": [
                   "DataFrame"
                 ],
