@@ -8,12 +8,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ENABLE_WIDGET } from "@/customization/feature-flags";
+import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-
+import { useState } from "react";
 export default function PublishDropdown() {
   const domain = window.location.origin;
-  const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
+  const [openEmbedModal, setOpenEmbedModal] = useState(false);
   const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
   const hasIO = useFlowStore((state) => state.hasIO);
 
@@ -23,6 +24,7 @@ export default function PublishDropdown() {
     "opacity-0 transition-all duration-300 group-hover:translate-x-3 group-hover:opacity-100 group-focus-visible:translate-x-3 group-focus-visible:opacity-100";
 
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="default" className="!h-8 !w-[95px] font-medium">
@@ -31,6 +33,7 @@ export default function PublishDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
+      forceMount
         sideOffset={10}
         alignOffset={-10}
         align="end"
@@ -78,7 +81,7 @@ export default function PublishDropdown() {
             <span>API access</span>
           </div>
         </DropdownMenuItem>
-        {ENABLE_WIDGET && <DropdownMenuItem className="deploy-dropdown-item group">
+        {ENABLE_WIDGET && <DropdownMenuItem onClick={() => setOpenEmbedModal(true)} className="deploy-dropdown-item group">
           <div className="group-hover:bg-accent">
             <IconComponent
               name="Columns2"
@@ -102,5 +105,7 @@ export default function PublishDropdown() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <EmbedModal open={openEmbedModal} setOpen={setOpenEmbedModal} embedCode={""} />
+    </>
   );
 }
