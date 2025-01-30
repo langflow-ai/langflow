@@ -63,6 +63,12 @@ export default function PlaygroundPage() {
     if (id) track("Playground Page Loaded", { flowId: id });
   }, []);
 
+  useEffect(() => {
+    document.title = currentSavedFlow?.name || "Langflow";
+  }, [currentSavedFlow]);
+
+
+
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
       {currentSavedFlow && (
