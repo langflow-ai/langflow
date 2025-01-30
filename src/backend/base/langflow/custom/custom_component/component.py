@@ -957,19 +957,19 @@ class Component(CustomComponent):
             custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
-        artifact_type = get_artifact_type(raw or self.status, result)
+        artifact_type = get_artifact_type(self.status or raw, result)
         raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
-        if hasattr(result, "data"):
+        if self.status:
+            raw = self.status
+        elif hasattr(result, "data"):
             raw = result.data
         elif hasattr(result, "model_dump"):
             raw = result.model_dump()
         elif isinstance(result, dict | Data | str):
             raw = result.data if isinstance(result, Data) else result
-        elif self.status:
-            raw = self.status
         else:
             raw = result
         return raw
