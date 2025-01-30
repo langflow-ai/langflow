@@ -1,8 +1,8 @@
 import json
 import logging
 
-import requests
-
+import httpx
+from loguru import logger
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
