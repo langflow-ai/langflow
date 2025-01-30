@@ -4389,6 +4389,85 @@
                     }
                 }
             }
+        },
+        "/logs-execution/{execution_id}": {
+            "get": {
+                "tags": [
+                    "Log"
+                ],
+                "summary": "Execution Logs",
+                "description": "Retrieve execution logs for a given execution_id, including timestamps, component names, outputs, errors, and performance metrics.",
+                "operationId": "get_execution_logs",
+                "parameters": [
+                    {
+                        "name": "execution_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "description": "The unique execution ID to retrieve logs for."
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "execution_id": "39d66d215980454b961f719d24152892",
+                                    "start_time": "2025-01-30T21:51:12.463078",
+                                    "end_time": "2025-01-30T21:51:12.463078",
+                                    "duration_seconds": 0,
+                                    "total_transactions": 1,
+                                    "errors_count": 0,
+                                    "unique_components": ["SimpleWebSearchComponent-ZNWxt"],
+                                    "logs": [
+                                        {
+                                            "timestamp": "2025-01-30T21:51:12.463078",
+                                            "component_display_name": "Simple Web Search Component",
+                                            "component_id": "SimpleWebSearchComponent-ZNWxt",
+                                            "outputs": {
+                                                "output": {
+                                                    "message": {"value": ["Example output data"]},
+                                                    "type": "object"
+                                                },
+                                                "output_message": {
+                                                    "message": "",
+                                                    "type": "unknown"
+                                                }
+                                            },
+                                            "status": "success",
+                                            "error": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid UUID format",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Invalid UUID format for execution_id"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Execution logs not found",
+                        "content": {
+                            "application/json": {
+                                "example": {
+                                    "detail": "Execution logs not found"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
