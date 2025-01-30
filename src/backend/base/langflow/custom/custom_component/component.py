@@ -173,6 +173,21 @@ class Component(CustomComponent):
         # Return the intersection of the sets
         return input_names & output_names
 
+    def get_base_args(self):
+        """Get the base arguments required for component initialization.
+
+        Returns:
+            dict: A dictionary containing the base arguments:
+                - _user_id: The ID of the current user
+                - _session_id: The ID of the current session
+                - _tracing_service: The tracing service instance for logging/monitoring
+        """
+        return {
+            "_user_id": self.user_id,
+            "_session_id": self.session_id,
+            "_tracing_service": self._tracing_service,
+        }
+
     @property
     def ctx(self):
         if not hasattr(self, "graph") or self.graph is None:
