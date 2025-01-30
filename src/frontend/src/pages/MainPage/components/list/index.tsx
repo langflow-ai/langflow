@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
-import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
 import useAlertStore from "@/stores/alertStore";
@@ -72,8 +71,6 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
       ? parseInt(flowData.gradient)
       : getNumberFromString(flowData.gradient ?? flowData.id)) %
     swatchColors.length;
-
-  useResetDismissUpdateAll();
 
   return (
     <>

@@ -324,6 +324,7 @@ function GenericNode({
         isOutdated={isOutdated}
         isUserEdited={isUserEdited}
         getValidationStatus={getValidationStatus}
+        handleUpdateComponent={handleUpdateCode}
       />
     );
   }, [
@@ -335,6 +336,7 @@ function GenericNode({
     isUserEdited,
     getValidationStatus,
     dismissAll,
+    handleUpdateCode,
   ]);
 
   const renderDescription = useCallback(() => {
