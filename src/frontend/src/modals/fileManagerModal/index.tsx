@@ -9,12 +9,14 @@ export default function FileManagerModal({
   children,
   open,
   handleSubmit,
+  selectedFiles,
   setOpen,
   disabled,
 }: {
   children?: ReactNode;
+  selectedFiles?: string[];
   open?: boolean;
-  handleSubmit: (files: String[]) => void;
+  handleSubmit: (files: string[]) => void;
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
@@ -24,7 +26,13 @@ export default function FileManagerModal({
     internalSetOpen(open);
   }, [open]);
 
-  const [selectedFiles, setSelectedFiles] = useState<String[]>([]);
+  const [internalSelectedFiles, setInternalSelectedFiles] = useState<string[]>(
+    selectedFiles || [],
+  );
+
+  useEffect(() => {
+    setInternalSelectedFiles(selectedFiles || []);
+  }, [selectedFiles]);
 
   return (
     <>
@@ -33,7 +41,7 @@ export default function FileManagerModal({
         open={!disabled && internalOpen}
         setOpen={internalSetOpen}
         onSubmit={() => {
-          handleSubmit(selectedFiles);
+          handleSubmit(internalSelectedFiles);
           internalSetOpen(false);
         }}
       >
@@ -52,7 +60,10 @@ export default function FileManagerModal({
           <div className="flex flex-col gap-4">
             <DragFilesComponent />
             <ImportFilesComponent />
-            <RecentFilesComponent />
+            <RecentFilesComponent
+              selectedFiles={internalSelectedFiles}
+              setSelectedFiles={setInternalSelectedFiles}
+            />
           </div>
         </BaseModal.Content>
 

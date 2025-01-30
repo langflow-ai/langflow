@@ -2,9 +2,10 @@ import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-uplo
 import { ENABLE_FILE_MANAGEMENT } from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import FileManagerModal from "@/modals/fileManagerModal";
+import FilesRendererComponent from "@/modals/fileManagerModal/components/filesRendererComponent";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
@@ -92,14 +93,56 @@ export default function InputFileComponent({
 
   const isDisabled = disabled || isPending;
 
+  const files = [
+    {
+      type: "json",
+      name: "user_profile_data.json",
+      size: "640 KB",
+    },
+    {
+      type: "csv",
+      name: "Q4_Reports.csv",
+      size: "80 KB",
+    },
+    {
+      type: "txt",
+      name: "Highschool Speech.txt",
+      size: "10 KB",
+    },
+    {
+      type: "pdf",
+      name: "logoconcepts.pdf",
+      size: "1.2 MB",
+    },
+  ];
+
+  const [selectedFiles, setSelectedFiles] = useState<string[]>(
+    files.map((file) => file.name),
+  );
+
   return (
     <div className="w-full">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
           {ENABLE_FILE_MANAGEMENT ? (
-            <div className="flex w-full flex-col">
+            <div className="flex w-full flex-col gap-2">
+              <div className="flex flex-col">
+                <FilesRendererComponent
+                  files={files.filter((file) =>
+                    selectedFiles.includes(file.name),
+                  )}
+                  handleDelete={(fileName) => {
+                    setSelectedFiles(
+                      selectedFiles.filter((file) => file !== fileName),
+                    );
+                  }}
+                />
+              </div>
               <FileManagerModal
-                handleSubmit={handleButtonClick}
+                selectedFiles={selectedFiles}
+                handleSubmit={(selectedFiles) => {
+                  setSelectedFiles(selectedFiles);
+                }}
                 disabled={isDisabled}
               >
                 <Button
