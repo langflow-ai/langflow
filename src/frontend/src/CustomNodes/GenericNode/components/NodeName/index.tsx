@@ -15,6 +15,7 @@ export default function NodeName({
   beta,
   editNameDescription,
   toggleEditNameDescription,
+  setHasChangedNodeDescription,
 }: {
   display_name?: string;
   selected?: boolean;
@@ -25,6 +26,7 @@ export default function NodeName({
   beta: boolean;
   editNameDescription: boolean;
   toggleEditNameDescription: () => void;
+  setHasChangedNodeDescription: (hasChanged: boolean) => void;
 }) {
   const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -69,15 +71,21 @@ export default function NodeName({
     }
   };
 
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNodeName(e.target.value);
+    setHasChangedNodeDescription(true);
+  };
+
   return editNameDescription ? (
     <div className="m-[1px] w-full">
       <Input
         onBlur={handleBlur}
         value={nodeName}
         autoFocus
-        onChange={(e) => setNodeName(e.target.value)}
+        onChange={onChange}
         data-testid={`input-title-${display_name}`}
         onKeyDown={handleKeyDown}
+        className="py-1"
       />
     </div>
   ) : (

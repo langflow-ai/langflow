@@ -19,6 +19,7 @@ export default function NodeDescription({
   editNameDescription,
   setEditNameDescription,
   stickyNote,
+  setHasChangedNodeDescription,
 }: {
   description?: string;
   selected?: boolean;
@@ -32,6 +33,7 @@ export default function NodeDescription({
   editNameDescription: boolean;
   setEditNameDescription?: (value: boolean) => void;
   stickyNote?: boolean;
+  setHasChangedNodeDescription?: (value: boolean) => void;
 }) {
   const [nodeDescription, setNodeDescription] = useState<string>(
     description ?? "",
@@ -132,6 +134,11 @@ export default function NodeDescription({
     }
   };
 
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setHasChangedNodeDescription?.(true);
+    setNodeDescription(e.target.value);
+  };
+
   return (
     <div
       className={cn(
@@ -153,7 +160,7 @@ export default function NodeDescription({
             style={style}
             onBlur={handleBlurFn}
             value={nodeDescription}
-            onChange={(e) => setNodeDescription(e.target.value)}
+            onChange={onChange}
             onKeyDown={handleKeyDownFn}
           />
           {charLimit && (nodeDescription?.length ?? 0) >= charLimit - 100 && (

@@ -248,18 +248,8 @@ function GenericNode({
     [data.node?.outputs],
   );
 
-  // Add state outside of useMemo
-  const [showToolbar, setShowToolbar] = useState(false);
-
-  // Handle animation timing outside of useMemo
-  useEffect(() => {
-    if (selected) {
-      const timer = setTimeout(() => setShowToolbar(true), 50);
-      return () => clearTimeout(timer);
-    } else {
-      setShowToolbar(false);
-    }
-  }, [selected]);
+  const [hasChangedNodeDescription, setHasChangedNodeDescription] =
+    useState(false);
 
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected ? (
@@ -268,9 +258,6 @@ function GenericNode({
           className={cn(
             "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
             "transform transition-all duration-300 ease-out",
-            showToolbar
-              ? "translate-y-0 opacity-100"
-              : "translate-y-4 opacity-0",
           )}
         >
           <NodeToolbarComponent
@@ -298,25 +285,33 @@ function GenericNode({
             unstyled
             onClick={() => {
               toggleEditNameDescription();
+              setHasChangedNodeDescription(false);
             }}
             className={cn(
               "nodrag absolute left-1/2 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md",
               "transform transition-all duration-300 ease-out",
-              getTransformClasses(showToolbar, showNode),
-              showNode ? "top-2" : "top-0",
-              editNameDescription ? "bg-accent-emerald" : "bg-zinc-foreground",
+              showNode
+                ? "top-2 translate-x-[10.4rem]"
+                : "top-0 translate-x-[6.4rem]",
+              editNameDescription && hasChangedNodeDescription
+                ? "bg-accent-emerald"
+                : "bg-zinc-foreground",
             )}
             data-testid={
-              editNameDescription
+              editNameDescription && hasChangedNodeDescription
                 ? "save-name-description-button"
                 : "edit-name-description-button"
             }
           >
             <ForwardedIconComponent
-              name={editNameDescription ? "Check" : "PencilLine"}
+              name={
+                editNameDescription && hasChangedNodeDescription
+                  ? "Check"
+                  : "PencilLine"
+              }
               strokeWidth={ICON_STROKE_WIDTH}
               className={cn(
-                editNameDescription
+                editNameDescription && hasChangedNodeDescription
                   ? "text-accent-emerald-foreground"
                   : "text-muted-foreground",
                 "icon-size",
@@ -340,7 +335,8 @@ function GenericNode({
     selected,
     shortcuts,
     editNameDescription,
-    showToolbar, // Add showToolbar to dependencies
+    hasChangedNodeDescription,
+    toggleEditNameDescription,
   ]);
 
   useEffect(() => {
@@ -373,6 +369,7 @@ function GenericNode({
         beta={data.node?.beta || false}
         editNameDescription={editNameDescription}
         toggleEditNameDescription={toggleEditNameDescription}
+        setHasChangedNodeDescription={setHasChangedNodeDescription}
       />
     );
   }, [
@@ -385,6 +382,7 @@ function GenericNode({
     data.node?.beta,
     editNameDescription,
     toggleEditNameDescription,
+    setHasChangedNodeDescription,
   ]);
 
   const renderNodeStatus = useCallback(() => {
@@ -422,6 +420,7 @@ function GenericNode({
         selected={selected}
         editNameDescription={editNameDescription}
         setEditNameDescription={set}
+        setHasChangedNodeDescription={setHasChangedNodeDescription}
       />
     );
   }, [
@@ -430,6 +429,7 @@ function GenericNode({
     selected,
     editNameDescription,
     toggleEditNameDescription,
+    setHasChangedNodeDescription,
   ]);
 
   const renderInputParameters = useCallback(() => {

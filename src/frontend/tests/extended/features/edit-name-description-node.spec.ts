@@ -25,6 +25,15 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
+    await page.waitForSelector(
+      '[data-testid="sidebar-custom-component-button"]',
+      {
+        timeout: 30000,
+      },
+    );
+
+    await page.waitForTimeout(500);
+
     await page.getByTestId("sidebar-custom-component-button").click();
 
     await page.getByTestId("div-generic-node").click();
