@@ -201,6 +201,39 @@ This component allows you to call the Serper.dev Google Search API.
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Google Serper search tool for use in LangChain|
 
+## MCP Tools (stdio)
+
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over `stdio` and exposes its tools as Langflow tools to be used by an Agent component.
+
+### Inputs
+
+| Name    | Type   | Description                                |
+|---------|--------|--------------------------------------------|
+| command | String | MCP command (default: `uvx mcp-sse-shim@latest`) |
+
+### Outputs
+
+| Name  | Type      | Description                               |
+|-------|-----------|-------------------------------------------|
+| tools | List[Tool]| List of tools exposed by the MCP server   |
+
+## MCP Tools (SSE)
+
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over [SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) and exposes its tools as Langflow tools to be used by an Agent component.
+
+### Inputs
+
+| Name | Type   | Description                                          |
+|------|--------|------------------------------------------------------|
+| url  | String | SSE URL (default: `http://localhost:7860/api/v1/mcp/sse`) |
+
+### Outputs
+
+| Name  | Type      | Description                               |
+|-------|-----------|-------------------------------------------|
+| tools | List[Tool]| List of tools exposed by the MCP server   |
+
+
 ## Python Code Structured Tool
 
 This component creates a structured tool from Python code using a dataclass.
@@ -372,3 +405,5 @@ This component does not have any input parameters.
 | Name | Type | Description                                  |
 |------|------|----------------------------------------------|
 | tool | Tool | Yahoo Finance News tool for use in LangChain |
+
+
