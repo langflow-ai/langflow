@@ -30,6 +30,7 @@ from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.log import LoggableType
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
@@ -1041,8 +1042,7 @@ class Component(CustomComponent):
             message (LoggableType | list[LoggableType]): The message to log.
             name (str, optional): The name of the log. Defaults to None.
         """
-        if name is None:
-            name = f"Log {len(self._logs) + 1}"
+        name = name or f"Log {len(self._logs) + 1}"
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self._tracing_service and self._vertex:
