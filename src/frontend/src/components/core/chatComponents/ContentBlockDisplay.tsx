@@ -78,11 +78,14 @@ export function ContentBlockDisplay({
           className="flex cursor-pointer items-center justify-between p-4"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex items-center align-baseline gap-2">
+          <div className="flex items-center gap-2 align-baseline">
             {headerIcon && (
               <ForwardedIconComponent
                 name={headerIcon}
-                className={cn("h-4 w-4",state !== "partial" &&"text-status-green")}
+                className={cn(
+                  "h-4 w-4",
+                  state !== "partial" && "text-status-green",
+                )}
                 strokeWidth={1.5}
               />
             )}
