@@ -2,6 +2,7 @@ import warnings
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 
+from .arxiv import ArXivComponent
 from .bing_search_api import BingSearchAPIComponent
 from .calculator import CalculatorToolComponent
 from .calculator_core import CalculatorComponent
@@ -16,17 +17,20 @@ from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
 from .python_repl_core import PythonREPLComponent
+from .search import SearchComponent
 from .search_api import SearchAPIComponent
 from .searxng import SearXNGToolComponent
 from .serp import SerpComponent
 from .serp_api import SerpAPIComponent
 from .tavily import TavilySearchComponent
 from .tavily_search import TavilySearchToolComponent
+from .wikidata import WikidataComponent
 from .wikidata_api import WikidataAPIComponent
+from .wikipedia import WikipediaComponent
 from .wikipedia_api import WikipediaAPIComponent
 from .wolfram_alpha_api import WolframAlphaAPIComponent
+from .yahoo import YfinanceComponent
 from .yahoo_finance import YfinanceToolComponent
-from .youtube_transcripts import YouTubeTranscriptsComponent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", LangChainDeprecationWarning)
@@ -34,6 +38,7 @@ with warnings.catch_warnings():
     from .astradb_cql import AstraDBCQLToolComponent
 
 __all__ = [
+    "ArXivComponent",
     "AstraDBCQLToolComponent",
     "AstraDBToolComponent",
     "BingSearchAPIComponent",
@@ -52,13 +57,16 @@ __all__ = [
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
+    "SearchComponent",
     "SerpAPIComponent",
     "SerpComponent",
     "TavilySearchComponent",
     "TavilySearchToolComponent",
     "WikidataAPIComponent",
+    "WikidataComponent",
     "WikipediaAPIComponent",
+    "WikipediaComponent",
     "WolframAlphaAPIComponent",
+    "YfinanceComponent",
     "YfinanceToolComponent",
-    "YouTubeTranscriptsComponent",
 ]

@@ -11,7 +11,7 @@ Helper components provide utility functions to help manage data, tasks, and othe
 
 Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database.
 
-The **Store Message** helper component stores chat memories as [Data](/configuration-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
+The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
 
 This example flow stores and retrieves chat history from an [AstraDBChatMemory](/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
 

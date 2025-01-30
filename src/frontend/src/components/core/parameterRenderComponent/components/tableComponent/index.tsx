@@ -219,11 +219,11 @@ const TableComponent = forwardRef<
             }
           }}
         />
-        {!props.tableOptions?.hide_options && (
+        {!props.tableOptions?.hide_options && props.pagination && (
           <TableOptions
             tableOptions={props.tableOptions}
             stateChange={columnStateChange}
-            hasSelection={realRef.current?.api?.getSelectedRows().length > 0}
+            hasSelection={realRef.current?.api?.getSelectedRows()?.length > 0}
             duplicateRow={props.onDuplicate ? props.onDuplicate : undefined}
             deleteRow={props.onDelete ? props.onDelete : undefined}
             addRow={props.addRow ? props.addRow : undefined}

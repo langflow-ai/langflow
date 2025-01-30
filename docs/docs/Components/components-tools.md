@@ -49,7 +49,7 @@ The Data output is primarily used when directly querying Astra DB, while the Too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[`Data`] | A list of [Data](/configuration-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
+| Data | List[`Data`] | A list of [Data](/concepts-objects) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain `StructuredTool` object that can be used in agent workflows. Contains the tool name, description, argument schema based on tool parameters, and the query function. |
 
 
@@ -79,7 +79,7 @@ The main difference between this tool and the **Astra DB Tool** is that this too
 
 | Name | Type | Description |
 |------|------|-------------|
-| Data | List[Data] | A list of [Data](/configuration-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the number_of_results parameter. |
+| Data | List[Data] | A list of [Data](/concepts-objects) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter. |
 | Tool | StructuredTool | A LangChain StructuredTool object that can be used in agent workflows. Contains the tool name, description, argument schema based on partition and clustering keys, and the query function. |
 
 ## Bing Search API
@@ -200,6 +200,39 @@ This component allows you to call the Serper.dev Google Search API.
 |---------|-----------|--------------------------------------|
 | results | List[Data]| List of search results               |
 | tool    | Tool      | Google Serper search tool for use in LangChain|
+
+## MCP Tools (stdio)
+
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over `stdio` and exposes its tools as Langflow tools to be used by an Agent component.
+
+### Inputs
+
+| Name    | Type   | Description                                |
+|---------|--------|--------------------------------------------|
+| command | String | MCP command (default: `uvx mcp-sse-shim@latest`) |
+
+### Outputs
+
+| Name  | Type      | Description                               |
+|-------|-----------|-------------------------------------------|
+| tools | List[Tool]| List of tools exposed by the MCP server   |
+
+## MCP Tools (SSE)
+
+This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over [SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) and exposes its tools as Langflow tools to be used by an Agent component.
+
+### Inputs
+
+| Name | Type   | Description                                          |
+|------|--------|------------------------------------------------------|
+| url  | String | SSE URL (default: `http://localhost:7860/api/v1/mcp/sse`) |
+
+### Outputs
+
+| Name  | Type      | Description                               |
+|-------|-----------|-------------------------------------------|
+| tools | List[Tool]| List of tools exposed by the MCP server   |
+
 
 ## Python Code Structured Tool
 
@@ -372,3 +405,5 @@ This component does not have any input parameters.
 | Name | Type | Description                                  |
 |------|------|----------------------------------------------|
 | tool | Tool | Yahoo Finance News tool for use in LangChain |
+
+
