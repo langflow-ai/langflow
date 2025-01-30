@@ -346,20 +346,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         api_endpoint: str | None = None,
         database_name: str | None = None,
     ):
-        # If the api_endpoint is set, return it
+        # Return api_endpoint immediately if it's already set
         if api_endpoint:
             return api_endpoint
 
-        # Check if the database_name is like a url
+        # Return database_name if it starts with "https://"
         if database_name and database_name.startswith("https://"):
             return database_name
 
-        # If the database is not set, nothing we can do.
+        # If database_name is not provided, return None
         if not database_name:
             return None
 
-        # Otherwise, get the URL from the database list
-        return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
+        # Retrieve the endpoint from the cached database list
+        db_list_static = cls._cached_db_list_static(token, environment)
+        db_info = db_list_static.get(database_name)
+
+        return db_info.get("api_endpoint") if db_info else None
 
     def get_api_endpoint(self, *, use_hidden: bool = True):
         return self.get_api_endpoint_static(
@@ -784,3 +787,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    @classmethod
+    def _cached_db_list_static(cls, token: str, environment: str | None = None):
+        # Use an internal cache to store the database list after the first retrieval
+        if not hasattr(cls, "_db_list_cache"):
+            cls._db_list_cache = cls.get_database_list_static(token, environment)
+        return cls._db_list_cache
