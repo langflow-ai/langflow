@@ -36,7 +36,7 @@ export const ChatViewWrapper = ({
       <div
         className={cn(
           "flex items-center  mb-4 h-[5%] text-[16px] font-semibold",
-          playgroundPage ? "justify-between" : "justify-center",
+          playgroundPage ? "justify-between" : "lg:justify-center",
         )}
       >
         <div className={cn(sidebarOpen ? "lg:hidden" : "left-4")}>
@@ -58,7 +58,8 @@ export const ChatViewWrapper = ({
           <div
             className={cn(
               "font-semibold truncate text-center",
-              playgroundPage ? "" : "flex-grow",
+              playgroundPage ? "" : "flex-grow mr-12 lg:mr-0",
+              sidebarOpen ? "blur-sm lg:blur-0" : "",
             )}
           >
             {visibleSession === currentFlowId
@@ -96,7 +97,7 @@ export const ChatViewWrapper = ({
         className={cn(
           visibleSession ? "h-[95%]" : "h-full",
           sidebarOpen
-            ? "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
+            ? "pointer-events-none lg:pointer-events-auto blur-sm lg:blur-0"
             : "",
         )}
       >
