@@ -3,8 +3,6 @@ from importlib import metadata
 import httpx
 from packaging import version as pkg_version
 
-from langflow.logging.logger import logger
-
 
 def _compute_non_prerelease_version(prerelease_version: str) -> str:
     prerelease_keywords = ["a", "b", "rc", "dev", "post"]
@@ -86,7 +84,6 @@ def fetch_latest_version(package_name: str, *, include_prerelease: bool) -> str 
         return max(valid_versions, key=pkg_version.parse)
 
     except Exception:  # noqa: BLE001
-        logger.exception("Error fetching latest version")
         return None
 
 
