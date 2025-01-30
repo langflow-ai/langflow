@@ -361,11 +361,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Otherwise, get the URL from the database list
         return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
 
-    def get_api_endpoint(self, *, use_hidden: bool = True):
+    def get_api_endpoint(self, *, api_endpoint: str | None = None):
         return self.get_api_endpoint_static(
             token=self.token,
             environment=self.environment,
-            api_endpoint=self.d_api_endpoint if use_hidden else None,
+            api_endpoint=api_endpoint or self.d_api_endpoint,
             database_name=self.api_endpoint,
         )
 
@@ -377,12 +377,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return None
 
-    def get_database_object(self):
+    def get_database_object(self, api_endpoint: str | None = None):
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
 
             return client.get_database(
-                api_endpoint=self.get_api_endpoint(use_hidden=False),
+                api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
@@ -452,8 +452,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return []
 
-    def _initialize_collection_options(self):
-        database = self.get_database_object()
+    def _initialize_collection_options(self, api_endpoint: str | None = None):
+        database = self.get_database_object(api_endpoint=api_endpoint)
         if database is None:
             return []
 
@@ -536,7 +536,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["d_api_endpoint"]["value"] = ""
 
             # Reload the list of collections and metadata associated
-            collection_options = self._initialize_collection_options()
+            collection_options = self._initialize_collection_options(
+                api_endpoint=build_config["d_api_endpoint"]["value"]
+            )
 
             # If we have collections, show the dropdown
             build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
@@ -633,23 +635,30 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else {}
         )
 
+        # Get the additional parameters
         additional_params = self.astradb_vectorstore_kwargs or {}
 
         # Get Langflow version and platform information
         __version__ = get_version_info()["version"]
         langflow_prefix = ""
-        # if os.getenv("LANGFLOW_HOST") is not None:  # TODO: Restore when we can reliably detect DSLF
-        #     langflow_prefix = "ds-"
+        if os.getenv("AWS_EXECUTION_ENV") == "AWS_ECS_FARGATE":  # TODO: More precise way of detecting
+            langflow_prefix = "ds-"
+
+        # Get the database object
+        database = self.get_database_object(api_endpoint=self.d_api_endpoint)
+        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
-            "autodetect_collection": self.autodetect_collection,
+            "autodetect_collection": autodetect,
             "content_field": (
                 self.content_field
                 if self.content_field and embedding_params
                 else (
                     "page_content"
-                    if embedding_params and self.collection_data(collection_name=self.collection_name) == 0
+                    if embedding_params and self.collection_data(
+                        collection_name=self.collection_name, database=database
+                    ) == 0
                     else None
                 )
             ),
@@ -661,8 +670,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             vector_store = AstraDBVectorStore(
                 # Astra DB Authentication Parameters
                 token=self.token,
-                api_endpoint=self.get_api_endpoint(),
-                namespace=self.get_keyspace(),
+                api_endpoint=database.api_endpoint,
+                namespace=database.keyspace,
                 collection_name=self.collection_name,
                 environment=self.environment,
                 # Astra DB Usage Tracking Parameters
@@ -676,6 +685,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Error initializing AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
 
+
+        # Add documents to the vector store
         self._add_documents_to_vector_store(vector_store)
 
         return vector_store
@@ -692,8 +703,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if documents and self.deletion_field:
             self.log(f"Deleting documents where {self.deletion_field}")
             try:
-                database = self.get_database_object()
-                collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+                database = self.get_database_object(api_endpoint=self.d_api_endpoint)
+                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)
                 delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
                 self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
                 collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
