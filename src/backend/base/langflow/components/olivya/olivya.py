@@ -66,10 +66,7 @@ class OlivyaComponent(Component):
         Output(display_name="Output", name="output", method="build_output"),
     ]
 
-    def build_output(self) -> Data:
-        # Initialize logger
-        logging.basicConfig(level=logging.INFO)
-        logger = logging.getLogger(__name__)
+    async def build_output(self) -> Data:
         try:
             payload = {
                 "variables": {
@@ -89,22 +86,23 @@ class OlivyaComponent(Component):
             logger.info("Sending POST request with payload: %s", payload)
 
             # Send the POST request with a timeout
-            response = requests.post(
-                "https://phone.olivya.io/create_zap_call",
-                headers=headers,
-                data=json.dumps(payload),
-                timeout=10,
-            )
-            response.raise_for_status()
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://phone.olivya.io/create_zap_call",
+                    headers=headers,
+                    json=payload,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
 
-            # Parse and return the successful response
-            response_data = response.json()
-            logger.info("Request successful: %s", response_data)
+                # Parse and return the successful response
+                response_data = response.json()
+                logger.info("Request successful: %s", response_data)
 
-        except requests.exceptions.HTTPError as http_err:
+        except httpx.HTTPStatusError as http_err:
             logger.exception("HTTP error occurred")
             response_data = {"error": f"HTTP error occurred: {http_err}", "response_text": response.text}
-        except requests.exceptions.RequestException as req_err:
+        except httpx.RequestError as req_err:
             logger.exception("Request failed")
             response_data = {"error": f"Request failed: {req_err}"}
         except json.JSONDecodeError as json_err:
