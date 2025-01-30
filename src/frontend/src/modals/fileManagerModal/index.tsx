@@ -2,6 +2,8 @@ import { ReactNode, useEffect, useState } from "react";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
 import DragFilesComponent from "./components/dragFilesComponent";
+import ImportFilesComponent from "./components/importFilesComponent";
+import RecentFilesComponent from "./components/recentFilesComponent";
 
 export default function FileManagerModal({
   children,
@@ -47,7 +49,11 @@ export default function FileManagerModal({
           </span>
         </BaseModal.Header>
         <BaseModal.Content>
-          <DragFilesComponent />
+          <div className="flex flex-col gap-4">
+            <DragFilesComponent />
+            <ImportFilesComponent />
+            <RecentFilesComponent />
+          </div>
         </BaseModal.Content>
 
         <BaseModal.Footer
