@@ -1,9 +1,12 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { DropboxIcon } from "@/icons/Dropbox";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
+import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
+import { OneDriveIcon } from "@/icons/OneDrive";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
@@ -799,6 +802,9 @@ export const nodeIconsLucide: iconsType = {
   AlertTriangle,
   ChevronLeft,
   SlidersHorizontal,
+  GoogleDrive: GoogleDriveIcon,
+  OneDrive: OneDriveIcon,
+  Dropbox: DropboxIcon,
   Palette,
   RefreshCcwDot,
   FolderUp,
