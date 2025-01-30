@@ -460,39 +460,42 @@ export const logHasMessage = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.message);
-  } else {
-    return outputs?.message;
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.message);
   }
+  return outputs?.message;
 };
 
 export const logTypeIsUnknown = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.type === "unknown");
-  } else {
-    return outputs?.type === "unknown";
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.type === "unknown");
   }
+  return outputs?.type === "unknown";
 };
 
 export const logTypeIsError = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
     return outputs.some((log) => isErrorLog(log));
-  } else {
-    return isErrorLog(outputs);
   }
+  return isErrorLog(outputs);
 };
 
 export function isEndpointNameValid(name: string, maxLength: number): boolean {
@@ -562,8 +565,8 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
         if (col.edit_mode === "popover") {
-          newCol.wrapText = true;
-          newCol.autoHeight = true;
+          newCol.wrapText = false;
+          newCol.autoHeight = false;
           newCol.cellEditor = "agLargeTextCellEditor";
           newCol.cellEditorPopup = true;
           newCol.cellEditorParams = {
@@ -726,6 +729,19 @@ export const formatPlaceholderName = (name) => {
   const prefix = /^[aeiou]/i.test(firstWord) ? "an" : "a";
 
   return `Select ${prefix} ${formattedName}`;
+};
+
+export const formatName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord =
+    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].slice(1);
+
+  return { formattedName, firstWord };
 };
 
 export const isStringArray = (value: unknown): value is string[] => {

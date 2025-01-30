@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
 import anyio
+import httpx
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -94,6 +95,14 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
+async def load_bundles_with_error_handling():
+    try:
+        return await load_bundles_from_urls()
+    except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
+        logger.error(f"Error loading bundles from URLs: {exc}")
+        return [], []
+
+
 def get_lifespan(*, fix_migration=False, version=None):
     telemetry_service = get_telemetry_service()
 
@@ -112,7 +121,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             setup_llm_caching()
             await initialize_super_user_if_needed()
-            temp_dirs, bundles_components_paths = await load_bundles_from_urls()
+            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await create_or_update_starter_projects(all_types_dict)
@@ -184,9 +193,12 @@ def create_app():
             body = await request.body()
 
             boundary_start = f"--{boundary}".encode()
+            # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
+            # implement it that way
             boundary_end = f"--{boundary}--\r\n".encode()
+            boundary_end_no_newline = f"--{boundary}--".encode()
 
-            if not body.startswith(boundary_start) or not body.endswith(boundary_end):
+            if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
                 return JSONResponse(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     content={"detail": "Invalid multipart formatting"},
@@ -220,6 +232,11 @@ def create_app():
         from prometheus_client import start_http_server
 
         start_http_server(settings.prometheus_port)
+
+    if settings.mcp_server_enabled:
+        from langflow.api.v1 import mcp_router
+
+        router.include_router(mcp_router)
 
     app.include_router(router)
     app.include_router(health_check_router)
