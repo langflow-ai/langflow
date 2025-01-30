@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+from pathlib import Path
 from typing import Any
 
 from aiofile import async_open
@@ -34,7 +35,8 @@ async def test_get_config(client: AsyncClient):
 
 
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
-    async with async_open("src/backend/tests/data/dynamic_output_component.py", encoding="utf-8") as f:
+    path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
+    async with async_open(path, encoding="utf-8") as f:
         code = await f.read()
     frontend_node: dict[str, Any] = {"outputs": []}
     request = UpdateCustomComponentRequest(
