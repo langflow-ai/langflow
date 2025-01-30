@@ -444,7 +444,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "name": name,
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
-                } for name, info in self.get_database_list().items()
+                }
+                for name, info in self.get_database_list().items()
             ]
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching databases: {e}")
