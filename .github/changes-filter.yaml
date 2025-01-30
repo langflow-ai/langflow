@@ -45,6 +45,7 @@ components:
   - "src/frontend/tests/extended/integrations/**"
   - "src/frontend/tests/extended/features/**"
   - "src/frontend/tests/extended/regression/**"
+  - "src/backend/base/langflow/custom/**"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"
