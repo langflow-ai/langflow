@@ -119,7 +119,6 @@ dependencies = [
     "uv>=0.5.7",
     "ag2",
     "pydantic-ai>=0.0.12",
-    "jsonquerylang>=1.1.1",
 ]
 
 [project.urls]
