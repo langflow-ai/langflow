@@ -169,6 +169,7 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -726,6 +727,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -1022,6 +1024,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
