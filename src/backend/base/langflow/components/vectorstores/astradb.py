@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -370,25 +372,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        return self.keyspace.strip() if self.keyspace else None
 
     def get_database_object(self):
         try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
+            client = self._get_or_create_client()
+            api_endpoint = self.get_api_endpoint(use_hidden=False)
+            keyspace = self.get_keyspace()
 
             return client.get_database(
-                api_endpoint=self.get_api_endpoint(use_hidden=False),
+                api_endpoint=api_endpoint,
                 token=self.token,
-                keyspace=self.get_keyspace(),
+                keyspace=keyspace,
             )
         except Exception as e:  # noqa: BLE001
             self.log(f"Error getting database: {e}")
-
             return None
 
     def collection_data(self, collection_name: str, database: Database | None = None):
@@ -784,3 +782,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def _get_or_create_client(self):
+        # Cache the DataAPIClient for reuse
+        key = (self.token, self.environment)
+        if key not in self._client_cache:
+            self._client_cache[key] = DataAPIClient(token=self.token, environment=self.environment)
+        return self._client_cache[key]
