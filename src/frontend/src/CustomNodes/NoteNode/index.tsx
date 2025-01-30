@@ -57,7 +57,6 @@ function NoteNode({
     [data.node?.description],
   );
 
-  // Debounced resize handler
   const debouncedResize = useMemo(
     () =>
       debounce((width: number, height: number) => {
@@ -65,7 +64,7 @@ function NoteNode({
           width: width - NOTE_NODE_PADDING,
           height: height - NOTE_NODE_PADDING,
         });
-      }, 5), // 5ms debounce time
+      }, 5),
     [],
   );
 
