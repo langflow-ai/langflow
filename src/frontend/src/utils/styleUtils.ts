@@ -491,6 +491,25 @@ export const nodeColorsName: { [char: string]: string } = {
   DataFrame: "pink",
 };
 
+export const FILE_ICONS = {
+  json: {
+    icon: "file-json",
+    color: "text-datatype-indigo dark:text-datatype-indigo-foreground",
+  },
+  csv: {
+    icon: "file-chart-column",
+    color: "text-datatype-emerald dark:text-datatype-emerald-foreground",
+  },
+  txt: {
+    icon: "file-type",
+    color: "text-datatype-purple dark:text-datatype-purple-foreground",
+  },
+  pdf: {
+    icon: "file",
+    color: "text-datatype-red dark:text-datatype-red-foreground",
+  },
+};
+
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
