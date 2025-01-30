@@ -7,6 +7,7 @@ import socket
 import sys
 import time
 import warnings
+from contextlib import suppress
 from pathlib import Path
 
 import click
@@ -312,10 +313,28 @@ def get_letter_from_version(version: str) -> str | None:
 
 
 def build_version_notice(current_version: str, package_name: str) -> str:
-    latest_version = fetch_latest_version(package_name, include_prerelease=langflow_is_pre_release(current_version))
-    if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
-        release_type = "pre-release" if langflow_is_pre_release(latest_version) else "version"
-        return f"A new {release_type} of {package_name} is available: {latest_version}"
+    """Build a version notice message if a newer version is available.
+
+    This function checks if there is a newer version of the package available on PyPI
+    and returns an appropriate notice message.
+
+    Args:
+        current_version (str): The currently installed version of the package
+        package_name (str): The name of the package to check
+
+    Returns:
+        str: A notice message if a newer version is available, empty string otherwise.
+            The message will indicate if the newer version is a pre-release.
+
+    Example:
+        >>> build_version_notice("1.0.0", "langflow")
+        'A new version of langflow is available: 1.1.0'
+    """
+    with suppress(httpx.ConnectError):
+        latest_version = fetch_latest_version(package_name, include_prerelease=langflow_is_pre_release(current_version))
+        if latest_version and pkg_version.parse(current_version) < pkg_version.parse(latest_version):
+            release_type = "pre-release" if langflow_is_pre_release(latest_version) else "version"
+            return f"A new {release_type} of {package_name} is available: {latest_version}"
     return ""
 
 
@@ -347,6 +366,7 @@ def print_banner(host: str, port: int) -> None:
     is_pre_release |= langflow_is_pre_release(langflow_version)  # Update pre-release status
 
     notice = build_version_notice(langflow_version, package_name)
+
     notice = stylize_text(notice, package_name, is_prerelease=is_pre_release)
     if notice:
         notices.append(notice)

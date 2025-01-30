@@ -58,7 +58,7 @@ async def aload_flow_from_json(
     if isinstance(flow, str | Path):
         async with async_open(Path(flow).name, encoding="utf-8") as f:
             content = await f.read()
-            flow_graph = json.load(content)
+            flow_graph = json.loads(content)
     # If input is a dictionary, assume it's a JSON object
     elif isinstance(flow, dict):
         flow_graph = flow
