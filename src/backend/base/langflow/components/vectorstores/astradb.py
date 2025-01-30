@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -362,33 +364,30 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
 
     def get_api_endpoint(self, *, api_endpoint: str | None = None):
-        return self.get_api_endpoint_static(
-            token=self.token,
-            environment=self.environment,
-            api_endpoint=api_endpoint or self.d_api_endpoint,
-            database_name=self.api_endpoint,
-        )
+        key = (self.token, self.environment, api_endpoint or self.d_api_endpoint, self.api_endpoint)
+        if key not in self._api_endpoints_cache:
+            self._api_endpoints_cache[key] = self.get_api_endpoint_static(
+                token=self.token,
+                environment=self.environment,
+                api_endpoint=api_endpoint or self.d_api_endpoint,
+                database_name=self.api_endpoint,
+            )
+        return self._api_endpoints_cache[key]
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        return self.keyspace.strip() if self.keyspace else None
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
-
             return client.get_database(
                 api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error getting database: {e}")
-
+        except Exception as e:
+            if self._tracing_service:
+                self.log(f"Error getting database: {e}")
             return None
 
     def collection_data(self, collection_name: str, database: Database | None = None):
