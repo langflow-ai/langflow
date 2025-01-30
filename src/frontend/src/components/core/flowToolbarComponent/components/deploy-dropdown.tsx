@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ENABLE_WIDGET } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 
@@ -77,7 +78,7 @@ export default function PublishDropdown() {
             <span>API access</span>
           </div>
         </DropdownMenuItem>
-        <DropdownMenuItem className="deploy-dropdown-item group">
+        {ENABLE_WIDGET && <DropdownMenuItem className="deploy-dropdown-item group">
           <div className="group-hover:bg-accent">
             <IconComponent
               name="Columns2"
@@ -85,7 +86,7 @@ export default function PublishDropdown() {
             />
             <span>Embed into site</span>
           </div>
-        </DropdownMenuItem>
+        </DropdownMenuItem>}
         <DropdownMenuItem className="deploy-dropdown-item group">
           <div className="group-hover:bg-accent">
             <IconComponent

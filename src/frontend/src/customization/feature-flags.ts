@@ -11,3 +11,4 @@ export const ENABLE_NEW_LOGO = true;
 export const ENABLE_DATASTAX_LANGFLOW = false;
 export const ENABLE_HOMEPAGE = true;
 export const ENABLE_PUBLISH = true;
+export const ENABLE_WIDGET = true;
