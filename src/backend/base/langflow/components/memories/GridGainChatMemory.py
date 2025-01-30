@@ -55,7 +55,7 @@ class GridGainChatMemory(LCChatMemoryComponent):
     def build_message_history(self) -> BaseChatMessageHistory:
         """Build and return a GridGain chat message history instance."""
         try:
-            from langchain_community.chat_message_histories.ignite import GridGainChatMessageHistory
+            from langchain_gridgain.chat_message_histories import GridGainChatMessageHistory
         except ImportError as e:
             msg = (
                 "Could not import GridGain chat message history implementation. "
