@@ -2,11 +2,19 @@ import asyncio
 import json
 from http import HTTPStatus
 from typing import Annotated, Any
-
-from fastapi import APIRouter, HTTPException, Query, Request
+from sqlmodel import select
+from uuid import UUID
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Query, 
+    Request, 
+    Depends)
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from langflow.logging.logger import log_buffer
+from langflow.api.utils import get_session
+from langflow.services.database.models.transactions.model import TransactionTable
 
 log_router = APIRouter(tags=["Log"])
 
@@ -49,6 +57,13 @@ async def event_generator(request: Request):
                 yield "keepalive\n\n"
 
         await asyncio.sleep(1)
+
+def format_outputs(outputs):
+    """extracts the output and output_message from the outputs dictionary"""
+    return {
+        "output": outputs.get("outputs", {}).get("output", {}),
+        "output_message": outputs.get("outputs", {}).get("output_message", {})
+    }
 
 
 @log_router.get("/logs-stream")
@@ -101,3 +116,62 @@ async def logs(
     else:
         content = log_buffer.get_before_timestamp(timestamp=timestamp, lines=10)
     return JSONResponse(content=content)
+
+
+
+
+@log_router.get("/logs-execution/{execution_id}")
+async def get_execution_logs(execution_id: str, session=Depends(get_session)):
+    """
+    Retrieve execution logs for a given execution_id.
+    """
+    # Check if execution_id is provided
+    if not execution_id:
+        raise HTTPException(status_code=400, detail="Execution ID is required")
+    # Check if execution_id is a valid UUID format
+    try:
+        execution_uuid = UUID(execution_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format for execution_id")
+
+    query = select(TransactionTable).where(TransactionTable.execution_id == execution_uuid)
+    result = await session.exec(query)
+    transactions = result.all()
+
+    if not transactions:
+        raise HTTPException(status_code=404, detail="Execution logs not found")
+
+    # 📅 timestamp logs
+    timestamps = [t.timestamp for t in transactions]
+    start_time = min(timestamps) if timestamps else None
+    end_time = max(timestamps) if timestamps else None
+    duration = (end_time - start_time).total_seconds() if start_time and end_time else None
+
+    # 📊 error logs
+    total_transactions = len(transactions)
+    errors_count = sum(1 for t in transactions if t.error)
+    unique_components = list(set(t.vertex_id for t in transactions))
+
+    # 🔥 filter response
+    formatted_logs = [
+        {
+            "timestamp": t.timestamp.isoformat(),
+            "component_display_name": t.vertex_id,
+            "component_id": t.vertex_id, 
+            "outputs": format_outputs(t.outputs),
+            "status": t.status,
+            "error": t.error,
+        }
+        for t in transactions
+    ]
+
+    return {
+        "execution_id": execution_id,
+        "start_time": start_time.isoformat() if start_time else None,
+        "end_time": end_time.isoformat() if end_time else None,
+        "duration_seconds": duration,
+        "total_transactions": total_transactions,
+        "errors_count": errors_count,
+        "unique_components": unique_components,
+        "logs": formatted_logs,
+    }
