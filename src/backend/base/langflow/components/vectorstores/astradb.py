@@ -656,9 +656,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 if self.content_field and embedding_params
                 else (
                     "page_content"
-                    if embedding_params and self.collection_data(
-                        collection_name=self.collection_name, database=database
-                    ) == 0
+                    if embedding_params
+                    and self.collection_data(collection_name=self.collection_name, database=database) == 0
                     else None
                 )
             ),
@@ -684,7 +683,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         except Exception as e:
             msg = f"Error initializing AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
-
 
         # Add documents to the vector store
         self._add_documents_to_vector_store(vector_store)
