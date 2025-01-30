@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
+from functools import cache, lru_cache
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -369,45 +372,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             database_name=self.api_endpoint,
         )
 
+    @cache
     def get_keyspace(self):
         keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        return keyspace.strip() if keyspace else None
 
     def get_database_object(self, api_endpoint: str | None = None):
-        try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-
-            return client.get_database(
-                api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
-                token=self.token,
-                keyspace=self.get_keyspace(),
-            )
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error getting database: {e}")
-
-            return None
+        client, database = self._get_client_and_database(api_endpoint=api_endpoint)
+        return database
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
             if not database:
-                client = DataAPIClient(token=self.token, environment=self.environment)
-
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
-
+                _, database = self._get_client_and_database()
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
-
             return collection.estimated_document_count()
         except Exception as e:  # noqa: BLE001
             self.log(f"Error checking collection data: {e}")
-
             return None
 
     def get_vectorize_providers(self):
@@ -459,28 +440,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         try:
             collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
-
             return [
                 {
                     "name": col.name,
                     "records": self.collection_data(collection_name=col.name, database=database),
-                    "provider": (
-                        col.options.vector.service.provider
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
+                    "provider": getattr(col.options.vector.service, "provider", None) if col.options.vector else None,
                     "icon": "",
-                    "model": (
-                        col.options.vector.service.model_name
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
+                    "model": getattr(col.options.vector.service, "model_name", None) if col.options.vector else None,
                 }
                 for col in collection_list
             ]
         except Exception as e:  # noqa: BLE001
             self.log(f"Error fetching collections: {e}")
-
             return []
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
@@ -793,3 +764,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    @lru_cache(maxsize=32)
+    def _get_client_and_database(self, api_endpoint: str | None = None):
+        try:
+            client = DataAPIClient(token=self.token, environment=self.environment)
+            database = client.get_database(
+                api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
+                token=self.token,
+                keyspace=self.get_keyspace(),
+            )
+            return client, database
+        except Exception as e:  # noqa: BLE001
+            self.log(f"Error getting database: {e}")
+            return None, None
