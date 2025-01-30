@@ -90,7 +90,7 @@ dependencies = [
     "langchain-unstructured==0.1.5",
     "langchain-milvus==0.1.7",
     "langchain-mongodb==0.2.0",
-    "langchain-nvidia-ai-endpoints==0.3.5",
+    "langchain-nvidia-ai-endpoints==0.3.8",
     "langchain-google-calendar-tools==0.0.1",
     "langchain-google-community==2.0.3",
     "langchain-elasticsearch==0.3.0",
@@ -109,7 +109,8 @@ dependencies = [
     "uv>=0.5.7",
     "ag2>=0.1.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19"
+    "pydantic-ai>=0.0.19",
+
 ]
 
 [tool.uv.sources]
