@@ -6,12 +6,12 @@ slug: /deployment-kubernetes
 
 This guide will help you get Langflow up and running in a Kubernetes cluster. Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
 
-- Install [LangFlow as IDE](/deployment-kubernetes#langflow-ide) in a Kubernetes cluster for the complete Langflow development environment.
-- Install [LangFlow as a standalone application](/deployment-kubernetes#langflow-runtime) to deploy a Langflow application in a more secure and stable environment.
+- Install [Langflow as IDE](/deployment-kubernetes#langflow-ide) in a Kubernetes cluster for the complete Langflow development environment.
+- Install [Langflow as a standalone application](/deployment-kubernetes#langflow-runtime) to deploy a Langflow application in a more secure and stable environment.
 
 ## Langflow IDE deployment
 
-The Langlow IDE deployment is a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
+The Langflow IDE deployment is a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
 
 The `langflow-ide` Helm chart is available in the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts/tree/main/charts/langflow-ide).
 
@@ -274,7 +274,7 @@ curl -X POST \
 
 ### Configure secrets
 
-To inject secrets and LangFlow global variables, use the `secrets` and `env` sections in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
+To inject secrets and Langflow global variables, use the `secrets` and `env` sections in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
 For example, the [example flow JSON](https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json) uses a global variable which is a secret. When you export the flow as JSON, it's recommended to not include the secret.
 

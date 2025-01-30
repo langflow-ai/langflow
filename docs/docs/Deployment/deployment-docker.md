@@ -106,5 +106,5 @@ docker build -t myuser/langflow-hello-world:1.0.0 .
 docker push myuser/langflow-hello-world:1.0.0
 ```
 
-To deploy the image with Helm, see [LangFlow as a standalone application](/deployment-kubernetes#langflow-runtime).
+To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#langflow-runtime).
 
