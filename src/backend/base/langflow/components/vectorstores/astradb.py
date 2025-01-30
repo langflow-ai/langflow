@@ -537,7 +537,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Reload the list of collections and metadata associated
             collection_options = self._initialize_collection_options(
-                api_endpoint=build_config["d_api_endpoint"]["value"]
+                api_endpoint=build_config["d_api_endpoint"]["value"] if not dslf else None
             )
 
             # If we have collections, show the dropdown
@@ -549,30 +549,33 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
             # Set the options for collection name to be the field value if its a new collection
-            if not dslf and field_value not in build_config["collection_name"]["options"]:
-                # Add the new collection to the list of options
-                build_config["collection_name"]["options"].append(field_value)
-                build_config["collection_name"]["options_metadata"].append(
-                    {"records": 0, "provider": None, "icon": "", "model": None}
-                )
+            if field_value not in build_config["collection_name"]["options"]:
+                # If this is running in DSLF, we may need to initialize the options again
+                if dslf:
+                    # Reload the list of collections and metadata associated
+                    collection_options = self._initialize_collection_options(
+                        api_endpoint=build_config["d_api_endpoint"]["value"] if not dslf else None
+                    )
 
-                # Ensure that autodetect collection is set to False
-                build_config["autodetect_collection"]["value"] = False
+                    # If we have collections, show the dropdown
+                    build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
+                    build_config["collection_name"]["options_metadata"] = [
+                        {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+                    ]
+                else:
+                    # Add the new collection to the list of options
+                    build_config["collection_name"]["options"].append(field_value)
+                    build_config["collection_name"]["options_metadata"].append(
+                        {"records": 0, "provider": None, "icon": "", "model": None}
+                    )
+
+                    # Ensure that autodetect collection is set to False, since its a new collection
+                    build_config["autodetect_collection"]["value"] = False
             else:
                 build_config["autodetect_collection"]["value"] = True
 
-            # Find location of the name in the options list
+            # Find the position of the selected collection to align with metadata
             index_of_name = build_config["collection_name"]["options"].index(field_value)
-
-            # Return if not found
-            if index_of_name == -1:
-                return build_config
-
-            # Check if the number of records is 0
-            if build_config["collection_name"]["options_metadata"][index_of_name]["records"] == 0:
-                build_config["autodetect_collection"]["value"] = False
-            else:
-                build_config["autodetect_collection"]["value"] = True
 
             # Get the provider value of the selected collection
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
