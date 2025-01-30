@@ -285,7 +285,9 @@ export default function IOModal({
                   : "w-0",
               )}
             >
-              <div className="flex relative h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
+              <div className={cn("flex relative h-full flex-col overflow-y-auto border-r border-border bg-muted p-4  text-center custom-scroll dark:bg-canvas",
+                playgroundPage ? "pt-[15px]" : "pt-3.5",
+              )}>
                 <div className="flex items-center gap-2 pb-8">
                   <ShadTooltip
                     styleClasses="z-50"
