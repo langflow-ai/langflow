@@ -102,10 +102,7 @@ docker run -p 7860:7860 myuser/langflow-hello-world:1.0.0
 5. Build and push the image to Docker Hub.
 Replace `myuser` with your Docker Hub username.
 ```shell
-# Build the docker image locally
 docker build -t myuser/langflow-hello-world:1.0.0 .
-
-# Push the image to DockerHub (make sure you're logged in)
 docker push myuser/langflow-hello-world:1.0.0
 ```
 
