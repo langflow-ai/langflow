@@ -23,6 +23,7 @@ import { classNames, cn } from "../../utils/utils";
 
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
+import { getTransformClasses } from "../helpers/get-class-toolbar-transform";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
@@ -247,10 +248,31 @@ function GenericNode({
     [data.node?.outputs],
   );
 
+  // Add state outside of useMemo
+  const [showToolbar, setShowToolbar] = useState(false);
+
+  // Handle animation timing outside of useMemo
+  useEffect(() => {
+    if (selected) {
+      const timer = setTimeout(() => setShowToolbar(true), 50);
+      return () => clearTimeout(timer);
+    } else {
+      setShowToolbar(false);
+    }
+  }, [selected]);
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     return selected ? (
       <>
-        <div className={cn("absolute -top-14 left-1/2 z-50 -translate-x-1/2")}>
+        <div
+          className={cn(
+            "absolute -top-12 left-1/2 z-50 -translate-x-1/2",
+            "transform transition-all duration-300 ease-out",
+            showToolbar
+              ? "translate-y-0 opacity-100"
+              : "translate-y-4 opacity-0",
+          )}
+        >
           <NodeToolbarComponent
             data={data}
             deleteNode={(id) => {
@@ -271,15 +293,18 @@ function GenericNode({
             isOutdated={isOutdated && isUserEdited}
           />
         </div>
-        <div className="z-40">
+        <div className="-z-10">
           <Button
             unstyled
             onClick={() => {
               toggleEditNameDescription();
             }}
             className={cn(
-              "nodrag absolute left-1/2 top-0 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-zinc-foreground",
-              showNode ? "translate-x-44" : "translate-x-28",
+              "nodrag absolute left-1/2 z-50 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md",
+              "transform transition-all duration-300 ease-out",
+              getTransformClasses(showToolbar, showNode),
+              showNode ? "top-2" : "top-0",
+              editNameDescription ? "bg-accent-emerald" : "bg-zinc-foreground",
             )}
             data-testid={
               editNameDescription
@@ -290,16 +315,14 @@ function GenericNode({
             <ForwardedIconComponent
               name={editNameDescription ? "Check" : "PencilLine"}
               strokeWidth={ICON_STROKE_WIDTH}
-              className="icon-size text-muted-foreground"
+              className={cn(
+                editNameDescription
+                  ? "text-accent-emerald-foreground"
+                  : "text-muted-foreground",
+                "icon-size",
+              )}
             />
           </Button>
-          {/* <Button unstyled className="bg-zinc-foreground nodrag absolute left-1/2 top-8 z-50 flex h-6 w-6 translate-x-44 cursor-pointer items-center justify-center rounded-md">
-            <ForwardedIconComponent
-              name="Info"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className="icon-size text-muted-foreground"
-            />
-          </Button> */}
         </div>
       </>
     ) : (
@@ -317,6 +340,7 @@ function GenericNode({
     selected,
     shortcuts,
     editNameDescription,
+    showToolbar, // Add showToolbar to dependencies
   ]);
 
   useEffect(() => {
