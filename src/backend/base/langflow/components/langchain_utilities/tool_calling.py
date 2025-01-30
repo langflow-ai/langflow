@@ -59,7 +59,8 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
 
     async def to_toolkit(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        toolkit = component_toolkit(component=self)
+        tools = toolkit.get_tools(callbacks=self.get_langchain_callbacks())
         if hasattr(self, "tools_metadata"):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+            tools = toolkit.update_tools_metadata(tools=tools)
         return tools
