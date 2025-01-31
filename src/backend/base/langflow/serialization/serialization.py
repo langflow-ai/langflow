@@ -21,10 +21,13 @@ def _serialize_str(obj: str, max_length: int | None, _) -> str:
 
 def _serialize_bytes(obj: bytes, max_length: int | None, _) -> str:
     """Decode bytes to string and truncate if max_length provided."""
-    decoded = obj.decode("utf-8", errors="ignore")
-    if max_length is None:
-        return decoded
-    return decoded[:max_length] + "..." if len(decoded) > max_length else decoded
+    if max_length is not None:
+        return (
+            obj[:max_length].decode("utf-8", errors="ignore") + "..."
+            if len(obj) > max_length
+            else obj.decode("utf-8", errors="ignore")
+        )
+    return obj.decode("utf-8", errors="ignore")
 
 
 def _serialize_datetime(obj: datetime, *_) -> str:
