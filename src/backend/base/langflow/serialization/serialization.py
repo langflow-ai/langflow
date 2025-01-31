@@ -180,7 +180,7 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
                     return obj.tobytes().decode("utf-8", errors="ignore")
                 if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
                     return serialize(obj.item())
-            return str(obj)
+            return obj
 
 
 def serialize(
@@ -201,10 +201,12 @@ def serialize(
         max_items: Maximum items in list-like structures, None for no truncation
         to_str: If True, return a string representation of the object if serialization fails
     """
+    if obj is None:
+        return None
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
-        if result is not None or obj is None:  # Special check for None since it's a valid result
+        if result is not None:  # Special check for None since it's a valid result
             return result
 
         # Handle class-based Pydantic types and other types
