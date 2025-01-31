@@ -978,17 +978,20 @@ class Component(CustomComponent):
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
+        if len(self.outputs) == 1:
+            return self.status or self.extract_data(result)
+        return self.extract_data(result)
+
+    def extract_data(self, result):
+        if hasattr(result, "data"):
+            return result.data
+        if hasattr(result, "model_dump"):
+            return result.model_dump()
+        if isinstance(result, Data | dict | str):
+            return result.data if isinstance(result, Data) else result
         if self.status:
-            raw = self.status
-        elif hasattr(result, "data"):
-            raw = result.data
-        elif hasattr(result, "model_dump"):
-            raw = result.model_dump()
-        elif isinstance(result, dict | Data | str):
-            raw = result.data if isinstance(result, Data) else result
-        else:
-            raw = result
-        return raw
+            return self.status
+        return result
 
     def _log_output(self, output):
         self._output_logs[output.name] = self._logs
