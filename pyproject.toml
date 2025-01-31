@@ -109,7 +109,10 @@ dependencies = [
     "uv>=0.5.7",
     "ag2>=0.1.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19"
+    "pydantic-ai>=0.0.19",
+    "pygridgain==1.5.0",
+    "langchain-gridgain==1.0.0",
+    
 ]
 
 [tool.uv.sources]
