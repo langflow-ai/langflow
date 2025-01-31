@@ -981,15 +981,15 @@ class Component(CustomComponent):
         if len(self.outputs) == 1:
             return self.status or self.extract_data(result)
         return self.extract_data(result)
-    
+
     def extract_data(self, result):
         if hasattr(result, "data"):
             return result.data
-        elif hasattr(result, "model_dump"):
+        if hasattr(result, "model_dump"):
             return result.model_dump()
-        elif isinstance(result, (Data, dict, str)):
+        if isinstance(result, (Data, dict, str)):
             return result.data if isinstance(result, Data) else result
-        elif self.status:
+        if self.status:
             return self.status
         return result
 
