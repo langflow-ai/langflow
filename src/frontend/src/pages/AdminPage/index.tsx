@@ -5,6 +5,8 @@ import {
   useGetUsers,
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
+import CustomLoader from "@/customization/components/custom-loader";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -303,7 +305,11 @@ export default function AdminPage() {
           </div>
           {isPending || isIdle ? (
             <div className="flex h-full w-full items-center justify-center">
-              <LoadingComponent remSize={12} />
+              {ENABLE_DATASTAX_LANGFLOW ? (
+                <CustomLoader />
+              ) : (
+                <LoadingComponent remSize={12} />
+              )}
             </div>
           ) : userList.current.length === 0 && !isIdle ? (
             <>

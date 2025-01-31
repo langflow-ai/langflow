@@ -14,6 +14,8 @@ import {
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import CustomLoader from "@/customization/components/custom-loader";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -637,7 +639,11 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <LoadingComponent remSize={30} />
+          {ENABLE_DATASTAX_LANGFLOW ? (
+            <CustomLoader />
+          ) : (
+            <LoadingComponent remSize={30} />
+          )}
         </div>
       )}
     </div>
