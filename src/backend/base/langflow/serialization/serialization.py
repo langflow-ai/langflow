@@ -86,6 +86,11 @@ def _serialize_primitive(obj: Any, *_) -> Any:
     return None
 
 
+def _serialize_instance(obj: Any, *_) -> str:
+    """Handle regular class instances by converting to string."""
+    return str(obj)
+
+
 def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | None:
     """Dispatch object to appropriate serializer."""
     # Handle primitive types first
@@ -118,16 +123,15 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
             return _serialize_dict(obj, max_length, max_items)
         case list() | tuple():
             return _serialize_list_tuple(obj, max_length, max_items)
+        case object() if not isinstance(obj, type):  # Match any instance that's not a class
+            return _serialize_instance(obj, max_length, max_items)
+        case object() if hasattr(obj, "_name_"):  # Enum case
+            return f"{obj.__class__.__name__}.{obj._name_}"
+        case object() if hasattr(obj, "__name__") and hasattr(obj, "__bound__"):  # TypeVar case
+            return repr(obj)
+        case object() if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):  # Type alias/generic case
+            return repr(obj)
         case _:
-            # Handle enums
-            if hasattr(obj, "_name_"):  # Enum check
-                return f"{obj.__class__.__name__}.{obj._name_}"
-            # Handle TypeVars
-            if hasattr(obj, "__name__") and hasattr(obj, "__bound__"):
-                return repr(obj)
-            # Handle type aliases and generic types
-            if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):
-                return repr(obj)
             return None
 
 
@@ -174,8 +178,8 @@ def serialize(
         if hasattr(obj, "dict") and not isinstance(obj, type):
             return serialize(obj.dict(), max_length, max_items)
 
-        # Final fallback to string conversion
-        if to_str or not isinstance(obj, type):  # Convert instances to string
+        # Final fallback to string conversion only if explicitly requested
+        if to_str:
             return str(obj)
 
     except Exception as e:  # noqa: BLE001
