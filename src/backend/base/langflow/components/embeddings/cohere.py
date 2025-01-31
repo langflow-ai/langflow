@@ -60,7 +60,6 @@ class CohereEmbeddingsComponent(LCModelComponent):
             )
             raise ValueError(msg) from e
         # added status if not the return data would be serialised to create the status
-        self.status = "Success Cohere Embeddings Model created"
         return data
 
     def get_model(self):
