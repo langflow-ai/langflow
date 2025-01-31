@@ -488,16 +488,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        # TODO: Remove special astra flags when overlays are out
-        # TODO: Better targeting of this field
-        dslf = os.getenv("AWS_EXECUTION_ENV") == "AWS_ECS_FARGATE"
+        # When the component first executes, this is the update refresh call
+        first_run = field_name == "collection_name" and not field_value
 
         # If the token has not been provided, simply return
-        if not self.token:
+        if not self.token or field_name == "environment":
             return self.reset_build_config(build_config)
 
         # Refresh the database name options
-        if not dslf and (field_name in ["token", "environment"] or not build_config["api_endpoint"]["options"]):
+        if first_run or field_name == "token":
             # Reset the build config to ensure we are starting fresh
             build_config = self.reset_build_config(build_config)
 
@@ -523,6 +522,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
             """
 
+            return build_config
+
         # Refresh the collection name options
         if field_name == "api_endpoint":
             # Reset the selected collection
@@ -539,7 +540,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Reload the list of collections and metadata associated
             collection_options = self._initialize_collection_options(
-                api_endpoint=build_config["d_api_endpoint"]["value"] if not dslf else None
+                api_endpoint=build_config["d_api_endpoint"]["value"]
             )
 
             # If we have collections, show the dropdown
@@ -547,6 +548,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["collection_name"]["options_metadata"] = [
                 {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
             ]
+
+            return build_config
 
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
