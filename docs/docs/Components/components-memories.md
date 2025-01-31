@@ -79,3 +79,23 @@ This component creates a `ZepChatMessageHistory` instance, enabling storage and 
 | Name            | Type                    | Description                                           |
 |-----------------|-------------------------|-------------------------------------------------------|
 | message_history | BaseChatMessageHistory  | An instance of ZepChatMessageHistory for the session. |
+
+## GridGainChatMemory Component
+
+This component creates a chat message history using GridGain, enabling storage and retrieval of chat messages using GridGain's distributed caching capabilities.
+
+### Inputs
+
+| Name         | Type          | Description                                                           |
+|--------------|---------------|-----------------------------------------------------------------------|
+| host         | String        | GridGain server host address (default: "localhost"). Required.         |
+| port         | String        | GridGain server port number (default: "10800"). Required.             |
+| cache_name   | String        | Name of the cache for storing messages (default: "langchain_message_store"). Required. |
+| session_id   | MessageText   | Chat session ID. Uses current session ID if not provided.             |
+| client_type  | String        | Type of client to use ("pygridgain"). Required.                      |
+
+### Outputs
+
+| Name            | Type                    | Description                                               |
+|-----------------|-------------------------|-----------------------------------------------------------|
+| message_history | BaseChatMessageHistory  | An instance of GridGainChatMessageHistory for the session. |

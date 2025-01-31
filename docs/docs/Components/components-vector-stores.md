@@ -659,3 +659,36 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
 | search_results | List[Data] | Results of similarity search |
+
+
+## GridGain Vector Store
+
+This component implements a Vector Store using GridGain with CSV ingestion and search capabilities.
+
+### Inputs
+
+| Name              | Type          | Description                                                                   |
+|-------------------|---------------|----------------------------------------------------------------               |
+| cache_name        | String        | The name of the cache within GridGain where vectors will be stored (required) |
+| host              | String        | GridGain server host address (required)                                       |
+| port              | Integer       | GridGain server port number (required)                                        |
+| score_threshold   | Float         | Minimum similarity score threshold for search results (required, default: 0.6)|
+| csv_file          | File          | Optional CSV file for data ingestion                                          |
+| embedding         | Embeddings    | Embedding model to use for vector creation                                    |
+| search_query      | String        | Query string for similarity search                                            |
+| number_of_results | Integer       | Number of results to return in similarity search (default: 4)                 |
+
+### Outputs
+
+| Name           | Type               | Description                                                |
+|----------------|--------------------|------------------------------------------------------------|
+| vector_store   | GridGainVectorStore| Built GridGain vector store instance                       |
+| search_results | List[Data]         | Results of the similarity search as a list of Data objects |
+
+**Important Note**: Unlike other vector store providers that support direct data ingestion through the `ingest_data` parameter, GridGain currently only supports data ingestion through CSV file upload. The CSV file must contain the following columns:
+- "id": Unique identifier for the document
+- "url": Document URL
+- "title": Document title
+- "text": Document content
+
+The component will automatically process the CSV file and create document objects with appropriate metadata for storage in GridGain.
