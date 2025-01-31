@@ -2,7 +2,6 @@ import math
 from datetime import datetime, timezone
 from typing import Any
 
-import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from langchain_core.documents import Document
@@ -46,7 +45,6 @@ class LegacyModel(PydanticV1BaseModel):
     value: int
 
 
-@pytest.mark.unit
 class TestSerializationHypothesis:
     """Hypothesis-based property tests for serialization logic."""
 
