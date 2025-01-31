@@ -386,10 +386,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error getting database: {e}")
-
-            return None
+        except Exception as e:
+            msg = f"Error fetching database object: {e}"
+            raise ValueError(msg) from e
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
@@ -452,35 +451,31 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
+        # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
-        if database is None:
-            return []
 
-        try:
-            collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+        # Get the list of collections
+        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
 
-            return [
-                {
-                    "name": col.name,
-                    "records": self.collection_data(collection_name=col.name, database=database),
-                    "provider": (
-                        col.options.vector.service.provider
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
-                    "icon": "",
-                    "model": (
-                        col.options.vector.service.model_name
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
-                }
-                for col in collection_list
-            ]
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error fetching collections: {e}")
-
-            return []
+        # Return the list of collections and metadata associated
+        return [
+            {
+                "name": col.name,
+                "records": self.collection_data(collection_name=col.name, database=database),
+                "provider": (
+                    col.options.vector.service.provider
+                    if col.options.vector and col.options.vector.service
+                    else None
+                ),
+                "icon": "",
+                "model": (
+                    col.options.vector.service.model_name
+                    if col.options.vector and col.options.vector.service
+                    else None
+                ),
+            }
+            for col in collection_list
+        ]
 
     def reset_build_config(self, build_config: dict):
         # Reset the list of databases we have based on the token provided
@@ -561,27 +556,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if field_name == "collection_name" and field_value:
             # Set the options for collection name to be the field value if its a new collection
             if field_value not in build_config["collection_name"]["options"]:
-                # If this is running in DSLF, we may need to initialize the options again
-                if dslf:
-                    # Reload the list of collections and metadata associated
-                    collection_options = self._initialize_collection_options(
-                        api_endpoint=build_config["d_api_endpoint"]["value"] if not dslf else None
-                    )
+                # Add the new collection to the list of options
+                build_config["collection_name"]["options"].append(field_value)
+                build_config["collection_name"]["options_metadata"].append(
+                    {"records": 0, "provider": None, "icon": "", "model": None}
+                )
 
-                    # If we have collections, show the dropdown
-                    build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-                    build_config["collection_name"]["options_metadata"] = [
-                        {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-                    ]
-                else:
-                    # Add the new collection to the list of options
-                    build_config["collection_name"]["options"].append(field_value)
-                    build_config["collection_name"]["options_metadata"].append(
-                        {"records": 0, "provider": None, "icon": "", "model": None}
-                    )
-
-                    # Ensure that autodetect collection is set to False, since its a new collection
-                    build_config["autodetect_collection"]["value"] = False
+                # Ensure that autodetect collection is set to False, since its a new collection
+                build_config["autodetect_collection"]["value"] = False
             else:
                 build_config["autodetect_collection"]["value"] = True
 
