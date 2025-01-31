@@ -2,6 +2,7 @@ import math
 from datetime import datetime, timezone
 from typing import Any
 
+import numpy as np
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from langchain_core.documents import Document
@@ -242,3 +243,10 @@ class TestSerializationHypothesis:
 
         result: str = serialize(Box[int])
         assert result == repr(Box[int])
+
+    def test_numpy_int64_serialization(self) -> None:
+        """Test serialization of numpy.int64 values."""
+        np_int = np.int64(42)
+        result = serialize(np_int)
+        assert result == 42
+        assert isinstance(result, int)

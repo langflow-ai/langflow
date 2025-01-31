@@ -86,6 +86,9 @@ def _serialize_primitive(obj: Any, *_) -> Any:
     """Handle primitive types without conversion."""
     if obj is None or isinstance(obj, int | float | bool):
         return obj
+    # Handle numpy integer types
+    if hasattr(obj, "dtype") and "int" in str(obj.dtype):
+        return int(obj)
     return None
 
 
