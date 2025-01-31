@@ -31,7 +31,7 @@ This component makes HTTP requests using URLs or cURL commands.
 | Name | Display Name | Info |
 |------|--------------|------|
 | urls | URLs | Enter one or more URLs, separated by commas. |
-| curl | cURL | Paste a curl command to populate the fields. This will fill in the dictionary fields for headers and body. |
+| curl | cURL | Paste a curl command to populate the dictionary fields for headers and body. |
 | method | Method | The HTTP method to use. |
 | use_curl | Use cURL | Enable cURL mode to populate fields from a cURL command. |
 | query_params | Query Parameters | The query parameters to append to the URL. |
@@ -61,10 +61,10 @@ This component recursively loads files from a directory, with options for file t
 | types              | MessageTextInput | File types to load (leave empty to load all types) |
 | depth              | IntInput         | Depth to search for files                          |
 | max_concurrency    | IntInput         | Maximum concurrency for loading files              |
-| load_hidden        | BoolInput        | If true, hidden files will be loaded               |
-| recursive          | BoolInput        | If true, the search will be recursive              |
-| silent_errors      | BoolInput        | If true, errors will not raise an exception        |
-| use_multithreading | BoolInput        | If true, multithreading will be used               |
+| load_hidden        | BoolInput        | If true, hidden files are loaded               |
+| recursive          | BoolInput        | If true, the search is recursive              |
+| silent_errors      | BoolInput        | If true, errors do not raise an exception        |
+| use_multithreading | BoolInput        | If true, multithreading is used               |
 
 
 ### Outputs
@@ -84,7 +84,7 @@ The maximum supported file size is 100 MB.
 | Name          | Display Name  | Info                                         |
 | ------------- | ------------- | -------------------------------------------- |
 | path          | Path          | File path to load.                           |
-| silent_errors | Silent Errors | If true, errors will not raise an exception. |
+| silent_errors | Silent Errors | If true, errors do not raise an exception. |
 
 ### Outputs
 
@@ -196,7 +196,7 @@ This component fetches content from one or more URLs, processes the content, and
 
 This component defines a webhook input for the flow. The flow can be triggered by an external HTTP POST request (webhook) sending a JSON payload.
 
-If the input is not valid JSON, the component will wrap it in a "payload" field. The component's status will reflect any errors or the processed data.
+If the input is not valid JSON, the component wraps it in a "payload" field. The component's status reflects any errors on the processed data.
 
 ### Inputs
 
