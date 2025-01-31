@@ -79,8 +79,22 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
     return [serialize(item, max_length, max_items) for item in obj]
 
 
+def _serialize_primitive(obj: Any, *_) -> Any:
+    """Handle primitive types without conversion."""
+    if obj is None or isinstance(obj, int | float | bool):
+        return obj
+    return None
+
+
 def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | None:
     """Dispatch object to appropriate serializer."""
+    # Handle primitive types first
+    if obj is None:
+        return obj
+    primitive = _serialize_primitive(obj, max_length, max_items)
+    if primitive is not None:  # Special check for None since it's a valid primitive
+        return primitive
+
     match obj:
         case str():
             return _serialize_str(obj, max_length, max_items)
@@ -105,6 +119,15 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
         case list() | tuple():
             return _serialize_list_tuple(obj, max_length, max_items)
         case _:
+            # Handle enums
+            if hasattr(obj, "_name_"):  # Enum check
+                return f"{obj.__class__.__name__}.{obj._name_}"
+            # Handle TypeVars
+            if hasattr(obj, "__name__") and hasattr(obj, "__bound__"):
+                return repr(obj)
+            # Handle type aliases and generic types
+            if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):
+                return repr(obj)
             return None
 
 
@@ -129,12 +152,21 @@ def serialize(
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
-        if result is not None:
+        if result is not None or obj is None:  # Special check for None since it's a valid result
             return result
 
-        # Handle class-based Pydantic types
-        if isinstance(obj, type) and issubclass(obj, BaseModel | BaseModelV1):
-            return repr(obj)
+        # Handle class-based Pydantic types and other types
+        if isinstance(obj, type):
+            if issubclass(obj, BaseModel | BaseModelV1):
+                return repr(obj)
+            return str(obj)  # Handle other class types
+
+        # Handle type aliases and generic types
+        if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):  # Type alias or generic type check
+            try:
+                return repr(obj)
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"Cannot serialize object {obj}: {e!s}")
 
         # Fallback to common serialization patterns
         if hasattr(obj, "model_dump"):
@@ -143,11 +175,11 @@ def serialize(
             return serialize(obj.dict(), max_length, max_items)
 
         # Final fallback to string conversion
-        if to_str:
+        if to_str or not isinstance(obj, type):  # Convert instances to string
             return str(obj)
 
-    except Exception:  # noqa: BLE001
-        logger.debug(f"Cannot serialize object {obj}")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Cannot serialize object {obj}: {e!s}")
         return "[Unserializable Object]"
     return obj
 
