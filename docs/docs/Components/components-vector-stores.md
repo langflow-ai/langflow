@@ -66,7 +66,7 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 ## AstraDB Graph vector store
 
 This component implements a Vector Store using AstraDB with graph capabilities.
-For more information, see the [DataStax documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
+For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
 
 ### Inputs
 

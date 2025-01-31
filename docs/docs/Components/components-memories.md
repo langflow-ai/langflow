@@ -76,7 +76,7 @@ The Mem0 Chat Memory component retrieves and stores chat messages using Mem0 mem
 | search_query | Search Query | Input text for searching related memories in Mem0. |
 | mem0_api_key | Mem0 API Key | API key for Mem0 platform (leave empty to use the local version). |
 | metadata | Metadata | Additional metadata to associate with the ingested message. |
-| openai_api_key | OpenAI API Key | API key for OpenAI (required if using OpenAI embeddings without a provided configuration). |
+| openai_api_key | OpenAI API Key | API key for OpenAI. This item is required if you use OpenAI embeddings without a provided configuration. |
 
 ### Outputs
 

@@ -32,7 +32,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of Input objects each with added Metadata |
+| data | Data | List of Input objects, each with added Metadata |
 
 ## Combine Text
 

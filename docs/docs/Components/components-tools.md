@@ -162,7 +162,7 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 
 ## DuckDuckGo search
 
-This component performs web searches using the [DuckDuckGo](www.duckduckgo.com) search engine with result limiting capabilities.
+This component performs web searches using the [DuckDuckGo](www.duckduckgo.com) search engine with result-limiting capabilities.
 
 ### Inputs
 
