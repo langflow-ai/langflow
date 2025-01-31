@@ -114,19 +114,20 @@ class LangChainHFModel(Model):
         )
 
 
-if __name__ == "__main__":
-    from langchain_community.tools import DuckDuckGoSearchRun
-    from langchain_openai import ChatOpenAI
-    from rich import rprint
-    from smolagents import CodeAgent
+# How to use
+# if __name__ == "__main__":
+#     from langchain_community.tools import DuckDuckGoSearchRun
+#     from langchain_openai import ChatOpenAI
+#     from rich import rprint
+#     from smolagents import CodeAgent
 
-    # Example usage
-    model = LangChainHFModel(chat_model=ChatOpenAI(model="gpt-4o-mini"))
-    search_tool = DuckDuckGoSearchRun()
-    hf_tool = Tool.from_langchain(search_tool)
+#     # Example usage
+#     model = LangChainHFModel(chat_model=ChatOpenAI(model="gpt-4o-mini"))
+#     search_tool = DuckDuckGoSearchRun()
+#     hf_tool = Tool.from_langchain(search_tool)
 
-    code_agent = CodeAgent(
-        model=model,
-        tools=[hf_tool],
-    )
-    rprint(code_agent.run("Search for Langflow on DuckDuckGo and return the first result"))
+#     code_agent = CodeAgent(
+#         model=model,
+#         tools=[hf_tool],
+#     )
+#     rprint(code_agent.run("Search for Langflow on DuckDuckGo and return the first result"))
