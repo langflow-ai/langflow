@@ -387,17 +387,16 @@ class ErrorMessage(Message):
     @staticmethod
     def _format_plain_reason(exception: BaseException) -> str:
         """Format the error reason without markdown."""
-        reason = f"{exception.__class__.__name__}\n"
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
-            reason += f" - {exception.body.get('message')}\n"
+            reason = f"{exception.body.get('message')}\n"
         elif hasattr(exception, "code"):
-            reason += f" - Code: {exception.code}\n"
+            reason = f"Code: {exception.code}\n"
         elif hasattr(exception, "args") and exception.args:
-            reason += f" - Details: {exception.args[0]}\n"
+            reason = f"{exception.args[0]}\n"
         elif isinstance(exception, ValidationError):
-            reason += f" - Details:\n\n{exception!s}\n"
+            reason = f"{exception!s}\n"
         else:
-            reason += " - An unknown error occurred.\n"
+            reason = "An unknown error occurred.\n"
         return reason
 
     def __init__(
