@@ -84,8 +84,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
                 # Convert CurrentDateComponent to a StructuredTool
-                current_date_tool = (await CurrentDateComponent().to_toolkit()).pop(0)
-                # current_date_tool = CurrentDateComponent().to_toolkit()[0]
+                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
                 if isinstance(current_date_tool, StructuredTool):
                     self.tools.append(current_date_tool)
                 else:
@@ -122,7 +121,7 @@ class AgentComponent(ToolCallingAgentComponent):
         # filter out empty values
         memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
 
-        return await MemoryComponent().set(**memory_kwargs).retrieve_messages()
+        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 
     def get_llm(self):
         if isinstance(self.agent_llm, str):
