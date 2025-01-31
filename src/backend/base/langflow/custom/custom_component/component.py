@@ -982,16 +982,16 @@ class Component(CustomComponent):
             return self.status or self.extract_data(result)
         return self.extract_data(result)
     
-    def extract_data(self, r):
-        if hasattr(r, "data"):
-            return r.data
-        elif hasattr(r, "model_dump"):
-            return r.model_dump()
-        elif isinstance(r, (Data, dict, str)):
-            return r.data if isinstance(r, Data) else r
+    def extract_data(self, result):
+        if hasattr(result, "data"):
+            return result.data
+        elif hasattr(result, "model_dump"):
+            return result.model_dump()
+        elif isinstance(result, (Data, dict, str)):
+            return result.data if isinstance(result, Data) else result
         elif self.status:
             return self.status
-        return r
+        return result
 
     def _log_output(self, output):
         self._output_logs[output.name] = self._logs
