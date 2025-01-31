@@ -9,7 +9,7 @@ from loguru import logger
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
-from langflow.utils.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 
 
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
