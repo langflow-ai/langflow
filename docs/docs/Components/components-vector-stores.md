@@ -13,10 +13,6 @@ Vector database components are distinct from [memory components](/components-mem
 
 ## Use a vector store component in a flow
 
-Vector databases can be populated from within Langflow with document ingestion pipelines, like the following
-
-![](/img/vector-store-document-ingestion.png)
-
 This example uses the **Astra DB vector store** component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The Astra DB vector store generates embeddings with the connected [model](/components-models) component, and stores them in the connected Astra DB database.
 
 This vector data can then be retrieved for workloads like Retrieval Augmented Generation.
@@ -63,8 +59,8 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built Astra DB vector store |
-| search_results | Search Results | Results of the similarity search as a list of Data objects |
+| vector_store | Vector Store | Astra DB vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
 
 ## AstraDB Graph vector store
@@ -96,8 +92,8 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built AstraDB Graph vector store |
-| search_results | Search Results | Results of the similarity search as a list of Data objects |
+| vector_store | Vector Store | Astra DB graph vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
 
 ## Cassandra
@@ -132,8 +128,8 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 
 | Name | Type | Description |
 |------|------|-------------|
-| vector_store | Cassandra | Cassandra vector store instance |
-| search_results | List[Data] | Results of similarity search |
+| vector_store | Cassandra | A Cassandra vector store instance configured with the specified parameters. |
+| search_results | List[Data] | The results of the similarity search as a list of `Data` objects. |
 
 ## Cassandra Graph Vector Store
 
@@ -163,8 +159,8 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built Cassandra Graph vector store |
-| search_results | Search Results | Results of the similarity search as a list of Data objects |
+| vector_store | Vector Store | A Cassandra Graph vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
 ## Chroma DB
 
@@ -344,8 +340,8 @@ This component implements a Vector Store using HCD.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built HCD vector store instance |
-| search_results | Search Results | Results of similarity search as a list of Data objects |
+| vector_store | Vector Store | An HCD vector store instance The results of the similarity search as a list of `Data` objects.|
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
 ## Milvus
 

@@ -121,7 +121,7 @@ This component generates embeddings using [Cloudflare Workers AI models](https:/
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| embeddings | Embeddings |  An instance for generating embeddings using Cloudflare Workers|
+| embeddings | Embeddings |  An instance for generating embeddings using Cloudflare Workers |
 
 ## Cohere Embeddings
 

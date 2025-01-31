@@ -23,7 +23,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Object(s) to which Metadata should be added |
+| input_value | Input | Objects to which Metadata should be added |
 | text_in | User Text | Text input; value will be in 'text' attribute of Data object. Empty text entries are ignored. |
 | metadata | Metadata | Metadata to add to each object |
 | remove_fields | Fields to Remove | Metadata Fields to Remove |
@@ -325,7 +325,7 @@ This component dynamically updates or appends data with specified fields.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| old_data | Data | The record(s) to update |
+| old_data | Data | The records to update |
 | number_of_fields | Number of Fields | Number of fields to add (max 15) |
 | text_key | Text Key | Key for text content |
 | text_key_validator | Text Key Validator | Validates text key presence |
@@ -334,4 +334,4 @@ This component dynamically updates or appends data with specified fields.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | Updated Data object(s) |
+| data | Data | Updated Data objects |

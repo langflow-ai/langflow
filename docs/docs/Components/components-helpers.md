@@ -27,7 +27,7 @@ The Batch Run component runs a language model over each row of a [DataFrame](/co
 |------|--------------|------|------|----------|
 | model | Language Model | HandleInput | Connect the 'Language Model' output from your LLM component here. | Yes |
 | system_message | System Message | MultilineInput | Multi-line system instruction for all rows in the DataFrame. | No |
-| df | DataFrame | DataFrameInput | The DataFrame whose column (specified by 'column_name') we'll treat as text messages. | Yes |
+| df | DataFrame | DataFrameInput | The DataFrame whose column (specified by 'column_name') will be treated as text messages. | Yes |
 | column_name | Column Name | StrInput | The name of the DataFrame column to treat as text messages. Default='text'. | Yes |
 
 ### Outputs

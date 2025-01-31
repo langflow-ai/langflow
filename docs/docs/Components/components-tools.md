@@ -33,7 +33,7 @@ This component searches and retrieves papers from [arXiv.org](arXiv.org).
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| search_query | Search Query | The search query for arXiv papers (e.g., 'quantum computing') |
+| search_query | Search Query | The search query for arXiv papers (for example, `quantum computing`) |
 | search_type | Search Field | The field to search in |
 | max_results | Max Results | Maximum number of results to return |
 
@@ -129,7 +129,7 @@ This component creates a tool for performing basic arithmetic operations on a gi
 
 | Name       | Type   | Description                                                        |
 |------------|--------|--------------------------------------------------------------------|
-| expression | String | The arithmetic expression to evaluate (e.g., `4*4*(33/22)+12-20`). |
+| expression | String | The arithmetic expression to evaluate (for example, `4*4*(33/22)+12-20`). |
 
 ### Outputs
 
