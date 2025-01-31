@@ -1,3 +1,4 @@
+import json
 import re
 
 from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
@@ -28,8 +29,8 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info="Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
-            options=["Text", "Raw HTML"],
+            info="Output Format. Use 'Text' to extract the text from the HTML, 'Raw HTML' for the raw HTML content or 'JSON' to extract JSON from the HTML ",
+            options=["Text", "Raw HTML", "JSON"],
             value="Text",
         ),
     ]
@@ -71,17 +72,44 @@ class URLComponent(Component):
         if not url_regex.match(string):
             msg = f"Invalid URL: {string}"
             raise ValueError(msg)
+        if self.format == "JSON":
+            if not ".json" in string: 
+                msg = f"Invalid JSON URL: {string}" 
+                raise ValueError(msg)
 
         return string
 
     def fetch_content(self) -> list[Data]:
         urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
+        
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
         else:
             loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
+        
         docs = loader.load()
-        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
+        
+        if self.format == "JSON":
+            data = []
+            for doc in docs:
+                try:
+                    json_content = json.loads(doc.page_content)
+                    data_dict = {
+                        "text": json.dumps(json_content, indent=2),
+                        **{key: str(value) for key, value in json_content.items()},
+                        **doc.metadata
+                    }
+                    data.append(Data(**data_dict))
+                except json.JSONDecodeError:
+                    msg = f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
+                    raise ValueError(msg)
+                    
+        else:
+            data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
+        
+        self.status = data
+        return data
+        
         self.status = data
         return data
 
