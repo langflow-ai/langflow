@@ -17,6 +17,7 @@ from langflow.api.v1.schemas import InputValueRequest
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
+from langflow.utils.voice_utils import resample_24k_to_16k, BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -190,7 +191,7 @@ async def websocket_endpoint(
             "session": {
                 "modalities": ["text", "audio"],
                 "instructions": SESSION_INSTRUCTIONS,
-                "voice": "alloy",
+                "voice": "echo",
                 "temperature": 0.8,
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
@@ -211,10 +212,6 @@ async def websocket_endpoint(
 
         # Set up WebRTC VAD
         vad = webrtcvad.Vad(mode=3)
-        SAMPLE_RATE = 16000
-        FRAME_DURATION_MS = 20
-        BYTES_PER_SAMPLE = 2  # 16-bit
-        FRAME_SIZE = int(SAMPLE_RATE * FRAME_DURATION_MS / 1000 * BYTES_PER_SAMPLE)
 
         # We'll accumulate partial frames for VAD checks
         audio_buffer = bytearray()
@@ -232,6 +229,7 @@ async def websocket_endpoint(
                     event_type = event.get("type")
 
                     if event_type == "response.output_item.added":
+                        logger.debug("Bot speaking = True")
                         bot_speaking = True
                         item = event.get("item", {})
                         if item.get("type") == "function_call":
@@ -239,6 +237,7 @@ async def websocket_endpoint(
                             function_call_args = ""
 
                     elif event_type == "response.output.complete":
+                        logger.debug("Bot speaking = False")
                         bot_speaking = False
 
                     elif event_type == "response.function_call_arguments.delta":
@@ -288,18 +287,31 @@ async def websocket_endpoint(
                         base64_data = msg.get("audio", "")
                         if not base64_data:
                             continue
-                        raw_chunk = base64.b64decode(base64_data)
+                        raw_chunk_24k = base64.b64decode(base64_data)
+                        with open("debug_incoming_24k.raw", "ab") as f:
+                            f.write(raw_chunk_24k)
 
                         # Accumulate in audio_buffer
-                        audio_buffer.extend(raw_chunk)
+                        audio_buffer.extend(raw_chunk_24k)
 
                         # Extract 20ms frames
-                        while len(audio_buffer) >= FRAME_SIZE:
-                            frame = audio_buffer[:FRAME_SIZE]
-                            del audio_buffer[:FRAME_SIZE]
+                        while len(audio_buffer) >= BYTES_PER_24K_FRAME:
+                            frame_24k = audio_buffer[:BYTES_PER_24K_FRAME]
+                            del audio_buffer[:BYTES_PER_24K_FRAME]
 
+                            try:
+                                frame_16k = resample_24k_to_16k(frame_24k)
+                            except ValueError as e:
+                                print(f"[ERROR] Invalid frame: {e}")
+                                # You could continue or raise
+                                continue
                             # Check local VAD
-                            is_speech = vad.is_speech(frame, SAMPLE_RATE)
+                            # 2) Local VAD
+                            try:
+                                is_speech = vad.is_speech(frame_16k, VAD_SAMPLE_RATE_16K)
+                            except Exception as e:
+                                print(f"[ERROR] VAD failed: {e}")
+                                continue
                             if is_speech and bot_speaking:
                                 print("Barge-in detected!")
                                 # The user is talking while the bot is still speaking
@@ -309,12 +321,10 @@ async def websocket_endpoint(
                                 # of this chunk. Future frames will be recognized
                                 # by server VAD for the next user turn.
                                 break
-
-                            # If not barging in, send the frame to OpenAI
-                            frame_b64 = base64.b64encode(frame).decode("utf-8")
-
-                            # Send event-based JSON
-                            await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": frame_b64}))
+                            else:
+                                # Send event-based JSON
+                                frame_b64 = base64.b64encode(frame_24k).decode("utf-8")
+                                await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": frame_b64}))
 
                     else:
                         # If it's some other message (text, etc.),

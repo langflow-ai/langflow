@@ -120,6 +120,7 @@ dependencies = [
     "ag2",
     "pydantic-ai>=0.0.12",
     "webrtcvad>=2.0.10",
+    "scipy>=1.14.1",
 ]
 
 [project.urls]
