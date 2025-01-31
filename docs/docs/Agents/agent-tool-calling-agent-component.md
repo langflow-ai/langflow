@@ -53,6 +53,8 @@ Point **API Request** to an online rules document, tell your agent `You are a fu
 * You need to learn a new software language quickly.
 Point **API Request** to some docs, tell your agent `You are a knowledgeable software developer who uses the tools at your disposal`, and start learning.
 
+If your agent is not working as expected, use the **Edit Tools** button to modify a connected tool's `name`, `description`, and `inputs` metadata. This information helps the agent understand how to use the tool.
+
 See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [simple agent starter project](/starter-projects-simple-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
 
 ## Use an agent as a tool

@@ -155,23 +155,35 @@ This component generates a notification for the Listen component to use.
 
 ## Run flow
 
-This component allows you to run a specified flow with given inputs and tweaks.
+This component allows you to run any flow stored in your Langflow database without opening the flow editor.
 
-The RunFlowComponent executes a specified flow within a larger workflow. It provides the ability to run a flow with custom inputs and apply tweaks to modify its behavior.
+The Run Flow component can also be used as a tool when connected to an [Agent](/components-agents). The `name`, `description`, and `inputs` metadata that the Agent uses to register the tool are created automatically.
+
+When you select a flow, the component fetches the flow's graph structure and uses it to generate the inputs and outputs for the Run Flow component.
+
+To use the Run Flow component as a tool, do the following:
+1. Add the **Run Flow** component to the [Simple Agent](/starter-projects-simple-agent) flow.
+2. In the **Flow Name** menu, select the sub-flow you want to run.
+The appearance of the **Run Flow** component will change to reflect the inputs and outputs of the selected flow.
+3. On the **Run Flow** component, enable **Tool Mode**.
+4. Connect the **Run Flow** component to the **Toolset** input of the Agent.
+Your flow should now look like this:
+![Run Flow component](/img/component-run-flow.png)
+5. Run the flow. The Agent will use the Run Flow component as a tool to run the selected sub-flow.
 
 ### Inputs
 
-| Name        | Type         | Description                                           |
-|-------------|--------------|-------------------------------------------------------|
-| input_value | String       | The input value for the flow to process.          |
-| flow_name   | Dropdown     | The name of the flow to run.                          |
-| tweaks      | Nested Dict  | Tweaks to apply to the flow.                          |
+| Name              | Type     | Description                                                    |
+|-------------------|----------|----------------------------------------------------------------|
+| flow_name_selected| Dropdown | The name of the flow to run                                    |
+| flow_tweak_data   | Dict     | Dictionary of tweaks to customize the flow's behavior         |
+| dynamic inputs  | Various  | Additional inputs are generated based on the selected flow     |
 
 ### Outputs
 
-| Name        | Type        | Description                                    |
-|-------------|-------------|------------------------------------------------|
-| run_outputs | List[Data]  | The results generated from running the flow.   |
+| Name         | Type        | Description                                                   |
+|--------------|-------------|---------------------------------------------------------------|
+| run_outputs  | List[Data]  | All outputs generated from running the flow                   |
 
 ## Sub Flow
 
