@@ -198,6 +198,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -500,6 +501,7 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -1042,6 +1044,7 @@
                 "method": "parse_data",
                 "name": "text",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -1054,6 +1057,7 @@
                 "method": "parse_data_as_list",
                 "name": "data_list",
                 "selected": "Data",
+                "tool_mode": true,
                 "types": [
                   "Data"
                 ],
@@ -1201,6 +1205,7 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -1337,6 +1342,7 @@
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
+                "tool_mode": true,
                 "types": [
                   "Message"
                 ],
@@ -1352,6 +1358,7 @@
                   "api_key"
                 ],
                 "selected": "LanguageModel",
+                "tool_mode": true,
                 "types": [
                   "LanguageModel"
                 ],
