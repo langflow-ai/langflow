@@ -94,11 +94,7 @@ class URLComponent(Component):
             for doc in docs:
                 try:
                     json_content = json.loads(doc.page_content)
-                    data_dict = {
-                        "text": json.dumps(json_content, indent=2),
-                        **json_content,
-                        **doc.metadata
-                    }
+                    data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
                     data.append(Data(**data_dict))
                 except json.JSONDecodeError:
                     msg = f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
