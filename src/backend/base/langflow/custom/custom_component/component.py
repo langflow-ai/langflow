@@ -44,6 +44,7 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
@@ -172,6 +173,21 @@ class Component(CustomComponent):
 
         # Return the intersection of the sets
         return input_names & output_names
+
+    def get_base_args(self):
+        """Get the base arguments required for component initialization.
+
+        Returns:
+            dict: A dictionary containing the base arguments:
+                - _user_id: The ID of the current user
+                - _session_id: The ID of the current session
+                - _tracing_service: The tracing service instance for logging/monitoring
+        """
+        return {
+            "_user_id": self.user_id,
+            "_session_id": self.session_id,
+            "_tracing_service": self._tracing_service,
+        }
 
     @property
     def ctx(self):
@@ -957,19 +973,19 @@ class Component(CustomComponent):
             custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
-        artifact_type = get_artifact_type(raw or self.status, result)
+        artifact_type = get_artifact_type(self.status or raw, result)
         raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
-        if hasattr(result, "data"):
+        if self.status:
+            raw = self.status
+        elif hasattr(result, "data"):
             raw = result.data
         elif hasattr(result, "model_dump"):
             raw = result.model_dump()
         elif isinstance(result, dict | Data | str):
             raw = result.data if isinstance(result, Data) else result
-        elif self.status:
-            raw = self.status
         else:
             raw = result
         return raw
@@ -1023,7 +1039,7 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
