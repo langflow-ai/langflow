@@ -370,43 +370,24 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        return self.keyspace.strip() if self.keyspace else None
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-
-            return client.get_database(
-                api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
-                token=self.token,
-                keyspace=self.get_keyspace(),
-            )
+            client = self.create_client()
+            endpoint = self.get_api_endpoint(api_endpoint=api_endpoint)
+            keyspace = self.get_keyspace()
+            return client.get_database(api_endpoint=endpoint, token=self.token, keyspace=keyspace)
         except Exception as e:
-            msg = f"Error fetching database object: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error fetching database object: {e}") from e
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
-            if not database:
-                client = DataAPIClient(token=self.token, environment=self.environment)
-
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
-
-            collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
-
+            keyspace = self.get_keyspace()
+            collection = database.get_collection(collection_name, keyspace=keyspace)
             return collection.estimated_document_count()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.log(f"Error checking collection data: {e}")
-
             return None
 
     def get_vectorize_providers(self):
@@ -451,27 +432,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
-        # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
+        keyspace = self.get_keyspace()
+        collection_list = database.list_collections(keyspace=keyspace)
 
-        # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
-
-        # Return the list of collections and metadata associated
-        return [
-            {
-                "name": col.name,
-                "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
-                "icon": "",
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
-            }
-            for col in collection_list
-        ]
+        collections_info = []
+        for col in collection_list:
+            service = col.options.vector.service if col.options.vector else None
+            collections_info.append(
+                {
+                    "name": col.name,
+                    "records": self.collection_data(collection_name=col.name, database=database),
+                    "provider": service.provider if service else None,
+                    "icon": "",
+                    "model": service.model_name if service else None,
+                }
+            )
+        return collections_info
 
     def reset_build_config(self, build_config: dict):
         # Reset the list of databases we have based on the token provided
@@ -788,3 +765,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def create_client(self):
+        return DataAPIClient(token=self.token, environment=self.environment)
