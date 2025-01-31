@@ -117,8 +117,7 @@ def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | N
     """Serialize pandas Series to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    obj = obj.apply(lambda x: _truncate_value(x, max_length, max_items))
-    return obj.to_dict()
+    return {k: _truncate_value(v, max_length, max_items) for k, v in obj.items()}
 
 
 def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | None:
@@ -247,3 +246,10 @@ def serialize_or_str(
         max_items: Maximum items in list-like structures, None for no truncation
     """
     return serialize(obj, max_length, max_items, to_str=True)
+
+
+def _truncate_value(x, max_length, max_items):
+    """Truncate the value if needed"""
+    if max_length is not None and isinstance(x, str) and len(x) > max_length:
+        return x[:max_length]
+    return x
