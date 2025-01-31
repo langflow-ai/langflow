@@ -987,7 +987,7 @@ class Component(CustomComponent):
             return result.data
         if hasattr(result, "model_dump"):
             return result.model_dump()
-        if isinstance(result, (Data, dict, str)):
+        if isinstance(result, Data | dict | str):
             return result.data if isinstance(result, Data) else result
         if self.status:
             return self.status
