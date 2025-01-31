@@ -1,3 +1,4 @@
+import json
 import re
 
 from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
@@ -72,22 +73,22 @@ class URLComponent(Component):
             msg = f"Invalid URL: {string}"
             raise ValueError(msg)
         if self.format == "JSON":
-            if not ".json" in string: 
-                msg = f"Invalid JSON URL: {string}" 
+            if ".json" not in string:
+                msg = f"Invalid JSON URL: {string}"
                 raise ValueError(msg)
 
         return string
 
     def fetch_content(self) -> list[Data]:
         urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
-        
+
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
         else:
             loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
-        
+
         docs = loader.load()
-        
+
         if self.format == "JSON":
             data = []
             for doc in docs:
@@ -102,10 +103,10 @@ class URLComponent(Component):
                 except json.JSONDecodeError:
                     msg = f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
                     raise ValueError(msg)
-                    
+
         else:
             data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
-        
+
         self.status = data
         return data
 
