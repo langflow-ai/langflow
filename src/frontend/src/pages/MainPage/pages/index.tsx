@@ -70,6 +70,9 @@ export default function CollectionPage(): JSX.Element {
               setFolderToEdit(item);
               setOpenDeleteFolderModal(true);
             }}
+            handleChangeFiles={() => {
+              navigate("files");
+            }}
           />
         )}
       <main className="flex h-full w-full overflow-hidden">

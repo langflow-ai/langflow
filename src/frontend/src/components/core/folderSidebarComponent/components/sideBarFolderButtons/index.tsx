@@ -1,6 +1,9 @@
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
@@ -38,10 +41,12 @@ import { SelectOptions } from "./components/select-options";
 type SideBarFoldersButtonsComponentProps = {
   handleChangeFolder?: (id: string) => void;
   handleDeleteFolder?: (item: FolderType) => void;
+  handleChangeFiles?: () => void;
 };
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
   handleDeleteFolder,
+  handleChangeFiles,
 }: SideBarFoldersButtonsComponentProps) => {
   const location = useLocation();
   const pathname = location.pathname;
@@ -52,9 +57,10 @@ const SideBarFoldersButtonsComponent = ({
   const currentFolder = pathname.split("/");
   const urlWithoutPath =
     pathname.split("/").length < (ENABLE_CUSTOM_PARAM ? 5 : 4);
+  const checkPathFiles = pathname.includes("files");
 
   const checkPathName = (itemId: string) => {
-    if (urlWithoutPath && itemId === myCollectionId) {
+    if (urlWithoutPath && itemId === myCollectionId && !checkPathFiles) {
       return true;
     }
     return currentFolder.includes(itemId);
@@ -437,6 +443,22 @@ const SideBarFoldersButtonsComponent = ({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t">
+        <div className="flex w-full items-center gap-2 p-2">
+          <SidebarMenuButton
+            isActive={checkPathFiles}
+            onClick={() => handleChangeFiles?.()}
+            size="md"
+            className="text-[13px]"
+          >
+            <ForwardedIconComponent name="File" />
+            My Files
+          </SidebarMenuButton>
+          <Button variant="ghost" size="iconMd" className="">
+            <ForwardedIconComponent name="Upload" className="!h-4 !w-4" />
+          </Button>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 };
