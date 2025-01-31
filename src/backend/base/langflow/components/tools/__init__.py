@@ -6,6 +6,7 @@ from .arxiv import ArXivComponent
 from .bing_search_api import BingSearchAPIComponent
 from .calculator import CalculatorToolComponent
 from .calculator_core import CalculatorComponent
+from .duck_duck_go_search_core import DuckDuckGoSearchCoreComponent
 from .duck_duck_go_search_run import DuckDuckGoSearchComponent
 from .exa_search import ExaSearchToolkit
 from .glean_search_api import GleanSearchAPIComponent
@@ -45,6 +46,7 @@ __all__ = [
     "CalculatorComponent",
     "CalculatorToolComponent",
     "DuckDuckGoSearchComponent",
+    "DuckDuckGoSearchCoreComponent",
     "ExaSearchToolkit",
     "GleanSearchAPIComponent",
     "GoogleSearchAPIComponent",
