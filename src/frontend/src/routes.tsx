@@ -15,6 +15,7 @@ import { CustomNavigate } from "./customization/components/custom-navigate";
 import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
+  ENABLE_FILE_MANAGEMENT,
   ENABLE_HOMEPAGE,
 } from "./customization/feature-flags";
 import { AppAuthenticatedPage } from "./pages/AppAuthenticatedPage";
@@ -26,6 +27,7 @@ import LoginPage from "./pages/LoginPage";
 import MyCollectionComponent from "./pages/MainPage/oldComponents/myCollectionComponent";
 import OldHomePage from "./pages/MainPage/oldPages/mainPage";
 import CollectionPage from "./pages/MainPage/pages";
+import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
@@ -76,6 +78,9 @@ const router = createBrowserRouter(
                     index
                     element={<CustomNavigate replace to={"flows"} />}
                   />
+                  {ENABLE_FILE_MANAGEMENT && (
+                    <Route path="files" element={<FilesPage />} />
+                  )}
                   <Route
                     path="flows/"
                     element={
