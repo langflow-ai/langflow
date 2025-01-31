@@ -447,10 +447,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 }
                 for name, info in self.get_database_list().items()
             ]
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error fetching databases: {e}")
-
-            return []
+        except Exception as e:
+            msg = f"Error fetching database options: {e}"
+            raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         database = self.get_database_object(api_endpoint=api_endpoint)
@@ -483,24 +482,36 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return []
 
+    def reset_build_config(self, build_config: dict):
+        # Reset the list of databases we have based on the token provided
+        build_config["api_endpoint"]["options"] = []
+        build_config["api_endpoint"]["options_metadata"] = []
+        build_config["api_endpoint"]["value"] = ""
+        build_config["api_endpoint"]["name"] = "Database"
+
+        # Reset the list of collections and metadata associated
+        build_config["collection_name"]["options"] = []
+        build_config["collection_name"]["options_metadata"] = []
+        build_config["collection_name"]["value"] = ""
+
+        return build_config
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # TODO: Remove special astra flags when overlays are out
         # TODO: Better targeting of this field
         dslf = os.getenv("AWS_EXECUTION_ENV") == "AWS_ECS_FARGATE"
 
+        # If the token has not been provided, simply return
+        if not self.token:
+            return self.reset_build_config(build_config)
+
         # Refresh the database name options
         if not dslf and (field_name in ["token", "environment"] or not build_config["api_endpoint"]["options"]):
+            # Reset the build config to ensure we are starting fresh
+            build_config = self.reset_build_config(build_config)
+
             # Get the list of options we have based on the token provided
             database_options = self._initialize_database_options()
-
-            # Reset the collection values selected
-            build_config["collection_name"]["options"] = []
-            build_config["collection_name"]["options_metadata"] = []
-            build_config["collection_name"]["value"] = ""
-
-            # Scenario #1: We have database options from the provided token
-            build_config["api_endpoint"]["value"] = ""
-            build_config["api_endpoint"]["name"] = "Database"
 
             # If we retrieved options based on the token, show the dropdown
             build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
