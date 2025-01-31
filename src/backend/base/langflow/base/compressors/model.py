@@ -4,6 +4,7 @@ from langflow.custom import Component
 from langflow.field_typing import BaseDocumentCompressor
 from langflow.io import DataInput, IntInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
 
 
@@ -29,9 +30,14 @@ class LCCompressorComponent(Component):
 
     outputs = [
         Output(
-            display_name="Compressed Documents",
+            display_name="Data",
             name="compressed_documents",
             method="Compressed Documents",
+        ),
+        Output(
+            display_name="DataFrame",
+            name="compressed_documents_as_dataframe",
+            method="Compressed Documents as DataFrame",
         ),
     ]
 
@@ -51,3 +57,8 @@ class LCCompressorComponent(Component):
         data = self.to_data(documents)
         self.status = data
         return data
+
+    async def compress_documents_as_dataframe(self) -> DataFrame:
+        """Compresses the documents retrieved from the vector store and returns a pandas DataFrame."""
+        data_objs = await self.compress_documents()
+        return DataFrame(data=data_objs)
