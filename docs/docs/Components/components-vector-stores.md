@@ -13,10 +13,6 @@ Vector database components are distinct from [memory components](/components-mem
 
 ## Use a vector store component in a flow
 
-Vector databases can be populated from within Langflow with document ingestion pipelines, like the following
-
-![](/img/vector-store-document-ingestion.png)
-
 This example uses the **Astra DB vector store** component. Your vector store component's parameters and authentication may be different, but the document ingestion workflow is the same. A document is loaded from a local machine and chunked. The Astra DB vector store generates embeddings with the connected [model](/components-models) component, and stores them in the connected Astra DB database.
 
 This vector data can then be retrieved for workloads like Retrieval Augmented Generation.
@@ -63,8 +59,42 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built Astra DB vector store |
-| search_results | Search Results | Results of the similarity search as a list of Data objects |
+| vector_store | Vector Store | Astra DB vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
+
+
+## AstraDB Graph vector store
+
+This component implements a Vector Store using AstraDB with graph capabilities.
+For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/tutorials/graph-rag.html).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| collection_name | Collection Name | The name of the collection within AstraDB where the vectors will be stored (required) |
+| token | Astra DB Application Token | Authentication token for accessing AstraDB (required) |
+| api_endpoint | API Endpoint | API endpoint URL for the AstraDB service (required) |
+| search_input | Search Input | Query string for similarity search |
+| ingest_data | Ingest Data | Data to be ingested into the vector store |
+| namespace | Namespace | Optional namespace within AstraDB to use for the collection |
+| embedding | Embedding Model | Embedding model to use |
+| metric | Metric | Distance metric for vector comparisons (options: "cosine", "euclidean", "dot_product") |
+| setup_mode | Setup Mode | Configuration mode for setting up the vector store (options: "Sync", "Async", "Off") |
+| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
+| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
+| search_type | Search Type | Search type to use (options: "Similarity", "Graph Traversal", "Hybrid") |
+| traversal_depth | Traversal Depth | Maximum depth for graph traversal searches (default: 1) |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results |
+| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| vector_store | Vector Store | Astra DB graph vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
+
 
 ## Cassandra
 
@@ -98,8 +128,8 @@ For more information, see the [Cassandra documentation](https://cassandra.apache
 
 | Name | Type | Description |
 |------|------|-------------|
-| vector_store | Cassandra | Cassandra vector store instance |
-| search_results | List[Data] | Results of similarity search |
+| vector_store | Cassandra | A Cassandra vector store instance configured with the specified parameters. |
+| search_results | List[Data] | The results of the similarity search as a list of `Data` objects. |
 
 ## Cassandra Graph Vector Store
 
@@ -129,8 +159,8 @@ This component implements a Cassandra Graph Vector Store with search capabilitie
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built Cassandra Graph vector store |
-| search_results | Search Results | Results of the similarity search as a list of Data objects |
+| vector_store | Vector Store | A Cassandra Graph vector store instance configured with the specified parameters. |
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
 ## Chroma DB
 
@@ -223,6 +253,34 @@ For more information, see the [Couchbase documentation](https://docs.couchbase.c
 |----------------|------------------------|--------------------------------|
 | vector_store   | CouchbaseVectorStore    | A Couchbase vector store instance configured with the specified parameters. |
 
+
+## Elasticsearch
+
+This component creates an Elasticsearch Vector Store with search capabilities.
+For more information, see the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html).
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| es_url | String | Elasticsearch server URL |
+| es_user | String | Username for Elasticsearch authentication |
+| es_password | SecretString | Password for Elasticsearch authentication |
+| index_name | String | Name of the Elasticsearch index |
+| strategy | String | Strategy for vector search ("approximate_k_nearest_neighbors" or "script_scoring") |
+| distance_strategy | String | Strategy for distance calculation ("COSINE", "EUCLIDEAN_DISTANCE", "DOT_PRODUCT") |
+| search_query | String | Query for similarity search |
+| ingest_data | Data | Data to be ingested into the vector store |
+| embedding | Embeddings | Embedding function to use |
+| number_of_results | Integer | Number of results to return in search (default: 4) |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| vector_store | ElasticsearchStore | Elasticsearch vector store instance |
+| search_results | List[Data] | Results of similarity search |
+
 ## FAISS
 
 This component creates a FAISS Vector Store with search capabilities.
@@ -282,8 +340,8 @@ This component implements a Vector Store using HCD.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| vector_store | Vector Store | Built HCD vector store instance |
-| search_results | Search Results | Results of similarity search as a list of Data objects |
+| vector_store | Vector Store | An HCD vector store instance The results of the similarity search as a list of `Data` objects.|
+| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
 
 ## Milvus
 
@@ -345,7 +403,7 @@ For more information, see the [MongoDB Atlas documentation](https://www.mongodb.
 ## Opensearch
 
 This component creates an Opensearch vector store with search capabilities
-For more information, see [Opensearch documentation](https://opensearch.org/platform/search/vector-database.html)
+For more information, see [Opensearch documentation](https://opensearch.org/platform/search/vector-database.html).
 
 ### Inputs
 
@@ -633,8 +691,6 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 |--------------|------------------|-------------------------------|
 | vector_store | WeaviateVectorStore | Weaviate vector store instance |
 
-**Note:** Ensure Weaviate instance is running and accessible. Verify API key, index name, text key, and attributes are set correctly.
-
 ## Weaviate Search
 
 This component searches a Weaviate Vector Store for documents similar to the input.
@@ -659,3 +715,6 @@ For more information, see the [Weaviate Documentation](https://weaviate.io/devel
 | Name           | Type       | Description                |
 |----------------|------------|----------------------------|
 | search_results | List[Data] | Results of similarity search |
+
+
+
