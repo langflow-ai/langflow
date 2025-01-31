@@ -1,9 +1,11 @@
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
+import numpy as np
+import pandas as pd
 from langchain_core.documents import Document
 from loguru import logger
 from pydantic import BaseModel
@@ -84,17 +86,39 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
 
 def _serialize_primitive(obj: Any, *_) -> Any:
     """Handle primitive types without conversion."""
-    if obj is None or isinstance(obj, int | float | bool):
+    if obj is None or isinstance(obj, int | float | bool | complex | str):
         return obj
-    # Handle numpy integer types
-    if hasattr(obj, "dtype") and "int" in str(obj.dtype):
-        return int(obj)
     return None
 
 
 def _serialize_instance(obj: Any, *_) -> str:
     """Handle regular class instances by converting to string."""
     return str(obj)
+
+
+def _truncate_value(value: Any, max_length: int | None, max_items: int | None) -> Any:
+    """Truncate value based on its type and provided limits."""
+    if isinstance(value, str) and max_length is not None and len(value) > max_length:
+        return value[:max_length]
+    if isinstance(value, list | tuple) and max_items is not None and len(value) > max_items:
+        return value[:max_items]
+    return value
+
+
+def _serialize_dataframe(obj: pd.DataFrame, max_length: int | None, max_items: int | None) -> list[dict]:
+    """Serialize pandas DataFrame to a dictionary format."""
+    if max_items is not None and len(obj) > max_items:
+        obj = obj.head(max_items)
+    obj = obj.apply(lambda x: x.apply(lambda y: _truncate_value(y, max_length, max_items)))
+    return obj.to_dict(orient="records")
+
+
+def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | None) -> dict:
+    """Serialize pandas Series to a dictionary format."""
+    if max_items is not None and len(obj) > max_items:
+        obj = obj.head(max_items)
+    obj = obj.apply(lambda x: _truncate_value(x, max_length, max_items))
+    return obj.to_dict()
 
 
 def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | None:
@@ -127,6 +151,10 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
             return _serialize_pydantic_v1(obj, max_length, max_items)
         case dict():
             return _serialize_dict(obj, max_length, max_items)
+        case pd.DataFrame():
+            return _serialize_dataframe(obj, max_length, max_items)
+        case pd.Series():
+            return _serialize_series(obj, max_length, max_items)
         case list() | tuple():
             return _serialize_list_tuple(obj, max_length, max_items)
         case object() if not isinstance(obj, type):  # Match any instance that's not a class
@@ -138,6 +166,20 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
         case object() if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):  # Type alias/generic case
             return repr(obj)
         case _:
+            # Handle numpy numeric types (int, float, bool, complex)
+            if hasattr(obj, "dtype"):
+                if np.issubdtype(obj.dtype, np.number) and hasattr(obj, "item"):
+                    return obj.item()
+                if np.issubdtype(obj.dtype, np.bool_):
+                    return bool(obj)
+                if np.issubdtype(obj.dtype, np.complexfloating):
+                    return complex(cast(complex, obj))
+                if np.issubdtype(obj.dtype, np.str_):
+                    return str(obj)
+                if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
+                    return obj.tobytes().decode("utf-8", errors="ignore")
+                if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
+                    return serialize(obj.item())
             return None
 
 
