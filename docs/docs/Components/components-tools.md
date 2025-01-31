@@ -27,7 +27,7 @@ For an example, see [Make any component a tool](/agents-tool-calling-agent-compo
 
 ## arXiv
 
-This component searches and retrieves papers from [arXiv.org](arXiv.org).
+This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
 
 ### Inputs
 
@@ -162,7 +162,7 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 
 ## DuckDuckGo search
 
-This component performs web searches using the [DuckDuckGo](www.duckduckgo.com) search engine with result-limiting capabilities.
+This component performs web searches using the [DuckDuckGo](https://www.duckduckgo.com) search engine with result-limiting capabilities.
 
 ### Inputs
 
