@@ -44,6 +44,7 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
@@ -97,6 +98,9 @@ class Component(CustomComponent):
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
+        if overlap := self._there_is_overlap_in_inputs_and_outputs():
+            msg = f"Inputs and outputs have overlapping names: {overlap}"
+            raise ValueError(msg)
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
@@ -156,6 +160,19 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    def _there_is_overlap_in_inputs_and_outputs(self) -> set[str]:
+        """Check the `.name` of inputs and outputs to see if there is overlap.
+
+        Returns:
+            set[str]: Set of names that overlap between inputs and outputs.
+        """
+        # Create sets of input and output names for O(1) lookup
+        input_names = {input_.name for input_ in self.inputs if input_.name is not None}
+        output_names = {output.name for output in self.outputs}
+
+        # Return the intersection of the sets
+        return input_names & output_names
 
     @property
     def ctx(self):
@@ -676,7 +693,7 @@ class Component(CustomComponent):
             return PlaceholderGraph(
                 flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
             )
-        msg = f"{name} not found in {self.__class__.__name__}"
+        msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
     def _set_input_value(self, name: str, value: Any) -> None:
@@ -694,7 +711,11 @@ class Component(CustomComponent):
                     name, f"Input is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 )
                 raise ValueError(msg)
-            self._inputs[name].value = value
+            try:
+                self._inputs[name].value = value
+            except Exception as e:
+                msg = f"Error setting input value for {name}: {e}"
+                raise ValueError(msg) from e
             if hasattr(self._inputs[name], "load_from_db"):
                 self._inputs[name].load_from_db = False
         else:
@@ -804,6 +825,7 @@ class Component(CustomComponent):
         for key, input_obj in self._inputs.items():
             if key not in attributes and key not in self._attributes:
                 attributes[key] = input_obj.value or None
+
         self._attributes.update(attributes)
 
     def _set_outputs(self, outputs: list[dict]) -> None:
@@ -929,7 +951,11 @@ class Component(CustomComponent):
         return result
 
     def _build_artifact(self, result):
-        custom_repr = self.custom_repr() or (result if isinstance(result, dict | Data | str) else str(result))
+        custom_repr = self.custom_repr()
+        if custom_repr is None and isinstance(result, dict | Data | str):
+            custom_repr = result
+        if not isinstance(custom_repr, str):
+            custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
         artifact_type = get_artifact_type(self.status or raw, result)
@@ -998,7 +1024,7 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)

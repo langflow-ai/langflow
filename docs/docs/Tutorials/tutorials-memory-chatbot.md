@@ -1,13 +1,13 @@
 ---
-title: Memory Chatbot
+title: Memory chatbot
 slug: /tutorials-memory-chatbot
 ---
 
-This flow extends the [basic prompting](/starter-projects-basic-prompting) flow to include a chat memory. This makes the AI remember previous user inputs.
+import Icon from "@site/src/components/icon";
 
-## Prerequisites {#a71d73e99b1543bbba827207503cf31f}
+This flow extends the [basic prompting flow](/starter-projects-basic-prompting) with a **Chat memory** component that stores up to 100 previous chat messages and uses them to provide context for the current conversation.
 
----
+## Prerequisites
 
 - [Langflow installed and running](/get-started-installation)
 - [OpenAI API key created](https://platform.openai.com/)
@@ -20,31 +20,49 @@ This flow extends the [basic prompting](/starter-projects-basic-prompting) flo
 
 ![](/img/starter-flow-memory-chatbot.png)
 
-This flow uses the same components as the Basic Prompting one, but extends it with a **Chat Memory** component. This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
+This flow adds a **Chat Memory** component to the Basic Prompting flow.
+This component retrieves previous messages and sends them to the **Prompt** component to fill a part of the **Template** with context.
 
-By clicking the template, you'll see the prompt editor like below:
+To examine the template, click the **Template** field in the **Prompt** component.
+The **Prompt** tells the **OpenAI model** component how to respond to input.
+
+```plain
+You are a helpful assistant that answers questions.
+
+Use markdown to format your answer, properly embedding images and urls.
+
+History:
+
+{memory}
+```
+
+The `{memory}` code in the prompt creates a new input port in the component called **memory**.
+The **Chat Memory** component is connected to this port to store chat messages from the **Playground**.
 
 This gives the **OpenAI** component a memory of previous chat messages.
 
 ## Run the memory chatbot flow
 
-1. Open the Playground.
-2. Type multiple questions. In the **Memories** tab, your queries are logged in order. Up to 100 queries are stored by default. Try telling the AI your name and asking `What is my name?` on a second message, or `What is the first subject I asked you about?` to validate that previous knowledge is taking effect.
+1. Open the **Playground**.
+2. Type multiple questions. For example, try entering this conversation:
 
-:::tip
+```plain
+Hi, my name is Luca.
+Please tell me about PostgreSQL.
+What is my name?
+What is the second subject I asked you about?
+```
 
-Check and adjust advanced parameters by opening the Advanced Settings of the **Chat Memory** component.
+The chatbot remembers your name and previous questions.
 
-:::
+3. To view the **Message Logs** pane, click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" />, and then click **Message Logs**.
+The **Message Logs** pane displays all previous messages, with each conversation sorted by `session_id`.
 
-
-
+![](/img/messages-logs.png)
 
 ## Use Session ID with the memory chatbot flow
 
----
-
-`SessionID` is a unique identifier in Langflow that stores conversation sessions between the AI and a user. A `SessionID` is created when a conversation is initiated, and then associated with all subsequent messages during that session.
+`session_id` is a unique identifier in Langflow that stores conversation sessions between the AI and a user. A `session_id` is created when a conversation is initiated, and then associated with all subsequent messages during that session.
 
 In the **Memory Chatbot** flow you created, the **Chat Memory** component references past interactions by **Session ID**. You can demonstrate this by modifying the **Session ID** value to switch between conversation histories.
 
@@ -52,10 +70,4 @@ In the **Memory Chatbot** flow you created, the **Chat Memory** component re
 2. Now, once you send a new message the **Playground**, you should have a new memory created on the **Memories** tab.
 3. Notice how your conversation is being stored in different memory sessions.
 
-:::tip
-
-Every chat component in Langflow comes with a `SessionID`. It defaults to the flow ID. Explore how changing it affects what the AI remembers.
-
-:::
-
-Learn more about memories in the [Memory](/components-memories) section.
+Learn more about chat memories in the [Memory](/components-memories) section.

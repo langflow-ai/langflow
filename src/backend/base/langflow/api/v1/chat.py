@@ -69,7 +69,7 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.post("/build/{flow_id}/vertices")
+@router.post("/build/{flow_id}/vertices", deprecated=True)
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
@@ -350,12 +350,12 @@ async def build_flow(
         build_task = asyncio.create_task(_build_vertex(vertex_id, graph, event_manager))
         try:
             await build_task
+            vertex_build_response: VertexBuildResponse = build_task.result()
         except asyncio.CancelledError as exc:
             logger.exception(exc)
             build_task.cancel()
             return
 
-        vertex_build_response: VertexBuildResponse = build_task.result()
         # send built event or error event
         try:
             vertex_build_response_json = vertex_build_response.model_dump_json()
@@ -471,7 +471,7 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
                 break
 
 
-@router.post("/build/{flow_id}/vertices/{vertex_id}")
+@router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
 async def build_vertex(
     *,
     flow_id: uuid.UUID,
@@ -713,7 +713,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
-@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
+@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse, deprecated=True)
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
