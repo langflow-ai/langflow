@@ -270,8 +270,6 @@ class ResultDataResponse(BaseModel):
     @classmethod
     def serialize_results(cls, v):
         """Serialize results with custom handling for special types and truncation."""
-        if isinstance(v, dict):
-            return {key: serialize(val, max_length=MAX_TEXT_LENGTH) for key, val in v.items()}
         return serialize(v, max_length=MAX_TEXT_LENGTH)
 
     @model_serializer(mode="plain")
