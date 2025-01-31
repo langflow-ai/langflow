@@ -1,4 +1,3 @@
-import json
 import re
 
 from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
@@ -96,7 +95,7 @@ class URLComponent(Component):
                     json_content = json.loads(doc.page_content)
                     data_dict = {
                         "text": json.dumps(json_content, indent=2),
-                        **{key: str(value) for key, value in json_content.items()},
+                        **json_content,
                         **doc.metadata
                     }
                     data.append(Data(**data_dict))
@@ -106,9 +105,6 @@ class URLComponent(Component):
                     
         else:
             data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
-        
-        self.status = data
-        return data
         
         self.status = data
         return data
