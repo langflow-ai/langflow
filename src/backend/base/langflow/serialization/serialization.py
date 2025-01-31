@@ -180,7 +180,7 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
                     return obj.tobytes().decode("utf-8", errors="ignore")
                 if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
                     return serialize(obj.item())
-            return None
+            return str(obj)
 
 
 def serialize(
