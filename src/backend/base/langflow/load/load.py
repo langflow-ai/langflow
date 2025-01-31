@@ -1,13 +1,14 @@
-import asyncio
 import json
+from io import StringIO
 from pathlib import Path
 
 from aiofile import async_open
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 from loguru import logger
 
 from langflow.graph import Graph
 from langflow.graph.schema import RunOutputs
+from langflow.load.utils import replace_tweaks_with_env
 from langflow.logging.logger import configure
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.utils.async_helpers import run_until_complete
@@ -49,14 +50,17 @@ async def aload_flow_from_json(
     configure(log_level=log_level, log_file=log_file_path, disable=disable_logs, async_file=True)
 
     # override env variables with .env file
-    if env_file:
-        await asyncio.to_thread(load_dotenv, env_file, override=True)
+    if env_file and tweaks is not None:
+        async with async_open(Path(env_file), encoding="utf-8") as f:
+            content = await f.read()
+            env_vars = dotenv_values(stream=StringIO(content))
+        tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=env_vars)
 
     # Update settings with cache and components path
     await update_settings(cache=cache)
 
     if isinstance(flow, str | Path):
-        async with async_open(Path(flow).name, encoding="utf-8") as f:
+        async with async_open(Path(flow), encoding="utf-8") as f:
             content = await f.read()
             flow_graph = json.loads(content)
     # If input is a dictionary, assume it's a JSON object
