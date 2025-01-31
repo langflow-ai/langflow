@@ -386,18 +386,17 @@ class Component(CustomComponent):
         """
         # override outputs (generated from the class code) with vertex outputs
         # if they exist (generated from the frontend)
-        outputs = self.outputs or []
-        temp_outputs = []
+        outputs = []
         if self._vertex and self._vertex.outputs:
             for output in self._vertex.outputs:
                 try:
                     output_ = Output(**output)
-                    temp_outputs.append(output_)
+                    outputs.append(output_)
                 except ValidationError as e:
                     msg = f"Invalid output: {e}"
                     raise ValueError(msg) from e
-            outputs = temp_outputs
-
+        else:
+            outputs = self.outputs
         for output in outputs:
             if output.name is None:
                 msg = "Output name cannot be None."
@@ -959,8 +958,6 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
-        if not isinstance(result, Data) and isinstance(result, dict):
-            result = Data(data=result)
         output.value = result
 
         return result

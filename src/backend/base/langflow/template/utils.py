@@ -111,7 +111,7 @@ def apply_json_filter(result, filter_):
     """Apply a json filter to the result.
 
     Args:
-        result (dict | Data): The JSON data to filter
+        result (Data): The JSON data to filter
         filter_ (str): The filter query string in jsonquery format
 
     Returns:
@@ -138,7 +138,7 @@ def apply_json_filter(result, filter_):
         return jsonquery(result_str, query)
 
     except (ImportError, ValueError, TypeError):
-        # Fallback to basic path-based filtering if jsonquery is not available
+        # Fallback to basic path-based filtering
         # or if there's an error processing the query
         # Normalize array access notation and handle direct key access
         filter_str = filter_.strip()
@@ -175,4 +175,4 @@ def apply_json_filter(result, filter_):
             else:
                 return None
 
-        return current
+        return Data(data=current)
