@@ -58,7 +58,7 @@ export default function EmbedModal({ open, setOpen, embedCode }: EmbedModalProps
           <SyntaxHighlighter
             language="html"
             style={oneDark}
-            className="!my-0 h-full overflow-auto rounded-sm !rounded-t-none border border-t-0 border-border text-left custom-scroll"
+            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md !rounded-t-none border border-border text-left !custom-scroll"
           >
             {embedCode}
           </SyntaxHighlighter>

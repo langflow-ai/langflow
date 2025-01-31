@@ -8,15 +8,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ENABLE_WIDGET } from "@/customization/feature-flags";
+import getWidgetCode from "@/modals/apiModal/utils/get-widget-code";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useAuthStore from "@/stores/authStore";
 import { useState } from "react";
 export default function PublishDropdown() {
   const domain = window.location.origin;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
   const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
+  const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
   const hasIO = useFlowStore((state) => state.hasIO);
+  const isAuth = useAuthStore((state) => !!state.autoLogin);
 
   // using js const instead of applies.css because of group tag
   const groupStyle = "text-muted-foreground group-hover:text-foreground";
@@ -105,7 +109,7 @@ export default function PublishDropdown() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <EmbedModal open={openEmbedModal} setOpen={setOpenEmbedModal} embedCode={""} />
+    <EmbedModal open={openEmbedModal} setOpen={setOpenEmbedModal} embedCode={getWidgetCode({ flowId: flowId ?? "", flowName: flowName ?? "", isAuth: !isAuth, tweaksBuildedObject: {}, activeTweaks: false })} />
     </>
   );
 }
