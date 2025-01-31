@@ -154,7 +154,10 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -425,7 +428,10 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -676,7 +682,10 @@
                 "method": "parse_data",
                 "name": "text",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -686,7 +695,10 @@
                 "method": "parse_data_as_list",
                 "name": "data_list",
                 "selected": "Data",
-                "types": ["Data"],
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -885,7 +897,10 @@
                 "name": "data",
                 "required_inputs": [],
                 "selected": "Data",
-                "types": ["Data"],
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1126,7 +1141,10 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1273,7 +1291,10 @@
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1284,7 +1305,10 @@
                 "name": "model_output",
                 "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
-                "types": ["LanguageModel"],
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],

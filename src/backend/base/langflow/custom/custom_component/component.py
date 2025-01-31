@@ -44,6 +44,7 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
@@ -1023,7 +1024,7 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)

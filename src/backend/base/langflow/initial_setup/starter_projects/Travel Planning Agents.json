@@ -198,7 +198,10 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -475,7 +478,10 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -753,7 +759,10 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1306,7 +1315,10 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1859,7 +1871,10 @@
                 "method": "message_response",
                 "name": "response",
                 "selected": "Message",
-                "types": ["Message"],
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
