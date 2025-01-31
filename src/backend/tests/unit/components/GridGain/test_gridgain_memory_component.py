@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from langflow.base.memory.model import LCChatMemoryComponent
-from base.langflow.components.memories.GridGainChatMemory import GridGainChatMemory
+from base.langflow.components.memories.gridgain import GridGainChatMemory
 
 
 # Test component class

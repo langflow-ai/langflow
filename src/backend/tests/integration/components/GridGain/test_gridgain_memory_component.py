@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ChatMessage
-from base.langflow.components.memories.GridGainChatMemory import GridGainChatMemory
+from base.langflow.components.memories.gridgain import GridGainChatMemory
 
 import asyncio
 

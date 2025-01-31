@@ -4,7 +4,7 @@ import tempfile
 import os
 from langchain.schema import Document
 from langchain.embeddings import OpenAIEmbeddings
-from base.langflow.components.vectorstores.GridGain import GridGainVectorStoreComponent
+from base.langflow.components.vectorstores.gridgain import GridGainVectorStoreComponent
 
 class TestGridGainVectorStore(unittest.TestCase):
     @classmethod

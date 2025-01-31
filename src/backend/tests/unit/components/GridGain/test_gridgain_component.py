@@ -9,7 +9,7 @@ import tempfile
 import os
 
 # Import the class to test
-from base.langflow.components.vectorstores.GridGain import GridGainVectorStoreComponent
+from base.langflow.components.vectorstores.gridgain import GridGainVectorStoreComponent
 
 @pytest.fixture
 def component():
@@ -81,7 +81,7 @@ Another content"""
         with pytest.raises(Exception):
             component.process_csv("nonexistent_file.csv")
 
-    @patch('base.langflow.components.vectorstores.GridGain.Client')
+    @patch('base.langflow.components.vectorstores.gridGain.Client')
     def test_connect_to_ignite(self, mock_client, component):
         """Test connection to GridGain server."""
         mock_client_instance = MagicMock()
@@ -93,7 +93,7 @@ Another content"""
         mock_client_instance.connect.assert_called_once_with(component.host, component.port)
         assert result == mock_client_instance
 
-    @patch('base.langflow.components.vectorstores.GridGain.Client')
+    @patch('base.langflow.components.vectorstores.gridGain.Client')
     def test_build_vector_store_without_csv(self, mock_client, component):
         """Test building vector store without CSV input."""
         # Setup mock client
@@ -101,7 +101,7 @@ Another content"""
         mock_client.return_value = mock_client_instance
         
         # Setup mock GridGainVectorStore
-        with patch('base.langflow.components.vectorstores.GridGain.GridGainVectorStore') as mock_gridgain:
+        with patch('base.langflow.components.vectorstores.gridGain.GridGainVectorStore') as mock_gridgain:
             mock_gridgain_instance = MagicMock()
             mock_gridgain.return_value = mock_gridgain_instance
             
@@ -115,7 +115,7 @@ Another content"""
             )
             assert vector_store == mock_gridgain_instance
 
-    @patch('base.langflow.components.vectorstores.GridGain.Client')
+    @patch('base.langflow.components.vectorstores.gridGain.Client')
     def test_build_vector_store_with_csv(self, mock_client, component, sample_csv_file):
         """Test building vector store with CSV input."""
         # Setup mock client
@@ -123,7 +123,7 @@ Another content"""
         mock_client.return_value = mock_client_instance
         
         # Setup mock GridGainVectorStore
-        with patch('base.langflow.components.vectorstores.GridGain.GridGainVectorStore') as mock_gridgain:
+        with patch('base.langflow.components.vectorstores.gridGain.GridGainVectorStore') as mock_gridgain:
             mock_gridgain_instance = MagicMock()
             mock_gridgain.return_value = mock_gridgain_instance
             
@@ -143,35 +143,7 @@ Another content"""
         assert results == []
         assert "No search query provided" in component.status
 
-    # @patch('base.langflow.components.vectorstores.GridGain.Client')
-    # def test_search_documents_valid_query(self, mock_client, component):
-    #     """Test search with valid query."""
-    #     # Setup mock client
-    #     mock_client_instance = MagicMock()
-    #     mock_client.return_value = mock_client_instance
-        
-    #     # Setup mock GridGainVectorStore
-    #     with patch('base.langflow.components.vectorstores.GridGain.GridGainVectorStore') as mock_gridgain:
-    #         mock_gridgain_instance = MagicMock()
-    #         mock_docs = [
-    #             Document(page_content="Test content 1", metadata={"source": "test1"}),
-    #             Document(page_content="Test content 2", metadata={"source": "test2"})
-    #         ]
-    #         mock_gridgain_instance.similarity_search.return_value = mock_docs
-    #         mock_gridgain.return_value = mock_gridgain_instance
-            
-    #         component.search_query = "test query"
-    #         component.number_of_results = 2
-    #         results = component.search_documents()
-            
-    #         assert len(results) == 2
-    #         mock_gridgain_instance.similarity_search.assert_called_once_with(
-    #             query="test query",
-    #             k=2
-    #         )
-    #         assert "Found 2 results" in component.status
-
-    @patch('base.langflow.components.vectorstores.GridGain.Client')
+    @patch('base.langflow.components.vectorstores.gridGain.Client')
     def test_search_documents_error_handling(self, mock_client, component):
         """Test search error handling."""
         # Setup mock client to raise an exception
