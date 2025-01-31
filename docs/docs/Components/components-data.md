@@ -194,11 +194,11 @@ This component fetches content from one or more URLs, processes the content, and
 
 ## Webhook
 
-This component defines a webhook trigger that runs the flow when it receives an HTTP POST request.
+This component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
 
 If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. The component does not require an API key.
 
-When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for testing the webhook component. For example:
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
 
 ```bash
 curl -X POST \
