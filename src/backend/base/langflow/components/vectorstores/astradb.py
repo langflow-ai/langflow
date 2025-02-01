@@ -496,12 +496,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def reset_database_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
-        database_options = self._initialize_database_options()
+        database_options = self._fetch_and_cache_database_options()
 
-        # If we retrieved options based on the token, show the dropdown
+        # If we retrieved options based on the token, update the dropdown
         build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
         build_config["api_endpoint"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            {
+                "collections": db["collections"],
+                "api_endpoint": db["api_endpoint"],
+            }
+            for db in database_options
         ]
 
         # Reset the selected database
@@ -806,3 +810,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def __init__(self):
+        super().__init__()
+        self.cached_db_options = None
+
+    def _fetch_and_cache_database_options(self):
+        if not self.cached_db_options:
+            try:
+                self.cached_db_options = [
+                    {
+                        "name": name,
+                        "collections": info["collections"],
+                        "api_endpoint": info["api_endpoint"],
+                    }
+                    for name, info in self.get_database_list().items()
+                ]
+            except Exception as e:
+                raise ValueError(f"Error fetching database options: {e}") from e
+
+        return self.cached_db_options
