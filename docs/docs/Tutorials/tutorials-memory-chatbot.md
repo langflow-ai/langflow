@@ -67,7 +67,7 @@ The **Message Logs** pane displays all previous messages, with each conversation
 In the **Memory Chatbot** flow you created, the **Chat Memory** component references past interactions by **Session ID**. You can demonstrate this by modifying the **Session ID** value to switch between conversation histories.
 
 1. In the **Session ID** field of the **Chat Memory** and **Chat Input** components, add a **Session ID** value like `MySessionID`.
-2. Now, once you send a new message the **Playground**, you should have a new memory created on the **Memories** tab.
+2. Now, once you send a new message the **Playground**, you should have a new memory created in the **Message Logs** pane.
 3. Notice how your conversation is being stored in different memory sessions.
 
 Learn more about chat memories in the [Memory](/components-memories) section.
