@@ -60,12 +60,12 @@ class DuckDuckGoSearchComponent(Component):
 
             full_results = wrapper.run(f"{self.input_value} (site:*)")
 
-            result_list = full_results.split("\n")[:self.max_results]
+            result_list = full_results.split("\n")[: self.max_results]
 
             data_results = []
             for result in result_list:
-                if result.strip():  
-                    snippet = result[:self.max_snippet_length]
+                if result.strip():
+                    snippet = result[: self.max_snippet_length]
                     data_results.append(
                         Data(
                             text=snippet,
