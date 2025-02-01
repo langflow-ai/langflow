@@ -29,7 +29,10 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info="Output Format. Use 'Text' to extract the text from the HTML, 'Raw HTML' for the raw HTML content or 'JSON' to extract JSON from the HTML ",
+            info=(
+                "Output Format. Use 'Text' to extract the text from the HTML, 'Raw HTML' "
+                "for the raw HTML content or 'JSON' to extract JSON from the HTML"
+            ),
             options=["Text", "Raw HTML", "JSON"],
             value="Text",
         ),
@@ -42,9 +45,7 @@ class URLComponent(Component):
     ]
 
     def ensure_url(self, string: str) -> str:
-        """Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.
-
-        Raises an error if the string is not a valid URL.
+        """Ensures the given string is a URL by adding 'http://' if needed.
 
         Parameters:
             string (str): The string to be checked and possibly modified.
@@ -72,10 +73,9 @@ class URLComponent(Component):
         if not url_regex.match(string):
             msg = f"Invalid URL: {string}"
             raise ValueError(msg)
-        if self.format == "JSON":
-            if ".json" not in string:
-                msg = f"Invalid JSON URL: {string}"
-                raise ValueError(msg)
+        if self.format == "JSON" and ".json" not in string:
+            msg = f"Invalid JSON URL: {string}"
+            raise ValueError(msg)
 
         return string
 
@@ -96,9 +96,9 @@ class URLComponent(Component):
                     json_content = json.loads(doc.page_content)
                     data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
                     data.append(Data(**data_dict))
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as err:
                     msg = f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
-                    raise ValueError(msg)
+                    raise ValueError(msg) from err
 
         else:
             data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
