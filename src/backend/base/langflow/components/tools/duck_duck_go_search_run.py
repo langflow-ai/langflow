@@ -47,8 +47,8 @@ class DuckDuckGoSearchComponent(Component):
     ]
 
     def _build_wrapper(self) -> DuckDuckGoSearchRun:
-        """Build the DuckDuckGo search wrapper."""
-        return DuckDuckGoSearchRun()
+        """Return the pre-built DuckDuckGo search wrapper."""
+        return self._wrapper
 
     def run_model(self) -> list[Data]:
         return self.fetch_content()
@@ -89,3 +89,7 @@ class DuckDuckGoSearchComponent(Component):
         result_string = "\n".join(item.text for item in data)
         self.status = result_string
         return Message(text=result_string)
+
+    def __init__(self):
+        """Initialize the DuckDuckGo search component."""
+        self._wrapper = DuckDuckGoSearchRun()
