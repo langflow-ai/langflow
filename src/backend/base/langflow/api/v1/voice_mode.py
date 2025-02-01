@@ -288,8 +288,8 @@ async def websocket_endpoint(
                         if not base64_data:
                             continue
                         raw_chunk_24k = base64.b64decode(base64_data)
-                        with open("debug_incoming_24k.raw", "ab") as f:
-                            f.write(raw_chunk_24k)
+                        #with open("debug_incoming_24k.raw", "ab") as f:
+                        #    f.write(raw_chunk_24k)
 
                         # Accumulate in audio_buffer
                         audio_buffer.extend(raw_chunk_24k)
