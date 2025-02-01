@@ -58,16 +58,13 @@ class DuckDuckGoSearchComponent(Component):
         try:
             wrapper = self._build_wrapper()
 
-            # Execute search and get full results
             full_results = wrapper.run(f"{self.input_value} (site:*)")
 
-            # Split results and limit to max_results
             result_list = full_results.split("\n")[:self.max_results]
 
-            # Process and format results
             data_results = []
             for result in result_list:
-                if result.strip():  # Only process non-empty results
+                if result.strip():  
                     snippet = result[:self.max_snippet_length]
                     data_results.append(
                         Data(
