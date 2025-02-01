@@ -1,0 +1,23 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # Executa a cada hora
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Fork
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Pull Changes from Upstream
+        run: |
+          git remote add upstream https://github.com/langflow-ai/langflow.git
+          git fetch upstream
+          git merge upstream/main --allow-unrelated-histories
+          git push origin main
