@@ -11,15 +11,19 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("duck");
 
-    await page.waitForSelector('//*[@id="toolsDuckDuckGo Search"]', {
+    await page.waitForSelector('[data-testid="toolsDuckDuckGo Search"]', {
       timeout: 3000,
     });
 
     await page
-      .locator('//*[@id="toolsDuckDuckGo Search"]')
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .getByTestId("toolsDuckDuckGo Search")
+      .hover()
+      .then(async () => {
+        await page
+          .getByTestId("add-component-button-duckduckgo-search")
+          .click();
+      });
+
     await page.getByTestId("fit_view").click();
 
     await page
@@ -42,7 +46,7 @@ test(
         ) ?? false;
 
       await page
-        .getByTestId("output-inspection-data-duckduckgosearch")
+        .getByTestId("output-inspection-data-duckduckgosearchcomponent")
         .first()
         .click();
 
