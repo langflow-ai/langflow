@@ -9,12 +9,12 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import (
     get_current_active_superuser,
     get_password_hash,
     verify_password,
 )
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.user import User, UserCreate, UserRead, UserUpdate
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.deps import get_settings_service
@@ -35,7 +35,7 @@ async def add_user(
         session.add(new_user)
         await session.commit()
         await session.refresh(new_user)
-        folder = await create_default_folder_if_it_doesnt_exist(session, new_user.id)
+        folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
             raise HTTPException(status_code=500, detail="Error creating default folder")
     except IntegrityError as e:
