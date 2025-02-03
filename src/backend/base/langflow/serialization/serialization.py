@@ -86,7 +86,7 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
 
 def _serialize_primitive(obj: Any, *_) -> Any:
     """Handle primitive types without conversion."""
-    if obj is None or isinstance(obj, int | float | bool | complex | str):
+    if obj is None or isinstance(obj, int | float | bool | complex):
         return obj
     return None
 
