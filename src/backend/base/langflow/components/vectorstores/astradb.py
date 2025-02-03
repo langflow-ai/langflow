@@ -459,37 +459,38 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
+        keyspace = self.get_keyspace()  # Cache the keyspace
 
         # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+        collection_list = list(database.list_collections(keyspace=keyspace))
 
-        # Return the list of collections and metadata associated
-        return [
-            {
+        def get_collection_metadata(col):
+            service = col.options.vector.service if col.options.vector else None
+            return {
                 "name": col.name,
                 "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
+                "provider": service.provider if service else None,
                 "icon": "",
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
+                "model": service.model_name if service else None,
             }
-            for col in collection_list
-        ]
+
+        # Return the list of collections and their metadata
+        return [get_collection_metadata(col) for col in collection_list]
 
     def reset_collection_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
         collection_options = self._initialize_collection_options()
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-        ]
+        # Generate options and options_metadata in a single pass
+        options = []
+        options_metadata = []
+        for col in collection_options:
+            options.append(col["name"])
+            options_metadata.append({k: v for k, v in col.items() if k != "name"})
 
-        # Reset the selected collection
+        # Update build_config with collection options and reset selected collection
+        build_config["collection_name"]["options"] = options
+        build_config["collection_name"]["options_metadata"] = options_metadata
         build_config["collection_name"]["value"] = ""
 
         return build_config
