@@ -26,7 +26,6 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
-    initialize_super_user_if_needed,
     load_bundles_from_urls,
     load_flows_from_directory,
 )
@@ -120,7 +119,6 @@ def get_lifespan(*, fix_migration=False, version=None):
         try:
             await initialize_services(fix_migration=fix_migration)
             setup_llm_caching()
-            await initialize_super_user_if_needed()
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
