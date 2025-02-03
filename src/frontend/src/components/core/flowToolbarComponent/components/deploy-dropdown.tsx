@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 
@@ -14,6 +15,9 @@ export default function PublishDropdown() {
   const domain = window.location.origin;
   const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
   const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
+  const isPublished = useFlowsManagerStore(
+    (state) => state.currentFlow?.public,
+  );
   const hasIO = useFlowStore((state) => state.hasIO);
 
   // using js const instead of applies.css because of group tag
@@ -60,10 +64,21 @@ export default function PublishDropdown() {
                   className={`${groupStyle} icon-size mr-2`}
                 />
                 <span>Standalone app</span>
-                <IconComponent
-                  name="ExternalLink"
-                  className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
-                />
+                <div
+                  className={`icon-size ml-auto pr-8 text-foreground`}
+                >
+                  <Switch
+                    className="w-9 h-5"
+                    checked={isPublished}
+                    onCheckedChange={(checked) => {
+                      console.log(checked);
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  />
+                </div>
               </div>
             </DropdownMenuItem>
           </div>
