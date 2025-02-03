@@ -34,7 +34,7 @@ The use of asynchronous messaging patterns is recommended for system scalability
 It includes code examples of REST and gRPC implementations to demonstrate integration approaches.
 ```
 
-## Conditional router
+## Conditional router (If-Else component)
 
 This component routes an input message to a corresponding output based on text comparison.
 
@@ -82,7 +82,12 @@ This component is particularly useful in workflows that require conditional rout
 | false_output | Data/List   | Output when the condition is not met.                |
 
 
-## Flow as Tool {#flow-as-tool}
+## Flow as tool {#flow-as-tool}
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
 
 This component constructs a tool from a function that runs a loaded flow.
 
@@ -153,6 +158,23 @@ This component generates a notification for the Listen component to use.
 |--------|------|-----------------------------------------|
 | output | Data | The data stored in the notification.    |
 
+## Pass message
+
+This component forwards the input message, unchanged.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | The message to be passed forward. |
+| ignored_message | Ignored Message | A second message to be ignored. Used as a workaround for continuity. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_message | Output Message | The forwarded input message. |
+
 ## Run flow
 
 This component allows you to run a specified flow with given inputs and tweaks.
@@ -173,7 +195,12 @@ The RunFlowComponent executes a specified flow within a larger workflow. It prov
 |-------------|-------------|------------------------------------------------|
 | run_outputs | List[Data]  | The results generated from running the flow.   |
 
-## Sub Flow
+## Sub flow
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
 
 This `SubFlowComponent` generates a component from a flow with all of its inputs and outputs.
 
