@@ -376,21 +376,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        return self._keyspace
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-
-            return client.get_database(
+            return self._client.get_database(
                 api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
                 token=self.token,
-                keyspace=self.get_keyspace(),
+                keyspace=self._keyspace,
             )
         except Exception as e:
             msg = f"Error fetching database object: {e}"
@@ -457,25 +450,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
-        # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
-        keyspace = self.get_keyspace()  # Cache the keyspace
+        keyspace = self._keyspace  # Use cached keyspace
 
-        # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=keyspace))
-
-        def get_collection_metadata(col):
-            service = col.options.vector.service if col.options.vector else None
-            return {
+        # Get the list of collections and metadata using list comprehension
+        collection_list = database.list_collections(keyspace=keyspace)
+        return [
+            {
                 "name": col.name,
                 "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": service.provider if service else None,
+                "provider": col.options.vector.service.provider if col.options.vector else None,
                 "icon": "",
-                "model": service.model_name if service else None,
+                "model": col.options.vector.service.model_name if col.options.vector else None,
             }
-
-        # Return the list of collections and their metadata
-        return [get_collection_metadata(col) for col in collection_list]
+            for col in collection_list
+        ]
 
     def reset_collection_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
@@ -807,3 +796,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._keyspace = self.keyspace.strip() if self.keyspace else None  # Cache keyspace
+        self._client = DataAPIClient(token=self.token, environment=self.environment)  # Initialize client once
