@@ -236,7 +236,7 @@ async def initialize_super_user_if_needed(
 ) -> None:
     if settings_service is None:
         settings_service = get_settings_service()
-    if not settings_service.auth_settings.AUTO_LOGIN or settings_service.auth_settings.DISABLE_SUPERUSER_CREATION:
+    if not settings_service.auth_settings.AUTO_LOGIN or settings_service.auth_settings.disable_superuser_creation:
         return
     username = settings_service.auth_settings.SUPERUSER
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
