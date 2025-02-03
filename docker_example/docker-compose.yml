@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   langflow:
     image: langflowai/langflow:latest # or another version tag on https://hub.docker.com/r/langflowai/langflow 
