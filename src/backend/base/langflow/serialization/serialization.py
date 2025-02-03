@@ -128,8 +128,7 @@ def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | N
     """Serialize pandas Series to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    obj = obj.apply(lambda x: _truncate_value(x, max_length, max_items))
-    return obj.to_dict()
+    return {index: _truncate_value(value, max_length, max_items) for index, value in obj.items()}
 
 
 def _is_numpy_type(obj: Any) -> bool:
