@@ -21,6 +21,22 @@ async def byte_stream_generator(file_bytes: bytes, chunk_size: int = 8192) -> As
     for i in range(0, len(file_bytes), chunk_size):
         yield file_bytes[i : i + chunk_size]
 
+async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser, session: DbSession):
+    # Fetch the file from the DB
+    stmt = select(UserFile).where(UserFile.id == file_id)
+    results = await session.exec(stmt)
+    file = results.first()
+
+    # Check if the file exists
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Make sure the user has access to the file
+    if file.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You don't have access to this file")
+
+    return file
+
 
 @router.post("", status_code=HTTPStatus.CREATED)
 async def upload_user_file(
@@ -105,18 +121,8 @@ async def download_file(
 ):
     """Download a file by its ID."""
     try:
-        # Grab the file from the DB
-        stmt = select(UserFile).where(UserFile.id == file_id)
-        results = await session.exec(stmt)
-        file = results.first()
-
-        # Check if the file exists
-        if not file:
-            raise HTTPException(status_code=404, detail="File not found")
-
-        # Make sure the user has access to the file
-        if file.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="You don't have access to this file")
+        # Fetch the file from the DB
+        file = await fetch_file_object(file_id, current_user, session)
 
         # Get file stream
         file_stream = await storage_service.get_file(flow_id=str(current_user.id), file_name=file.path)
@@ -132,3 +138,51 @@ async def download_file(
         media_type="application/octet-stream",
         headers={"Content-Disposition": f'attachment; filename="{file.name}"'},
     )
+
+@router.put("/{file_id}")
+async def edit_file_name(
+    file_id: uuid.UUID,
+    name: str,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+) -> UploadFileResponse:
+    """Edit the name of a file by its ID."""
+    try:
+        # Fetch the file from the DB
+        file = await fetch_file_object(file_id, current_user, session)
+
+        # Update the file name
+        file.name = name
+        await session.commit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
+
+    return UploadFileResponse(id=file.id, name=file.name, path=file.path)
+
+@router.delete("/{file_id}")
+async def delete_file(
+    file_id: uuid.UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+):
+    """Delete a file by its ID."""
+    try:
+        # Fetch the file from the DB
+        file = await fetch_file_object(file_id, current_user, session)
+        if not file:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # Delete the file from the storage service
+        await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+
+        # Delete from the database
+        await session.delete(file)
+        await session.flush()  # Ensures delete is staged
+        await session.commit()  # Commit deletion
+
+    except Exception as e:
+        await session.rollback()  # Rollback on failure
+        raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
+
+    return {"message": "File deleted successfully"}
