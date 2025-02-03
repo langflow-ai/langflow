@@ -27,8 +27,8 @@ async def upload_user_file(
     file: Annotated[UploadFile, File(...)],
     session: DbSession,
     current_user: CurrentActiveUser,
-    storage_service = Depends(get_storage_service),
-    settings_service = Depends(get_settings_service),
+    storage_service=Depends(get_storage_service),
+    settings_service=Depends(get_settings_service),
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
     # Get the max allowed file size from settings (in MB)
@@ -79,6 +79,7 @@ async def upload_user_file(
 
     return UploadFileResponse(id=new_file.id, name=new_file.name, path=new_file.path)
 
+
 @router.get("")
 async def list_files(
     current_user: CurrentActiveUser,
@@ -93,6 +94,7 @@ async def list_files(
         return results.all()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
+
 
 @router.get("/{file_id}")
 async def download_file(
@@ -128,5 +130,5 @@ async def download_file(
     return StreamingResponse(
         byte_stream,
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{file.name}"'}
+        headers={"Content-Disposition": f'attachment; filename="{file.name}"'},
     )
