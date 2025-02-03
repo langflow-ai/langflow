@@ -124,7 +124,7 @@ export default function PublishDropdown() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    <EmbedModal open={openEmbedModal} setOpen={setOpenEmbedModal} embedCode={getWidgetCode({ flowId: flowId ?? "", flowName: flowName ?? "", isAuth: !isAuth, tweaksBuildedObject: {}, activeTweaks: false })} />
+    <EmbedModal open={openEmbedModal} setOpen={setOpenEmbedModal} flowId={flowId ?? ""} flowName={flowName ?? ""} isAuth={isAuth} tweaksBuildedObject={{}} activeTweaks={false}></EmbedModal>
     </>
   );
 }
