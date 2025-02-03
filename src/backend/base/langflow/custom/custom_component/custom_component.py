@@ -138,6 +138,21 @@ class CustomComponent(BaseComponent):
             msg = f"Error stopping {self.display_name}: {e}"
             raise ValueError(msg) from e
 
+    def start(self, output_name: str | None = None) -> None:
+        if not output_name and self._vertex and len(self._vertex.outputs) == 1:
+            output_name = self._vertex.outputs[0]["name"]
+        elif not output_name:
+            msg = "You must specify an output name to call start"
+            raise ValueError(msg)
+        if not self._vertex:
+            msg = "Vertex is not set"
+            raise ValueError(msg)
+        try:
+            self.graph.mark_branch(vertex_id=self._vertex.id, output_name=output_name, state="ACTIVE")
+        except Exception as e:
+            msg = f"Error starting {self.display_name}: {e}"
+            raise ValueError(msg) from e
+
     def append_state(self, name: str, value: Any) -> None:
         if not self._vertex:
             msg = "Vertex is not set"

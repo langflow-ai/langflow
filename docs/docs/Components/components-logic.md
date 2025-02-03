@@ -7,7 +7,34 @@ slug: /components-logic
 
 Logic components provide functionalities for routing, conditional processing, and flow management.
 
-## Conditional router
+## Use a logic component in a flow
+
+This flow creates a summarizing "for each" loop with the [Loop](/components-logic#loop) component.
+
+The component iterates over a list of [Data](/concepts-objects#data-object) objects until it's completed, and then the **Done** loop aggregates the results.
+
+The **File** component loads text files from your local machine, and then the **Parse Data** component parses them into a list of structured `Data` objects.
+The **Loop** component passes each `Data` object to a **Prompt** to be summarized.
+
+When the **Loop** component runs out of `Data`, the **Done** loop activates, which counts the number of pages and summarizes their tone with another **Prompt**.
+This is represented in Langflow by connecting the Parse Data component's **Data List** output to the Loop component's `Data` loop input.
+
+![Sample Flow looping summarizer](/img/loop-text-summarizer.png)
+
+The output will look similar to this:
+```plain
+Document Summary
+Total Pages Processed
+Total Pages: 2
+Overall Tone of Document
+Tone: Informative and Instructional
+The documentation outlines microservices architecture patterns and best practices.
+It emphasizes service isolation and inter-service communication protocols.
+The use of asynchronous messaging patterns is recommended for system scalability.
+It includes code examples of REST and gRPC implementations to demonstrate integration approaches.
+```
+
+## Conditional router (If-Else component)
 
 This component routes an input message to a corresponding output based on text comparison.
 
@@ -55,7 +82,12 @@ This component is particularly useful in workflows that require conditional rout
 | false_output | Data/List   | Output when the condition is not met.                |
 
 
-## Flow as Tool {#flow-as-tool}
+## Flow as tool {#flow-as-tool}
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
 
 This component constructs a tool from a function that runs a loaded flow.
 
@@ -90,6 +122,24 @@ This component listens for a notification and retrieves its associated state.
 |--------|------|--------------------------------------------|
 | output | Data | The state associated with the notification. |
 
+
+## Loop
+
+This component iterates over a list of [Data](/concepts-objects#data-object) objects, outputting one item at a time and aggregating results from loop inputs.
+
+### Inputs
+
+| Name | Type      | Description                                          |
+|------|-----------|------------------------------------------------------|
+| data | Data/List | The initial list of Data objects to iterate over.    |
+
+### Outputs
+
+| Name | Type    | Description                                           |
+|------|---------|-------------------------------------------------------|
+| item | Data    | Outputs one item at a time from the data list.        |
+| done | Data    | Triggered when iteration complete, returns aggregated results. |
+
 ## Notify
 
 This component generates a notification for the Listen component to use.
@@ -107,6 +157,23 @@ This component generates a notification for the Listen component to use.
 | Name   | Type | Description                             |
 |--------|------|-----------------------------------------|
 | output | Data | The data stored in the notification.    |
+
+## Pass message
+
+This component forwards the input message, unchanged.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | The message to be passed forward. |
+| ignored_message | Ignored Message | A second message to be ignored. Used as a workaround for continuity. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_message | Output Message | The forwarded input message. |
 
 ## Run flow
 
@@ -128,7 +195,12 @@ The RunFlowComponent executes a specified flow within a larger workflow. It prov
 |-------------|-------------|------------------------------------------------|
 | run_outputs | List[Data]  | The results generated from running the flow.   |
 
-## Sub Flow
+## Sub flow
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
 
 This `SubFlowComponent` generates a component from a flow with all of its inputs and outputs.
 

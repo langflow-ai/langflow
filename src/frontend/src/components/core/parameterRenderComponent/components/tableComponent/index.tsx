@@ -219,7 +219,7 @@ const TableComponent = forwardRef<
             }
           }}
         />
-        {!props.tableOptions?.hide_options && (
+        {!props.tableOptions?.hide_options && props.pagination && (
           <TableOptions
             tableOptions={props.tableOptions}
             stateChange={columnStateChange}

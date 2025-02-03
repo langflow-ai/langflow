@@ -41,6 +41,7 @@ import {
   scapedJSONStringfy,
   unselectAllNodesEdges,
   updateGroupRecursion,
+  validateEdge,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
@@ -118,6 +119,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       false,
     );
     set({ isBuilding: false });
+    get().revertBuiltStatusFromBuilding();
+    get().setLockChat(false);
+    useAlertStore.getState().setErrorData({
+      title: "Build stopped",
+    });
   },
   isPending: true,
   setHasIO: (hasIO) => {
@@ -606,6 +612,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
+
+    const edges = get().edges;
+    let error = false;
+    for (const edge of edges) {
+      const errors = validateEdge(edge, get().nodes, edges);
+      if (errors.length > 0) {
+        error = true;
+        setErrorData({
+          title: MISSED_ERROR_ALERT,
+          list: errors,
+        });
+      }
+    }
+    if (error) {
+      get().setIsBuilding(false);
+      get().setLockChat(false);
+      throw new Error("Invalid components");
+    }
+
     function validateSubgraph(nodes: string[]) {
       const errorsObjs = validateNodes(
         get().nodes.filter((node) => nodes.includes(node.id)),
@@ -737,14 +762,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setLockChat(false);
       },
       onBuildUpdate: handleBuildUpdate,
-      onBuildStopped: () => {
-        get().setIsBuilding(false);
-        setErrorData({
-          title: "Build stopped",
-        });
-        get().revertBuiltStatusFromBuilding();
-        get().setLockChat(false);
-      },
       onBuildError: (title: string, list: string[], elementList) => {
         const idList =
           (elementList
@@ -763,6 +780,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         setErrorData({ list, title });
         get().setIsBuilding(false);
         get().setLockChat(false);
+        get().buildController.abort();
       },
       onBuildStart: (elementList) => {
         const idList = elementList

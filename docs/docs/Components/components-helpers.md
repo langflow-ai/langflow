@@ -11,11 +11,30 @@ Helper components provide utility functions to help manage data, tasks, and othe
 
 Chat memory in Langflow is stored either in local Langflow tables with `LCBufferMemory`, or connected to an external database.
 
-The **Store Message** helper component stores chat memories as [Data](/configuration-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
+The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as data objects or strings.
 
 This example flow stores and retrieves chat history from an [AstraDBChatMemory](/components-memories#astradbchatmemory-component) component with **Store Message** and **Chat Memory** components.
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
+
+## Batch Run Component
+
+The Batch Run component runs a language model over each row of a [DataFrame](/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and the model's response.
+
+### Inputs
+
+| Name | Display Name | Type | Info | Required |
+|------|--------------|------|------|----------|
+| model | Language Model | HandleInput | Connect the 'Language Model' output from your LLM component here. | Yes |
+| system_message | System Message | MultilineInput | Multi-line system instruction for all rows in the DataFrame. | No |
+| df | DataFrame | DataFrameInput | The DataFrame whose column (specified by 'column_name') will be treated as text messages. | Yes |
+| column_name | Column Name | StrInput | The name of the DataFrame column to treat as text messages. Default='text'. | Yes |
+
+### Outputs
+
+| Name | Display Name | Method | Info |
+|------|--------------|--------|------|
+| batch_results | Batch Results | run_batch | A DataFrame with two columns: 'text_input' and 'model_response'. |
 
 ## Create List
 
@@ -27,6 +46,12 @@ This component dynamically creates a record with a specified number of fields.
 |------|--------------|------|
 | n_fields | Number of Fields | Number of fields to be added to the record. |
 | text_key | Text Key | Key used as text. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| list | List | The dynamically created list with the specified number of fields. |
 
 ## Current date
 
@@ -48,11 +73,17 @@ The Current Date component returns the current date and time in a selected timez
 
 This component generates a unique ID.
 
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| unique_id| Value | The generated unique ID. |
+
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| value | Value | Unique ID generated. |
+| id | ID | The generated unique ID. |
 
 ## Message history
 
@@ -82,7 +113,7 @@ This component retrieves and manages chat messages from Langflow tables or an ex
 | messages_text | Messages (Text) | Retrieved messages formatted as text. |
 | lc_memory | Memory | A constructed Langchain [ConversationBufferMemory](https://api.python.langchain.com/en/latest/memory/langchain.memory.buffer.ConversationBufferMemory.html) object  |
 
-## Store Message
+## Message store
 
 This component stores chat messages or text into Langflow tables or an external memory.
 
@@ -120,4 +151,7 @@ This component transforms LLM responses into structured data formats.
 
 ### Output
 
-| structured_output | Structured Output | The resulting structured output based on the defined schema. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| stored_messages | Stored Messages | structured output based on the defined schema. |
+
