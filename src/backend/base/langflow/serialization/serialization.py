@@ -120,8 +120,10 @@ def _serialize_dataframe(obj: pd.DataFrame, max_length: int | None, max_items: i
     """Serialize pandas DataFrame to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    obj = obj.apply(lambda x: x.apply(lambda y: _truncate_value(y, max_length, max_items)))
-    return obj.to_dict(orient="records")
+
+    data = obj.to_dict(orient="records")
+
+    return serialize(data, max_length, max_items)
 
 
 def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | None) -> dict:
