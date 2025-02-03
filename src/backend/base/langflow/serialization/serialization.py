@@ -283,3 +283,9 @@ def serialize_or_str(
         max_items: Maximum items in list-like structures, None for no truncation
     """
     return serialize(obj, max_length, max_items, to_str=True)
+
+
+def _truncate_value(value, max_length: int | None, max_items: int | None):
+    if isinstance(value, str) and max_length is not None:
+        return value[:max_length]
+    return value
