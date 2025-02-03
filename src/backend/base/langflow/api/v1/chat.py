@@ -389,7 +389,6 @@ async def build_flow(
             raise
         event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
-
         tasks = []
         for vertex_id in ids:
             task = asyncio.create_task(build_vertices(vertex_id, graph, client_consumed_queue, event_manager))
