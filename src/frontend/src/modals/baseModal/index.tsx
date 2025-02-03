@@ -73,16 +73,18 @@ const Trigger: React.FC<TriggerProps> = ({
 
 const Header: React.FC<{
   children: ReactNode;
-  description: string | JSX.Element | null;
+  description?: string | JSX.Element | null;
 }> = ({ children, description }: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
         {children}
       </DialogTitle>
-      <DialogDescription className="line-clamp-2 text-sm">
-        {description}
-      </DialogDescription>
+      {description && (
+        <DialogDescription className="line-clamp-2 text-sm">
+          {description}
+        </DialogDescription>
+      )}
     </DialogHeader>
   );
 };
@@ -159,6 +161,7 @@ interface BaseModalProps {
   setOpen?: (open: boolean) => void;
   size?:
     | "x-small"
+    | "retangular"
     | "smaller"
     | "small"
     | "medium"
