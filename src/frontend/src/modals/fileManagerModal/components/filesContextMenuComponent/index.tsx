@@ -19,7 +19,7 @@ export default function FilesContextMenuComponent({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent sideOffset={5} side="bottom">
+      <DropdownMenuContent sideOffset={0} side="bottom" className="-ml-24">
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
