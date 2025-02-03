@@ -25,7 +25,12 @@ class LCCompressorComponent(Component):
             info="Search Results from a Vector Store.",
             is_list=True,
         ),
-        IntInput(name="top_n", display_name="Top N", value=3, advanced=True),
+        IntInput(
+            name="top_n",
+            display_name="Top N",
+            value=3, 
+            advanced=True
+        ),
     ]
 
     outputs = [
@@ -44,7 +49,7 @@ class LCCompressorComponent(Component):
     @abstractmethod
     def build_compressor(self) -> BaseDocumentCompressor:
         """Builds the Base Document Compressor object."""
-        msg = "build_vector_store method must be implemented."
+        msg = "build_compressor method must be implemented."
         raise NotImplementedError(msg)
 
     async def compress_documents(self) -> list[Data]:
