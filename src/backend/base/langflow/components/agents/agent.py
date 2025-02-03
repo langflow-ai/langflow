@@ -78,7 +78,7 @@ class AgentComponent(ToolCallingAgentComponent):
 
             # Add current date tool if enabled
             if self.add_current_date_tool:
-                if not isinstance(self.tools, list):
+                if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
                 current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
                 if not isinstance(current_date_tool, StructuredTool):

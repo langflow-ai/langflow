@@ -7,7 +7,6 @@ from langchain_core.agents import AgentFinish
 from langchain_core.messages import BaseMessage
 from typing_extensions import TypedDict
 
-from langflow.base.agents.errors import CustomBadRequestError
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
 from langflow.schema.log import SendMessageFunctionType
