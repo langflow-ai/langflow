@@ -175,15 +175,7 @@ export const FilesPage = () => {
                           </span>
                         </Button>
                       </ShadTooltip>
-                      <ImportButtonComponent>
-                        <Button className="font-semibold">
-                          Import from
-                          <ForwardedIconComponent
-                            name="ChevronDown"
-                            className="ml-2 h-4 w-4"
-                          />
-                        </Button>
-                      </ImportButtonComponent>
+                      <ImportButtonComponent />
                     </div>
                   </div>
                 </>
