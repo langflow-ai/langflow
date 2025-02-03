@@ -388,7 +388,7 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
 
 
 async def copy_profile_pictures() -> None:
-    """Asynchronously copy profile pictures from the source directory to the target configuration directory.
+    """Asynchronously copies profile pictures from the source directory to the target configuration directory.
 
     This function copies profile pictures while optimizing I/O operations by:
     1. Using a set to track existing files and avoid redundant filesystem checks
