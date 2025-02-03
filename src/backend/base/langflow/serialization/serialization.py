@@ -109,8 +109,15 @@ def _serialize_dataframe(obj: pd.DataFrame, max_length: int | None, max_items: i
     """Serialize pandas DataFrame to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    obj = obj.apply(lambda x: x.apply(lambda y: _truncate_value(y, max_length, max_items)))
-    return obj.to_dict(orient="records")
+
+    data = obj.to_dict(orient="records")
+
+    if max_length is not None:
+        for record in data:
+            for key, value in record.items():
+                record[key] = _truncate_value(value, max_length)
+
+    return data
 
 
 def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | None) -> dict:
@@ -249,3 +256,10 @@ def serialize_or_str(
         max_items: Maximum items in list-like structures, None for no truncation
     """
     return serialize(obj, max_length, max_items, to_str=True)
+
+
+def _truncate_value(value, max_length: int | None):
+    """Truncate value if max_length is specified and value is a string."""
+    if isinstance(value, str) and max_length is not None:
+        return value[:max_length]
+    return value
