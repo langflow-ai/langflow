@@ -310,34 +310,27 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def get_database_list_static(cls, token: str, environment: str | None = None):
         client = DataAPIClient(token=token, environment=environment)
 
-        # Get the admin object
+        # Get the admin object and list of databases
         admin_client = client.get_admin(token=token)
+        db_list = admin_client.list_databases()
 
-        # Get the list of databases
-        db_list = list(admin_client.list_databases())
+        # Set the environment suffix
+        env_suffix = f"-{environment}" if environment and environment != "prod" else ""
 
-        # Set the environment properly
-        env_string = ""
-        if environment and environment != "prod":
-            env_string = f"-{environment}"
-
-        # Generate the api endpoint for each database
+        # Generate api endpoints and fetch collections for all databases in bulk
         db_info_dict = {}
         for db in db_list:
             try:
-                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
-                db_info_dict[db.info.name] = {
-                    "api_endpoint": api_endpoint,
-                    "collections": len(
-                        list(
-                            client.get_database(
-                                api_endpoint=api_endpoint, token=token, keyspace=db.info.keyspace
-                            ).list_collection_names(keyspace=db.info.keyspace)
-                        )
-                    ),
-                }
-            except Exception:  # noqa: BLE001, S110
-                pass
+                db_info = db.info
+                api_endpoint = f"https://{db_info.id}-{db_info.region}.apps.astra{env_suffix}.datastax.com"
+
+                # Fetch collections for the database
+                database_client = client.get_database(api_endpoint=api_endpoint, token=token, keyspace=db_info.keyspace)
+                collection_names = database_client.list_collection_names(keyspace=db_info.keyspace)
+
+                db_info_dict[db_info.name] = {"api_endpoint": api_endpoint, "collections": len(collection_names)}
+            except Exception:  # noqa: BLE001
+                continue
 
         return db_info_dict
 
