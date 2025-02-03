@@ -58,7 +58,7 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully");
 
     await page.getByTestId("playground-btn-flow-io").click();
 
