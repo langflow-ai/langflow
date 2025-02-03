@@ -1,6 +1,8 @@
 from langchain_core.tools import StructuredTool
 
 from langflow.base.agents.agent import LCToolsAgentComponent
+from langflow.base.agents.errors import CustomBadRequestError
+from langflow.base.agents.events import ExceptionWithMessageError
 from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
@@ -67,11 +69,11 @@ class AgentComponent(ToolCallingAgentComponent):
         try:
             llm_model, display_name = self.get_llm()
             if llm_model is None:
-                msg = "No language model selected"
+                msg = "No language model selected. Please choose a model to proceed."
+                logger.error(msg)
                 raise ValueError(msg)
             self.model_name = get_model_name(llm_model, display_name=display_name)
         except Exception as e:
-            # Log the error for debugging purposes
             logger.error(f"Error retrieving language model: {e}")
             raise
 
@@ -85,19 +87,19 @@ class AgentComponent(ToolCallingAgentComponent):
             try:
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
-                # Convert CurrentDateComponent to a StructuredTool
                 current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
                 if isinstance(current_date_tool, StructuredTool):
                     self.tools.append(current_date_tool)
                 else:
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
+                    logger.error(msg)
                     raise TypeError(msg)
             except Exception as e:
                 logger.error(f"Error adding current date tool: {e}")
                 raise
 
         if not self.tools:
-            msg = "Tools are required to run the agent."
+            msg = "Tools are required to run the agent. Please add at least one tool."
             logger.error(msg)
             raise ValueError(msg)
 
@@ -114,7 +116,19 @@ class AgentComponent(ToolCallingAgentComponent):
             logger.error(f"Error setting up the agent: {e}")
             raise
 
-        return await self.run_agent(agent)
+        try:
+            result = await self.run_agent(agent)
+        except ExceptionWithMessageError as e:
+            logger.error(f"ExceptionWithMessageError occurred: {e}")
+            raise
+        except CustomBadRequestError as e:
+            logger.error(f"BadRequestError occurred: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error running the agent: {e}")
+            raise
+
+        return result
 
     async def get_memory_data(self):
         memory_kwargs = {
