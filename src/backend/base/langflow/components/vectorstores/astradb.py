@@ -122,6 +122,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Environment",
             info="The environment for the Astra DB API Endpoint.",
             advanced=True,
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="api_endpoint",
@@ -315,11 +316,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the list of databases
         db_list = list(admin_client.list_databases())
 
+        # Set the environment properly
+        env_string = ""
+        if environment and environment != "prod":
+            env_string = f"-{environment}"
+
         # Generate the api endpoint for each database
         db_info_dict = {}
         for db in db_list:
             try:
-                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"
+                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
                 db_info_dict[db.info.name] = {
                     "api_endpoint": api_endpoint,
                     "collections": len(
@@ -473,6 +479,36 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             for col in collection_list
         ]
 
+    def reset_collection_list(self, build_config: dict):
+        # Get the list of options we have based on the token provided
+        collection_options = self._initialize_collection_options()
+
+        # If we retrieved options based on the token, show the dropdown
+        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
+        build_config["collection_name"]["options_metadata"] = [
+            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+        ]
+
+        # Reset the selected collection
+        build_config["collection_name"]["value"] = ""
+
+        return build_config
+
+    def reset_database_list(self, build_config: dict):
+        # Get the list of options we have based on the token provided
+        database_options = self._initialize_database_options()
+
+        # If we retrieved options based on the token, show the dropdown
+        build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
+        build_config["api_endpoint"]["options_metadata"] = [
+            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+        ]
+
+        # Reset the selected database
+        build_config["api_endpoint"]["value"] = ""
+
+        return build_config
+
     def reset_build_config(self, build_config: dict):
         # Reset the list of databases we have based on the token provided
         build_config["api_endpoint"]["options"] = []
@@ -489,25 +525,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # When the component first executes, this is the update refresh call
-        first_run = field_name == "collection_name" and not field_value
+        first_run = field_name == "collection_name" and not field_value and not build_config["api_endpoint"]["options"]
 
         # If the token has not been provided, simply return
-        if not self.token or field_name == "environment":
+        if not self.token:
             return self.reset_build_config(build_config)
 
-        # Refresh the database name options
-        if first_run or field_name == "token":
+        # If this is the first execution of the component, reset and build database list
+        if first_run or field_name in ["token", "environment"]:
             # Reset the build config to ensure we are starting fresh
             build_config = self.reset_build_config(build_config)
-
-            # Get the list of options we have based on the token provided
-            database_options = self._initialize_database_options()
-
-            # If we retrieved options based on the token, show the dropdown
-            build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
-            build_config["api_endpoint"]["options_metadata"] = [
-                {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-            ]
+            build_config = self.reset_database_list(build_config)
 
             # Get list of regions for a given cloud provider
             """
@@ -526,8 +554,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Refresh the collection name options
         if field_name == "api_endpoint":
-            # Reset the selected collection
-            build_config["collection_name"]["value"] = ""
+            # If missing, refresh the database options
+            if not build_config["api_endpoint"]["options"] or not field_value:
+                return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
             # Set the underlying api endpoint value of the database
             if field_value in build_config["api_endpoint"]["options"]:
@@ -538,21 +567,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 build_config["d_api_endpoint"]["value"] = ""
 
-            # Reload the list of collections and metadata associated
-            collection_options = self._initialize_collection_options(
-                api_endpoint=build_config["d_api_endpoint"]["value"]
-            )
-
-            # If we have collections, show the dropdown
-            build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-            build_config["collection_name"]["options_metadata"] = [
-                {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-            ]
-
-            return build_config
+            # Reset the list of collections we have based on the token provided
+            return self.reset_collection_list(build_config)
 
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
+            # Assume we will be autodetecting the collection:
+            build_config["autodetect_collection"]["value"] = True
+
             # Set the options for collection name to be the field value if its a new collection
             if field_value not in build_config["collection_name"]["options"]:
                 # Add the new collection to the list of options
@@ -563,13 +585,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
                 # Ensure that autodetect collection is set to False, since its a new collection
                 build_config["autodetect_collection"]["value"] = False
-            else:
-                build_config["autodetect_collection"]["value"] = True
 
             # Find the position of the selected collection to align with metadata
             index_of_name = build_config["collection_name"]["options"].index(field_value)
-
-            # Get the provider value of the selected collection
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
 
             # If we were able to determine the Vectorize provider, set it accordingly
