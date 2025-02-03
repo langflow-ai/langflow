@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import List
 
 from langchain_community.vectorstores import FAISS
+
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import BoolInput, HandleInput, IntInput, StrInput
@@ -56,7 +56,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         if not self.persist_directory:
             msg = "Folder path is required to save the FAISS index."
             raise ValueError(msg)
-        
+
         path = self.resolve_path(self.persist_directory)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -71,15 +71,15 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         faiss.save_local(str(path), self.index_name)
         return faiss
 
-    def search_documents(self) -> List[Data]:
+    def search_documents(self) -> list[Data]:
         """Search for documents in the FAISS vector store."""
         if not self.persist_directory:
             msg = "Folder path is required to load the FAISS index."
             raise ValueError(msg)
-        
+
         path = self.resolve_path(self.persist_directory)
         index_path = path / f"{self.index_name}.faiss"
-        
+
         if not index_path.exists():
             vector_store = self.build_vector_store()
         else:
