@@ -21,6 +21,7 @@ async def byte_stream_generator(file_bytes: bytes, chunk_size: int = 8192) -> As
     for i in range(0, len(file_bytes), chunk_size):
         yield file_bytes[i : i + chunk_size]
 
+
 async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser, session: DbSession):
     # Fetch the file from the DB
     stmt = select(UserFile).where(UserFile.id == file_id)
@@ -139,6 +140,7 @@ async def download_file(
         headers={"Content-Disposition": f'attachment; filename="{file.name}"'},
     )
 
+
 @router.put("/{file_id}")
 async def edit_file_name(
     file_id: uuid.UUID,
@@ -158,6 +160,7 @@ async def edit_file_name(
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
     return UploadFileResponse(id=file.id, name=file.name, path=file.path)
+
 
 @router.delete("/{file_id}")
 async def delete_file(
