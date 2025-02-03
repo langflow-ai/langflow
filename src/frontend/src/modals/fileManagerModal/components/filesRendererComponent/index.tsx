@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
+import FilesContextMenuComponent from "../filesContextMenuComponent";
 
 export default function FilesRendererComponent({
   files,
@@ -15,7 +16,7 @@ export default function FilesRendererComponent({
   selectedFiles?: string[];
   handleDelete?: (name: string) => void;
 }) {
-  return files.map((file) => (
+  return files.map((file, index) => (
     <div
       className={cn(
         "flex items-center justify-between rounded-lg py-2",
@@ -57,20 +58,25 @@ export default function FilesRendererComponent({
           />
         </Button>
       ) : (
-        <Button
-          size="iconMd"
-          variant="ghost"
-          className="hover:bg-secondary-foreground/5"
-          onClick={(e) => {
-            e.stopPropagation();
-            console.log("oiee");
-          }}
+        <FilesContextMenuComponent
+          isLocal={index % 2 === 0}
+          handleSelectOptionsChange={() => {}}
         >
-          <ForwardedIconComponent
-            name="EllipsisVertical"
-            className="h-5 w-5 shrink-0"
-          />
-        </Button>
+          <Button
+            size="iconMd"
+            variant="ghost"
+            className="hover:bg-secondary-foreground/5"
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("oiee");
+            }}
+          >
+            <ForwardedIconComponent
+              name="EllipsisVertical"
+              className="h-5 w-5 shrink-0"
+            />
+          </Button>
+        </FilesContextMenuComponent>
       )}
     </div>
   ));
