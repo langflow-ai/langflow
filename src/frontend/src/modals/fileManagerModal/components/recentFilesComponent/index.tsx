@@ -66,7 +66,7 @@ export default function RecentFilesComponent({
           />
         </div>
       </div>
-      <div className="flex h-48 flex-col gap-1">
+      <div className="flex h-44 flex-col gap-1">
         <FilesRendererComponent
           files={searchResults}
           handleFileSelect={handleFileSelect}
