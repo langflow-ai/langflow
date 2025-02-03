@@ -1,4 +1,6 @@
 import { Input } from "@/components/ui/input";
+import Fuse from "fuse.js";
+import { useMemo, useState } from "react";
 import FilesRendererComponent from "../filesRendererComponent";
 
 export default function RecentFilesComponent({
@@ -31,6 +33,17 @@ export default function RecentFilesComponent({
     },
   ];
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const fuse = new Fuse(files, {
+    keys: ["name", "type"],
+    threshold: 0.3,
+  });
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery) return files;
+    return fuse.search(searchQuery).map(({ item }) => item);
+  }, [searchQuery, files]);
+
   const handleFileSelect = (fileName: string) => {
     setSelectedFiles(
       selectedFiles.includes(fileName)
@@ -44,12 +57,18 @@ export default function RecentFilesComponent({
       <div className="flex items-center justify-between gap-6">
         <span className="text-sm font-medium">Recent Files</span>
         <div className="flex-1">
-          <Input icon="Search" placeholder="Search files..." className="" />
+          <Input
+            icon="Search"
+            placeholder="Search files..."
+            className=""
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex h-48 flex-col gap-1">
         <FilesRendererComponent
-          files={files}
+          files={searchResults}
           handleFileSelect={handleFileSelect}
           selectedFiles={selectedFiles}
         />
