@@ -73,12 +73,21 @@ class AgentComponent(ToolCallingAgentComponent):
                 logger.error(msg)
                 raise ValueError(msg)
             self.model_name = get_model_name(llm_model, display_name=display_name)
+        except ValueError as e:
+            logger.error(f"ValueError: {e}")
+            raise
+        except KeyError as e:
+            logger.error(f"KeyError: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error retrieving language model: {e}")
             raise
 
         try:
             self.chat_history = await self.get_memory_data()
+        except ValueError as e:
+            logger.error(f"ValueError: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error retrieving chat history: {e}")
             raise
@@ -94,6 +103,9 @@ class AgentComponent(ToolCallingAgentComponent):
                     msg = "CurrentDateComponent must be converted to a StructuredTool"
                     logger.error(msg)
                     raise TypeError(msg)
+            except TypeError as e:
+                logger.error(f"TypeError: {e}")
+                raise
             except Exception as e:
                 logger.error(f"Error adding current date tool: {e}")
                 raise
@@ -112,6 +124,9 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_prompt=self.system_prompt,
             )
             agent = self.create_agent_runnable()
+        except ValueError as e:
+            logger.error(f"ValueError: {e}")
+            raise
         except Exception as e:
             logger.error(f"Error setting up the agent: {e}")
             raise
@@ -123,6 +138,9 @@ class AgentComponent(ToolCallingAgentComponent):
             raise
         except CustomBadRequestError as e:
             logger.error(f"BadRequestError occurred: {e}")
+            raise
+        except ValueError as e:
+            logger.error(f"ValueError: {e}")
             raise
         except Exception as e:
             logger.error(f"Unexpected error running the agent: {e}")
@@ -152,8 +170,13 @@ class AgentComponent(ToolCallingAgentComponent):
                         self._build_llm_model(component_class, inputs, prefix),
                         display_name,
                     )
+            except KeyError as e:
+                msg = f"KeyError: {e}"
+                logger.error(msg)
+                raise ValueError(msg) from e
             except Exception as e:
-                msg = f"Error building {self.agent_llm} language model"
+                msg = f"Error building {self.agent_llm} language model: {e}"
+                logger.error(msg)
                 raise ValueError(msg) from e
         return self.agent_llm, None
 
