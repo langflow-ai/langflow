@@ -7,20 +7,24 @@ from loguru import logger
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
+from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
 from langflow.services.schema import ServiceType
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from langflow.services.settings.manager import SettingsService
 
-from .deps import get_db_service, get_service, get_settings_service
+from .deps import get_db_service, get_service, get_settings_service, get_variable_service
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.database.models.user.model import User
     from langflow.services.settings.manager import SettingsService
 
 
@@ -75,7 +79,7 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
         logger.opt(exception=True).debug("Error creating superuser.")
 
 
-async def setup_superuser(settings_service, session: AsyncSession) -> None:
+async def setup_superuser(settings_service, session: AsyncSession) -> User:
     if settings_service.auth_settings.AUTO_LOGIN:
         logger.debug("AUTO_LOGIN is set to True. Creating default superuser.")
     else:
@@ -86,7 +90,7 @@ async def setup_superuser(settings_service, session: AsyncSession) -> None:
     password = settings_service.auth_settings.SUPERUSER_PASSWORD
 
     is_default = (username == DEFAULT_SUPERUSER) and (password == DEFAULT_SUPERUSER_PASSWORD)
-
+    user = None
     try:
         user = await get_or_create_super_user(
             session=session, username=username, password=password, is_default=is_default
@@ -99,6 +103,7 @@ async def setup_superuser(settings_service, session: AsyncSession) -> None:
         raise RuntimeError(msg) from exc
     finally:
         settings_service.auth_settings.reset_credentials()
+    return user
 
 
 async def teardown_superuser(settings_service, session: AsyncSession) -> None:
@@ -226,6 +231,26 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         # Don't re-raise since this is a cleanup task
 
 
+async def initialize_super_user_if_needed(
+    settings_service: SettingsService | None = None, session: AsyncSession | None = None
+) -> None:
+    if settings_service is None:
+        settings_service = get_settings_service()
+    if not settings_service.auth_settings.AUTO_LOGIN or settings_service.auth_settings.DISABLE_SUPERUSER_CREATION:
+        return
+    username = settings_service.auth_settings.SUPERUSER
+    password = settings_service.auth_settings.SUPERUSER_PASSWORD
+    if not username or not password:
+        msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
+        raise ValueError(msg)
+    user = await setup_superuser(settings_service, session)
+    if user is None:
+        return
+    await get_variable_service().initialize_user_variables(user.id, session)
+    await create_default_folder_if_it_doesnt_exist(session, user.id)
+    logger.info("Super user initialized")
+
+
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
     # Test cache connection
@@ -236,7 +261,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     await db_service.initialize_alembic_log_file()
     async with db_service.with_session() as session:
         settings_service = get_service(ServiceType.SETTINGS_SERVICE)
-        await setup_superuser(settings_service, session)
+        await initialize_super_user_if_needed(settings_service, session)
     try:
         await get_db_service().assign_orphaned_flows_to_superuser()
     except sqlalchemy_exc.IntegrityError as exc:

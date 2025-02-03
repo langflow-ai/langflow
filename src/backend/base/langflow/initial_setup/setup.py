@@ -27,20 +27,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
-from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder, FolderCreate
-from langflow.services.database.models.folder.utils import (
-    create_default_folder_if_it_doesnt_exist,
-    get_default_folder_id,
-)
+from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.deps import (
-    get_settings_service,
-    get_storage_service,
-    get_variable_service,
-    session_scope,
-)
+from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
 
@@ -763,20 +754,3 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     project_tags=project_tags,
                     new_folder_id=new_folder.id,
                 )
-
-
-async def initialize_super_user_if_needed() -> None:
-    settings_service = get_settings_service()
-    if not settings_service.auth_settings.AUTO_LOGIN:
-        return
-    username = settings_service.auth_settings.SUPERUSER
-    password = settings_service.auth_settings.SUPERUSER_PASSWORD
-    if not username or not password:
-        msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
-        raise ValueError(msg)
-
-    async with session_scope() as async_session:
-        super_user = await create_super_user(db=async_session, username=username, password=password)
-        await get_variable_service().initialize_user_variables(super_user.id, async_session)
-        await create_default_folder_if_it_doesnt_exist(async_session, super_user.id)
-    logger.info("Super user initialized")
