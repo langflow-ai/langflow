@@ -16,8 +16,8 @@ from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
     """Truncate long strings with ellipsis if max_length provided."""
-    if max_length is None:
-        return obj
+    if max_length is None or len(obj) <= max_length:
+    return obj[:max_length] + "..."
     return obj[:max_length] + "..." if len(obj) > max_length else obj
 
 
