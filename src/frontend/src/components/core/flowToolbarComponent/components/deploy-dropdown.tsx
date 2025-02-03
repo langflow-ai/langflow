@@ -10,6 +10,7 @@ import {
 import { ENABLE_WIDGET } from "@/customization/feature-flags";
 import getWidgetCode from "@/modals/apiModal/utils/get-widget-code";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
+import { Switch } from "@/components/ui/switch";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import useAuthStore from "@/stores/authStore";
@@ -19,6 +20,9 @@ export default function PublishDropdown() {
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
   const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
   const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
+  const isPublished = useFlowsManagerStore(
+    (state) => state.currentFlow?.public,
+  );
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
 
@@ -68,10 +72,21 @@ export default function PublishDropdown() {
                   className={`${groupStyle} icon-size mr-2`}
                 />
                 <span>Standalone app</span>
-                <IconComponent
-                  name="ExternalLink"
-                  className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
-                />
+                <div
+                  className={`icon-size ml-auto pr-8 text-foreground`}
+                >
+                  <Switch
+                    className="w-9 h-5"
+                    checked={isPublished}
+                    onCheckedChange={(checked) => {
+                      console.log(checked);
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  />
+                </div>
               </div>
             </DropdownMenuItem>
           </div>
