@@ -11,9 +11,11 @@ This page provides examples and practices for managing Langflow using the Langfl
 The Langflow API's OpenAPI spec can be viewed and tested at your Langflow deployment's `docs` endpoint.
 For example, `http://127.0.0.1:7860/docs`.
 
-## Export values (optional)
+## Export values
 
-You might find it helpful to set the following environment variables:
+You might find it helpful to set the following environment variables in your terminal.
+
+The examples in this guide use environment variables for these values.
 
 * Export your Langflow URL in your terminal.
 Langflow starts by default at `http://127.0.0.1:7860`.
@@ -75,11 +77,212 @@ Export the generated API key as an environment variable.
 export LANGFLOW_API_KEY="sk-..."
 ```
 
-The examples in this guide use environment variables for these values.
+## Base
+
+Use the base Langflow API for running your flow and retrieving configuration information.
+
+### Get all components
+
+This operation returns a dictionary of all Langflow components.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/api/v1/all" \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+```result
+A dictionary of all Langflow components.
+```
+  </TabItem>
+</Tabs>
+
+### Run flow
+
+Execute a specified flow by ID or name.
+Use this endpoint to batch run a flow with no streaming.
+For streaming execution of your flows, use the [`/build` endpoint](/api-reference-api-examples#build-flow) instead.
+
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=false" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "input_value": "string",
+  "input_type": "chat",
+  "output_type": "chat",
+  "output_component": "",
+  "tweaks": {
+    "Component Name": {
+      "parameter_name": "value"
+    },
+    "component_id": {
+      "parameter_name": "value"
+    },
+    "parameter_name": "value"
+  },
+  "session_id": "string"
+}'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```result
+{
+  "result": "Flow execution result",
+  "session_id": "session_uuid"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Webhook run flow
+
+The webhook endpoint triggers flow execution with an HTTP POST request.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X POST \
+  "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"data": "example-data"}'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```result
+{
+  {"message":"Task started in the background","status":"in progress"}
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Process
+
+:::info
+This endpoint is deprecated. Use the `/run` endpoint instead.
+:::
+
+### Predict
+
+:::info
+This endpoint is deprecated. Use the `/run` endpoint instead.
+:::
+
+### Get task status
+
+Get the status of a task.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/api/v1/task/TASK_ID" \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```result
+{
+  "status": "Task status",
+  "result": "Task result if completed"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Create upload file (Deprecated)
+
+:::info
+This endpoint is deprecated. Use the `/file` endpoint instead.
+:::
+
+### Get version
+
+Get the version of the Langflow API.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/api/v1/version" \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```result
+{
+    "version": "1.1.1",
+    "main_version": "1.1.1",
+    "package": "Langflow"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Get config
+
+Retrieve the Langflow configuration information.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/api/v1/config" \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+    "feature_flags": {
+        "mvp_components": false
+    },
+    "frontend_timeout": 0,
+    "auto_saving": true,
+    "auto_saving_interval": 1000,
+    "health_check_max_retries": 5,
+    "max_file_size_upload": 100
+}
+```
+
+  </TabItem>
+</Tabs>
+
 
 ## Build
 
-Use the `/build` endpoint to build vertices and flows.
+Use the `/build` endpoint to build vertices and flows, and execute those flows with streaming.
+
+For simpler batch execution of your flows, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead.
 
 ### Build flow
 
@@ -145,6 +348,201 @@ curl -X 'POST' \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{"stop_component_id": "OpenAIModel-Uksag"}'
 ```
+
+## Files
+
+Use the `/files` endpoint to add or delete files between your local machine and Langflow.
+
+### Upload file
+
+Upload a file to an existing flow.
+
+This example uploads `the_oscar_award.csv`.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@the_oscar_award.csv'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "flowId": "92f9a4c5-cfc8-4656-ae63-1f0881163c28",
+  "file_path": "92f9a4c5-cfc8-4656-ae63-1f0881163c28/2024-12-30_15-19-43_the_oscar_award.csv"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+#### Upload image files
+
+Send image files to the Langflow API for AI analysis.
+
+The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
+For more information, see [Supported environment variables](/environment-variables#supported-variables).
+
+1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
+
+```curl
+curl -X POST "$LANGFLOW_URL/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@image-file.png"
+```
+
+The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<TIMESTAMP>_<FILE-NAME>"}`.
+
+```json
+{"flowId":"a430cc57-06bb-4c11-be39-d3d4de68d2c4","file_path":"a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"}
+```
+
+2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
+Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
+
+```curl
+curl -X POST \
+    "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
+    -H 'Content-Type: application/json'\
+    -d '{
+    "output_type": "chat",
+    "input_type": "chat",
+    "tweaks": {
+  "ChatInput-b67sL": {
+    "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
+    "input_value": "what do you see?"
+  }
+}}'
+```
+
+Your chatbot describes the image file you sent.
+
+```plain
+"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
+```
+
+
+### List files
+
+List all files associated with a specific flow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```json
+{
+  "files": [
+    "2024-12-30_15-19-43_the_oscar_award.csv"
+  ]
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Download file
+
+Download a specific file for a given flow.
+
+To look up the file name in Langflow, use the `/list` endpoint.
+
+This example downloads the `2024-12-30_15-19-43_the_oscar_award.csv` file from Langflow to a file named `output-file.csv`.
+
+The `--output` flag is optional.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv" \
+  -H 'accept: application/json' \
+  --output output-file.csv
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+The file contents.
+```
+
+  </TabItem>
+</Tabs>
+
+### Download image
+
+Download an image file for a given flow.
+
+To look up the file name in Langflow, use the `/list` endpoint.
+
+This example downloads the `2024-12-30_15-42-44_image-file.png` file from Langflow to a file named `output-image.png`.
+
+The `--output` flag is optional.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
+  -H 'accept: application/json' \
+  --output output-image.png
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+Image file content.
+```
+
+  </TabItem>
+</Tabs>
+
+
+### Delete file
+
+Delete a specific file from a flow.
+
+This example deletes the `2024-12-30_15-42-44_image-file.png` file from Langflow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "message": "File 2024-12-30_15-42-44_image-file.png deleted successfully"
+}
+```
+
+  </TabItem>
+</Tabs>
 
 ## Flows
 
@@ -543,6 +941,352 @@ A list of example flows.
 </Tabs>
 
 
+## Folders
+
+Use the `/folders` endpoint to create, read, update, and delete folders.
+
+Folders store your flows and components.
+
+### Read folders
+
+Get a list of Langflow folders.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+  {
+    "name": "My Projects",
+    "description": "Manage your own projects. Download and upload folders.",
+    "id": "1415de42-8f01-4f36-bf34-539f23e47466",
+    "parent_id": null
+  }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Create folder
+
+Create a new folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  "$LANGFLOW_URL/api/v1/folders/" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "new_folder_name",
+  "description": "string",
+  "components_list": [],
+  "flows_list": []
+}'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "name": "new_folder_name",
+  "description": "string",
+  "id": "b408ddb9-6266-4431-9be8-e04a62758331",
+  "parent_id": null
+}
+```
+
+  </TabItem>
+</Tabs>
+
+To add flows and components at folder creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
+
+Adding a flow to a folder moves the flow from its previous location. The flow is not copied.
+
+```curl
+curl -X 'POST' \
+  "$LANGFLOW_URL/api/v1/folders/" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "new_folder_name",
+  "description": "string",
+  "components_list": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ],
+  "flows_list": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ]
+}'
+```
+
+### Read folder
+
+Retrieve details of a specific folder.
+
+To find the UUID of your folder, call the [read folders](#read-folders) endpoint.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+[
+    {
+        "name": "My Projects",
+        "description": "Manage your own projects. Download and upload folders.",
+        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "parent_id": null
+    }
+]
+```
+
+  </TabItem>
+</Tabs>
+
+### Update folder
+
+Update the information of a specific folder with a `PATCH` request.
+
+Each PATCH request updates the folder with the values you send.
+Only the fields you include in your request are updated.
+If you send the same values multiple times, the update is still processed, even if the values are unchanged.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'PATCH' \
+  '$LANGFLOW_URL/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "name": "string",
+  "description": "string",
+  "parent_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "components": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ],
+  "flows": [
+    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+  ]
+}'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "name": "string",
+  "description": "string",
+  "id": "b408ddb9-6266-4431-9be8-e04a62758331",
+  "parent_id": null
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Delete folder
+
+Delete a specific folder.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'DELETE' \
+  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
+  -H 'accept: */*'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+204 No Content
+```
+
+  </TabItem>
+</Tabs>
+
+### Download folder
+
+Download all flows from a folder as a zip file.
+
+The `--output` flag is optional.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  '$LANGFLOW_URL/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331' \
+  -H 'accept: application/json' \
+  --output langflow-folder.zip
+```
+
+  </TabItem>
+    <TabItem value="result" label="Result">
+
+```plain
+The folder contents.
+```
+
+  </TabItem>
+</Tabs>
+
+### Upload folder
+
+Upload a folder to Langflow.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'POST' \
+  '$LANGFLOW_URL/api/v1/folders/upload/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@20241230_135006_langflow_flows.zip;type=application/zip'
+```
+
+  </TabItem>
+
+  <TabItem value="result" label="Result">
+
+```plain
+The folder contents are uploaded to Langflow.
+```
+
+  </TabItem>
+</Tabs>
+
+
+## Logs
+
+Retrieve logs for your Langflow flow.
+
+This endpoint requires log retrieval to be enabled in your Langflow application.
+
+To enable log retrieval, include these values in your `.env` file:
+
+```plain
+LANGFLOW_ENABLE_LOG_RETRIEVAL=true
+LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
+LANGFLOW_LOG_LEVEL=DEBUG
+```
+
+For log retrieval to function, `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` needs to be greater than 0. The default value is `10000`.
+
+Start Langflow with this `.env`:
+
+```plain
+uv run langflow run --env-file .env
+```
+
+### Stream logs
+
+Stream logs in real-time using Server-Sent Events (SSE).
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/logs-stream" \
+  -H 'accept: text/event-stream'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+keepalive
+
+{"1736355791151": "2025-01-08T12:03:11.151218-0500 DEBUG Building Chat Input\n"}
+
+{"1736355791485": "2025-01-08T12:03:11.485380-0500 DEBUG consumed event add_message-153bcd5d-ef4d-4ece-8cc0-47c6b6a9ef92 (time in queue, 0.0000, client 0.0001)\n"}
+
+{"1736355791499": "2025-01-08T12:03:11.499704-0500 DEBUG consumed event end_vertex-3d7125cd-7b8a-44eb-9113-ed5b785e3cf3 (time in queue, 0.0056, client 0.0047)\n"}
+
+{"1736355791502": "2025-01-08T12:03:11.502510-0500 DEBUG consumed event end-40d0b363-5618-4a23-bbae-487cd0b9594d (time in queue, 0.0001, client 0.0004)\n"}
+
+{"1736355791513": "2025-01-08T12:03:11.513097-0500 DEBUG Logged vertex build: 729ff2f8-6b01-48c8-9ad0-3743c2af9e8a\n"}
+
+{"1736355791834": "2025-01-08T12:03:11.834982-0500 DEBUG Telemetry data sent successfully.\n"}
+
+{"1736355791941": "2025-01-08T12:03:11.941840-0500 DEBUG Telemetry data sent successfully.\n"}
+
+keepalive
+```
+
+  </TabItem>
+</Tabs>
+
+### Retrieve logs with optional parameters
+
+Retrieve logs with optional query parameters.
+
+* `lines_before`: The number of logs before the timestamp or the last log.
+* `lines_after`: The number of logs after the timestamp.
+* `timestamp`: The timestamp to start getting logs from.
+
+The default values for all three parameters is `0`.
+With these values, the endpoint returns the last 10 lines of logs.
+
+<Tabs>
+  <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X 'GET' \
+  "$LANGFLOW_URL/logs?lines_before=0&lines_after=0&timestamp=0" \
+  -H 'accept: application/json'
+```
+
+  </TabItem>
+  <TabItem value="result" label="Result">
+
+```plain
+{
+  "1736354770500": "2025-01-08T11:46:10.500363-0500 DEBUG Creating starter project Document Q&A\n",
+  "1736354770511": "2025-01-08T11:46:10.511146-0500 DEBUG Creating starter project Image Sentiment Analysis\n",
+  "1736354770521": "2025-01-08T11:46:10.521018-0500 DEBUG Creating starter project SEO Keyword Generator\n",
+  "1736354770532": "2025-01-08T11:46:10.532677-0500 DEBUG Creating starter project Sequential Tasks Agents\n",
+  "1736354770544": "2025-01-08T11:46:10.544010-0500 DEBUG Creating starter project Custom Component Generator\n",
+  "1736354770555": "2025-01-08T11:46:10.555513-0500 DEBUG Creating starter project Prompt Chaining\n",
+  "1736354770588": "2025-01-08T11:46:10.588105-0500 DEBUG Create service ServiceType.CHAT_SERVICE\n",
+  "1736354771021": "2025-01-08T11:46:11.021817-0500 DEBUG Telemetry data sent successfully.\n",
+  "1736354775619": "2025-01-08T11:46:15.619545-0500 DEBUG Create service ServiceType.STORE_SERVICE\n",
+  "1736354775699": "2025-01-08T11:46:15.699661-0500 DEBUG File 046-rocket.svg retrieved successfully from flow /Users/mendon.kissling/Library/Caches/langflow/profile_pictures/Space.\n"
+}
+```
+
+  </TabItem>
+</Tabs>
+
 ## Monitor
 
 Use the `/monitor` endpoint to monitor and modify messages passed between Langflow components, vertex builds, and transactions.
@@ -849,744 +1593,6 @@ curl -X 'GET' \
   "page": 1,
   "size": 1,
   "pages": 0
-}
-```
-
-  </TabItem>
-</Tabs>
-
-
-## Folders
-
-Use the `/folders` endpoint to create, read, update, and delete folders.
-
-Folders store your flows and components.
-
-### Read folders
-
-Get a list of Langflow folders.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-[
-  {
-    "name": "My Projects",
-    "description": "Manage your own projects. Download and upload folders.",
-    "id": "1415de42-8f01-4f36-bf34-539f23e47466",
-    "parent_id": null
-  }
-]
-```
-
-  </TabItem>
-</Tabs>
-
-### Create folder
-
-Create a new folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  "$LANGFLOW_URL/api/v1/folders/" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "name": "new_folder_name",
-  "description": "string",
-  "components_list": [],
-  "flows_list": []
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "name": "new_folder_name",
-  "description": "string",
-  "id": "b408ddb9-6266-4431-9be8-e04a62758331",
-  "parent_id": null
-}
-```
-
-  </TabItem>
-</Tabs>
-
-To add flows and components at folder creation, retrieve the `components_list` and `flows_list` values from the [/api/v1/store/components](#get-all-components) and [/api/v1/flows/read](#read-flows) endpoints and add them to the request body.
-
-Adding a flow to a folder moves the flow from its previous location. The flow is not copied.
-
-```curl
-curl -X 'POST' \
-  "$LANGFLOW_URL/api/v1/folders/" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "name": "new_folder_name",
-  "description": "string",
-  "components_list": [
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-  ],
-  "flows_list": [
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-  ]
-}'
-```
-
-### Read folder
-
-Retrieve details of a specific folder.
-
-To find the UUID of your folder, call the [read folders](#read-folders) endpoint.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-[
-    {
-        "name": "My Projects",
-        "description": "Manage your own projects. Download and upload folders.",
-        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "parent_id": null
-    }
-]
-```
-
-  </TabItem>
-</Tabs>
-
-### Update folder
-
-Update the information of a specific folder with a `PATCH` request.
-
-Each PATCH request updates the folder with the values you send.
-Only the fields you include in your request are updated.
-If you send the same values multiple times, the update is still processed, even if the values are unchanged.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "name": "string",
-  "description": "string",
-  "parent_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "components": [
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-  ],
-  "flows": [
-    "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-  ]
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "name": "string",
-  "description": "string",
-  "id": "b408ddb9-6266-4431-9be8-e04a62758331",
-  "parent_id": null
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Delete folder
-
-Delete a specific folder.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
-  -H 'accept: */*'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-204 No Content
-```
-
-  </TabItem>
-</Tabs>
-
-### Download folder
-
-Download all flows from a folder as a zip file.
-
-The `--output` flag is optional.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331' \
-  -H 'accept: application/json' \
-  --output langflow-folder.zip
-```
-
-  </TabItem>
-    <TabItem value="result" label="Result">
-
-```plain
-The folder contents.
-```
-
-  </TabItem>
-</Tabs>
-
-### Upload folder
-
-Upload a folder to Langflow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/folders/upload/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@20241230_135006_langflow_flows.zip;type=application/zip'
-```
-
-  </TabItem>
-
-  <TabItem value="result" label="Result">
-
-```plain
-The folder contents are uploaded to Langflow.
-```
-
-  </TabItem>
-</Tabs>
-
-## Files
-
-Use the `/files` endpoint to add or delete files between your local machine and Langflow.
-
-### Upload file
-
-Upload a file to an existing flow.
-
-This example uploads `the_oscar_award.csv`.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@the_oscar_award.csv'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```json
-{
-  "flowId": "92f9a4c5-cfc8-4656-ae63-1f0881163c28",
-  "file_path": "92f9a4c5-cfc8-4656-ae63-1f0881163c28/2024-12-30_15-19-43_the_oscar_award.csv"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-#### Upload image files
-
-Send image files to the Langflow API for AI analysis.
-
-The default file limit is 100 MB. To configure this value, change the `LANGFLOW_MAX_FILE_SIZE_UPLOAD` environment variable.
-For more information, see [Supported environment variables](/environment-variables#supported-variables).
-
-1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
-
-```curl
-curl -X POST "$LANGFLOW_URL/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@image-file.png"
-```
-
-The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<TIMESTAMP>_<FILE-NAME>"}`.
-
-```json
-{"flowId":"a430cc57-06bb-4c11-be39-d3d4de68d2c4","file_path":"a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png"}
-```
-
-2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
-Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
-
-```curl
-curl -X POST \
-    "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
-    -H 'Content-Type: application/json'\
-    -d '{
-    "output_type": "chat",
-    "input_type": "chat",
-    "tweaks": {
-  "ChatInput-b67sL": {
-    "files": "a430cc57-06bb-4c11-be39-d3d4de68d2c4/2024-11-27_14-47-50_image-file.png",
-    "input_value": "what do you see?"
-  }
-}}'
-```
-
-Your chatbot describes the image file you sent.
-
-```plain
-"text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
-```
-
-
-### List files
-
-List all files associated with a specific flow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```json
-{
-  "files": [
-    "2024-12-30_15-19-43_the_oscar_award.csv"
-  ]
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Download file
-
-Download a specific file for a given flow.
-
-To look up the file name in Langflow, use the `/list` endpoint.
-
-This example downloads the `2024-12-30_15-19-43_the_oscar_award.csv` file from Langflow to a file named `output-file.csv`.
-
-The `--output` flag is optional.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv" \
-  -H 'accept: application/json' \
-  --output output-file.csv
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-The file contents.
-```
-
-  </TabItem>
-</Tabs>
-
-### Download image
-
-Download an image file for a given flow.
-
-To look up the file name in Langflow, use the `/list` endpoint.
-
-This example downloads the `2024-12-30_15-42-44_image-file.png` file from Langflow to a file named `output-image.png`.
-
-The `--output` flag is optional.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
-  -H 'accept: application/json' \
-  --output output-image.png
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-Image file content.
-```
-
-  </TabItem>
-</Tabs>
-
-
-### Delete file
-
-Delete a specific file from a flow.
-
-This example deletes the `2024-12-30_15-42-44_image-file.png` file from Langflow.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'DELETE' \
-  "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "message": "File 2024-12-30_15-42-44_image-file.png deleted successfully"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-## Logs
-
-Retrieve logs for your Langflow flow.
-
-This endpoint requires log retrieval to be enabled in your Langflow application.
-
-To enable log retrieval, include these values in your `.env` file:
-
-```plain
-LANGFLOW_ENABLE_LOG_RETRIEVAL=true
-LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
-LANGFLOW_LOG_LEVEL=DEBUG
-```
-
-For log retrieval to function, `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` needs to be greater than 0. The default value is `10000`.
-
-Start Langflow with this `.env`:
-
-```plain
-uv run langflow run --env-file .env
-```
-
-### Stream logs
-
-Stream logs in real-time using Server-Sent Events (SSE).
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/logs-stream" \
-  -H 'accept: text/event-stream'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-keepalive
-
-{"1736355791151": "2025-01-08T12:03:11.151218-0500 DEBUG Building Chat Input\n"}
-
-{"1736355791485": "2025-01-08T12:03:11.485380-0500 DEBUG consumed event add_message-153bcd5d-ef4d-4ece-8cc0-47c6b6a9ef92 (time in queue, 0.0000, client 0.0001)\n"}
-
-{"1736355791499": "2025-01-08T12:03:11.499704-0500 DEBUG consumed event end_vertex-3d7125cd-7b8a-44eb-9113-ed5b785e3cf3 (time in queue, 0.0056, client 0.0047)\n"}
-
-{"1736355791502": "2025-01-08T12:03:11.502510-0500 DEBUG consumed event end-40d0b363-5618-4a23-bbae-487cd0b9594d (time in queue, 0.0001, client 0.0004)\n"}
-
-{"1736355791513": "2025-01-08T12:03:11.513097-0500 DEBUG Logged vertex build: 729ff2f8-6b01-48c8-9ad0-3743c2af9e8a\n"}
-
-{"1736355791834": "2025-01-08T12:03:11.834982-0500 DEBUG Telemetry data sent successfully.\n"}
-
-{"1736355791941": "2025-01-08T12:03:11.941840-0500 DEBUG Telemetry data sent successfully.\n"}
-
-keepalive
-```
-
-  </TabItem>
-</Tabs>
-
-### Retrieve logs with optional parameters
-
-Retrieve logs with optional query parameters.
-
-* `lines_before`: The number of logs before the timestamp or the last log.
-* `lines_after`: The number of logs after the timestamp.
-* `timestamp`: The timestamp to start getting logs from.
-
-The default values for all three parameters is `0`.
-With these values, the endpoint returns the last 10 lines of logs.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/logs?lines_before=0&lines_after=0&timestamp=0" \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-  "1736354770500": "2025-01-08T11:46:10.500363-0500 DEBUG Creating starter project Document Q&A\n",
-  "1736354770511": "2025-01-08T11:46:10.511146-0500 DEBUG Creating starter project Image Sentiment Analysis\n",
-  "1736354770521": "2025-01-08T11:46:10.521018-0500 DEBUG Creating starter project SEO Keyword Generator\n",
-  "1736354770532": "2025-01-08T11:46:10.532677-0500 DEBUG Creating starter project Sequential Tasks Agents\n",
-  "1736354770544": "2025-01-08T11:46:10.544010-0500 DEBUG Creating starter project Custom Component Generator\n",
-  "1736354770555": "2025-01-08T11:46:10.555513-0500 DEBUG Creating starter project Prompt Chaining\n",
-  "1736354770588": "2025-01-08T11:46:10.588105-0500 DEBUG Create service ServiceType.CHAT_SERVICE\n",
-  "1736354771021": "2025-01-08T11:46:11.021817-0500 DEBUG Telemetry data sent successfully.\n",
-  "1736354775619": "2025-01-08T11:46:15.619545-0500 DEBUG Create service ServiceType.STORE_SERVICE\n",
-  "1736354775699": "2025-01-08T11:46:15.699661-0500 DEBUG File 046-rocket.svg retrieved successfully from flow /Users/mendon.kissling/Library/Caches/langflow/profile_pictures/Space.\n"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-## Base
-
-Use the base Langflow API for running your flow and retrieving configuration information.
-
-### Get all components
-
-This operation returns a dictionary of all Langflow components.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/api/v1/all" \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-```result
-A dictionary of all Langflow components.
-```
-  </TabItem>
-</Tabs>
-
-### Run flow
-
-Execute a specified flow by ID or name.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'POST' \
-  "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=false" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "input_value": "string",
-  "input_type": "chat",
-  "output_type": "chat",
-  "output_component": "",
-  "tweaks": {
-    "Component Name": {
-      "parameter_name": "value"
-    },
-    "component_id": {
-      "parameter_name": "value"
-    },
-    "parameter_name": "value"
-  },
-  "session_id": "string"
-}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  "result": "Flow execution result",
-  "session_id": "session_uuid"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Webhook run flow
-
-The webhook endpoint triggers flow execution with an HTTP POST request.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X POST \
-  "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
-  -H "Content-Type: application/json" \
-  -d '{"path": "/tmp/test_file.txt"}'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  {"message":"Task started in the background","status":"in progress"}
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Process
-
-:::info
-This endpoint is deprecated. Use the `/run` endpoint instead.
-:::
-
-### Predict
-
-:::info
-This endpoint is deprecated. Use the `/run` endpoint instead.
-:::
-
-### Get task status
-
-Get the status of a task.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/api/v1/task/TASK_ID" \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-  "status": "Task status",
-  "result": "Task result if completed"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Create upload file (Deprecated)
-
-:::info
-This endpoint is deprecated. Use the `/file` endpoint instead.
-:::
-
-### Get version
-
-Get the version of the Langflow API.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/api/v1/version" \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```result
-{
-    "version": "1.1.1",
-    "main_version": "1.1.1",
-    "package": "Langflow"
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Get config
-
-Retrieve the Langflow configuration information.
-
-<Tabs>
-  <TabItem value="curl" label="curl" default>
-
-```curl
-curl -X 'GET' \
-  "$LANGFLOW_URL/api/v1/config" \
-  -H 'accept: application/json'
-```
-
-  </TabItem>
-  <TabItem value="result" label="Result">
-
-```plain
-{
-    "feature_flags": {
-        "mvp_components": false
-    },
-    "frontend_timeout": 0,
-    "auto_saving": true,
-    "auto_saving_interval": 1000,
-    "health_check_max_retries": 5,
-    "max_file_size_upload": 100
 }
 ```
 
