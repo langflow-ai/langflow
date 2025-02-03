@@ -25,12 +25,7 @@ class LCCompressorComponent(Component):
             info="Search Results from a Vector Store.",
             is_list=True,
         ),
-        IntInput(
-            name="top_n",
-            display_name="Top N",
-            value=3, 
-            advanced=True
-        ),
+        IntInput(name="top_n", display_name="Top N", value=3, advanced=True),
     ]
 
     outputs = [
