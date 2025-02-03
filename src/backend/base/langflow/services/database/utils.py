@@ -10,7 +10,7 @@ from loguru import logger
 from sqlmodel import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.utils import constants
+from langflow.serialization import constants
 
 if TYPE_CHECKING:
     from langflow.services.database.service import DatabaseService

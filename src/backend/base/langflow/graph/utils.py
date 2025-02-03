@@ -6,14 +6,12 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from langchain_core.documents import Document
 from loguru import logger
-from pydantic import BaseModel
-from pydantic.v1 import BaseModel as V1BaseModel
 
 from langflow.interface.utils import extract_input_variables_from_prompt
 from langflow.schema.data import Data
 from langflow.schema.message import Message
+from langflow.serialization import serialize
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
 from langflow.services.database.models.transactions.model import TransactionBase
 from langflow.services.database.models.vertex_builds.crud import log_vertex_build as crud_log_vertex_build
@@ -66,30 +64,6 @@ def flatten_list(list_of_lists: list[list | Any]) -> list:
         else:
             new_list.append(item)
     return new_list
-
-
-def serialize_field(value):
-    """Serialize field.
-
-    Unified serialization function for handling both BaseModel and Document types,
-    including handling lists of these types.
-    """
-    if isinstance(value, list | tuple):
-        return [serialize_field(v) for v in value]
-    if isinstance(value, Document):
-        return value.to_json()
-    if isinstance(value, BaseModel):
-        return serialize_field(value.model_dump())
-    if isinstance(value, dict):
-        return {k: serialize_field(v) for k, v in value.items()}
-    if isinstance(value, V1BaseModel):
-        if hasattr(value, "to_json"):
-            return value.to_json()
-        return value.dict()
-    # Handle datetime objects
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
-    return str(value)
 
 
 def get_artifact_type(value, build_result) -> str:
@@ -186,9 +160,9 @@ async def log_vertex_build(
             valid=valid,
             params=str(params) if params else None,
             # Serialize data using our custom serializer
-            data=serialize_field(data),
+            data=serialize(data),
             # Serialize artifacts using our custom serializer
-            artifacts=serialize_field(artifacts) if artifacts else None,
+            artifacts=serialize(artifacts) if artifacts else None,
         )
         async with session_getter(get_db_service()) as session:
             inserted = await crud_log_vertex_build(session, vertex_build)
