@@ -17,14 +17,14 @@ The component offers control over chunk size, overlap, and separator, which affe
 
 ## Alter metadata
 
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects) and [Data](/concepts-objects) objects, and can also create a new Data object from user-provided text.
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects) objects, and can also create a new Data object from user-provided text.
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_value | Input | Objects to which Metadata should be added |
-| text_in | User Text | Text input; value will be in 'text' attribute of[Data](/concepts-objects#data-object)object. Empty text entries are ignored. |
+| text_in | User Text | Text input; value will be in 'text' attribute of [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
 | metadata | Metadata | Metadata to add to each object |
 | remove_fields | Fields to Remove | Metadata Fields to Remove |
 
@@ -32,7 +32,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of Input objects, each with added Metadata |
+| data | Data | List of Input objects, each with added metadata |
 
 ## Combine text
 
@@ -50,12 +50,12 @@ This component concatenates two text sources into a single text chunk using a sp
 
 | Name | Display Name | Info |
 |------|--------------|------|
-|message |Message |A [Message](/concepts-objects) object containing the combined text.
+|message |Message |A [Message](/concepts-objects#message-object) object containing the combined text.
 
 
 ## Create data
 
-This component dynamically creates a [Data](/concepts-objects) object with a specified number of fields.
+This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
 
 ### Inputs
 | Name | Display Name | Info |
@@ -68,7 +68,7 @@ This component dynamically creates a [Data](/concepts-objects) object with a spe
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A [Data](/concepts-objects) object created with the specified fields and text key. |
+| data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
 
 
 ## DataFrame operations
@@ -204,19 +204,19 @@ The component iterates through the input list of data objects, merging them into
 
 ## Message to data
 
-This component converts [Message](/concepts-objects) objects to [Data](/concepts-objects) objects.
+This component converts [Message](/concepts-objects#message-object) objects to [Data](/concepts-objects#data-object) objects.
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| message | Message | The [Message](/concepts-objects) object to convert to a [Data](/concepts-objects) object |
+| message | Message | The [Message](/concepts-objects#message-object) object to convert to a [Data](/concepts-objects#data-object) object |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The converted [Data](/concepts-objects) object |
+| data | Data | The converted [Data](/concepts-objects#data-object) object |
 
 ## Parse Data (Data to message)
 
@@ -235,7 +235,7 @@ This component transforms structured data into human-readable text formats, allo
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| text | Text | The resulting formatted text string as a [Message](/concepts-objects) object. |
+| text | Text | The resulting formatted text string as a [Message](/concepts-objects#message-object) object. |
 
 
 ## Parse DataFrame
@@ -264,7 +264,7 @@ This component converts and extracts JSON fields using JQ queries.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Data object to filter ([Message](/concepts-objects) or [Data](/concepts-objects#data-object)) |
+| input_value | Input | Data object to filter ([Message](/concepts-objects#message-object) or [Data](/concepts-objects#data-object)) |
 | query | JQ Query | JQ Query to filter the data |
 
 ### Outputs
@@ -275,7 +275,7 @@ This component converts and extracts JSON fields using JQ queries.
 
 ## Select data
 
-This component selects a single [Data](/concepts-objects) item from a list.
+This component selects a single [Data](/concepts-objects#data-object) item from a list.
 
 ### Inputs
 
@@ -288,7 +288,7 @@ This component selects a single [Data](/concepts-objects) item from a list.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| selected_data | Selected Data | The selected [Data](/concepts-objects) object |
+| selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object |
 
 ## Split text
 
@@ -307,7 +307,7 @@ This component splits text into chunks based on specified criteria.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| chunks | Chunks | List of split text chunks as [Data](/concepts-objects) objects |
+| chunks | Chunks | List of split text chunks as [Data](/concepts-objects#data-object) objects |
 | dataframe | DataFrame | The chunks as a DataFrame |
 
 ## Update data
@@ -327,4 +327,4 @@ This component dynamically updates or appends data with specified fields.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | Updated [Data](/concepts-objects) objects |
+| data | Data | Updated [Data](/concepts-objects#data-object) objects |
