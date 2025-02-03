@@ -107,7 +107,7 @@ def extract_tool_modes(data: dict | list) -> list[bool | None]:
     return tool_models
 
 
-def apply_json_filter(result, filter_):
+def apply_json_filter(result, filter_) -> Data:
     """Apply a json filter to the result.
 
     Args:
@@ -115,7 +115,7 @@ def apply_json_filter(result, filter_):
         filter_ (str): The filter query string in jsonquery format
 
     Returns:
-        Any: The filtered result
+        Data: The filtered result
     """
     if not filter_ or not filter_.strip():
         return result

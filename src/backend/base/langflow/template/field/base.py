@@ -20,7 +20,7 @@ from pydantic import (
 from langflow.field_typing import Text
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
-from langflow.template.utils import apply_json_filter
+from langflow.schema.data import Data
 from langflow.type_extraction.type_extraction import post_process_type
 
 
@@ -238,7 +238,6 @@ class Output(BaseModel):
     def apply_options(self, result):
         if not self.options:
             return result
-        if self.options.get("filter"):
-            filtered_result = apply_json_filter(result, self.options["filter"])
-            return filtered_result if filtered_result is not None else result
+        if self.options.get("filter") and isinstance(result, Data):
+            return result.filter_data(self.options["filter"])
         return result
