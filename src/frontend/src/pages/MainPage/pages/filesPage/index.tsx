@@ -5,6 +5,7 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import ImportButtonComponent from "@/modals/fileManagerModal/components/importButtonComponent";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { ColDef } from "ag-grid-community";
@@ -94,9 +95,14 @@ export const FilesPage = () => {
       cellRenderer: (params) => {
         return (
           <div className="flex h-full cursor-default items-center justify-center">
-            <Button variant="ghost" size="iconMd">
-              <ForwardedIconComponent name="EllipsisVertical" />
-            </Button>
+            <FilesContextMenuComponent
+              isLocal={true}
+              handleSelectOptionsChange={() => {}}
+            >
+              <Button variant="ghost" size="iconMd">
+                <ForwardedIconComponent name="EllipsisVertical" />
+              </Button>
+            </FilesContextMenuComponent>
           </div>
         );
       },
