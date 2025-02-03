@@ -444,14 +444,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_database_options(self):
         try:
-            return [
+            # Retrieve database list once
+            database_list = self.get_database_list().items()
+
+            # Prepare options and metadata simultaneously
+            database_options = [
                 {
                     "name": name,
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in database_list
             ]
+            return database_options
         except Exception as e:
             msg = f"Error fetching database options: {e}"
             raise ValueError(msg) from e
@@ -498,10 +503,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the list of options we have based on the token provided
         database_options = self._initialize_database_options()
 
-        # If we retrieved options based on the token, show the dropdown
+        # Extract names and metadata directly
         build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
         build_config["api_endpoint"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            {"collections": db["collections"], "api_endpoint": db["api_endpoint"]} for db in database_options
         ]
 
         # Reset the selected database
