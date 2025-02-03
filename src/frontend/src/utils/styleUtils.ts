@@ -1,4 +1,5 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { DropboxIcon } from "@/icons/Dropbox";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
@@ -654,6 +655,7 @@ export const nodeIconsLucide: iconsType = {
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
+  AWSInverted: AWSInvertedIcon,
   Anthropic: AnthropicIcon,
   ArXiv: ArXivIcon,
   ChatAnthropic: AnthropicIcon,
