@@ -14,6 +14,17 @@ from pydantic.v1 import BaseModel as BaseModelV1
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 
 
+# Sentinel variable to signal a failed serialization.
+# Using a helper class ensures that the sentinel is a unique object,
+# while its __repr__ displays the desired message.
+class _UnserializableSentinel:
+    def __repr__(self):
+        return "[Unserializable Object]"
+
+
+UNSERIALIZABLE_SENTINEL = _UnserializableSentinel()
+
+
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
     """Truncate long strings with ellipsis if max_length provided."""
     if max_length is None or len(obj) <= max_length:
@@ -86,9 +97,9 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
 
 def _serialize_primitive(obj: Any, *_) -> Any:
     """Handle primitive types without conversion."""
-    if obj is None or isinstance(obj, int | float | bool | complex | str):
+    if obj is None or isinstance(obj, int | float | bool | complex):
         return obj
-    return None
+    return UNSERIALIZABLE_SENTINEL
 
 
 def _serialize_instance(obj: Any, *_) -> str:
@@ -112,12 +123,7 @@ def _serialize_dataframe(obj: pd.DataFrame, max_length: int | None, max_items: i
 
     data = obj.to_dict(orient="records")
 
-    if max_length is not None:
-        for record in data:
-            for key, value in record.items():
-                record[key] = _truncate_value(value, max_length)
-
-    return data
+    return serialize(data, max_length, max_items)
 
 
 def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | None) -> dict:
@@ -128,13 +134,35 @@ def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | N
     return obj.to_dict()
 
 
-def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | None:
+def _is_numpy_type(obj: Any) -> bool:
+    """Check if an object is a numpy type by checking its type's module name."""
+    return hasattr(type(obj), "__module__") and type(obj).__module__ == np.__name__
+
+
+def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | None) -> Any:
+    """Serialize numpy types."""
+    if np.issubdtype(obj.dtype, np.number) and hasattr(obj, "item"):
+        return obj.item()
+    if np.issubdtype(obj.dtype, np.bool_):
+        return bool(obj)
+    if np.issubdtype(obj.dtype, np.complexfloating):
+        return complex(cast(complex, obj))
+    if np.issubdtype(obj.dtype, np.str_):
+        return _serialize_str(str(obj), max_length, max_items)
+    if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
+        return _serialize_bytes(obj.tobytes(), max_length, max_items)
+    if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
+        return _serialize_instance(obj.item(), max_length, max_items)
+    return UNSERIALIZABLE_SENTINEL
+
+
+def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | _UnserializableSentinel:
     """Dispatch object to appropriate serializer."""
     # Handle primitive types first
     if obj is None:
         return obj
     primitive = _serialize_primitive(obj, max_length, max_items)
-    if primitive is not None:  # Special check for None since it's a valid primitive
+    if primitive is not UNSERIALIZABLE_SENTINEL:
         return primitive
 
     match obj:
@@ -164,6 +192,8 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
             return _serialize_series(obj, max_length, max_items)
         case list() | tuple():
             return _serialize_list_tuple(obj, max_length, max_items)
+        case object() if _is_numpy_type(obj):
+            return _serialize_numpy_type(obj, max_length, max_items)
         case object() if not isinstance(obj, type):  # Match any instance that's not a class
             return _serialize_instance(obj, max_length, max_items)
         case object() if hasattr(obj, "_name_"):  # Enum case
@@ -187,7 +217,7 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
                     return obj.tobytes().decode("utf-8", errors="ignore")
                 if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
                     return serialize(obj.item())
-            return obj
+            return UNSERIALIZABLE_SENTINEL
 
 
 def serialize(
@@ -213,7 +243,7 @@ def serialize(
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
-        if result is not None:  # Special check for None since it's a valid result
+        if result is not UNSERIALIZABLE_SENTINEL:  # Special check for None since it's a valid result
             return result
 
         # Handle class-based Pydantic types and other types
@@ -256,10 +286,3 @@ def serialize_or_str(
         max_items: Maximum items in list-like structures, None for no truncation
     """
     return serialize(obj, max_length, max_items, to_str=True)
-
-
-def _truncate_value(value, max_length: int | None):
-    """Truncate value if max_length is specified and value is a string."""
-    if isinstance(value, str) and max_length is not None:
-        return value[:max_length]
-    return value
