@@ -272,8 +272,8 @@ class TestSerializationHypothesis:
         assert abs(float32_val - 3.14) < 1e-6  # Check if close enough
 
         # Test bool
-        assert serialize(np.bool_(value=True)) is True
-        assert isinstance(serialize(np.bool_(value=True)), bool)
+        assert serialize(np.bool_(True)) is True  # noqa: FBT003
+        assert isinstance(serialize(np.bool_(True)), bool)  # noqa: FBT003
 
         # Test complex numbers
         complex_val = serialize(np.complex64(1 + 2j))
