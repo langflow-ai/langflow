@@ -17,8 +17,8 @@ from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
     """Truncate long strings with ellipsis if max_length provided."""
     if max_length is None or len(obj) <= max_length:
+        return obj
     return obj[:max_length] + "..."
-    return obj[:max_length] + "..." if len(obj) > max_length else obj
 
 
 def _serialize_bytes(obj: bytes, max_length: int | None, _) -> str:
@@ -98,8 +98,8 @@ def _serialize_instance(obj: Any, *_) -> str:
 
 def _truncate_value(value: Any, max_length: int | None, max_items: int | None) -> Any:
     """Truncate value based on its type and provided limits."""
-    if max_length is not None and isinstance(value, str) and len(value) > max_length:
-    if max_items is not None and isinstance(value, (list, tuple)) and len(value) > max_items:
+    if isinstance(value, str) and max_length is not None and len(value) > max_length:
+        return value[:max_length]
     if isinstance(value, list | tuple) and max_items is not None and len(value) > max_items:
         return value[:max_items]
     return value
