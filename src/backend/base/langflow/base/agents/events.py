@@ -7,6 +7,7 @@ from langchain_core.agents import AgentFinish
 from langchain_core.messages import BaseMessage
 from typing_extensions import TypedDict
 
+from langflow.base.agents.errors import CustomBadRequestError
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
 from langflow.schema.log import SendMessageFunctionType
@@ -14,9 +15,13 @@ from langflow.schema.message import Message
 
 
 class ExceptionWithMessageError(Exception):
-    def __init__(self, agent_message: Message):
+    def __init__(self, agent_message: Message, message: str):
         self.agent_message = agent_message
-        super().__init__()
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return f"{self.message}"
 
 
 class InputDict(TypedDict):
@@ -273,6 +278,5 @@ async def process_agent_events(
                 agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
         agent_message.properties.state = "complete"
     except Exception as e:
-        raise ExceptionWithMessageError(agent_message) from e
-
+        raise ExceptionWithMessageError(agent_message, str(e)) from e
     return await Message.create(**agent_message.model_dump())
