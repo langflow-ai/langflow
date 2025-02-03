@@ -9,7 +9,7 @@ from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.encoders import CUSTOM_ENCODERS
 from langflow.schema.message import Message
-from langflow.schema.serialize import recursive_serialize_or_str
+from langflow.serialization.serialization import serialize
 
 
 class ArtifactType(str, Enum):
@@ -56,7 +56,7 @@ def _to_list_of_dicts(raw):
     raw_ = []
     for item in raw:
         if hasattr(item, "dict") or hasattr(item, "model_dump"):
-            raw_.append(recursive_serialize_or_str(item))
+            raw_.append(serialize(item))
         else:
             raw_.append(str(item))
     return raw_
