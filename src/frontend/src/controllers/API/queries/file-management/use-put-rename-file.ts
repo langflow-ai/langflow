@@ -13,7 +13,7 @@ export const usePostRenameFileV2: useMutationFunctionType<
   undefined,
   IPostRenameFile
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const postRenameFileFn = async (payload: IPostRenameFile): Promise<any> => {
     const response = await api.put<any>(
@@ -31,7 +31,15 @@ export const usePostRenameFileV2: useMutationFunctionType<
         const res = await postRenameFileFn(payload);
         return res;
       },
-      options,
+      {
+        onSettled: (data, error, variables, context) => {
+          queryClient.invalidateQueries({
+            queryKey: ["useGetFilesV2"],
+          });
+          options?.onSettled?.(data, error, variables, context);
+        },
+        ...options,
+      },
     );
 
   return mutation;

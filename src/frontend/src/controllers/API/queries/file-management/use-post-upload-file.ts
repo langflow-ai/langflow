@@ -12,7 +12,7 @@ export const usePostUploadFileV2: useMutationFunctionType<
   undefined,
   IPostUploadFile
 > = (options?) => {
-  const { mutate } = UseRequestProcessor();
+  const { mutate, queryClient } = UseRequestProcessor();
 
   const postUploadFileFn = async (payload: IPostUploadFile): Promise<any> => {
     const formData = new FormData();
@@ -33,7 +33,15 @@ export const usePostUploadFileV2: useMutationFunctionType<
         const res = await postUploadFileFn(payload);
         return res;
       },
-      options,
+      {
+        onSettled: (data, error, variables, context) => {
+          queryClient.invalidateQueries({
+            queryKey: ["useGetFilesV2"],
+          });
+          options?.onSettled?.(data, error, variables, context);
+        },
+        ...options,
+      },
     );
 
   return mutation;
