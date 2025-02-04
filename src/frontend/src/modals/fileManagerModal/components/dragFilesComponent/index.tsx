@@ -3,7 +3,11 @@ import useUploadFile from "@/hooks/files/use-upload-file";
 import useAlertStore from "@/stores/alertStore";
 import { useState } from "react";
 
-export default function DragFilesComponent() {
+export default function DragFilesComponent({
+  onUpload,
+}: {
+  onUpload: (filesPaths: string[]) => void;
+}) {
   const image = `url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23FFFFFF' stroke-width='2px' stroke-dasharray='5%2c 5' stroke-dashoffset='0' stroke-linecap='butt'/%3E%3C/svg%3E")`;
   const [isDragging, setIsDragging] = useState(false);
   const uploadFile = useUploadFile({
@@ -38,9 +42,10 @@ export default function DragFilesComponent() {
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length > 0) {
       try {
-        await uploadFile({
+        const filesIds = await uploadFile({
           files: droppedFiles,
         });
+        onUpload(filesIds);
       } catch (error: any) {
         setErrorData({
           title: "Error uploading file",
@@ -52,7 +57,8 @@ export default function DragFilesComponent() {
 
   const handleClick = async () => {
     try {
-      await uploadFile({});
+      const filesIds = await uploadFile({});
+      onUpload(filesIds);
     } catch (error: any) {
       setErrorData({
         title: "Error uploading file",
