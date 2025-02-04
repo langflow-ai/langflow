@@ -52,7 +52,7 @@ class TelemetryService(Service):
             try:
                 await func(payload, path)
             except Exception:  # noqa: BLE001
-                logger.exception("Error sending telemetry data")
+                logger.error("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 
@@ -72,11 +72,11 @@ class TelemetryService(Service):
             else:
                 logger.debug("Telemetry data sent successfully.")
         except httpx.HTTPStatusError:
-            logger.exception("HTTP error occurred")
+            logger.error("HTTP error occurred")
         except httpx.RequestError:
-            logger.exception("Request error occurred")
+            logger.error("Request error occurred")
         except Exception:  # noqa: BLE001
-            logger.exception("Unexpected error occurred")
+            logger.error("Unexpected error occurred")
 
     async def log_package_run(self, payload: RunPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "run"))

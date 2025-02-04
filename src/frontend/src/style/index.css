@@ -111,8 +111,11 @@
     --smooth-red: 0 93.3% 94.1%;
     --radius: 0.5rem;
 
-    --datatype-pink: 327.3 73.3% 97.1%;
-    --datatype-pink-foreground: 333.3 71.4% 50.6%;
+    --datatype-pink: 333.3 71.4% 50.6%;
+    --datatype-pink-foreground: 325.7 77.8% 94.7%;
+
+    --datatype-rose: 346.8 77.2% 49.8%;
+    --datatype-rose-foreground: 355.6 100% 94.7%;
 
     --datatype-yellow: 40.6 96.1% 40.4%;
     --datatype-yellow-foreground: 54.9 96.7% 88%;
@@ -273,10 +276,13 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
     --placeholder: 240 5% 64.9%;
     --hard-zinc: 240 5.2% 33.9%;
-    --smooth-red: 0 93.3% 94.1%;
+    --smooth-red: 0 74.7% 15.5%;
 
     --datatype-pink: 327.4 87.1% 81.8%;
     --datatype-pink-foreground: 333.3 71.4% 50.6%;
+
+    --datatype-rose: 352.6 95.7% 81.8%;
+    --datatype-rose-foreground: 346.8 77.2% 49.8%;
 
     --datatype-yellow: 50.4 97.8% 63.5%;
     --datatype-yellow-foreground: 40.6 96.1% 40.4%;
@@ -301,9 +307,9 @@
 
     --datatype-fuchsia: 291.1 93.1% 82.9%;
     --datatype-fuchsia-foreground: 293.4 69.5% 48.8%;
-
-    --datatype-purple: 269.2 97.4% 85.1%;
-    --datatype-purple-foreground: 293.4 69.5% 48.8%;
+    
+    --datatype-purple: 268.6 100% 91.8%;
+    --datatype-purple-foreground: 272.1 71.7% 47.1%;
 
     --datatype-cyan: 187 92.4% 69%;
     --datatype-cyan-foreground: 191.6 91.4% 36.5%;

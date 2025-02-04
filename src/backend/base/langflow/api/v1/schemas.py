@@ -4,20 +4,14 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    field_serializer,
-    field_validator,
-    model_serializer,
-)
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
 
 from langflow.graph.schema import RunOutputs
-from langflow.graph.utils import serialize_field
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.serialization.serialization import serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
@@ -275,9 +269,22 @@ class ResultDataResponse(BaseModel):
     @field_serializer("results")
     @classmethod
     def serialize_results(cls, v):
-        if isinstance(v, dict):
-            return {key: serialize_field(val) for key, val in v.items()}
-        return serialize_field(v)
+        """Serialize results with custom handling for special types and truncation."""
+        return serialize(v, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
+
+    @model_serializer(mode="plain")
+    def serialize_model(self) -> dict:
+        """Custom serializer for the entire model."""
+        return {
+            "results": self.serialize_results(self.results),
+            "outputs": serialize(self.outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "logs": serialize(self.logs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "message": serialize(self.message, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "artifacts": serialize(self.artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "timedelta": self.timedelta,
+            "duration": self.duration,
+            "used_frozen_result": self.used_frozen_result,
+        }
 
 
 class VertexBuildResponse(BaseModel):

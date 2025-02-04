@@ -14,13 +14,14 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
-from sqlalchemy import event, inspect
+from sqlalchemy import AsyncAdaptedQueuePool, event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.base import Service
@@ -38,6 +39,7 @@ class DatabaseService(Service):
     name = "database_service"
 
     def __init__(self, settings_service: SettingsService):
+        self._logged_pragma = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -54,7 +56,10 @@ class DatabaseService(Service):
         # register the event listener for sqlite as part of this class.
         # Using decorator will make the method not able to use self
         event.listen(Engine, "connect", self.on_connection)
-        self.engine = self._create_engine()
+        if self.settings_service.settings.database_connection_retry:
+            self.engine = self._create_engine_with_retry()
+        else:
+            self.engine = self._create_engine()
 
         alembic_log_file = self.settings_service.settings.alembic_log_file
         # Check if the provided path is absolute, cross-platform.
@@ -63,8 +68,6 @@ class DatabaseService(Service):
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
-        self._logged_pragma = False
-
     async def initialize_alembic_log_file(self):
         # Ensure the directory and file for the alembic log file exists
         await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
@@ -72,7 +75,10 @@ class DatabaseService(Service):
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
-        self.engine = self._create_engine()
+        if self.settings_service.settings.database_connection_retry:
+            self.engine = self._create_engine_with_retry()
+        else:
+            self.engine = self._create_engine()
 
     def _sanitize_database_url(self):
         if self.database_url.startswith("postgres://"):
@@ -82,24 +88,56 @@ class DatabaseService(Service):
                 "To avoid this warning, update the database URL."
             )
 
+    def _build_connection_kwargs(self):
+        """Build connection kwargs by merging deprecated settings with db_connection_settings.
+
+        Returns:
+            dict: Connection kwargs with deprecated settings overriding db_connection_settings
+        """
+        settings = self.settings_service.settings
+        # Start with db_connection_settings as base
+        connection_kwargs = settings.db_connection_settings.copy()
+
+        # Override individual settings if explicitly set
+        if "pool_size" in settings.model_fields_set:
+            logger.warning("pool_size is deprecated. Use db_connection_settings['pool_size'] instead.")
+            connection_kwargs["pool_size"] = settings.pool_size
+        if "max_overflow" in settings.model_fields_set:
+            logger.warning("max_overflow is deprecated. Use db_connection_settings['max_overflow'] instead.")
+            connection_kwargs["max_overflow"] = settings.max_overflow
+
+        return connection_kwargs
+
     def _create_engine(self) -> AsyncEngine:
         """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
+
+        # Get connection settings from config, with defaults if not specified
+        # if the user specifies an empty dict, we allow it.
+        kwargs = self._build_connection_kwargs()
+
         if url_components[0].startswith("sqlite"):
-            database_url = "sqlite+aiosqlite://"
-            kwargs = {}
+            scheme = "sqlite+aiosqlite"
+            # Even though the docs say this is the default, it raises an error
+            # if we don't specify it.
+            # https://docs.sqlalchemy.org/en/20/errors.html#pool-class-cannot-be-used-with-asyncio-engine-or-vice-versa
+            pool = AsyncAdaptedQueuePool
         else:
-            kwargs = {
-                "pool_size": self.settings_service.settings.pool_size,
-                "max_overflow": self.settings_service.settings.max_overflow,
-            }
-            database_url = "postgresql+psycopg://" if url_components[0].startswith("postgresql") else url_components[0]
-        database_url += url_components[1]
+            scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
+            pool = None
+
+        database_url = f"{scheme}://{url_components[1]}"
         return create_async_engine(
             database_url,
             connect_args=self._get_connect_args(),
+            poolclass=pool,
             **kwargs,
         )
+
+    @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
+    def _create_engine_with_retry(self) -> AsyncEngine:
+        """Create the engine for the database with retry logic."""
+        return self._create_engine()
 
     def _get_connect_args(self):
         if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
@@ -136,7 +174,13 @@ class DatabaseService(Service):
     @asynccontextmanager
     async def with_session(self):
         async with AsyncSession(self.engine, expire_on_commit=False) as session:
-            yield session
+            # Start of Selection
+            try:
+                yield session
+            except exc.SQLAlchemyError as db_exc:
+                logger.error(f"Database error during session scope: {db_exc}")
+                await session.rollback()
+                raise
 
     async def assign_orphaned_flows_to_superuser(self) -> None:
         """Assign orphaned flows to the default superuser when auto login is enabled."""
@@ -346,7 +390,7 @@ class DatabaseService(Service):
         ]
         async with self.with_session() as session, session.bind.connect() as conn:
             return [
-                TableResults(sql_model.__tablename__, conn.run_sync(self.check_table, sql_model))
+                TableResults(sql_model.__tablename__, await conn.run_sync(self.check_table, sql_model))
                 for sql_model in sql_models
             ]
 
@@ -407,6 +451,10 @@ class DatabaseService(Service):
                 raise RuntimeError(msg)
 
         logger.debug("Database and tables created successfully")
+
+    @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
+    async def create_db_and_tables_with_retry(self) -> None:
+        await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
         async with self.with_session() as session, session.bind.connect() as conn:

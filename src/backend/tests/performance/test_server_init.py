@@ -23,7 +23,6 @@ def setup_database_url(tmp_path, monkeypatch):
         monkeypatch.delenv("LANGFLOW_DATABASE_URL", raising=False)
 
 
-@pytest.mark.benchmark
 async def test_initialize_services():
     """Benchmark the initialization of services."""
     from langflow.services.utils import initialize_services
@@ -33,7 +32,6 @@ async def test_initialize_services():
     assert "test_performance.db" in settings_service.settings.database_url
 
 
-@pytest.mark.benchmark
 def test_setup_llm_caching():
     """Benchmark LLM caching setup."""
     from langflow.interface.utils import setup_llm_caching
@@ -43,7 +41,6 @@ def test_setup_llm_caching():
     assert "test_performance.db" in settings_service.settings.database_url
 
 
-@pytest.mark.benchmark
 async def test_initialize_super_user():
     """Benchmark super user initialization."""
     from langflow.initial_setup.setup import initialize_super_user_if_needed
@@ -55,10 +52,9 @@ async def test_initialize_super_user():
     assert "test_performance.db" in settings_service.settings.database_url
 
 
-@pytest.mark.benchmark
 async def test_get_and_cache_all_types_dict():
     """Benchmark get_and_cache_all_types_dict function."""
-    from langflow.interface.types import get_and_cache_all_types_dict
+    from langflow.interface.components import get_and_cache_all_types_dict
 
     settings_service = get_settings_service()
     result = await get_and_cache_all_types_dict(settings_service)
@@ -66,11 +62,10 @@ async def test_get_and_cache_all_types_dict():
     assert "test_performance.db" in settings_service.settings.database_url
 
 
-@pytest.mark.benchmark
 async def test_create_starter_projects():
     """Benchmark creation of starter projects."""
     from langflow.initial_setup.setup import create_or_update_starter_projects
-    from langflow.interface.types import get_and_cache_all_types_dict
+    from langflow.interface.components import get_and_cache_all_types_dict
     from langflow.services.utils import initialize_services
 
     await initialize_services(fix_migration=False)
@@ -80,7 +75,6 @@ async def test_create_starter_projects():
     assert "test_performance.db" in settings_service.settings.database_url
 
 
-@pytest.mark.benchmark
 async def test_load_flows():
     """Benchmark loading flows from directory."""
     from langflow.initial_setup.setup import load_flows_from_directory

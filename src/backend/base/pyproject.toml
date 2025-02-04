@@ -1,3 +1,88 @@
+[project]
+name = "langflow-base"
+version = "0.1.3"
+description = "A Python package with a built-in web application"
+requires-python = ">=3.10,<3.13"
+license = "MIT"
+keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
+readme = "README.md"
+maintainers = [
+    { name = "Carlos Coelho", email = "carlos@langflow.org" },
+    { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
+    { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
+    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
+    { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
+    { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
+    { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
+    { name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com" },
+]
+
+dependencies = [
+    "fastapi>=0.115.2,<1.0.0",
+    "httpx[http2]>=0.27,<1.0.0",
+    "aiofile>=3.9.0,<4.0.0",
+    "uvicorn>=0.30.0,<1.0.0",
+    "gunicorn>=22.0.0,<24.0.0",
+    "langchain~=0.3.10",
+    "langchain-community~=0.3.10",
+    "langchain-core~=0.3.15",
+    "langchainhub~=0.1.15",
+    "loguru>=0.7.1,<1.0.0",
+    "rich>=13.7.0,<14.0.0",
+    "langchain-experimental>=0.0.61,<1.0.0",
+    "sqlmodel==0.0.22",
+    "pydantic~=2.10.1",
+    "pydantic-settings>=2.2.0,<3.0.0",
+    "typer>=0.13.0,<1.0.0",
+    "cachetools>=5.5.0,<6.0.0",
+    "platformdirs>=4.2.0,<5.0.0",
+    "python-multipart>=0.0.12,<1.0.0",
+    "orjson==3.10.0",
+    "alembic>=1.13.0,<2.0.0",
+    "passlib>=1.7.4,<2.0.0",
+    "bcrypt==4.0.1",
+    "pillow>=10.2.0,<11.0.0",
+    "docstring-parser>=0.16,<1.0.0",
+    "python-jose>=3.3.0,<4.0.0",
+    "pandas==2.2.2",
+    "multiprocess>=0.70.14,<1.0.0",
+    "duckdb>=1.0.0,<2.0.0",
+    "python-docx>=1.1.0,<2.0.0",
+    "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
+    "nest-asyncio>=1.6.0,<2.0.0",
+    "emoji>=2.12.0,<3.0.0",
+    "cryptography>=42.0.5,<44.0.0",
+    "asyncer>=0.0.5,<1.0.0",
+    "pyperclip>=1.8.2,<2.0.0",
+    "uncurl>=0.0.11,<1.0.0",
+    "sentry-sdk[fastapi,loguru]>=2.5.1,<3.0.0",
+    "chardet>=5.2.0,<6.0.0",
+    "firecrawl-py>=1.0.16,<2.0.0",
+    "opentelemetry-api>=1.25.0,<2.0.0",
+    "opentelemetry-sdk>=1.25.0,<2.0.0",
+    "opentelemetry-exporter-prometheus>=0.46b0,<1.0.0",
+    "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
+    "prometheus-client>=0.20.0,<1.0.0",
+    "aiofiles>=24.1.0,<25.0.0",
+    "setuptools>=70,<76.0.0",
+    "nanoid>=2.0.0,<3.0.0",
+    "filelock>=3.15.4,<4.0.0",
+    "grandalf>=0.8.0,<1.0.0",
+    "spider-client>=0.0.27,<1.0.0",
+    "diskcache>=5.6.3,<6.0.0",
+    "clickhouse-connect==0.7.19",
+    "assemblyai>=0.33.0,<1.0.0",
+    "fastapi-pagination>=0.12.29,<1.0.0",
+    "defusedxml>=0.7.1,<1.0.0",
+    "pypdf~=5.1.0",
+    "validators>=0.34.0",
+    "networkx>=3.4.2",
+    "json-repair>=0.30.3",
+    "mcp>=1.1.2",
+    "aiosqlite>=0.20.0",
+    "greenlet>=3.1.1",
+]
+
 
 [tool.hatch.build.targets.wheel]
 packages = ["langflow"]
@@ -94,86 +179,9 @@ pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:spl
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project]
-name = "langflow-base"
-version = "0.1.1"
-description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
-license = "MIT"
-keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
-readme = "README.md"
-maintainers = [
-    { name = "Carlos Coelho", email = "carlos@langflow.org" },
-    { name = "Cristhian Zanforlin", email = "cristhian.lousa@gmail.com" },
-    { name = "Gabriel Almeida", email = "gabriel@langflow.org" },
-    { name = "Igor Carvalho", email = "igorr.ackerman@gmail.com" },
-    { name = "Lucas Eduoli", email = "lucaseduoli@gmail.com" },
-    { name = "Otávio Anovazzi", email = "otavio2204@gmail.com" },
-    { name = "Rodrigo Nader", email = "rodrigo@langflow.org" },
-    { name = "Italo dos Anjos", email = "italojohnnydosanjos@gmail.com" },
-]
 
 
 
-dependencies = [
-    "fastapi>=0.115.2,<1.0.0",
-    "httpx[http2]>=0.27,<1.0.0",
-    "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=22.0.0,<24.0.0",
-    "langchain~=0.3.10",
-    "langchain-community~=0.3.10",
-    "langchain-core~=0.3.15",
-    "langchainhub~=0.1.15",
-    "loguru>=0.7.1,<1.0.0",
-    "rich>=13.7.0,<14.0.0",
-    "langchain-experimental>=0.0.61,<1.0.0",
-    "sqlmodel==0.0.22",
-    "pydantic~=2.10.1",
-    "pydantic-settings>=2.2.0,<3.0.0",
-    "typer>=0.13.0,<1.0.0",
-    "cachetools>=5.5.0,<6.0.0",
-    "platformdirs>=4.2.0,<5.0.0",
-    "python-multipart>=0.0.12,<1.0.0",
-    "orjson==3.10.0",
-    "alembic>=1.13.0,<2.0.0",
-    "passlib>=1.7.4,<2.0.0",
-    "bcrypt==4.0.1",
-    "pillow>=10.2.0,<11.0.0",
-    "docstring-parser>=0.16,<1.0.0",
-    "python-jose>=3.3.0,<4.0.0",
-    "pandas==2.2.2",
-    "multiprocess>=0.70.14,<1.0.0",
-    "duckdb>=1.0.0,<2.0.0",
-    "python-docx>=1.1.0,<2.0.0",
-    "jq>=1.7.0,<2.0.0; sys_platform != 'win32'",
-    "nest-asyncio>=1.6.0,<2.0.0",
-    "emoji>=2.12.0,<3.0.0",
-    "cryptography>=42.0.5,<44.0.0",
-    "asyncer>=0.0.5,<1.0.0",
-    "pyperclip>=1.8.2,<2.0.0",
-    "uncurl>=0.0.11,<1.0.0",
-    "sentry-sdk[fastapi,loguru]>=2.5.1,<3.0.0",
-    "chardet>=5.2.0,<6.0.0",
-    "firecrawl-py>=1.0.16,<2.0.0",
-    "opentelemetry-api>=1.25.0,<2.0.0",
-    "opentelemetry-sdk>=1.25.0,<2.0.0",
-    "opentelemetry-exporter-prometheus>=0.46b0,<1.0.0",
-    "opentelemetry-instrumentation-fastapi>=0.46b0,<1.0.0",
-    "prometheus-client>=0.20.0,<1.0.0",
-    "aiofiles>=24.1.0,<25.0.0",
-    "setuptools>=70,<76.0.0",
-    "nanoid>=2.0.0,<3.0.0",
-    "filelock>=3.15.4,<4.0.0",
-    "grandalf>=0.8.0,<1.0.0",
-    "spider-client>=0.0.27,<1.0.0",
-    "diskcache>=5.6.3,<6.0.0",
-    "clickhouse-connect==0.7.19",
-    "assemblyai>=0.33.0,<1.0.0",
-    "fastapi-pagination>=0.12.29,<1.0.0",
-    "defusedxml>=0.7.1,<1.0.0",
-    "pypdf~=5.1.0",
-    "validators>=0.34.0",
-]
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"

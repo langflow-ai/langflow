@@ -20,16 +20,19 @@ export const mutateTemplate = debounce(
     setErrorData,
     parameterName?: string,
     callback?: () => void,
+    toolMode?: boolean,
   ) => {
     try {
       const newNode = cloneDeep(node);
       const newTemplate = await postTemplateValue.mutateAsync({
         value: newValue,
         field_name: parameterName,
+        tool_mode: toolMode ?? node.tool_mode,
       });
       if (newTemplate) {
         newNode.template = newTemplate.template;
         newNode.outputs = newTemplate.outputs;
+        newNode.tool_mode = toolMode ?? node.tool_mode;
       }
       setNodeClass(newNode);
       callback?.();

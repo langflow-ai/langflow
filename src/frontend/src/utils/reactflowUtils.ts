@@ -2,9 +2,11 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
+import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   Connection,
   Edge,
+  getOutgoers,
   Node,
   OnSelectionChangeParams,
   ReactFlowJsonObject,
@@ -18,8 +20,8 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  SUCCESS_BUILD,
   specialCharsRegex,
+  SUCCESS_BUILD,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
@@ -68,14 +70,39 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
-      const id: targetHandleType = {
-        type: targetNode.data.node!.template[field]?.type,
-        fieldName: field,
-        id: targetNode.data.id,
-        inputTypes: targetNode.data.node!.template[field]?.input_types,
-      };
-      if (targetNode.data.node!.template[field]?.proxy) {
-        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      let id: targetHandleType | sourceHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
+      if (
+        !field &&
+        targetHandleObject.name &&
+        targetNode.type === "genericNode"
+      ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
+        id = {
+          dataType: dataType ?? "",
+          name: targetHandleObject.name,
+          id: targetNode.data.id,
+          output_types: outputTypes,
+        };
+      } else {
+        id = {
+          type: templateFieldType,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: inputTypes,
+        };
+        if (hasProxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
+        }
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -132,7 +159,9 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
         displayName: targetNode.data.node!.display_name,
         field:
           targetNode.data.node!.template[targetHandleObject.fieldName]
-            ?.display_name ?? targetHandleObject.fieldName,
+            ?.display_name ??
+          targetHandleObject.fieldName ??
+          targetHandleObject.name,
       },
     };
   }
@@ -161,14 +190,39 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
-      const id: targetHandleType = {
-        type: targetNode.data.node!.template[field]?.type,
-        fieldName: field,
-        id: targetNode.data.id,
-        inputTypes: targetNode.data.node!.template[field]?.input_types,
-      };
-      if (targetNode.data.node!.template[field]?.proxy) {
-        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      let id: sourceHandleType | targetHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
+      if (
+        !field &&
+        targetHandleObject.name &&
+        targetNode.type === "genericNode"
+      ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
+        id = {
+          dataType: dataType ?? "",
+          name: targetHandleObject.name,
+          id: targetNode.data.id,
+          output_types: outputTypes,
+        };
+      } else {
+        id = {
+          type: templateFieldType,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: inputTypes,
+        };
+        if (hasProxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
+        }
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -219,7 +273,7 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   nodes: AllNodeType[],
   edges: EdgeType[],
-) {
+): boolean {
   if (source === target) {
     return false;
   }
@@ -229,6 +283,13 @@ export function isValidConnection(
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||
+    (targetHandleObject.output_types &&
+      (targetHandleObject.output_types?.some(
+        (n) => n === sourceHandleObject.dataType,
+      ) ||
+        sourceHandleObject.output_types.some((t) =>
+          targetHandleObject.output_types?.some((n) => n === t),
+        ))) ||
     sourceHandleObject.output_types.some(
       (t) =>
         targetHandleObject.inputTypes?.some((n) => n === t) ||
@@ -241,9 +302,15 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandleObject.fieldName].list &&
+      targetHandleObject.output_types &&
+      !edges.find((e) => e.targetHandle === targetHandle)
+    ) {
+      return true;
+    } else if (
+      !targetHandleObject.output_types &&
+      ((!targetNode.template[targetHandleObject.fieldName].list &&
         !edges.find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandleObject.fieldName].list
+        targetNode.template[targetHandleObject.fieldName].list)
     ) {
       return true;
     }
@@ -485,7 +552,64 @@ Array<{ id: string; errors: Array<string> }> {
     id: n.id,
     errors: validateNode(n, edges),
   }));
+
   return nodeMap.filter((n) => n.errors?.length);
+}
+
+export function validateEdge(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): Array<string> {
+  const targetHandleObject: targetHandleType = scapeJSONParse(e.targetHandle!);
+
+  const loop = hasLoop(e, nodes, edges);
+  if (targetHandleObject.output_types && !loop) {
+    return [INCOMPLETE_LOOP_ERROR_ALERT];
+  }
+  return [];
+}
+
+function hasLoop(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): boolean {
+  const source = e.source;
+  const target = e.target;
+
+  // Check if this connection would create a cycle
+  const targetNode = nodes.find((n) => n.id === target);
+
+  const hasCycle = (
+    node,
+    visited = new Set(),
+    firstEdge: EdgeType | null = null,
+  ): boolean => {
+    if (visited.has(node.id)) return false;
+
+    visited.add(node.id);
+
+    for (const outgoer of getOutgoers(node, nodes, edges)) {
+      const edge = edges.find(
+        (e) => e.source === node.id && e.target === outgoer.id,
+      );
+      if (outgoer.id === source) {
+        const sourceHandleObject = scapeJSONParse(
+          firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
+        );
+        const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
+        if (sourceHandleParsed === e.targetHandle) {
+          return true;
+        }
+      }
+      if (hasCycle(outgoer, visited, firstEdge || edge)) return true;
+    }
+    return false;
+  };
+
+  if (targetNode?.id === source) return false;
+  return hasCycle(targetNode);
 }
 
 export function updateEdges(edges: EdgeType[]) {
@@ -1745,4 +1869,12 @@ export function someFlowTemplateFields(
 
 export function checkHasToolMode(template: APITemplateType) {
   return template && Object.values(template).some((field) => field.tool_mode);
+}
+
+export function buildPositionDictionary(nodes: AllNodeType[]) {
+  const positionDictionary = {};
+  nodes.forEach((node) => {
+    positionDictionary[node.position.x] = node.position.y;
+  });
+  return positionDictionary;
 }

@@ -17,9 +17,10 @@ test(
     });
     await page
       .getByTestId("dataURL")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+      .hover()
+      .then(async () => {
+        await page.getByTestId("add-component-button-url").click();
+      });
     await adjustScreenView(page);
 
     await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
@@ -53,93 +54,60 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
+    await page.getByTestId("input-list-delete-btn-edit_urls-0").click();
 
-    const plusButtonLocator = page.getByTestId(
-      "input-list-minus-btn-edit_urls-1",
-    );
-    const elementCount = await plusButtonLocator?.count();
+    expect(
+      await page.getByTestId("input-list-delete-btn-edit_urls-2").count(),
+    ).toBe(0);
 
-    if (elementCount > 1) {
-      expect(false).toBeTruthy();
-    }
+    await page.getByTestId("input-list-delete-btn-edit_urls-1").click();
+
+    expect(
+      await page.getByTestId("input-list-delete-btn-edit_urls-1").count(),
+    ).toBe(0);
 
     await page.getByText("Close").last().click();
 
-    await page.getByTestId("input-list-minus-btn_urls-2").isHidden();
-
     await page.getByTestId("input-list-plus-btn_urls-0").click();
     await page.getByTestId("input-list-plus-btn_urls-0").click();
+    await page.getByTestId("input-list-plus-btn_urls-0").click();
 
-    await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
-    await page
-      .getByTestId("inputlist_str_urls_1")
-      .fill("test1 test1 test1 test1");
-    await page
-      .getByTestId("inputlist_str_urls_2")
-      .fill("test2 test2 test2 test2");
-    await page
-      .getByTestId("inputlist_str_urls_3")
-      .fill("test3 test3 test3 test3");
-
-    await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("advanced-button-modal").click();
-
-    const value0Edit = await page
-      .getByTestId("inputlist_str_edit_urls_0")
-      .inputValue();
-    const value1Edit = await page
-      .getByTestId("inputlist_str_edit_urls_1")
-      .inputValue();
-    const value2Edit = await page
-      .getByTestId("inputlist_str_edit_urls_2")
-      .inputValue();
-    const value3Edit = await page
-      .getByTestId("inputlist_str_edit_urls_3")
-      .inputValue();
-
-    if (
-      value0Edit !== "test test test test" ||
-      value1Edit !== "test1 test1 test1 test1" ||
-      value2Edit !== "test2 test2 test2 test2" ||
-      value3Edit !== "test3 test3 test3 test3"
-    ) {
-      expect(false).toBeTruthy();
-    }
-
-    await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
-    await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
-    await page.getByTestId("input-list-minus-btn-edit_urls-1").click();
-
-    const plusButtonLocatorEdit0 = await page.getByTestId(
-      "input-list-plus-btn-edit_urls-0",
-    );
-    const elementCountEdit0 = await plusButtonLocatorEdit0?.count();
-
-    const plusButtonLocatorEdit2 = await page.getByTestId(
-      "input-list-plus-btn-edit_urls-1",
-    );
-    const elementCountEdit2 = await plusButtonLocatorEdit2?.count();
-
-    if (elementCountEdit0 > 1 || elementCountEdit2 > 0) {
-      expect(false).toBeTruthy();
-    }
-
-    const minusButtonLocatorEdit1 = await page.getByTestId(
-      "input-list-minus-btn-edit_urls-1",
+    expect(await page.getByTestId("input-list-delete-btn_urls-0").count()).toBe(
+      1,
     );
 
-    const elementCountMinusEdit1 = await minusButtonLocatorEdit1?.count();
-
-    const minusButtonLocatorEdit2 = await page.getByTestId(
-      "input-list-minus-btn-edit_urls-2",
+    expect(await page.getByTestId("input-list-delete-btn_urls-1").count()).toBe(
+      1,
     );
 
-    const elementCountMinusEdit2 = await minusButtonLocatorEdit2?.count();
+    expect(await page.getByTestId("input-list-delete-btn_urls-2").count()).toBe(
+      1,
+    );
 
-    if (elementCountMinusEdit1 > 1 || elementCountMinusEdit2 > 0) {
-      expect(false).toBeTruthy();
-    }
+    expect(await page.getByTestId("input-list-delete-btn_urls-3").count()).toBe(
+      1,
+    );
+
+    expect(await page.getByTestId("input-list-delete-btn_urls-4").count()).toBe(
+      0,
+    );
+
+    expect(await page.getByTestId("inputlist_str_urls_0").inputValue()).toBe(
+      "test1 test1 test1 test1",
+    );
+
+    expect(await page.getByTestId("inputlist_str_urls_1").inputValue()).toBe(
+      "",
+    );
+
+    await page.getByTestId("edit-button-modal").click();
+
+    expect(
+      await page.getByTestId("inputlist_str_edit_urls_0").inputValue(),
+    ).toBe("test1 test1 test1 test1");
+
+    expect(
+      await page.getByTestId("inputlist_str_edit_urls_1").inputValue(),
+    ).toBe("");
   },
 );

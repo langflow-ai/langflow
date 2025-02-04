@@ -1,38 +1,39 @@
 import asyncio
 import copy
+import io
 import json
 import os
+import re
 import shutil
+import zipfile
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import AnyStr
 from uuid import UUID
 
 import anyio
+import httpx
 import orjson
+import sqlalchemy as sa
 from aiofile import async_open
 from emoji import demojize, purely_emoji
 from loguru import logger
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.database.models.folder.model import Folder, FolderCreate
-from langflow.services.database.models.folder.utils import (
-    create_default_folder_if_it_doesnt_exist,
-    get_default_folder_id,
-)
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.deps import (
-    get_settings_service,
-    get_storage_service,
-    get_variable_service,
-    session_scope,
-)
+from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
 
@@ -385,10 +386,27 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
 
 
 async def copy_profile_pictures() -> None:
+    """Asynchronously copies profile pictures from the source directory to the target configuration directory.
+
+    This function copies profile pictures while optimizing I/O operations by:
+    1. Using a set to track existing files and avoid redundant filesystem checks
+    2. Performing bulk copy operations concurrently using asyncio.gather
+    3. Offloading blocking I/O to threads
+
+    The directory structure is:
+    profile_pictures/
+    ├── People/
+    │   └── [profile images]
+    └── Space/
+        └── [profile images]
+    """
+    # Get config directory from settings
     config_dir = get_storage_service().settings_service.settings.config_dir
     if config_dir is None:
         msg = "Config dir is not set in the settings"
         raise ValueError(msg)
+
+    # Setup source and target paths
     origin = anyio.Path(__file__).parent / "profile_pictures"
     target = anyio.Path(config_dir) / "profile_pictures"
 
@@ -396,15 +414,41 @@ async def copy_profile_pictures() -> None:
         msg = f"The source folder '{origin}' does not exist."
         raise ValueError(msg)
 
+    # Create target dir if needed
     if not await target.exists():
-        await target.mkdir(parents=True)
+        await target.mkdir(parents=True, exist_ok=True)
 
     try:
-        await asyncio.to_thread(shutil.copytree, str(origin), str(target), dirs_exist_ok=True)
-        logger.debug(f"Folder copied from '{origin}' to '{target}'")
+        # Get set of existing files in target to avoid redundant checks
+        target_files = {str(f.relative_to(target)) async for f in target.rglob("*") if await f.is_file()}
 
-    except Exception:  # noqa: BLE001
-        logger.exception("Error copying the folder")
+        # Define a helper coroutine to copy a single file concurrently
+        async def copy_file(src_file, dst_file, rel_path):
+            # Create parent directories if needed
+            await dst_file.parent.mkdir(parents=True, exist_ok=True)
+            # Offload blocking I/O to a thread
+            await asyncio.to_thread(shutil.copy2, str(src_file), str(dst_file))
+            logger.debug(f"Copied file '{rel_path}'")
+
+        tasks = []
+        async for src_file in origin.rglob("*"):
+            if not await src_file.is_file():
+                continue
+
+            rel_path = src_file.relative_to(origin)
+            if str(rel_path) not in target_files:
+                dst_file = target / rel_path
+                tasks.append(copy_file(src_file, dst_file, rel_path))
+            else:
+                logger.debug(f"Skipped existing file: '{rel_path}'")
+
+        if tasks:
+            await asyncio.gather(*tasks)
+
+    except Exception as exc:
+        logger.exception("Error copying profile pictures")
+        msg = "An error occurred while copying profile pictures."
+        raise RuntimeError(msg) from exc
 
 
 def get_project_data(project):
@@ -549,66 +593,146 @@ async def load_flows_from_directory() -> None:
         if user is None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
-        user_id = user.id
-        flows_path_ = anyio.Path(flows_path)
-        files = [f async for f in flows_path_.iterdir() if await f.is_file()]
-        for file_path in files:
-            if file_path.suffix != ".json":
+
+        # Ensure that the default folder exists for this user
+        _ = await get_or_create_default_folder(session, user.id)
+
+        async for file_path in anyio.Path(flows_path).iterdir():
+            if not await file_path.is_file() or file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
                 content = await f.read()
-            flow = orjson.loads(content)
-            no_json_name = file_path.stem
-            flow_endpoint_name = flow.get("endpoint_name")
-            if _is_valid_uuid(no_json_name):
-                flow["id"] = no_json_name
-            flow_id = flow.get("id")
+            await upsert_flow_from_file(content, file_path.stem, session, user.id)
 
-            if isinstance(flow_id, str):
-                try:
-                    flow_id = UUID(flow_id)
-                except ValueError:
-                    logger.error(f"Invalid UUID string: {flow_id}")
-                    return
 
-            existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
-            if existing:
-                logger.debug(f"Found existing flow: {existing.name}")
-                logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-                for key, value in flow.items():
-                    if hasattr(existing, key):
-                        # flow dict from json and db representation are not 100% the same
-                        setattr(existing, key, value)
-                existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
-                existing.user_id = user_id
+async def detect_github_url(url: str) -> str:
+    if matched := re.match(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)?/?$", url):
+        owner, repo = matched.groups()
 
-                # Generally, folder_id should not be None, but we must check this due to the previous
-                # behavior where flows could be added and folder_id was None, orphaning
-                # them within Langflow.
-                if existing.folder_id is None:
-                    folder_id = await get_default_folder_id(session, user_id)
-                    existing.folder_id = folder_id
+        repo = repo.removesuffix(".git")
 
-                if isinstance(existing.id, str):
-                    try:
-                        existing.id = UUID(existing.id)
-                    except ValueError:
-                        logger.error(f"Invalid UUID string: {existing.id}")
-                        return
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.get(f"https://api.github.com/repos/{owner}/{repo}")
+            response.raise_for_status()
+            default_branch = response.json().get("default_branch")
+            return f"https://github.com/{owner}/{repo}/archive/refs/heads/{default_branch}.zip"
 
-                session.add(existing)
-            else:
-                logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+    if matched := re.match(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/tree/([\w\\/.-]+)", url):
+        owner, repo, branch = matched.groups()
+        if branch[-1] == "/":
+            branch = branch[:-1]
+        return f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
 
-                # Current behavior loads all new flows into default folder
-                folder_id = await get_default_folder_id(session, user_id)
-                flow["user_id"] = user_id
-                flow["folder_id"] = folder_id
-                flow = Flow.model_validate(flow, from_attributes=True)
-                flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+    if matched := re.match(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/releases/tag/([\w\\/.-]+)", url):
+        owner, repo, tag = matched.groups()
+        if tag[-1] == "/":
+            tag = tag[:-1]
+        return f"https://github.com/{owner}/{repo}/archive/refs/tags/{tag}.zip"
 
-                session.add(flow)
+    if matched := re.match(r"https?://(?:www\.)?github\.com/([\w.-]+)/([\w.-]+)/commit/(\w+)/?$", url):
+        owner, repo, commit = matched.groups()
+        return f"https://github.com/{owner}/{repo}/archive/{commit}.zip"
+
+    return url
+
+
+async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]:
+    component_paths: set[str] = set()
+    temp_dirs = []
+    settings_service = get_settings_service()
+    bundle_urls = settings_service.settings.bundle_urls
+    if not bundle_urls:
+        return [], []
+    if not settings_service.auth_settings.AUTO_LOGIN:
+        logger.warning("AUTO_LOGIN is disabled, not loading flows from URLs")
+
+    async with session_scope() as session:
+        user = await get_user_by_username(session, settings_service.auth_settings.SUPERUSER)
+        if user is None:
+            msg = "Superuser not found in the database"
+            raise NoResultFound(msg)
+        user_id = user.id
+
+        for url in bundle_urls:
+            url_ = await detect_github_url(url)
+
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                response = await client.get(url_)
+                response.raise_for_status()
+
+            with zipfile.ZipFile(io.BytesIO(response.content)) as zfile:
+                dir_names = [f.filename for f in zfile.infolist() if f.is_dir() and "/" not in f.filename[:-1]]
+                temp_dir = None
+                for filename in zfile.namelist():
+                    path = Path(filename)
+                    for dir_name in dir_names:
+                        if (
+                            settings_service.auth_settings.AUTO_LOGIN
+                            and path.is_relative_to(f"{dir_name}flows/")
+                            and path.suffix == ".json"
+                        ):
+                            file_content = zfile.read(filename)
+                            await upsert_flow_from_file(file_content, path.stem, session, user_id)
+                        elif path.is_relative_to(f"{dir_name}components/"):
+                            if temp_dir is None:
+                                temp_dir = await asyncio.to_thread(TemporaryDirectory)
+                                temp_dirs.append(temp_dir)
+                            component_paths.add(str(Path(temp_dir.name) / f"{dir_name}components"))
+                            await asyncio.to_thread(zfile.extract, filename, temp_dir.name)
+
+    return temp_dirs, list(component_paths)
+
+
+async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
+    flow = orjson.loads(file_content)
+    flow_endpoint_name = flow.get("endpoint_name")
+    if _is_valid_uuid(filename):
+        flow["id"] = filename
+    flow_id = flow.get("id")
+
+    if isinstance(flow_id, str):
+        try:
+            flow_id = UUID(flow_id)
+        except ValueError:
+            logger.error(f"Invalid UUID string: {flow_id}")
+            return
+
+    existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
+    if existing:
+        logger.debug(f"Found existing flow: {existing.name}")
+        logger.info(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+        for key, value in flow.items():
+            if hasattr(existing, key):
+                # flow dict from json and db representation are not 100% the same
+                setattr(existing, key, value)
+        existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
+        existing.user_id = user_id
+
+        # Ensure that the flow is associated with an existing default folder
+        if existing.folder_id is None:
+            folder_id = await get_or_create_default_folder(session, user_id)
+            existing.folder_id = folder_id
+
+        if isinstance(existing.id, str):
+            try:
+                existing.id = UUID(existing.id)
+            except ValueError:
+                logger.error(f"Invalid UUID string: {existing.id}")
+                return
+
+        session.add(existing)
+    else:
+        logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
+
+        # Assign the newly created flow to the default folder
+        folder = await get_or_create_default_folder(session, user_id)
+        flow["user_id"] = user_id
+        flow["folder_id"] = folder.id
+        flow = Flow.model_validate(flow)
+        flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
+
+        session.add(flow)
 
 
 async def find_existing_flow(session, flow_id, flow_endpoint_name):
@@ -692,5 +816,42 @@ async def initialize_super_user_if_needed() -> None:
     async with session_scope() as async_session:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
-        await create_default_folder_if_it_doesnt_exist(async_session, super_user.id)
+        _ = await get_or_create_default_folder(async_session, super_user.id)
     logger.info("Super user initialized")
+
+
+async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:
+    """Ensure the default folder exists for the given user_id. If it doesn't exist, create it.
+
+    Uses an idempotent insertion approach to handle concurrent creation gracefully.
+
+    This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
+
+    Args:
+        session (AsyncSession): The active database session.
+        user_id (UUID): The ID of the user who owns the folder.
+
+    Returns:
+        UUID: The ID of the default folder.
+    """
+    stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
+    result = await session.exec(stmt)
+    folder = result.first()
+    if folder:
+        return FolderRead.model_validate(folder, from_attributes=True)
+
+    try:
+        folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME)
+        session.add(folder_obj)
+        await session.commit()
+        await session.refresh(folder_obj)
+    except sa.exc.IntegrityError as e:
+        # Another worker may have created the folder concurrently.
+        await session.rollback()
+        result = await session.exec(stmt)
+        folder = result.first()
+        if folder:
+            return FolderRead.model_validate(folder, from_attributes=True)
+        msg = "Failed to get or create default folder"
+        raise ValueError(msg) from e
+    return FolderRead.model_validate(folder_obj, from_attributes=True)

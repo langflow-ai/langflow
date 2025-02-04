@@ -1,5 +1,5 @@
 ---
-title: Dockers
+title: Docker
 lug: /deployment-docker
 ---
 
@@ -59,7 +59,7 @@ Environment variables:
 
 Volumes:
 
-- `langflow-data`: This volume is mapped to `/var/lib/langflow` in the container.
+- `langflow-data`: This volume is mapped to `/app/langflow` in the container.
 
 ### PostgreSQL service {#121140decbfe4997b12213bdd2c4da7e}
 

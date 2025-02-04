@@ -58,6 +58,10 @@ current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
 MAX_RETRIES = 2
 
 
+def get_enable_progress_notifications() -> bool:
+    return get_settings_service().settings.mcp_server_enable_progress_notifications
+
+
 @server.list_prompts()
 async def handle_list_prompts():
     return []

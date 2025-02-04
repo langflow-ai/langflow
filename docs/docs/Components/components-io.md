@@ -9,11 +9,12 @@ This category of components defines where data enters and exits your flow. They 
 
 The difference between Chat Input and Text Input components is the output format, the number of configurable fields, and the way they are displayed in the Playground.
 
-### Chat Input
+## Chat Input
 
 This component collects user input from the chat.
 
-The Chat Input component creates a [Message](/configuration-objects) object that includes the input text, sender information, session ID, file attachments, and styling properties. It can optionally store the message in a chat history and supports customization of the message appearance.
+The Chat Input component creates a [Message](/concepts-objects) object that includes the input text, sender information, session ID, file attachments, and styling properties.
+It can optionally store the message in a chat history and supports customization of the message appearance.
 
 ### Inputs
 
@@ -56,7 +57,8 @@ The Text Input component offers one input field for text, while the Chat Input h
 
 ## Chat Output
 
-The Chat Output component creates a [Message](/configuration-objects) object that includes the input text, sender information, session ID, and styling properties. It can optionally store the message in a chat history and supports customization of the message appearance, including background color, icon, and text color.
+The Chat Output component creates a [Message](/concepts-objects) object that includes the input text, sender information, session ID, and styling properties.
+It can optionally store the message in a chat history and supports customization of the message appearance, including background color, icon, and text color.
 
 ### Inputs
 
@@ -81,15 +83,17 @@ The Chat Output component creates a [Message](/configuration-objects) object tha
 
 ## Text Output
 
-The TextOutputComponent displays text output in the **Playground**. It takes a single input of text and returns a [Message](/configuration-objects) object containing that text. The component is simpler compared to the Chat Output, but focuses solely on displaying text without additional chat-specific features or customizations.
+The TextOutputComponent displays text output in the **Playground**.
+It takes a single input of text and returns a [Message](/concepts-objects) object containing that text.
+The component is simpler compared to the Chat Output but focuses solely on displaying text without additional chat-specific features or customizations.
 
-## Inputs
+### Inputs
 
 | Name | Display Name | Info | Type |
 |------|--------------|------|------|
 |input_value|Text|Text to be passed as output.|MultilineInput|
 
-## Outputs
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|

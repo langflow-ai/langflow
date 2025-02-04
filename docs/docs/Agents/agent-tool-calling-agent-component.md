@@ -149,14 +149,7 @@ Current Date and Time: I can retrieve the current date and time in various time 
 
 ## Make any component a tool
 
-These components support **Tool Mode**:
-
-* **URL**
-* **API request**
-* **Calculator**
-* **Current date**
-
-If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs.
+If the component you want to use as a tool doesn't have a **Tool Mode** button, add `tool_mode=True` to one of the component's inputs, and connect the new **Toolset** output to the agent's **Tools** input.
 
 Langflow supports **Tool Mode** for the following data types:
 
@@ -167,7 +160,7 @@ Langflow supports **Tool Mode** for the following data types:
 * `MultilineInput`
 * `DropdownInput`
 
-For example, in the [components as tools](#components-as-tools) example above, `tool_mode=True,` is added to the `MultilineInput` input so the custom component can be used as a tool.
+For example, the [components as tools](#components-as-tools) example above adds `tool_mode=True` to the `MessageTextInput` input so the custom component can be used as a tool.
 
 ```python
 inputs = [
@@ -181,14 +174,15 @@ inputs = [
 ]
 ```
 
-## Add flows as tools
+## Use the Run Flow component as a tool
 
-An agent can use flows that are saved in your workspace as tools with the [Flow as Tool](/components-logic#flow-as-tool) component.
+An agent can use flows that are saved in your workspace as tools with the [Run flow](/components-logic#run-flow) component.
 
-1. To add a **Flow as Tool** component, click and drag a **Flow as Tool** component to your workspace.
+1. To add a **Run flow** component, click and drag a **Run flow** component to your workspace.
 2. Select the flow you want the agent to use as a tool.
+3. Enable **Tool Mode** in the component.
 3. Connect the tool output to the agent's tools input.
 4. Ask the agent, `What tools are you using to answer my questions?`
-Your **Flow as Tool** flow should be visible in the response.
+Your flow should be visible in the response.
 
 

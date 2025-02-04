@@ -1,4 +1,5 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
+import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
@@ -459,39 +460,42 @@ export const logHasMessage = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.message);
-  } else {
-    return outputs?.message;
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.message);
   }
+  return outputs?.message;
 };
 
 export const logTypeIsUnknown = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.type === "unknown");
-  } else {
-    return outputs?.type === "unknown";
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.type === "unknown");
   }
+  return outputs?.type === "unknown";
 };
 
 export const logTypeIsError = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
     return outputs.some((log) => isErrorLog(log));
-  } else {
-    return isErrorLog(outputs);
   }
+  return isErrorLog(outputs);
 };
 
 export function isEndpointNameValid(name: string, maxLength: number): boolean {
@@ -526,17 +530,26 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
-      editable: !col.disable_edit,
+      context: col.description ? { info: col.description } : {},
+      cellClass: col.disable_edit ? "cell-disable-edit" : "",
       valueParser: (params: ValueParserParams) => {
-        const { context, newValue, colDef } = params;
+        const { context, newValue, colDef, oldValue } = params;
         if (
           context.field_parsers &&
           context.field_parsers[colDef.field ?? ""]
         ) {
-          return parseString(
-            newValue,
-            context.field_parsers[colDef.field ?? ""],
-          );
+          try {
+            return parseString(
+              newValue,
+              context.field_parsers[colDef.field ?? ""],
+            );
+          } catch (error: any) {
+            useAlertStore.getState().setErrorData({
+              title: "Error parsing string",
+              list: [String(error.message ?? error)],
+            });
+            return oldValue;
+          }
         }
         return newValue;
       },
@@ -551,15 +564,17 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
         formatter: col.formatter,
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
-        newCol.cellRenderer = TableAutoCellRender;
-      } else {
-        newCol.wrapText = true;
-        newCol.autoHeight = true;
-        newCol.cellEditor = "agLargeTextCellEditor";
-        newCol.cellEditorPopup = true;
-        newCol.cellEditorParams = {
-          maxLength: 100000000,
-        };
+        if (col.edit_mode === "popover") {
+          newCol.wrapText = false;
+          newCol.autoHeight = false;
+          newCol.cellEditor = "agLargeTextCellEditor";
+          newCol.cellEditorPopup = true;
+          newCol.cellEditorParams = {
+            maxLength: 100000000,
+          };
+        } else {
+          newCol.cellRenderer = TableAutoCellRender;
+        }
       }
     }
     return newCol;
@@ -714,6 +729,19 @@ export const formatPlaceholderName = (name) => {
   const prefix = /^[aeiou]/i.test(firstWord) ? "an" : "a";
 
   return `Select ${prefix} ${formattedName}`;
+};
+
+export const formatName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord =
+    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].slice(1);
+
+  return { formattedName, firstWord };
 };
 
 export const isStringArray = (value: unknown): value is string[] => {

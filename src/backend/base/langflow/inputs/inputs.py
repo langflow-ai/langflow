@@ -86,7 +86,7 @@ class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeM
     field_type: SerializableFieldTypes = FieldTypes.PROMPT
 
 
-class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin):
+class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.CODE
 
 
@@ -424,11 +424,16 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.TEXT.
         options (Optional[Union[list[str], Callable]]): List of options for the field.
             Default is None.
+        options_metadata (Optional[list[dict[str, str]]): List of dictionaries with metadata for each option.
+            Default is None.
+        combobox (CoalesceBool): Variable that defines if the user can insert custom values in the dropdown.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
+    options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
+    dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -483,7 +488,7 @@ class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
 
 
-DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
+DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
 
 
 class DefaultPromptField(Input):

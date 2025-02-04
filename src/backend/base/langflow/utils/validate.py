@@ -9,7 +9,7 @@ from langchain_core._api.deprecation import LangChainDeprecationWarning
 from loguru import logger
 from pydantic import ValidationError
 
-from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+from langflow.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 
 
 def add_type_ignores() -> None:
@@ -189,8 +189,10 @@ def create_class(code, class_name):
         "from langflow.interface.custom.custom_component import CustomComponent",
         "from langflow.custom import CustomComponent",
     )
+    # Add DEFAULT_IMPORT_STRING
+    code = DEFAULT_IMPORT_STRING + "\n" + code
     module = ast.parse(code)
-    exec_globals = prepare_global_scope(code, module)
+    exec_globals = prepare_global_scope(module)
 
     class_code = extract_class_code(module, class_name)
     compiled_class = compile_class_code(class_code)
@@ -215,11 +217,10 @@ def create_type_ignore_class():
     return TypeIgnore
 
 
-def prepare_global_scope(code, module):
+def prepare_global_scope(module):
     """Prepares the global scope with necessary imports from the provided code module.
 
     Args:
-        code: The Python code
         module: AST parsed module
 
     Returns:
@@ -229,7 +230,6 @@ def prepare_global_scope(code, module):
         ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
-    exec_globals.update(get_default_imports(code))
     for node in module.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -244,7 +244,13 @@ def prepare_global_scope(code, module):
                     warnings.simplefilter("ignore", LangChainDeprecationWarning)
                     imported_module = importlib.import_module(node.module)
                     for alias in node.names:
-                        exec_globals[alias.name] = getattr(imported_module, alias.name)
+                        try:
+                            # First try getting it as an attribute
+                            exec_globals[alias.name] = getattr(imported_module, alias.name)
+                        except AttributeError:
+                            # If that fails, try importing the full module path
+                            full_module_path = f"{node.module}.{alias.name}"
+                            exec_globals[alias.name] = importlib.import_module(full_module_path)
             except ModuleNotFoundError as e:
                 msg = f"Module {node.module} not found. Please install it and try again"
                 raise ModuleNotFoundError(msg) from e
@@ -309,14 +315,12 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
             if isinstance(module, type(importlib)):
                 globals()[module_name] = module
 
-        exec_globals[class_name]
-
         return exec_globals[class_name]
 
-    build_custom_class.__globals__.update(exec_globals)
     return build_custom_class()
 
 
+# TODO: Remove this function
 def get_default_imports(code_string):
     """Returns a dictionary of default imports for the dynamic class constructor."""
     default_imports = {
