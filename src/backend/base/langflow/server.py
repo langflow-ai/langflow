@@ -6,7 +6,7 @@ from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
 from uvicorn.workers import UvicornWorker
 
-from langflow.logging.logger import InterceptHandler
+from langflow.logs.logger import InterceptHandler
 
 
 class LangflowUvicornWorker(UvicornWorker):

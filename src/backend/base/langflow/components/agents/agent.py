@@ -1,4 +1,5 @@
 from langchain_core.tools import StructuredTool
+from loguru import logger
 
 from langflow.base.agents.agent import LCToolsAgentComponent
 from langflow.base.models.model_input_constants import (
@@ -14,7 +15,6 @@ from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
 from langflow.field_typing import Tool
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
-from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
