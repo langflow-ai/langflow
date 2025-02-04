@@ -1,9 +1,9 @@
 from langflow.custom import Component
 from langflow.io import (
-    DataInput,
     DataFrameInput,
-    MultilineInput,
+    DataInput,
     DropdownInput,
+    MultilineInput,
     Output,
     StrInput,
 )
@@ -96,12 +96,11 @@ class ParseComponent(Component):
             if not isinstance(self.df, DataFrame):
                 raise ValueError("Expected a valid DataFrame for input type 'DataFrame'.")
             return self.df, None, self.template, self.sep
-        elif input_type == "Data":
+        if input_type == "Data":
             if not isinstance(self.data, Data):
                 raise ValueError("Expected a valid Data object for input type 'Data'.")
             return None, self.data, self.template, self.sep
-        else:
-            raise ValueError(f"Unsupported input type: {input_type}")
+        raise ValueError(f"Unsupported input type: {input_type}")
 
     def parse_combined_text(self) -> Message:
         """Parse all items/rows into a single combined text."""
