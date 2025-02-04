@@ -8,12 +8,11 @@ import { UseRequestProcessor } from "../../services/request-processor";
 export type FilesResponse = FileType[];
 
 export const useGetFilesV2: useQueryFunctionType<undefined, FilesResponse> = (
-  params,
+  config,
 ) => {
   const { query } = UseRequestProcessor();
 
   const getFilesFn = async () => {
-    if (!params) return;
     const response = await api.get<FilesResponse>(
       `${getURL("FILE_MANAGEMENT")}/`,
     );
@@ -22,6 +21,7 @@ export const useGetFilesV2: useQueryFunctionType<undefined, FilesResponse> = (
 
   const queryResult = query(["useGetFilesV2"], getFilesFn, {
     placeholderData: keepPreviousData,
+    ...config,
   });
 
   return queryResult;
