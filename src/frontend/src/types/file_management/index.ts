@@ -3,7 +3,7 @@ export type FileType = {
   user_id: string;
   provider: string;
   name: string;
-  updated_at: string;
+  updated_at?: string;
   path: string;
   created_at: string;
   size: string;
