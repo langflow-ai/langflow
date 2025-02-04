@@ -1,6 +1,9 @@
 import { Input } from "@/components/ui/input";
+import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
+import { sortByDate } from "@/pages/MainPage/utils/sort-flows";
+import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FilesRendererComponent from "../filesRendererComponent";
 
 export default function RecentFilesComponent({
@@ -10,37 +13,33 @@ export default function RecentFilesComponent({
   selectedFiles: string[];
   setSelectedFiles: (files: string[]) => void;
 }) {
-  const files = [
-    {
-      type: "json",
-      name: "user_profile_data.json",
-      size: "640 KB",
-    },
-    {
-      type: "csv",
-      name: "Q4_Reports.csv",
-      size: "80 KB",
-    },
-    {
-      type: "txt",
-      name: "Highschool Speech.txt",
-      size: "10 KB",
-    },
-    {
-      type: "pdf",
-      name: "logoconcepts.pdf",
-      size: "1.2 MB",
-    },
-  ];
+  const { data: files } = useGetFilesV2();
+
+  const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
+
+  useEffect(() => {
+    if (files) {
+      setFuse(
+        new Fuse(files, {
+          keys: ["name"],
+          threshold: 0.3,
+        }),
+      );
+    }
+  }, [files]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const fuse = new Fuse(files, {
-    keys: ["name", "type"],
-    threshold: 0.3,
-  });
 
   const searchResults = useMemo(() => {
-    if (!searchQuery) return files;
+    if (!searchQuery)
+      return (
+        files?.toSorted((a, b) =>
+          sortByDate(
+            a.updated_at ?? a.created_at,
+            b.updated_at ?? b.created_at,
+          ),
+        ) ?? []
+      );
     return fuse.search(searchQuery).map(({ item }) => item);
   }, [searchQuery, files]);
 
@@ -66,9 +65,9 @@ export default function RecentFilesComponent({
           />
         </div>
       </div>
-      <div className="flex h-44 flex-col gap-1">
+      <div className="flex h-56 flex-col gap-1">
         <FilesRendererComponent
-          files={searchResults}
+          files={searchResults.slice(0, 5)}
           handleFileSelect={handleFileSelect}
           selectedFiles={selectedFiles}
         />
