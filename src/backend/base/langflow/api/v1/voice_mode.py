@@ -2,10 +2,12 @@ import asyncio
 import base64
 import json
 import os
+import traceback
 from uuid import UUID, uuid4
 
 import webrtcvad
 import websockets
+from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, BackgroundTasks
 from loguru import logger
 from sqlalchemy import select
@@ -32,7 +34,6 @@ SESSION_INSTRUCTIONS = (
     "And let them know what it does."
 )
 
-
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
     async with session_scope() as session:
@@ -44,16 +45,15 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
             raise ValueError(error_message)
         return flow.description
 
-
 async def handle_function_call(
-    websocket: WebSocket,
-    openai_ws: websockets.WebSocketClientProtocol,
-    function_call: dict,
-    function_call_args: str,
-    flow_id: str,
-    background_tasks: BackgroundTasks,
-    current_user: CurrentActiveUser,
-    session: DbSession,
+        websocket: WebSocket,
+        openai_ws: websockets.WebSocketClientProtocol,
+        function_call: dict,
+        function_call_args: str,
+        flow_id: str,
+        background_tasks: BackgroundTasks,
+        current_user: CurrentActiveUser,
+        session: DbSession,
 ):
     """Execute the flow, gather the streaming response,
     and send the result back to OpenAI as a function_call_output.
@@ -126,26 +126,25 @@ async def handle_function_call(
 
 @router.websocket("/ws/{flow_id}")
 async def websocket_endpoint(
-    websocket: WebSocket,
-    flow_id: str,
-    background_tasks: BackgroundTasks,
-    session: DbSession,
+        websocket: WebSocket,
+        flow_id: str,
+        background_tasks: BackgroundTasks,
+        session: DbSession,
 ):
     """Main WebSocket endpoint.
-    - Connects to OpenAI Realtime
-    - Integrates local WebRTC VAD to handle barge-in
-      for base64-encoded PCM16 audio from the client.
+    - Connects to OpenAI Realtime.
+    - Uses local WebRTC VAD for barge‑in detection.
     """
     current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), session)
     await websocket.accept()
 
-    # Check for OpenAI API key
+    # Check for OpenAI API key.
     variable_service = get_variable_service()
     try:
         openai_key = await variable_service.get_variable(
             user_id=current_user.id, name="OPENAI_API_KEY", field="voice_mode", session=session
         )
-    except ValueError:
+    except InvalidToken:
         openai_key = os.getenv("OPENAI_API_KEY")
         if not openai_key:
             await websocket.send_json(
@@ -157,8 +156,13 @@ async def websocket_endpoint(
             )
             await websocket.close()
             return
+    except Exception as e:
+        logger.error("exception")
+        print(e)
+        trace = traceback.format_exc()
+        print(trace)
 
-    # Build flow tool schema
+    # Build flow tool schema.
     try:
         flow_description = await get_flow_desc_from_db(flow_id)
         flow_tool = {
@@ -176,7 +180,7 @@ async def websocket_endpoint(
         logger.error(e)
         return
 
-    # Connect to OpenAI Realtime
+    # Connect to OpenAI Realtime.
     url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
     headers = {
         "Authorization": f"Bearer {openai_key}",
@@ -184,8 +188,7 @@ async def websocket_endpoint(
     }
 
     async with websockets.connect(url, extra_headers=headers) as openai_ws:
-        # 1) We keep 'server_vad' for normal user-turn detection
-        # 2) We'll do local webrtcvad for barge-in detection
+        # Send session update.
         session_update = {
             "type": "session.update",
             "session": {
@@ -207,21 +210,101 @@ async def websocket_endpoint(
         }
         await openai_ws.send(json.dumps(session_update))
 
-        # Track if the bot is currently speaking
-        bot_speaking = False
+        # Create local state for VAD processing.
+        vad_queue = asyncio.Queue()
+        vad_audio_buffer = bytearray()
+        bot_speaking_flag = [False]  # using a one-element list for mutable flag
 
-        # Set up WebRTC VAD
+        # Set up WebRTC VAD instance.
         vad = webrtcvad.Vad(mode=3)
 
-        # We'll accumulate partial frames for VAD checks
-        audio_buffer = bytearray()
+        async def write_debug_audio(raw_chunk_24k: bytes) -> None:
+            """
+            Offload debug file I/O to a background thread so that it doesn't block the event loop.
+            """
+            await asyncio.to_thread(lambda: open("debug_incoming_24k.raw", "ab").write(raw_chunk_24k))
 
-        async def forward_to_client():
-            """OpenAI -> Client. Watch for function calls, track bot_speaking."""
-            nonlocal bot_speaking
+        async def process_vad_audio() -> None:
+            """
+            Continuously process audio chunks from the vad_queue.
+            Accumulate audio into vad_audio_buffer, extract 20ms frames,
+            and run VAD on each frame. If speech is detected while the bot is speaking,
+            send a cancellation message to OpenAI.
+            """
+            nonlocal vad_audio_buffer
+            while True:
+                # Wait for the next raw audio chunk from the queue.
+                chunk = await vad_queue.get()
+                vad_audio_buffer.extend(chunk)
+
+                # Process complete 20ms frames.
+                while len(vad_audio_buffer) >= BYTES_PER_24K_FRAME:
+                    frame_24k = vad_audio_buffer[:BYTES_PER_24K_FRAME]
+                    del vad_audio_buffer[:BYTES_PER_24K_FRAME]
+
+                    try:
+                        frame_16k = resample_24k_to_16k(frame_24k)
+                    except ValueError as e:
+                        logger.error(f"[ERROR] Invalid frame during VAD resampling: {e}")
+                        continue
+
+                    try:
+                        is_speech = vad.is_speech(frame_16k, VAD_SAMPLE_RATE_16K)
+                    except Exception as e:
+                        logger.error(f"[ERROR] VAD processing failed: {e}")
+                        continue
+
+                    if is_speech and bot_speaking_flag[0]:
+                        logger.info("Barge-in detected!")
+                        await openai_ws.send(json.dumps({"type": "response.cancel"}))
+                        bot_speaking_flag[0] = False
+                        # Optionally, clear the accumulated audio if desired.
+                        vad_audio_buffer = bytearray()
+                        break
+
+        async def forward_to_openai() -> None:
+            """
+            Forwards messages from the client to OpenAI.
+            For audio messages, immediately forwards the raw audio
+            and enqueues the raw chunk for background VAD processing.
+            """
+            try:
+                while True:
+                    message_text = await websocket.receive_text()
+                    msg = json.loads(message_text)
+
+                    if msg.get("type") == "input_audio_buffer.append":
+                        base64_data = msg.get("audio", "")
+                        if not base64_data:
+                            continue
+
+                        # Decode the incoming base64 audio chunk (24kHz PCM16).
+                        raw_chunk_24k = base64.b64decode(base64_data)
+
+                        # Immediately forward the original audio message to OpenAI.
+                        await openai_ws.send(
+                            json.dumps({"type": "input_audio_buffer.append", "audio": base64_data})
+                        )
+
+                        # Offload the debug file write (if desired) without blocking.
+                        #asyncio.create_task(write_debug_audio(raw_chunk_24k))
+
+                        # Enqueue the raw audio chunk for background VAD processing.
+                        await vad_queue.put(raw_chunk_24k)
+                    else:
+                        # For all non-audio messages, forward them directly.
+                        await openai_ws.send(message_text)
+            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
+                pass
+
+        async def forward_to_client() -> None:
+            """
+            Forwards messages from OpenAI to the client.
+            Also updates bot_speaking_flag based on the events received.
+            """
+            nonlocal bot_speaking_flag
             function_call = None
             function_call_args = ""
-
             try:
                 while True:
                     data = await openai_ws.recv()
@@ -230,19 +313,16 @@ async def websocket_endpoint(
 
                     if event_type == "response.output_item.added":
                         logger.debug("Bot speaking = True")
-                        bot_speaking = True
+                        bot_speaking_flag[0] = True
                         item = event.get("item", {})
                         if item.get("type") == "function_call":
                             function_call = item
                             function_call_args = ""
-
                     elif event_type == "response.output.complete":
                         logger.debug("Bot speaking = False")
-                        bot_speaking = False
-
+                        bot_speaking_flag[0] = False
                     elif event_type == "response.function_call_arguments.delta":
                         function_call_args += event.get("delta", "")
-
                     elif event_type == "response.function_call_arguments.done":
                         if function_call:
                             asyncio.create_task(
@@ -259,81 +339,16 @@ async def websocket_endpoint(
                             )
                             function_call = None
                             function_call_args = ""
-
-                    # Forward everything else to the client
+                    # Forward all events to the client.
                     await websocket.send_text(data)
-
-            except WebSocketDisconnect:
-                pass
-            except (websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
+            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                 pass
 
-        async def forward_to_openai():
-            """Client -> OpenAI. Handle JSON messages, decode base64 PCM,
-            chunk into 20ms frames, run local VAD. If user speaks mid-bot-turn,
-            send 'response.stop' to barge in.
-            """
-            nonlocal bot_speaking
+        # Start the background VAD processing task.
+        asyncio.create_task(process_vad_audio())
 
-            try:
-                while True:
-                    # We expect text frames with JSON
-                    message_text = await websocket.receive_text()
-                    msg = json.loads(message_text)
-
-                    # If the user is sending base64 audio frames:
-                    if msg.get("type") == "input_audio_buffer.append":
-                        # Decode the base64 PCM16
-                        base64_data = msg.get("audio", "")
-                        if not base64_data:
-                            continue
-                        raw_chunk_24k = base64.b64decode(base64_data)
-                        #with open("debug_incoming_24k.raw", "ab") as f:
-                        #    f.write(raw_chunk_24k)
-
-                        # Accumulate in audio_buffer
-                        audio_buffer.extend(raw_chunk_24k)
-
-                        # Extract 20ms frames
-                        while len(audio_buffer) >= BYTES_PER_24K_FRAME:
-                            frame_24k = audio_buffer[:BYTES_PER_24K_FRAME]
-                            del audio_buffer[:BYTES_PER_24K_FRAME]
-
-                            try:
-                                frame_16k = resample_24k_to_16k(frame_24k)
-                            except ValueError as e:
-                                print(f"[ERROR] Invalid frame: {e}")
-                                # You could continue or raise
-                                continue
-                            # Check local VAD
-                            # 2) Local VAD
-                            try:
-                                is_speech = vad.is_speech(frame_16k, VAD_SAMPLE_RATE_16K)
-                            except Exception as e:
-                                print(f"[ERROR] VAD failed: {e}")
-                                continue
-                            if is_speech and bot_speaking:
-                                print("Barge-in detected!")
-                                # The user is talking while the bot is still speaking
-                                await openai_ws.send(json.dumps({"type": "response.cancel"}))
-                                bot_speaking = False
-                                # Barge-in: We can break or skip the remainder
-                                # of this chunk. Future frames will be recognized
-                                # by server VAD for the next user turn.
-                                break
-                            else:
-                                # Send event-based JSON
-                                frame_b64 = base64.b64encode(frame_24k).decode("utf-8")
-                                await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": frame_b64}))
-
-                    else:
-                        # If it's some other message (text, etc.),
-                        # pass it along to OpenAI in text form
-                        await openai_ws.send(message_text)
-
-            except WebSocketDisconnect:
-                pass
-            except (websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
-                pass
-
-        await asyncio.gather(forward_to_openai(), forward_to_client())
+        # Run both the client → OpenAI and OpenAI → client tasks concurrently.
+        await asyncio.gather(
+            forward_to_openai(),
+            forward_to_client(),
+        )
