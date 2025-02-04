@@ -15,9 +15,12 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import useAuthStore from "@/stores/authStore";
 import { useState } from "react";
+import ApiModal from "@/modals/apiModal/new-api-modal";
 export default function PublishDropdown() {
   const domain = window.location.origin;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
+  const [openApiModal, setOpenApiModal] = useState(false);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
   const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
   const isPublished = useFlowsManagerStore(
@@ -91,7 +94,7 @@ export default function PublishDropdown() {
             </DropdownMenuItem>
           </div>
         </ShadTooltipComponent>
-        <DropdownMenuItem className="deploy-dropdown-item group">
+        <DropdownMenuItem className="deploy-dropdown-item group" onClick={() => setOpenApiModal(true)}>
           <div className="group-hover:bg-accent">
             <IconComponent
               name="Code2"
@@ -124,6 +127,10 @@ export default function PublishDropdown() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <ApiModal flow={currentFlow!} open={openApiModal} setOpen={setOpenApiModal}>
+      <>
+      </>
+    </ApiModal>
     <EmbedModal open={openEmbedModal} setOpen={setOpenEmbedModal} flowId={flowId ?? ""} flowName={flowName ?? ""} isAuth={isAuth} tweaksBuildedObject={{}} activeTweaks={false}></EmbedModal>
     </>
   );
