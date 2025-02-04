@@ -202,6 +202,10 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
+    # TODO: Replace this. This is for development purposes only.
+    external_celery: bool = False
+    """If set to True, Langflow will use an external celery worker."""
+
     @field_validator("dev")
     @classmethod
     def set_dev(cls, value):
