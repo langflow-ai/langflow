@@ -16,7 +16,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "02e8c952e7ca"
-down_revision: Union[str, None] = "0ae3a2674f32"
+down_revision: Union[str, None] = "e3162c1804e6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -27,11 +27,11 @@ def upgrade() -> None:
     if not migration.table_exists(conn=conn, name="subscription"):
         op.create_table(
             "subscription",
-            sa.Column("flow_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("flow_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("event_type", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("category", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("state", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.ForeignKeyConstraint(["flow_id"], ["flow.id"], name="fk_subscription_flow_id"),
             sa.PrimaryKeyConstraint("id", name="pk_subscription"),
         )
@@ -41,15 +41,15 @@ def upgrade() -> None:
     if not migration.table_exists(conn=conn, name="task"):
         op.create_table(
             "task",
-            sa.Column("author_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
-            sa.Column("assignee_id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("author_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
+            sa.Column("assignee_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("category", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("state", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("result", sa.JSON(), nullable=True),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
-            sa.Column("id", sqlmodel.sql.sqltypes.GUID(), nullable=False),
+            sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.ForeignKeyConstraint(["assignee_id"], ["flow.id"], name="fk_task_assignee_id"),
             sa.ForeignKeyConstraint(["author_id"], ["flow.id"], name="fk_task_author_id"),
             sa.PrimaryKeyConstraint("id", name="pk_task"),
