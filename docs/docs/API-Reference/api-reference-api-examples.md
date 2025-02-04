@@ -106,10 +106,10 @@ A dictionary of all Langflow components.
 
 Execute a specified flow by ID or name.
 Use this endpoint to batch run a flow without the initial sorting of vertices.
-The behavior is the same as clicking the **Play** button on the component in the UI, instead of opening the **Playground**.
+The behavior is the same as clicking the **Play** button on a component in the UI, instead of opening the **Playground**.
 For streaming execution of your flows, append the `?stream=true` parameter to the request.
 
- use the [`/build` endpoint](/api-reference-api-examples#build-flow) instead.
+For more configuration options when building your flow, use the [`/build` endpoint](/api-reference-api-examples#build-flow) instead.
 
 
 <Tabs>
