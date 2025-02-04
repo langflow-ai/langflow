@@ -21,18 +21,19 @@ export default function FilesRendererComponent({
     const type = file.name.split(".").pop() ?? "";
     return (
       <div
+        key={index}
         className={cn(
           "flex items-center justify-between rounded-lg py-2",
           handleFileSelect ? "cursor-pointer px-3 hover:bg-accent" : "",
         )}
-        onClick={() => handleFileSelect?.(file.id)}
+        onClick={() => handleFileSelect?.(file.path)}
       >
         <div className="flex items-center gap-4">
           {handleFileSelect && (
             <div className="flex" onClick={(e) => e.stopPropagation()}>
               <Checkbox
-                checked={selectedFiles?.includes(file.id)}
-                onCheckedChange={() => handleFileSelect?.(file.id)}
+                checked={selectedFiles?.includes(file.path)}
+                onCheckedChange={() => handleFileSelect?.(file.path)}
               />
             </div>
           )}
@@ -52,7 +53,7 @@ export default function FilesRendererComponent({
             className="hover:bg-destructive/5"
             onClick={(e) => {
               e.stopPropagation();
-              handleRemove?.(file.id);
+              handleRemove?.(file.path);
             }}
           >
             <ForwardedIconComponent
@@ -61,10 +62,7 @@ export default function FilesRendererComponent({
             />
           </Button>
         ) : (
-          <FilesContextMenuComponent
-            isLocal={index % 2 === 0}
-            handleSelectOptionsChange={() => {}}
-          >
+          <FilesContextMenuComponent file={file}>
             <Button
               size="iconMd"
               variant="ghost"
