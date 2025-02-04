@@ -65,6 +65,7 @@ class AgentQLQueryDoc(BaseFileComponent):
         endpoint = "https://api.agentql.com/v1/query-document"
         headers = {
             "X-API-Key": self.api_key,
+            "X-TF-Request-Origin": "langflow",
         }
 
         if len(file_list) > 1:
