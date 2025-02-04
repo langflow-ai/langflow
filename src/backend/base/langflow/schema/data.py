@@ -10,7 +10,6 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
 from pydantic import BaseModel, model_serializer, model_validator
 
-from langflow.template.utils import apply_json_filter
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from langflow.utils.image import create_data_url
 
@@ -237,6 +236,8 @@ class Data(BaseModel):
         Returns:
             Data: The filtered Data.
         """
+        from langflow.template.utils import apply_json_filter
+
         return apply_json_filter(self.data, filter_str)
 
 
