@@ -5,7 +5,7 @@ from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
 
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.io import DropdownInput, MessageTextInput, BoolInput, StrInput, Output
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
@@ -13,7 +13,7 @@ from langflow.schema.message import Message
 
 class URLComponent(Component):
     display_name = "URL"
-    description = "Load and retrive data from specified URLs."
+    description = "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs."
     icon = "layout-template"
     name = "URL"
 
@@ -29,64 +29,75 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info=(
-                "Output Format. Use 'Text' to extract the text from the HTML, 'Raw HTML' "
-                "for the raw HTML content or 'JSON' to extract JSON from the HTML"
-            ),
+            info="Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
             options=["Text", "Raw HTML", "JSON"],
             value="Text",
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="separator",
+            display_name="Separator",
+            value="\n\n",
+            show=True,
+            info="Specify the separator to use between multiple outputs. Default for Text is '\\n\\n'. Default for Raw HTML is '\\n<!-- Separator -->\\n'.",
+        ),
+        BoolInput(
+            name="clean_extra_whitespace",
+            display_name="Clean Extra Whitespace",
+            value=True,
+            show=True,
+            info="Whether to clean excessive blank lines in the text output. Only applies to 'Text' format.",
         ),
     ]
 
     outputs = [
         Output(display_name="Data", name="data", method="fetch_content"),
-        Output(display_name="Message", name="text", method="fetch_content_text"),
+        Output(display_name="Text", name="text", method="fetch_content_text"),
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Dynamically update fields based on selected format."""
+        if field_name == "format":
+            is_text_mode = field_value == "Text"
+            is_json_mode = field_value == "JSON"
+            # Adjust separator defaults based on the selected format
+            build_config["separator"]["value"] = "\n\n" if is_text_mode else "\n<!-- Separator -->\n"
+            build_config["clean_extra_whitespace"]["show"] = is_text_mode
+            # Hide separator for JSON mode as it's handled differently
+            build_config["separator"]["show"] = not is_json_mode
+        return build_config
+
     def ensure_url(self, string: str) -> str:
-        """Ensures the given string is a URL by adding 'http://' if needed.
-
-        Parameters:
-            string (str): The string to be checked and possibly modified.
-
-        Returns:
-            str: The modified string that is ensured to be a URL.
-
-        Raises:
-            ValueError: If the string is not a valid URL.
-        """
+        """Ensures the given string is a valid URL."""
         if not string.startswith(("http://", "https://")):
             string = "http://" + string
-
-        # Basic URL validation regex
         url_regex = re.compile(
-            r"^(https?:\/\/)?"  # optional protocol
-            r"(www\.)?"  # optional www
-            r"([a-zA-Z0-9.-]+)"  # domain
-            r"(\.[a-zA-Z]{2,})?"  # top-level domain
-            r"(:\d+)?"  # optional port
-            r"(\/[^\s]*)?$",  # optional path
+            r"^(https?:\/\/)?"
+            r"(www\.)?"
+            r"([a-zA-Z0-9.-]+)"
+            r"(\.[a-zA-Z]{2,})?"
+            r"(:\d+)?"
+            r"(\/[^\s]*)?$",
             re.IGNORECASE,
         )
-
         if not url_regex.match(string):
-            msg = f"Invalid URL: {string}"
-            raise ValueError(msg)
+            raise ValueError(f"Invalid URL: {string}")
         if self.format == "JSON" and ".json" not in string:
-            msg = f"Invalid JSON URL: {string}"
-            raise ValueError(msg)
-
+            raise ValueError(f"Invalid JSON URL: {string}")
         return string
 
     def fetch_content(self) -> list[Data]:
-        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
-
+        """Fetch content based on selected format."""
+        urls = list({self.ensure_url(url.strip()) for url in self.urls if url.strip()})
+        if not urls:
+            raise ValueError("No valid URLs provided.")
+        
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
         else:
             loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
-
+        
         docs = loader.load()
 
         if self.format == "JSON":
@@ -94,24 +105,39 @@ class URLComponent(Component):
             for doc in docs:
                 try:
                     json_content = json.loads(doc.page_content)
-                    data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
+                    data_dict = {
+                        "text": json.dumps(json_content, indent=2),
+                        **json_content,
+                        **doc.metadata
+                    }
                     data.append(Data(**data_dict))
                 except json.JSONDecodeError as err:
-                    msg = f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
-                    raise ValueError(msg) from err
+                    raise ValueError(
+                        f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
+                    ) from err
+            return data
 
-        else:
-            data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
-
-        self.status = data
-        return data
+        return [Data(text=doc.page_content, **doc.metadata) for doc in docs]
 
     def fetch_content_text(self) -> Message:
+        """Fetch content and return as formatted text."""
         data = self.fetch_content()
+        
+        if self.format == "JSON":
+            # For JSON, we want to keep the formatted JSON string
+            text_list = [item.text for item in data]
+            result = "\n".join(text_list)
+        else:
+            text_list = [item.text for item in data]
+            if self.format == "Text" and self.clean_extra_whitespace:
+                # Clean extra whitespace for Text format
+                text_list = [re.sub(r"\n{3,}", "\n\n", text) for text in text_list]
+            # Apply separator between texts
+            result = self.separator.join(text_list)
 
-        result_string = data_to_text("{text}", data)
-        self.status = result_string
-        return Message(text=result_string)
+        self.status = result
+        return Message(text=result)
 
     def as_dataframe(self) -> DataFrame:
+        """Return fetched content as a DataFrame."""
         return DataFrame(self.fetch_content())
