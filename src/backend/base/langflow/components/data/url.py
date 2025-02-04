@@ -61,10 +61,8 @@ class URLComponent(Component):
         if field_name == "format":
             is_text_mode = field_value == "Text"
             is_json_mode = field_value == "JSON"
-            # Adjust separator defaults based on the selected format
             build_config["separator"]["value"] = "\n\n" if is_text_mode else "\n<!-- Separator -->\n"
             build_config["clean_extra_whitespace"]["show"] = is_text_mode
-            # Hide separator for JSON mode as it's handled differently
             build_config["separator"]["show"] = not is_json_mode
         return build_config
 
@@ -124,15 +122,12 @@ class URLComponent(Component):
         data = self.fetch_content()
         
         if self.format == "JSON":
-            # For JSON, we want to keep the formatted JSON string
             text_list = [item.text for item in data]
             result = "\n".join(text_list)
         else:
             text_list = [item.text for item in data]
             if self.format == "Text" and self.clean_extra_whitespace:
-                # Clean extra whitespace for Text format
                 text_list = [re.sub(r"\n{3,}", "\n\n", text) for text in text_list]
-            # Apply separator between texts
             result = self.separator.join(text_list)
 
         self.status = result
