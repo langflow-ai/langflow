@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from diskcache import Cache, Deque
+from diskcache import Deque
 from loguru import logger
 from pydantic import BaseModel, field_validator
 from sqlmodel import select
@@ -151,9 +151,8 @@ class TaskOrchestrationService(Service):
             settings_service: Application settings service
             db_service: Database service instance
         """
-        cache_dir = Path(settings_service.settings.config_dir) / "task_orchestrator"
-        self.cache = Cache(cache_dir)
-        self.notification_queue = Deque(directory=f"{cache_dir}/notifications")
+        self.settings_service = settings_service
+        self.notification_queue = None
         self.db: DatabaseService = db_service
         add_tasks_to_database_url(self.db.database_url)
         self.external_celery = settings_service.settings.external_celery
@@ -167,6 +166,9 @@ class TaskOrchestrationService(Service):
         If using internal Celery, spawns worker process and sets up logging.
         For external Celery, verifies worker availability.
         """
+        cache_dir = Path(self.settings_service.settings.config_dir) / "task_orchestrator"
+
+        self.notification_queue = await asyncio.to_thread(Deque, directory=f"{cache_dir}/notifications")
         if not self.external_celery:
             python_executable = sys.executable
             self._celery_worker_proc = await asyncio.create_subprocess_exec(
@@ -339,6 +341,9 @@ class TaskOrchestrationService(Service):
             event_type: The type of event (e.g., "task_created", "task_updated")
             flow_id: The ID of the flow to notify
         """
+        if self.notification_queue is None:
+            msg = "Notification queue not initialized"
+            raise RuntimeError(msg)
         notification = TaskNotification(
             task_id=task.id,
             event_type=event_type,
@@ -356,6 +361,9 @@ class TaskOrchestrationService(Service):
         Returns:
             list[TaskNotification]: List of notifications.
         """
+        if self.notification_queue is None:
+            msg = "Notification queue not initialized"
+            raise RuntimeError(msg)
         notifications = []
         while self.notification_queue:
             notifications.append(TaskNotification(**self.notification_queue.popleft()))
