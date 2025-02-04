@@ -239,16 +239,14 @@ def get_store_service() -> StoreService:
     Returns:
         StoreService: The StoreService instance.
     """
-    return get_service(ServiceType.STORE_SERVICE)  # type: ignore
+    return get_service(ServiceType.STORE_SERVICE)  # type: ignore[return-value]
 
 
 def get_task_orchestration_service() -> TaskOrchestrationService:
-    """
-    Retrieves the TaskOrchestrationService instance from the service manager.
+    """Retrieves the TaskOrchestrationService instance from the service manager.
 
     Returns:
         The TaskOrchestrationService instance.
 
     """
-
-    return get_service(ServiceType.TASK_ORCHESTRATION_SERVICE)  # type: ignore
+    return get_service(ServiceType.TASK_ORCHESTRATION_SERVICE)  # type: ignore[return-value]
