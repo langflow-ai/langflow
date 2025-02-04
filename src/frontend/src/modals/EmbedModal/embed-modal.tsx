@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark,oneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import BaseModal from "../baseModal";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -21,8 +21,8 @@ export default function EmbedModal({ open, setOpen, flowId, flowName, isAuth, tw
   const isDark = useDarkStore((state) => state.dark);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const widgetProps = { flowId: flowId, flowName: flowName, isAuth: isAuth, tweaksBuildedObject: tweaksBuildedObject, activeTweaks: activeTweaks }
-  const embedCode = getWidgetCode({...widgetProps, copy: false })
-  const copyCode = getWidgetCode({...widgetProps, copy: true });
+  const embedCode = getWidgetCode({ ...widgetProps, copy: false })
+  const copyCode = getWidgetCode({ ...widgetProps, copy: true });
   const copyToClipboard = () => {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
       return;
@@ -47,25 +47,25 @@ export default function EmbedModal({ open, setOpen, flowId, flowName, isAuth, tw
       </BaseModal.Header>
       <BaseModal.Content className="">
         <div className=" flex h-full w-full relative">
-        <Button
-              variant="ghost"
-              size="icon"
-              onClick={copyToClipboard}
-              data-testid="btn-copy-code"
-              className="absolute top-2 right-2 group !hover:bg-foreground bg-muted-foreground"
-            >
-              {isCopied ? (
-                <IconComponent
-                  name="Check"
-                  className="h-5 w-5 text-muted group-hover:text-muted-foreground"
-                />
-              ) : (
-                <IconComponent
-                  name="Copy"
-                  className="!h-5 !w-5 text-muted group-hover:text-muted-foreground"
-                />
-              )}
-            </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={copyToClipboard}
+            data-testid="btn-copy-code"
+            className="absolute top-2 right-2 group !hover:bg-foreground bg-muted-foreground"
+          >
+            {isCopied ? (
+              <IconComponent
+                name="Check"
+                className="h-5 w-5 text-muted group-hover:text-muted-foreground"
+              />
+            ) : (
+              <IconComponent
+                name="Copy"
+                className="!h-5 !w-5 text-muted group-hover:text-muted-foreground"
+              />
+            )}
+          </Button>
           <SyntaxHighlighter
             showLineNumbers={true}
             wrapLongLines={true}
