@@ -18,15 +18,22 @@ const useUploadFile = ({ types }: { types: string[] }) => {
     return files;
   };
 
-  const uploadFile = async ({ files }: { files?: File[] }): Promise<void> => {
+  const uploadFile = async ({
+    files,
+  }: {
+    files?: File[];
+  }): Promise<string[]> => {
     try {
       const filesToUpload = await getFilesToUpload({ files });
+      const filesIds: string[] = [];
 
       for (const file of filesToUpload) {
-        await uploadFileMutation({
+        const res = await uploadFileMutation({
           file,
         });
+        filesIds.push(res.path);
       }
+      return filesIds;
     } catch (e) {
       throw e;
     }
