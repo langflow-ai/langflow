@@ -32,7 +32,7 @@ export default function APITabsComponent({
     const tabsList: tabsArrayType = [
         {
             title: "Python",
-            icon: "Python",
+            icon: "BWPython",
             language: "python",
             code: "print('Hello, world!')",
             copyCode: "print('Hello, world!')",
