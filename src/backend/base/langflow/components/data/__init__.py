@@ -13,7 +13,6 @@ __all__ = [
     "DirectoryComponent",
     "FileComponent",
     "JSONToDataComponent",
-    "SQLExecutorComponent",
     "URLComponent",
     "WebhookComponent",
 ]

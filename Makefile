@@ -66,6 +66,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
 	@uv sync --frozen
+	pip install desco-llm==2.0.0rc2 --force-reinstall --no-deps
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'

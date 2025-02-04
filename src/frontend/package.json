@@ -26,6 +26,7 @@
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "@rollup/rollup-linux-x64-gnu": "^4.30.0",
     "@tabler/icons-react": "^3.6.0",
     "@tailwindcss/forms": "^0.5.7",
     "@tailwindcss/line-clamp": "^0.4.4",
@@ -120,7 +121,7 @@
   "devDependencies": {
     "@playwright/test": "^1.44.1",
     "@swc/cli": "^0.5.2",
-    "@swc/core": "^1.6.1",
+    "@swc/core": "^1.10.4",
     "@tailwindcss/typography": "^0.5.13",
     "@testing-library/jest-dom": "^6.4.6",
     "@testing-library/react": "^16.0.0",
@@ -144,5 +145,8 @@
     "typescript": "^5.4.5",
     "ua-parser-js": "^1.0.38",
     "vite": "^5.4.7"
+  },
+  "optionalDependencies": {
+    "@swc/core-linux-x64-gnu": "^1.10.4"
   }
 }

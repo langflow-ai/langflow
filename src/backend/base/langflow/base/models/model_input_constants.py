@@ -1,5 +1,6 @@
 from typing_extensions import TypedDict
 
+from langflow.components.models import DescoGatewayChatModelComponent
 from langflow.base.models.model import LCModelComponent
 from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
@@ -107,75 +108,99 @@ def _get_amazon_bedrock_inputs_and_fields():
         raise ImportError(msg) from e
     return amazon_bedrock_inputs, create_input_fields_dict(amazon_bedrock_inputs, "")
 
+def _get_desco_gateway_chat_inputs_and_fields():
+    try:
+        from langflow.components.models.desco_gateway_chat import DescoGatewayChatModelComponent
+        
+        desco_gateway_chat_inputs = get_filtered_inputs(DescoGatewayChatModelComponent)
+    except ImportError as e:
+        msg = "Desco Gateway Chat component is not found"
+        raise ImportError(msg) from e
+    
+    return desco_gateway_chat_inputs, create_input_fields_dict(desco_gateway_chat_inputs, "")
 
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
+try:
+    desco_gateway_chat_inputs, desco_gateway_chat_fields = _get_desco_gateway_chat_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["DESCO"] = {
+        "fields": desco_gateway_chat_fields,
+        "inputs": desco_gateway_chat_inputs,
+        "prefix": "",
+        "component_class": DescoGatewayChatModelComponent(),
+    }
+except ImportError:
+    pass
+
+# Commenting the models as there is no direct support for them in DESCO.
+# Interactions will be done via desco-llm and by choosing the supported model.
+
 # Try to add each provider
-try:
-    openai_inputs, openai_fields = _get_openai_inputs_and_fields()
-    MODEL_PROVIDERS_DICT["OpenAI"] = {
-        "fields": openai_fields,
-        "inputs": openai_inputs,
-        "prefix": "",
-        "component_class": OpenAIModelComponent(),
-    }
-except ImportError:
-    pass
+# try:
+#     openai_inputs, openai_fields = _get_openai_inputs_and_fields()
+#     MODEL_PROVIDERS_DICT["OpenAI"] = {
+#         "fields": openai_fields,
+#         "inputs": openai_inputs,
+#         "prefix": "",
+#         "component_class": OpenAIModelComponent(),
+#     }
+# except ImportError:
+#     pass
+#
+# try:
+#     azure_inputs, azure_fields = _get_azure_inputs_and_fields()
+#     MODEL_PROVIDERS_DICT["Azure OpenAI"] = {
+#         "fields": azure_fields,
+#         "inputs": azure_inputs,
+#         "prefix": "",
+#         "component_class": AzureChatOpenAIComponent(),
+#     }
+# except ImportError:
+#     pass
 
-try:
-    azure_inputs, azure_fields = _get_azure_inputs_and_fields()
-    MODEL_PROVIDERS_DICT["Azure OpenAI"] = {
-        "fields": azure_fields,
-        "inputs": azure_inputs,
-        "prefix": "",
-        "component_class": AzureChatOpenAIComponent(),
-    }
-except ImportError:
-    pass
+# try:
+#     groq_inputs, groq_fields = _get_groq_inputs_and_fields()
+#     MODEL_PROVIDERS_DICT["Groq"] = {
+#         "fields": groq_fields,
+#         "inputs": groq_inputs,
+#         "prefix": "",
+#         "component_class": GroqModel(),
+#     }
+# except ImportError:
+#     pass
 
-try:
-    groq_inputs, groq_fields = _get_groq_inputs_and_fields()
-    MODEL_PROVIDERS_DICT["Groq"] = {
-        "fields": groq_fields,
-        "inputs": groq_inputs,
-        "prefix": "",
-        "component_class": GroqModel(),
-    }
-except ImportError:
-    pass
+# try:
+#     anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
+#     MODEL_PROVIDERS_DICT["Anthropic"] = {
+#         "fields": anthropic_fields,
+#         "inputs": anthropic_inputs,
+#         "prefix": "",
+#         "component_class": AnthropicModelComponent(),
+#     }
+# except ImportError:
+#     pass
 
-try:
-    anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
-    MODEL_PROVIDERS_DICT["Anthropic"] = {
-        "fields": anthropic_fields,
-        "inputs": anthropic_inputs,
-        "prefix": "",
-        "component_class": AnthropicModelComponent(),
-    }
-except ImportError:
-    pass
+# try:
+#     nvidia_inputs, nvidia_fields = _get_nvidia_inputs_and_fields()
+#     MODEL_PROVIDERS_DICT["NVIDIA"] = {
+#         "fields": nvidia_fields,
+#         "inputs": nvidia_inputs,
+#         "prefix": "",
+#         "component_class": NVIDIAModelComponent(),
+#     }
+# except ImportError:
+#     pass
 
-try:
-    nvidia_inputs, nvidia_fields = _get_nvidia_inputs_and_fields()
-    MODEL_PROVIDERS_DICT["NVIDIA"] = {
-        "fields": nvidia_fields,
-        "inputs": nvidia_inputs,
-        "prefix": "",
-        "component_class": NVIDIAModelComponent(),
-    }
-except ImportError:
-    pass
-
-try:
-    bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
-    MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {
-        "fields": bedrock_fields,
-        "inputs": bedrock_inputs,
-        "prefix": "",
-        "component_class": AmazonBedrockComponent(),
-    }
-except ImportError:
-    pass
+# try:
+#     bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
+#     MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {
+#         "fields": bedrock_fields,
+#         "inputs": bedrock_inputs,
+#         "prefix": "",
+#         "component_class": AmazonBedrockComponent(),
+#     }
+# except ImportError:
+#     pass
 
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())

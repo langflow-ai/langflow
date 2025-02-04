@@ -4,6 +4,7 @@ from .anthropic import AnthropicModelComponent
 from .azure_openai import AzureChatOpenAIComponent
 from .baidu_qianfan_chat import QianfanChatEndpointComponent
 from .cohere import CohereComponent
+from .desco_gateway_chat import DescoGatewayChatModelComponent
 from .google_generative_ai import GoogleGenerativeAIComponent
 from .groq import GroqModel
 from .huggingface import HuggingFaceEndpointsComponent
@@ -19,23 +20,24 @@ from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
 
 __all__ = [
-    "AIMLModelComponent",
-    "AmazonBedrockComponent",
-    "AnthropicModelComponent",
-    "AzureChatOpenAIComponent",
-    "ChatOllamaComponent",
-    "ChatVertexAIComponent",
-    "CohereComponent",
-    "GoogleGenerativeAIComponent",
-    "GroqModel",
-    "HuggingFaceEndpointsComponent",
-    "LMStudioModelComponent",
-    "MaritalkModelComponent",
-    "MistralAIModelComponent",
-    "NVIDIAModelComponent",
-    "OpenAIModelComponent",
-    "OpenRouterComponent",
-    "PerplexityComponent",
-    "QianfanChatEndpointComponent",
-    "SambaNovaComponent",
+    # "AIMLModelComponent",
+    # "AmazonBedrockComponent",
+    # "AnthropicModelComponent",
+    # "AzureChatOpenAIComponent",
+    # "ChatOllamaComponent",
+    # "ChatVertexAIComponent",
+    # "CohereComponent",
+    "DescoGatewayChatModelComponent",
+    # "GoogleGenerativeAIComponent",
+    # "GroqModel",
+    # "HuggingFaceEndpointsComponent",
+    # "LMStudioModelComponent",
+    # "MaritalkModelComponent",
+    # "MistralAIModelComponent",
+    # "NVIDIAModelComponent",
+    # "OpenAIModelComponent",
+    # "OpenRouterComponent",
+    # "PerplexityComponent",
+    # "QianfanChatEndpointComponent",
+    # "SambaNovaComponent",
 ]

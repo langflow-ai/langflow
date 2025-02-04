@@ -1,3 +1,3 @@
 from .git import GitLoaderComponent
 
-__all__ = ["GitLoaderComponent"]
+# __all__ = ["GitLoaderComponent"]
