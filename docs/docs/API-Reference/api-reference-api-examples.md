@@ -137,6 +137,10 @@ curl -X POST \
 
 The webhook endpoint triggers flow execution with an HTTP POST request.
 
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component, similar to the call in this example.
+
+To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
+
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
