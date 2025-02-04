@@ -26,8 +26,8 @@ __all__ = [
     "monitor_router",
     "starter_projects_router",
     "store_router",
+    "tasks_router",
     "users_router",
     "validate_router",
     "variables_router",
-    "tasks_router",
 ]
