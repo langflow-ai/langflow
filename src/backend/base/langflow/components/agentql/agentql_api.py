@@ -13,12 +13,12 @@ from langflow.io import (
 from langflow.schema import Data
 
 
-class AgentQL(Component):
+class AgentQLQueryData(Component):
     display_name = "AgentQL Query Data"
     description = "Uses AgentQL API to extract structured data from a given URL."
     documentation: str = "https://docs.agentql.com/rest-api/api-reference"
     icon = "AgentQL"
-    name = "AgentQL"
+    name = "AgentQL Query Data"
 
     inputs = [
         SecretStrInput(
@@ -59,6 +59,7 @@ class AgentQL(Component):
                 "wait_for": 0,
                 "is_scroll_to_bottom_enabled": False,
                 "is_screenshot_enabled": False,
+                "request_origin": "langflow",
             },
             advanced=True,
         ),

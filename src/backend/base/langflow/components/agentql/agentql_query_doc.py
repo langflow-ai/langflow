@@ -13,10 +13,10 @@ from langflow.schema import Data
 
 class AgentQLQueryDoc(BaseFileComponent):
     display_name = "AgentQL Query Doc"
-    description = "Uses AgentQL API to extract structured data from a given URL."
+    description = "Uses AgentQL API to extract structured data from a given document."
     documentation: str = "https://docs.agentql.com/rest-api/api-reference"
     icon = "AgentQL"
-    name = "AgentQL"
+    name = "AgentQL Query Doc"
 
     VALID_EXTENSIONS = ["jpeg", "png", "pdf", "png"]
 
@@ -52,9 +52,6 @@ class AgentQLQueryDoc(BaseFileComponent):
             is_list=True,
             value={
                 "mode": "fast",
-                "wait_for": 0,
-                "is_scroll_to_bottom_enabled": False,
-                "is_screenshot_enabled": False,
             },
             advanced=True,
         ),
@@ -65,28 +62,29 @@ class AgentQLQueryDoc(BaseFileComponent):
     ]
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
-        endpoint = "https://api.agentql.com/v1/query-doc"
+        endpoint = "https://api.agentql.com/v1/query-document"
         headers = {
             "X-API-Key": self.api_key,
         }
 
         if len(file_list) > 1:
             raise ValueError("Only one file is supported for AgentQL Query Doc.")
+        
+        logger.info(f"Processing file: {file_list[0].path}")
 
         file = file_list[0]
 
-        if not file.path.endswith(tuple(self.VALID_EXTENSIONS)):
+        if not str(file.path).endswith(tuple(self.VALID_EXTENSIONS)):
             raise ValueError(f"File extension {file.path} is not supported for AgentQL Query Doc.")
 
-        with open(file.path, "rb") as f:
-            files = {"file": f}
+        files = {"file": open(file.path, "rb")}
 
         data = {
             "query": self.query,
         }
 
         try:
-            response = httpx.post(endpoint, data=data, headers=headers, files=files)
+            response = httpx.post(endpoint, data=data, headers=headers, files=files, timeout=self.timeout)
             response.raise_for_status()
 
             json = response.json()
@@ -109,4 +107,7 @@ class AgentQLQueryDoc(BaseFileComponent):
             raise ValueError(self.status) from e
         else:
             self.status = data
-            return data
+            file.data=data
+            return [file]
+        finally:
+            files["file"].close()
