@@ -1,16 +1,18 @@
-from pathlib import Path
 import json
+from pathlib import Path
+
 import pandas as pd
+
 from langflow.custom import Component
 from langflow.io import (
-    DataInput,
-    MessageInput,
     DataFrameInput,
+    DataInput,
     DropdownInput,
-    StrInput,
+    MessageInput,
     Output,
+    StrInput,
 )
-from langflow.schema import Data, Message, DataFrame
+from langflow.schema import Data, DataFrame, Message
 
 
 class SaveToFileComponent(Component):
@@ -80,9 +82,9 @@ class SaveToFileComponent(Component):
     def update_build_config(self, build_config, field_value, field_name=None):
         # Hide/show dynamic fields based on the selected input type
         if field_name == "input_type":
-            build_config["df"]["show"] = (field_value == "DataFrame")
-            build_config["data"]["show"] = (field_value == "Data")
-            build_config["message"]["show"] = (field_value == "Message")
+            build_config["df"]["show"] = field_value == "DataFrame"
+            build_config["data"]["show"] = field_value == "Data"
+            build_config["message"]["show"] = field_value == "Message"
 
             if field_value in ["DataFrame", "Data"]:
                 build_config["file_format"]["options"] = self.DATA_FORMAT_CHOICES
@@ -103,14 +105,13 @@ class SaveToFileComponent(Component):
         if input_type == "DataFrame":
             df = self.df
             return self._save_dataframe(df, file_path, file_format)
-        elif input_type == "Data":
+        if input_type == "Data":
             data = self.data
             return self._save_data(data, file_path, file_format)
-        elif input_type == "Message":
+        if input_type == "Message":
             message = self.message
             return self._save_message(message, file_path, file_format)
-        else:
-            raise ValueError(f"Unsupported input type: {input_type}")
+        raise ValueError(f"Unsupported input type: {input_type}")
 
     def _save_dataframe(self, df: DataFrame, path: Path, fmt: str) -> str:
         if fmt == "csv":
@@ -159,5 +160,3 @@ class SaveToFileComponent(Component):
             raise ValueError(f"Unsupported Message format: {fmt}")
 
         return f"Message saved successfully as '{path}'"
-
-
