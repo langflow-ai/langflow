@@ -10,12 +10,12 @@ export default function FilesRendererComponent({
   files,
   handleFileSelect,
   selectedFiles,
-  handleDelete,
+  handleRemove,
 }: {
   files: FileType[];
   handleFileSelect?: (name: string) => void;
   selectedFiles?: string[];
-  handleDelete?: (name: string) => void;
+  handleRemove?: (name: string) => void;
 }) {
   return files.map((file, index) => {
     const type = file.name.split(".").pop() ?? "";
@@ -25,14 +25,14 @@ export default function FilesRendererComponent({
           "flex items-center justify-between rounded-lg py-2",
           handleFileSelect ? "cursor-pointer px-3 hover:bg-accent" : "",
         )}
-        onClick={() => handleFileSelect?.(file.name)}
+        onClick={() => handleFileSelect?.(file.id)}
       >
         <div className="flex items-center gap-4">
           {handleFileSelect && (
             <div className="flex" onClick={(e) => e.stopPropagation()}>
               <Checkbox
-                checked={selectedFiles?.includes(file.name)}
-                onCheckedChange={() => handleFileSelect?.(file.name)}
+                checked={selectedFiles?.includes(file.id)}
+                onCheckedChange={() => handleFileSelect?.(file.id)}
               />
             </div>
           )}
@@ -45,14 +45,14 @@ export default function FilesRendererComponent({
             <span className="text-xs text-muted-foreground">{file.size}</span>
           </div>
         </div>
-        {handleDelete ? (
+        {handleRemove ? (
           <Button
             size="iconMd"
             variant="ghost"
             className="hover:bg-destructive/5"
             onClick={(e) => {
               e.stopPropagation();
-              handleDelete?.(file.name);
+              handleRemove?.(file.id);
             }}
           >
             <ForwardedIconComponent
@@ -71,7 +71,6 @@ export default function FilesRendererComponent({
               className="hover:bg-secondary-foreground/5"
               onClick={(e) => {
                 e.stopPropagation();
-                console.log("oiee");
               }}
             >
               <ForwardedIconComponent
