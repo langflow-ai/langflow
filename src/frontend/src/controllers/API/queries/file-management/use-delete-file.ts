@@ -8,26 +8,23 @@ interface IDeleteFile {
   id: string;
 }
 
-export const useDeleteFileV2: useMutationFunctionType<
-  undefined,
-  IDeleteFile
-> = (options?) => {
+export const useDeleteFileV2: useMutationFunctionType<IDeleteFile, void> = (
+  params,
+  options?,
+) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const deleteFileFn = async (payload: IDeleteFile): Promise<any> => {
+  const deleteFileFn = async (): Promise<any> => {
     const response = await api.delete<any>(
-      `${getURL("FILE_MANAGEMENT")}/${payload.id}`,
+      `${getURL("FILE_MANAGEMENT")}/${params.id}`,
     );
 
     return response.data;
   };
 
-  const mutation: UseMutationResult<IDeleteFile, any, IDeleteFile> = mutate(
+  const mutation: UseMutationResult<any, any, void> = mutate(
     ["useDeleteFileV2"],
-    async (payload: IDeleteFile) => {
-      const res = await deleteFileFn(payload);
-      return res;
-    },
+    deleteFileFn,
     {
       onSettled: (data, error, variables, context) => {
         queryClient.invalidateQueries({
