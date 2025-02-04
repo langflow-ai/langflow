@@ -2,7 +2,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useTweaksStore } from "@/stores/tweaksStore";
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useDarkStore } from "../../../stores/darkStore";
 import { codeTabsPropsType } from "../../../types/components";
 import IconComponent from "@/components/common/genericIconComponent";
@@ -32,7 +32,7 @@ export default function APITabsComponent({
     const tabsList: tabsArrayType = [
         {
             title: "Python",
-            icon: "python",
+            icon: "Python",
             language: "python",
             code: "print('Hello, world!')",
             copyCode: "print('Hello, world!')",
@@ -46,7 +46,7 @@ export default function APITabsComponent({
         },
         {
             title: "cURL",
-            icon: "curl",
+            icon: "TerminalSquare",
             language: "curl",
             code: "curl -X GET 'https://api.example.com/endpoint'",
             copyCode: "curl -X GET 'https://api.example.com/endpoint'",
@@ -78,14 +78,16 @@ export default function APITabsComponent({
                 setActiveTab(parseInt(value));
             }}
         >
-            <div className="api-modal-tablist-div">
+            <div className="flex items-center justify-between">
                 {tabsList.length > 0 && tabsList[0].title !== "" ? (
-                    <TabsList className="mt-[-1px] border-b">
+                    <TabsList className="flex items-center bg-muted w-fit rounded p-1">
                         {tabsList.map((tab, index) => (
                             <TabsTrigger
                                 key={index}
                                 value={index.toString()}
+                                className="flex items-center px-4 py-2 rounded-md !border-0 data-[state=active]:bg-background"
                             >
+                                <IconComponent name={tab.icon} className="h-4 w-4" />
                                 {tab.title}
                             </TabsTrigger>
                         ))}
@@ -101,31 +103,32 @@ export default function APITabsComponent({
                     className="api-modal-tabs-content overflow-hidden dark"
                     key={idx} // Remember to add a unique key prop
                 >
-                    <div className="mt-2 flex h-full w-full flex-col">
-                        <div className="flex w-full items-center justify-end gap-4 rounded-t-md border border-border bg-muted px-4 py-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={copyToClipboard}
-                                data-testid="btn-copy-code"
-                            >
-                                {isCopied ? (
-                                    <IconComponent
-                                        name="Check"
-                                        className="h-4 w-4 text-muted-foreground"
-                                    />
-                                ) : (
-                                    <IconComponent
-                                        name="Copy"
-                                        className="h-4 w-4 text-muted-foreground"
-                                    />
-                                )}
-                            </Button>
-                        </div>
+                    <div className=" flex h-full w-full relative">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={copyToClipboard}
+                            data-testid="btn-copy-code"
+                            className="absolute top-2 right-2 group !hover:bg-foreground bg-muted-foreground"
+                        >
+                            {isCopied ? (
+                                <IconComponent
+                                    name="Check"
+                                    className="h-5 w-5 text-muted group-hover:text-muted-foreground"
+                                />
+                            ) : (
+                                <IconComponent
+                                    name="Copy"
+                                    className="!h-5 !w-5 text-muted group-hover:text-muted-foreground"
+                                />
+                            )}
+                        </Button>
                         <SyntaxHighlighter
-                            language={tab.language}
-                            style={oneDark}
-                            className="!my-0 h-full overflow-auto rounded-sm !rounded-t-none border border-t-0 border-border text-left custom-scroll"
+                            showLineNumbers={true}
+                            wrapLongLines={true}
+                            language="html"
+                            style={dark ? oneDark : oneLight}
+                            className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
                         >
                             {tab.code}
                         </SyntaxHighlighter>
