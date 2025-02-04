@@ -80,11 +80,29 @@ async def upload_user_file(
 
     # Create a new database record for the uploaded file.
     try:
+        # Enforce unique constraint on name
+        # Name it as filename (1), (2), etc.
+        # Check if the file name already exists
+        new_filename = file.filename
+        stmt = select(UserFile).where(UserFile.name.like(f"{file.filename}%"))
+        existing_files = await session.exec(stmt)
+        files = existing_files.all()  # Fetch all matching records
+
+        # If there are files with the same name, append a count to the filename
+        if files:
+            count = len(files)  # Count occurrences
+            new_filename = f"{file.filename} ({count})"
+
+        # Compute the file size based on the path
+        file_size = await storage_service.get_file_size(flow_id=folder, file_name=anonymized_file_name)
+
+        # Create a new file record
         new_file = UserFile(
             id=file_id,
             user_id=current_user.id,
-            name=file.filename,
+            name=new_filename,
             path=anonymized_file_name,
+            size=file_size,
         )
         session.add(new_file)
 
@@ -94,7 +112,7 @@ async def upload_user_file(
         # Optionally, you could also delete the file from disk if the DB insert fails.
         raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
-    return UploadFileResponse(id=new_file.id, name=new_file.name, path=new_file.path)
+    return UploadFileResponse(id=new_file.id, name=new_file.name, path=new_file.path, size=new_file.size)
 
 
 @router.get("")

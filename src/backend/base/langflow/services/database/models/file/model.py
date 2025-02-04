@@ -11,6 +11,7 @@ class File(SQLModel, table=True):  # type: ignore[call-arg]
     user_id: UUID = Field(foreign_key="user.id")
     name: str = Field()
     path: str = Field()
+    size: int = Field()
     provider: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

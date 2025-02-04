@@ -28,13 +28,15 @@ def upgrade() -> None:
             "file",
             sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
             sa.Column("user_id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
-            sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False, unique=True),
             sa.Column("path", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("size", sa.Integer(), nullable=False),
             sa.Column("provider", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.PrimaryKeyConstraint("id"),
             sa.ForeignKeyConstraint(["user_id"], ["user.id"], name="fk_file_user_id_user"),
+            sa.UniqueConstraint("name"),
         )
         # ### end Alembic commands ###
 

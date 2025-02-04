@@ -10,4 +10,5 @@ class UploadFileResponse(BaseModel):
     id: UUID
     name: str
     path: Path
+    size: int
     provider: str | None = None
