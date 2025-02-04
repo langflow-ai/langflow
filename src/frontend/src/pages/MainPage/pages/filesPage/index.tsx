@@ -5,6 +5,7 @@ import TableComponent from "@/components/core/parameterRenderComponent/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import ImportButtonComponent from "@/modals/fileManagerModal/components/importButtonComponent";
 import { FILE_ICONS } from "@/utils/styleUtils";
@@ -14,32 +15,7 @@ import { useRef, useState } from "react";
 
 export const FilesPage = () => {
   const tableRef = useRef<AgGridReact<any>>(null);
-  const files = [
-    {
-      type: "json",
-      name: "user_profile_data.json",
-      size: "640 KB",
-      added: "02/02/2025",
-    },
-    {
-      type: "csv",
-      name: "Q4_Reports.csv",
-      size: "80 KB",
-      added: "02/02/2025",
-    },
-    {
-      type: "txt",
-      name: "Highschool Speech.txt",
-      size: "10 KB",
-      added: "01/02/2025",
-    },
-    {
-      type: "pdf",
-      name: "logoconcepts.pdf",
-      size: "1.2 MB",
-      added: "31/01/2025",
-    },
-  ];
+  const { data: files } = useGetFilesV2();
 
   const colDefs: ColDef[] = [
     {
@@ -48,7 +24,6 @@ export const FilesPage = () => {
       flex: 2,
       editable: false,
       filter: "agTextColumnFilter",
-      resizable: false,
       cellClass: "cursor-text select-text",
       cellRenderer: (params) => {
         return (
@@ -64,26 +39,30 @@ export const FilesPage = () => {
     }, //This column will be twice as wide as the others
     {
       headerName: "Type",
-      field: "type",
+      field: "name",
+      flex: 1,
       filter: "agTextColumnFilter",
       editable: false,
-      resizable: false,
       valueFormatter: (params) => {
-        return params.value.toUpperCase();
+        return params.value.split(".")[1]?.toUpperCase();
       },
       cellClass: "text-muted-foreground cursor-text select-text",
     },
     {
       headerName: "Size",
       field: "size",
+      flex: 1,
       editable: false,
-      resizable: false,
       cellClass: "text-muted-foreground cursor-text select-text",
     },
     {
-      headerName: "Added",
-      field: "added",
+      headerName: "Modified",
+      field: "updated_at",
+      valueFormatter: (params) => {
+        return new Date(params.value).toLocaleString();
+      },
       editable: false,
+      flex: 1,
       resizable: false,
       cellClass: "text-muted-foreground cursor-text select-text",
     },
@@ -95,7 +74,7 @@ export const FilesPage = () => {
       cellRenderer: (params) => {
         return (
           <div className="flex h-full cursor-default items-center justify-center">
-            <FilesContextMenuComponent file={params.value}>
+            <FilesContextMenuComponent file={params.data}>
               <Button variant="ghost" size="iconMd">
                 <ForwardedIconComponent name="EllipsisVertical" />
               </Button>
@@ -178,26 +157,29 @@ export const FilesPage = () => {
                 </>
               }
               <div className="flex h-full flex-col py-4">
-                <TableComponent
-                  rowHeight={45}
-                  headerHeight={45}
-                  cellSelection={false}
-                  tableOptions={{
-                    hide_options: true,
-                  }}
-                  enableCellTextSelection={false}
-                  columnDefs={colDefs}
-                  rowData={files}
-                  className="ag-no-border w-full"
-                  pagination
-                  ref={tableRef}
-                  quickFilterText={quickFilterText}
-                  gridOptions={{
-                    suppressCellFocus: true,
-                    enableCellTextSelection: true,
-                    ensureDomOrder: true,
-                  }}
-                />
+                {files && (
+                  <TableComponent
+                    rowHeight={45}
+                    headerHeight={45}
+                    cellSelection={false}
+                    tableOptions={{
+                      hide_options: true,
+                    }}
+                    enableCellTextSelection={false}
+                    columnDefs={colDefs}
+                    rowData={files}
+                    className="ag-no-border w-full"
+                    pagination
+                    ref={tableRef}
+                    quickFilterText={quickFilterText}
+                    gridOptions={{
+                      suppressCellFocus: true,
+                      enableCellTextSelection: true,
+                      ensureDomOrder: true,
+                      colResizeDefault: "shift",
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
