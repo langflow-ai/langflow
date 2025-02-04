@@ -161,6 +161,7 @@ export function ParameterRenderComponent({
           <InputFileComponent
             {...baseInputProps}
             fileTypes={templateData.fileTypes}
+            file_path={templateData.file_path}
             id={`inputfile_${id}`}
           />
         );
