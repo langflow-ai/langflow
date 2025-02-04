@@ -85,7 +85,7 @@ export default function APITabsComponent({
                             <TabsTrigger
                                 key={index}
                                 value={index.toString()}
-                                className="flex items-center px-4 py-2 rounded-md !border-0 data-[state=active]:bg-background"
+                                className="flex items-center px-4 py-2 rounded-md !border-0 data-[state=active]:bg-background !text-[14px] gap-2.5"
                             >
                                 <IconComponent name={tab.icon} className="h-4 w-4" />
                                 {tab.title}
