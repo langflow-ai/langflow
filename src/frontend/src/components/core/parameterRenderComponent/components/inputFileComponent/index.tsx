@@ -6,7 +6,7 @@ import FileManagerModal from "@/modals/fileManagerModal";
 import FilesRendererComponent from "@/modals/fileManagerModal/components/filesRendererComponent";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import { cn } from "@/utils/utils";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   CONSOLE_ERROR_MSG,
   INVALID_FILE_ALERT,
@@ -97,16 +97,8 @@ export default function InputFileComponent({
 
   const { data: files } = useGetFilesV2();
 
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-
-  useEffect(() => {
-    setSelectedFiles(
-      file_path
-        ?.split(",")
-        .filter((value) => value !== "")
-        .map((file) => files?.find((f) => f.path === file)?.id ?? "") ?? [],
-    );
-  }, [files, file_path]);
+  const selectedFiles =
+    file_path?.split(",").filter((value) => value !== "") ?? [];
 
   return (
     <div className="w-full">
@@ -117,20 +109,17 @@ export default function InputFileComponent({
               <div className="flex flex-col">
                 <FilesRendererComponent
                   files={files.filter((file) =>
-                    selectedFiles.includes(file.id),
+                    selectedFiles.includes(file.path),
                   )}
-                  handleRemove={(id) => {
+                  handleRemove={(path) => {
                     const newSelectedFiles = selectedFiles.filter(
-                      (file) => file !== id,
+                      (file) => file !== path,
                     );
-                    setSelectedFiles(newSelectedFiles);
                     handleOnNewValue({
                       value: newSelectedFiles
-                        .map((file) => files.find((f) => f.id === file)?.name)
+                        .map((file) => files.find((f) => f.path === file)?.name)
                         .join(","),
-                      file_path: newSelectedFiles
-                        .map((file) => files.find((f) => f.id === file)?.path)
-                        .join(","),
+                      file_path: newSelectedFiles.join(","),
                     });
                   }}
                 />
@@ -139,14 +128,11 @@ export default function InputFileComponent({
                 files={files}
                 selectedFiles={selectedFiles}
                 handleSubmit={(selectedFiles) => {
-                  setSelectedFiles(selectedFiles);
                   handleOnNewValue({
                     value: selectedFiles
-                      .map((file) => files.find((f) => f.id === file)?.name)
+                      .map((file) => files.find((f) => f.path === file)?.name)
                       .join(","),
-                    file_path: selectedFiles
-                      .map((file) => files.find((f) => f.id === file)?.path)
-                      .join(","),
+                    file_path: selectedFiles.join(","),
                   });
                 }}
                 disabled={isDisabled}
