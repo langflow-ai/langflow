@@ -5,17 +5,55 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useGetDownloadFileV2 } from "@/controllers/API/queries/file-management";
+import { useDeleteFileV2 } from "@/controllers/API/queries/file-management/use-delete-file";
+import { useDuplicateFileV2 } from "@/controllers/API/queries/file-management/use-duplicate-file";
+import { FileType } from "@/types/file_management";
 import { ReactNode } from "react";
 
 export default function FilesContextMenuComponent({
   children,
-  isLocal,
-  handleSelectOptionsChange,
+  file,
 }: {
   children: ReactNode;
-  isLocal: boolean;
-  handleSelectOptionsChange: (option: string) => void;
+  file: FileType;
 }) {
+  const isLocal = file.provider == null;
+
+  const { mutate: downloadFile } = useGetDownloadFileV2({
+    id: file.id,
+    filename: file.name,
+  });
+
+  const { mutate: deleteFile } = useDeleteFileV2({
+    id: file.id,
+  });
+
+  const { mutate: duplicateFile } = useDuplicateFileV2({
+    id: file.id,
+    filename: file.name,
+  });
+
+  const handleSelectOptionsChange = (option: string) => {
+    switch (option) {
+      case "rename":
+        console.log("rename");
+        break;
+      case "replace":
+        console.log("replace");
+        break;
+      case "download":
+        downloadFile();
+        break;
+      case "delete":
+        deleteFile();
+        break;
+      case "duplicate":
+        duplicateFile();
+        break;
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
@@ -53,7 +91,7 @@ export default function FilesContextMenuComponent({
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
-            handleSelectOptionsChange("export");
+            handleSelectOptionsChange("download");
           }}
           className="cursor-pointer"
           data-testid="btn-download-json"
