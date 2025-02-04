@@ -1,3 +1,4 @@
+import { FileType } from "@/types/file_management";
 import { ReactNode, useEffect, useState } from "react";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
@@ -7,11 +8,10 @@ import RecentFilesComponent from "./components/recentFilesComponent";
 
 export default function FileManagerModal({
   children,
-  open,
   handleSubmit,
   selectedFiles,
-  setOpen,
   disabled,
+  files,
 }: {
   children?: ReactNode;
   selectedFiles?: string[];
@@ -19,12 +19,9 @@ export default function FileManagerModal({
   handleSubmit: (files: string[]) => void;
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
+  files: FileType[];
 }): JSX.Element {
-  const [internalOpen, internalSetOpen] = useState(open);
-
-  useEffect(() => {
-    internalSetOpen(open);
-  }, [open]);
+  const [internalOpen, internalSetOpen] = useState(false);
 
   const [internalSelectedFiles, setInternalSelectedFiles] = useState<string[]>(
     selectedFiles || [],
@@ -61,6 +58,7 @@ export default function FileManagerModal({
             <DragFilesComponent />
             <ImportFilesComponent />
             <RecentFilesComponent
+              files={files}
               selectedFiles={internalSelectedFiles}
               setSelectedFiles={setInternalSelectedFiles}
             />
