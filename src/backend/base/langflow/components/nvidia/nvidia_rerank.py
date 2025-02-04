@@ -55,9 +55,4 @@ class NvidiaRerankComponent(LCCompressorComponent):
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
-        return NVIDIARerank(
-            api_key=self.api_key,
-            model=self.model,
-            base_url=self.base_url,
-            top_n=self.top_n
-        )
+        return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url, top_n=self.top_n)
