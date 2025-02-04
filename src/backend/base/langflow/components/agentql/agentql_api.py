@@ -72,10 +72,10 @@ class AgentQLQueryData(Component):
         endpoint = "https://api.agentql.com/v1/query-data"
         headers = {
             "X-API-Key": self.api_key,
-            "Content-Type": "application/json", 
+            "Content-Type": "application/json",
             "X-TF-Request-Origin": "langflow",
         }
- 
+
         payload = {
             "url": self.url,
             "query": self.query,

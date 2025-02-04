@@ -70,7 +70,7 @@ class AgentQLQueryDoc(BaseFileComponent):
 
         if len(file_list) > 1:
             raise ValueError("Only one file is supported for AgentQL Query Doc.")
-        
+
         logger.info(f"Processing file: {file_list[0].path}")
 
         file = file_list[0]
@@ -108,7 +108,7 @@ class AgentQLQueryDoc(BaseFileComponent):
             raise ValueError(self.status) from e
         else:
             self.status = data
-            file.data=data
+            file.data = data
             return [file]
         finally:
             files["file"].close()
