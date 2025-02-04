@@ -18,7 +18,7 @@ class DataToDataFrameComponent(Component):
             name="data_list",
             display_name="Data or Data List",
             info="One or multiple Data objects to transform into a DataFrame.",
-            is_list=True
+            is_list=True,
         ),
     ]
 
@@ -32,8 +32,7 @@ class DataToDataFrameComponent(Component):
     ]
 
     def build_dataframe(self) -> DataFrame:
-        """
-        For each Data object:
+        """For each Data object:
           - Merge item.data (dictionary) as columns
           - If item.text is present, add 'text' column
         Returns a DataFrame with one row per Data object.
@@ -64,4 +63,3 @@ class DataToDataFrameComponent(Component):
         df_result = DataFrame(rows)
         self.status = df_result  # store in self.status for logs
         return df_result
-
