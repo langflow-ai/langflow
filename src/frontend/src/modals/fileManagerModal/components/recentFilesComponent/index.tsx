@@ -1,20 +1,19 @@
 import { Input } from "@/components/ui/input";
-import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
-import { sortByDate } from "@/pages/MainPage/utils/sort-flows";
+import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
 import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useState } from "react";
 import FilesRendererComponent from "../filesRendererComponent";
 
 export default function RecentFilesComponent({
+  files,
   selectedFiles,
   setSelectedFiles,
 }: {
   selectedFiles: string[];
+  files: FileType[];
   setSelectedFiles: (files: string[]) => void;
 }) {
-  const { data: files } = useGetFilesV2();
-
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
 
   useEffect(() => {
@@ -31,23 +30,15 @@ export default function RecentFilesComponent({
   const [searchQuery, setSearchQuery] = useState("");
 
   const searchResults = useMemo(() => {
-    if (!searchQuery)
-      return (
-        files?.toSorted((a, b) =>
-          sortByDate(
-            a.updated_at ?? a.created_at,
-            b.updated_at ?? b.created_at,
-          ),
-        ) ?? []
-      );
+    if (!searchQuery) return files ?? [];
     return fuse.search(searchQuery).map(({ item }) => item);
-  }, [searchQuery, files]);
+  }, [searchQuery, files, selectedFiles]);
 
-  const handleFileSelect = (fileName: string) => {
+  const handleFileSelect = (fileId: string) => {
     setSelectedFiles(
-      selectedFiles.includes(fileName)
-        ? selectedFiles.filter((name) => name !== fileName)
-        : [...selectedFiles, fileName],
+      selectedFiles.includes(fileId)
+        ? selectedFiles.filter((name) => name !== fileId)
+        : [...selectedFiles, fileId],
     );
   };
 
@@ -67,7 +58,20 @@ export default function RecentFilesComponent({
       </div>
       <div className="flex h-56 flex-col gap-1">
         <FilesRendererComponent
-          files={searchResults.slice(0, 5)}
+          files={searchResults
+            .toSorted((a, b) => {
+              const selectedOrder = sortByBoolean(
+                selectedFiles.includes(a.id),
+                selectedFiles.includes(b.id),
+              );
+              return selectedOrder === 0
+                ? sortByDate(
+                    a.updated_at ?? a.created_at,
+                    b.updated_at ?? b.created_at,
+                  )
+                : selectedOrder;
+            })
+            .slice(0, 5)}
           handleFileSelect={handleFileSelect}
           selectedFiles={selectedFiles}
         />
