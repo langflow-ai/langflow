@@ -21,17 +21,20 @@ class TaskBase(SQLModel):
     state: str
     status: str
     result: dict | None = Field(default=None, sa_column=Column(JSON))
+    input_request: dict | None = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     cron_expression: str | None = Field(default=None)
 
     @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
     def validate_datetime(cls, v):
         if isinstance(v, datetime):
             return v
         return datetime.fromisoformat(v)
 
     @field_validator("status")
+    @classmethod
     def validate_status(cls, v):
         valid_statuses = ["pending", "processing", "completed", "failed"]
         if v not in valid_statuses:
@@ -40,7 +43,7 @@ class TaskBase(SQLModel):
         return v
 
 
-class Task(TaskBase, table=True):  # type: ignore
+class Task(TaskBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     author: Flow = Relationship(sa_relationship_kwargs={"primaryjoin": "Task.author_id==Flow.id"})
     assignee: Flow = Relationship(sa_relationship_kwargs={"primaryjoin": "Task.assignee_id==Flow.id"})

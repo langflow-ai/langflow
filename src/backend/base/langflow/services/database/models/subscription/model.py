@@ -15,6 +15,7 @@ class SubscriptionBase(SQLModel):
     state: str | None = None
 
     @field_validator("event_type")
+    @classmethod
     def validate_event_type(cls, v):
         valid_event_types = ["task_created", "task_updated", "task_completed", "task_failed"]
         if v not in valid_event_types:
@@ -23,7 +24,7 @@ class SubscriptionBase(SQLModel):
         return v
 
 
-class Subscription(SubscriptionBase, table=True):  # type: ignore
+class Subscription(SubscriptionBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow: "Flow" = Relationship(back_populates="subscriptions")
 
