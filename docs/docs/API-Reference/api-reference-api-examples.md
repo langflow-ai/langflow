@@ -34,9 +34,9 @@ To find your folder ID, call the Langflow [/api/v1/folders/](#read-folders) endp
 <Tabs>
   <TabItem value="curl" label="curl" default>
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/folders/" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
   </TabItem>
   <TabItem value="result" label="Result">
@@ -89,9 +89,9 @@ This operation returns a dictionary of all Langflow components.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/all" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -113,10 +113,10 @@ For streaming execution of your flows, use the [`/build` endpoint](/api-referenc
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=false" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "input_value": "string",
   "input_type": "chat",
@@ -194,9 +194,9 @@ Get the status of a task.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/task/TASK_ID" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -226,9 +226,9 @@ Get the version of the Langflow API.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/version" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -253,9 +253,9 @@ Retrieve the Langflow configuration information.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/config" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -294,10 +294,10 @@ LLM chat responses are streamed back as `token` events until the `end` event clo
    <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{"message": "hello, how are you doing?"}'
 ```
@@ -341,10 +341,10 @@ You can also pass values for `start_component_id` and `stop_component_id` in the
 For example, to stop flow execution at the Open AI model component, run the following command:
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{"stop_component_id": "OpenAIModel-Uksag"}'
 ```
@@ -363,11 +363,11 @@ This example uploads `the_oscar_award.csv`.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@the_oscar_award.csv'
+curl -X POST \
+  "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@the_oscar_award.csv"
 ```
 
   </TabItem>
@@ -437,9 +437,9 @@ List all files associated with a specific flow.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -470,9 +470,9 @@ The `--output` flag is optional.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv" \
-  -H 'accept: application/json' \
+  -H "accept: application/json" \
   --output output-file.csv
 ```
 
@@ -500,9 +500,9 @@ The `--output` flag is optional.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
-  -H 'accept: application/json' \
+  -H "accept: application/json" \
   --output output-image.png
 ```
 
@@ -527,9 +527,9 @@ This example deletes the `2024-12-30_15-42-44_image-file.png` file from Langflow
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'DELETE' \
+curl -X DELETE \
   "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -556,10 +556,10 @@ Create a new flow.
    <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "name": "string2",
   "description": "string",
@@ -622,9 +622,9 @@ Retrieve a list of flows with pagination support.
    <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=false&components_only=false&get_all=true&header_flows=false&page=1&size=50" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
    </TabItem>
@@ -644,9 +644,9 @@ To retrieve only the flows from a specific folder, pass `folder_id` in the query
    <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/?remove_example_flows=true&components_only=false&get_all=false&folder_id=$FOLDER_ID&header_flows=false&page=1&size=1" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
    </TabItem>
@@ -668,9 +668,9 @@ Read a specific flow by its ID.
 <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
 </TabItem>
@@ -705,10 +705,10 @@ This example changes the value for `endpoint_name` from a random UUID to `my_new
 <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X 'PATCH' \
+curl -X PATCH \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "name": "string",
   "description": "string",
@@ -753,9 +753,9 @@ Delete a specific flow by its ID.
     <TabItem value="curl" label="curl" default>
 
 ```bash
-curl -X 'DELETE' \
+curl -X DELETE \
   "$LANGFLOW_URL/api/v1/flows/$FLOW_ID" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
 </TabItem>
@@ -779,10 +779,10 @@ Create multiple new flows.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/batch/" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "flows": [
     {
@@ -849,11 +849,11 @@ This example uploads a local file named `agent-with-astra-db-tool.json`.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@agent-with-astra-db-tool.json;type=application/json'
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@agent-with-astra-db-tool.json;type=application/json"
 ```
 
   </TabItem>
@@ -879,11 +879,11 @@ To specify a target folder for the flow, include the query parameter `folder_id`
 The target `folder_id` must already exist before uploading a flow. Call the [/api/v1/folders/](#read-folders) endpoint for a list of available folders.
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@agent-with-astra-db-tool.json;type=application/json'
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@agent-with-astra-db-tool.json;type=application/json"
 ```
 
 ### Download all flows
@@ -896,12 +896,13 @@ This endpoint downloads a ZIP file containing flows for all `flow-id` values lis
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/download/" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '[
-  "e1e40c77-0541-41a9-88ab-ddb3419398b5", "92f9a4c5-cfc8-4656-ae63-1f0881163c28"
+  "e1e40c77-0541-41a9-88ab-ddb3419398b5",
+  "92f9a4c5-cfc8-4656-ae63-1f0881163c28"
 ]' \
   --output langflow-flows.zip
 ```
@@ -925,9 +926,9 @@ Retrieve a list of basic example flows.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/basic_examples/" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -955,9 +956,9 @@ Get a list of Langflow folders.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/' \
-  -H 'accept: application/json'
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/folders/" \
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -985,10 +986,10 @@ Create a new folder.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/folders/" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "name": "new_folder_name",
   "description": "string",
@@ -1017,10 +1018,10 @@ To add flows and components at folder creation, retrieve the `components_list` a
 Adding a flow to a folder moves the flow from its previous location. The flow is not copied.
 
 ```curl
-curl -X 'POST' \
+curl -X POST \
   "$LANGFLOW_URL/api/v1/folders/" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "name": "new_folder_name",
   "description": "string",
@@ -1043,9 +1044,9 @@ To find the UUID of your folder, call the [read folders](#read-folders) endpoint
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
-  -H 'accept: application/json'
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/folders/$FOLDER_ID" \
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -1077,10 +1078,10 @@ If you send the same values multiple times, the update is still processed, even 
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'PATCH' \
-  '$LANGFLOW_URL/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+curl -X PATCH \
+  "$LANGFLOW_URL/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331" \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "name": "string",
   "description": "string",
@@ -1117,9 +1118,9 @@ Delete a specific folder.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/folders/$FOLDER_ID' \
-  -H 'accept: */*'
+curl -X DELETE \
+  "$LANGFLOW_URL/api/v1/folders/$FOLDER_ID" \
+  -H "accept: */*"
 ```
 
   </TabItem>
@@ -1142,9 +1143,9 @@ The `--output` flag is optional.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331' \
-  -H 'accept: application/json' \
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331" \
+  -H "accept: application/json" \
   --output langflow-folder.zip
 ```
 
@@ -1166,11 +1167,11 @@ Upload a folder to Langflow.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'POST' \
-  '$LANGFLOW_URL/api/v1/folders/upload/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: multipart/form-data' \
-  -F 'file=@20241230_135006_langflow_flows.zip;type=application/zip'
+curl -X POST \
+  "$LANGFLOW_URL/api/v1/folders/upload/" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@20241230_135006_langflow_flows.zip;type=application/zip"
 ```
 
   </TabItem>
@@ -1215,9 +1216,9 @@ Stream logs in real-time using Server-Sent Events (SSE).
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/logs-stream" \
-  -H 'accept: text/event-stream'
+  -H "accept: text/event-stream"
 ```
 
   </TabItem>
@@ -1261,9 +1262,9 @@ With these values, the endpoint returns the last 10 lines of logs.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/logs?lines_before=0&lines_after=0&timestamp=0" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -1299,9 +1300,9 @@ Retrieve Vertex builds for a specific flow.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -1322,9 +1323,9 @@ Delete Vertex builds for a specific flow.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'DELETE' \
+curl -X DELETE \
   "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
-  -H 'accept: */*'
+  -H "accept: */*"
 ```
 
   </TabItem>
@@ -1345,9 +1346,9 @@ Retrieve messages with optional filters.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
-  'http://127.0.0.1:7860/api/v1/monitor/messages' \
-  -H 'accept: application/json'
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/monitor/messages" \
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -1369,7 +1370,7 @@ This example retrieves messages sent by `Machine` and `AI` in a given chat sessi
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X "GET" \
+curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/messages?flow_id=$FLOW_ID&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp" \
   -H "accept: application/json"
 ```
@@ -1423,13 +1424,11 @@ This example deletes the message retrieved in the previous Get messages example.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -v -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/monitor/messages' \
-  -H 'accept: */*' \
-  -H 'Content-Type: application/json' \
-  -d '[
-  "1c1d6134-9b8b-4079-931c-84dcaddf19ba"
-]'
+curl -v -X DELETE \
+  "$LANGFLOW_URL/api/v1/monitor/messages" \
+  -H "accept: */*" \
+  -H "Content-Type: application/json" \
+  -d '["MESSAGE_ID_1", "MESSAGE_ID_2"]'
 ```
   </TabItem>
   <TabItem value="result" label="Result">
@@ -1441,16 +1440,6 @@ curl -v -X 'DELETE' \
   </TabItem>
 </Tabs>
 
-To delete multiple messages, list the IDs within the array.
-
-```curl
-curl -v -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/monitor/messages' \
-  -H 'accept: */*' \
-  -H 'Content-Type: application/json' \
-  -d '["MESSAGE_ID_1", "MESSAGE_ID_2"]'
-```
-
 ### Update message
 
 Update a specific message by its ID.
@@ -1461,10 +1450,10 @@ This example updates the `text` value of message `3ab66cc6-c048-48f8-ab07-570f5a
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'PUT' \
+curl -X PUT \
   "$LANGFLOW_URL/api/v1/monitor/messages/3ab66cc6-c048-48f8-ab07-570f5af7b160" \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
+  -H "accept: application/json" \
+  -H "Content-Type: application/json" \
   -d '{
   "text": "testing 1234"
 }'
@@ -1491,9 +1480,9 @@ This example updates the `session_ID` value `01ce083d-748b-4b8d-97b6-33adbb6a528
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'PATCH' \
+curl -X PATCH \
   "$LANGFLOW_URL/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id" \
-  -H 'accept: application/json'
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -1543,9 +1532,9 @@ Delete all messages for a specific session.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'DELETE' \
-  '$LANGFLOW_URL/api/v1/monitor/messages/session/different_session_id_2' \
-  -H 'accept: */*'
+curl -X DELETE \
+  "$LANGFLOW_URL/api/v1/monitor/messages/session/different_session_id_2" \
+  -H "accept: */*"
 ```
 
   </TabItem>
@@ -1566,9 +1555,9 @@ Retrieve all transactions (interactions between components) for a specific flow.
   <TabItem value="curl" label="curl" default>
 
 ```curl
-curl -X 'GET' \
-  '$LANGFLOW_URL/api/v1/monitor/transactions?flow_id=$FLOW_ID&page=1&size=50' \
-  -H 'accept: application/json'
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/monitor/transactions?flow_id=$FLOW_ID&page=1&size=50" \
+  -H "accept: application/json"
 ```
 
   </TabItem>
@@ -1598,5 +1587,6 @@ curl -X 'GET' \
 
   </TabItem>
 </Tabs>
+
 
 
