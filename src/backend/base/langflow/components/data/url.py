@@ -4,8 +4,7 @@ import re
 from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
 
 from langflow.custom import Component
-from langflow.helpers.data import data_to_text
-from langflow.io import DropdownInput, MessageTextInput, BoolInput, StrInput, Output
+from langflow.io import BoolInput, DropdownInput, MessageTextInput, Output, StrInput
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
@@ -90,12 +89,12 @@ class URLComponent(Component):
         urls = list({self.ensure_url(url.strip()) for url in self.urls if url.strip()})
         if not urls:
             raise ValueError("No valid URLs provided.")
-        
+
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
         else:
             loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
-        
+
         docs = loader.load()
 
         if self.format == "JSON":
@@ -103,16 +102,10 @@ class URLComponent(Component):
             for doc in docs:
                 try:
                     json_content = json.loads(doc.page_content)
-                    data_dict = {
-                        "text": json.dumps(json_content, indent=2),
-                        **json_content,
-                        **doc.metadata
-                    }
+                    data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
                     data.append(Data(**data_dict))
                 except json.JSONDecodeError as err:
-                    raise ValueError(
-                        f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
-                    ) from err
+                    raise ValueError(f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}") from err
             return data
 
         return [Data(text=doc.page_content, **doc.metadata) for doc in docs]
@@ -120,7 +113,7 @@ class URLComponent(Component):
     def fetch_content_text(self) -> Message:
         """Fetch content and return as formatted text."""
         data = self.fetch_content()
-        
+
         if self.format == "JSON":
             text_list = [item.text for item in data]
             result = "\n".join(text_list)
