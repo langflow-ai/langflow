@@ -51,6 +51,14 @@ const JsonEditor = ({
     }
   }, [initialFilter, newRef.current]);
 
+  const isValidResult = (result: any): boolean => {
+    // Only allow objects and arrays
+    return (
+      result !== null &&
+      (Array.isArray(result) || (typeof result === 'object' && !Array.isArray(result)))
+    );
+  };
+
   const handleTransform = () => {
     if (!newRef.current) return;
 
@@ -68,10 +76,28 @@ const JsonEditor = ({
       try {
         const result = jsonquery(json, transformQuery);
         if (result !== undefined) {
-          newRef.current.set({ json: result });
-          onChange?.({ json: result });
-          setFilter?.(transformQuery.trim());
-          return;
+          // Validate that result is a JSON object or array
+          if (isValidResult(result)) {
+            try {
+              JSON.stringify(result); // Still check JSON serializability
+              newRef.current.set({ json: result });
+              onChange?.({ json: result });
+              setFilter?.(transformQuery.trim());
+              return;
+            } catch (jsonError) {
+              setErrorData({
+                title: "Invalid Result",
+                list: ["The filtered result contains values that cannot be serialized to JSON"],
+              });
+              return;
+            }
+          } else {
+            setErrorData({
+              title: "Invalid Result",
+              list: ["The filtered result must be a JSON object or array, not a primitive value"],
+            });
+            return;
+          }
         }
       } catch (jsonQueryError) {
         // If JSONQuery fails, continue with our path-based method
@@ -134,9 +160,25 @@ const JsonEditor = ({
       }
 
       if (result !== undefined) {
-        newRef.current.set({ json: result });
-        onChange?.({ json: result });
-        setFilter?.(transformQuery.trim());
+        // Validate that result is a JSON object or array
+        if (isValidResult(result)) {
+          try {
+            JSON.stringify(result); // Still check JSON serializability
+            newRef.current.set({ json: result });
+            onChange?.({ json: result });
+            setFilter?.(transformQuery.trim());
+          } catch (jsonError) {
+            setErrorData({
+              title: "Invalid Result",
+              list: ["The filtered result contains values that cannot be serialized to JSON"],
+            });
+          }
+        } else {
+          setErrorData({
+            title: "Invalid Result",
+            list: ["The filtered result must be a JSON object or array, not a primitive value"],
+          });
+        }
       } else {
         setErrorData({
           title: "Invalid Result",
