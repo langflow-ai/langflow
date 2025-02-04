@@ -1,7 +1,7 @@
 import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
 
-const useUploadFile = () => {
+const useUploadFile = ({ types }: { types: string[] }) => {
   const { mutateAsync: uploadFileMutation } = usePostUploadFileV2();
 
   const getFilesToUpload = async ({
@@ -10,7 +10,10 @@ const useUploadFile = () => {
     files?: File[];
   }): Promise<File[]> => {
     if (!files) {
-      files = await createFileUpload();
+      files = await createFileUpload({
+        accept: types.join(","),
+        multiple: true,
+      });
     }
     return files;
   };
