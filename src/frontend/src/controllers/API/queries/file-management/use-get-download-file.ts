@@ -8,7 +8,8 @@ interface DownloadFileQueryParams {
 }
 
 export const useGetDownloadFileV2: useMutationFunctionType<
-  DownloadFileQueryParams
+  DownloadFileQueryParams,
+  void
 > = (params, options) => {
   const { mutate } = UseRequestProcessor();
 
