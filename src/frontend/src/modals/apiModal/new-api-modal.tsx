@@ -45,13 +45,17 @@ export default function ApiModal({
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-large">
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={EXPORT_CODE_DIALOG}>
-        <span className="pr-2">API</span>
+      <BaseModal.Header description={<>
+      <span className="pr-2">
+      API access requires an API key. You can <a href="/settings/api-keys" className="text-accent-pink-foreground"> create an API key</a> in settings.
+      </span>
+      </>}>
         <IconComponent
           name="Code2"
-          className="h-6 w-6 pl-1 text-gray-800 dark:text-white"
+          className="h-6 w-6 text-gray-800 dark:text-white"
           aria-hidden="true"
         />
+        <span className="pl-2">API access</span>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>
         {open && (
