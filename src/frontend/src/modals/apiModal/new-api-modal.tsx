@@ -43,7 +43,7 @@ export default function ApiModal({
   }, [open]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="x-large">
+    <BaseModal open={open} setOpen={setOpen} size="medium">
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header description={autoLogin?undefined:<>
       <span className="pr-2">
