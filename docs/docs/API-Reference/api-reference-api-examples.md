@@ -120,32 +120,14 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=false" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
-  -d '{
-  "input_value": "string",
-  "input_type": "chat",
-  "output_type": "chat",
-  "output_component": "",
-  "tweaks": {
-    "Component Name": {
-      "parameter_name": "value"
-    },
-    "component_id": {
-      "parameter_name": "value"
-    },
-    "parameter_name": "value"
-  },
-  "session_id": "string"
-}'
+  -d '{}'
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
 ```result
-{
-  "result": "Flow execution result",
-  "session_id": "session_uuid"
-}
+{"session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","outputs":[{"inputs":{},"outputs":[{"results":{"message":{"text_key":"text","data":{"timestamp":"2025-02-04T21:44:02+00:00","sender":"Machine","sender_name":"AI","session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","files":[],"error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-g7uMN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"dcb15280-a16c-489a-9818-bec697fd123e","flow_id":"947eaf64-bc35-4431-ae52-8b30d819915b"},"default_value":"","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","timestamp":"2025-02-04T21:44:02+00:00","flow_id":"947eaf64-bc35-4431-ae52-8b30d819915b","error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-g7uMN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[]}},"artifacts":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"outputs":{"message":{"message":{"timestamp":"2025-02-04T21:44:02","sender":"Machine","sender_name":"AI","session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","files":[],"error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-g7uMN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"dcb15280-a16c-489a-9818-bec697fd123e","flow_id":"947eaf64-bc35-4431-ae52-8b30d819915b"},"type":"message"}},"logs":{"message":[]},"messages":[{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","stream_url":null,"component_id":"ChatOutput-HnFx1","files":[],"type":"message"}],"timedelta":null,"duration":null,"component_display_name":"Chat Output","component_id":"ChatOutput-HnFx1","used_frozen_result":false}]}]}
 ```
 
   </TabItem>
