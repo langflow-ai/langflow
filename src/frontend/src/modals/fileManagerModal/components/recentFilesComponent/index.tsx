@@ -34,11 +34,11 @@ export default function RecentFilesComponent({
     return fuse.search(searchQuery).map(({ item }) => item);
   }, [searchQuery, files, selectedFiles]);
 
-  const handleFileSelect = (fileId: string) => {
+  const handleFileSelect = (filePath: string) => {
     setSelectedFiles(
-      selectedFiles.includes(fileId)
-        ? selectedFiles.filter((name) => name !== fileId)
-        : [...selectedFiles, fileId],
+      selectedFiles.includes(filePath)
+        ? selectedFiles.filter((path) => path !== filePath)
+        : [...selectedFiles, filePath],
     );
   };
 
@@ -61,8 +61,8 @@ export default function RecentFilesComponent({
           files={searchResults
             .toSorted((a, b) => {
               const selectedOrder = sortByBoolean(
-                selectedFiles.includes(a.id),
-                selectedFiles.includes(b.id),
+                selectedFiles.includes(a.path),
+                selectedFiles.includes(b.path),
               );
               return selectedOrder === 0
                 ? sortByDate(
