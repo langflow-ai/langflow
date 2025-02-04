@@ -4,6 +4,7 @@ export const URLs = {
   TRANSACTIONS: `monitor/transactions`,
   API_KEY: `api_key`,
   FILES: `files`,
+  FILE_MANAGEMENT: `filesv2`,
   VERSION: `version`,
   MESSAGES: `monitor/messages`,
   BUILDS: `monitor/builds`,
