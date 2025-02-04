@@ -1,3 +1,4 @@
+import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { ENABLE_FILE_MANAGEMENT } from "@/customization/feature-flags";
 import { createFileUpload } from "@/helpers/create-file-upload";
@@ -18,6 +19,7 @@ import { FileComponentType, InputProps } from "../../types";
 
 export default function InputFileComponent({
   value,
+  file_path,
   handleOnNewValue,
   disabled,
   fileTypes,
@@ -93,55 +95,59 @@ export default function InputFileComponent({
 
   const isDisabled = disabled || isPending;
 
-  const files = [
-    {
-      type: "json",
-      name: "user_profile_data.json",
-      size: "640 KB",
-    },
-    {
-      type: "csv",
-      name: "Q4_Reports.csv",
-      size: "80 KB",
-    },
-    {
-      type: "txt",
-      name: "Highschool Speech.txt",
-      size: "10 KB",
-    },
-    {
-      type: "pdf",
-      name: "logoconcepts.pdf",
-      size: "1.2 MB",
-    },
-  ];
+  const { data: files } = useGetFilesV2();
 
-  const [selectedFiles, setSelectedFiles] = useState<string[]>(
-    files.map((file) => file.name),
-  );
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSelectedFiles(
+      file_path
+        ?.split(",")
+        .filter((value) => value !== "")
+        .map((file) => files?.find((f) => f.path === file)?.id ?? "") ?? [],
+    );
+  }, [files, file_path]);
 
   return (
     <div className="w-full">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
-          {ENABLE_FILE_MANAGEMENT ? (
+          {ENABLE_FILE_MANAGEMENT && files ? (
             <div className="flex w-full flex-col gap-2">
               <div className="flex flex-col">
                 <FilesRendererComponent
                   files={files.filter((file) =>
-                    selectedFiles.includes(file.name),
+                    selectedFiles.includes(file.id),
                   )}
-                  handleDelete={(fileName) => {
-                    setSelectedFiles(
-                      selectedFiles.filter((file) => file !== fileName),
+                  handleRemove={(id) => {
+                    const newSelectedFiles = selectedFiles.filter(
+                      (file) => file !== id,
                     );
+                    setSelectedFiles(newSelectedFiles);
+                    handleOnNewValue({
+                      value: newSelectedFiles
+                        .map((file) => files.find((f) => f.id === file)?.name)
+                        .join(","),
+                      file_path: newSelectedFiles
+                        .map((file) => files.find((f) => f.id === file)?.path)
+                        .join(","),
+                    });
                   }}
                 />
               </div>
               <FileManagerModal
+                files={files}
                 selectedFiles={selectedFiles}
                 handleSubmit={(selectedFiles) => {
                   setSelectedFiles(selectedFiles);
+                  handleOnNewValue({
+                    value: selectedFiles
+                      .map((file) => files.find((f) => f.id === file)?.name)
+                      .join(","),
+                    file_path: selectedFiles
+                      .map((file) => files.find((f) => f.id === file)?.path)
+                      .join(","),
+                  });
                 }}
                 disabled={isDisabled}
               >
