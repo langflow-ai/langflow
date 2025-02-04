@@ -1,37 +1,39 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import asyncio
+from typing import Any
 
-from asgiref.sync import async_to_sync
-from celery.exceptions import SoftTimeLimitExceeded
-
+# Import the async simple_run_flow_task from the API endpoints
+from langflow.api.v1.endpoints import simple_run_flow_task
 from langflow.core.celery_app import celery_app
 
-if TYPE_CHECKING:
-    from langflow.graph.vertex.base import Vertex
-
 
 @celery_app.task(acks_late=True)
-def test_celery(word: str) -> str:
-    return f"test task return {word}"
+def simple_run_flow_task_celery(
+    flow_data: dict,
+    input_request: dict,
+    *,
+    stream: bool = False,
+    api_key_user: Any = None,
+    event_manager: Any = None,
+) -> Any:
+    """Celery task to execute the simple_run_flow_task from the API endpoints.
 
-
-@celery_app.task(bind=True, soft_time_limit=30, max_retries=3)
-def build_vertex(self, vertex: Vertex) -> Vertex:
-    """Build a vertex.
+    Args:
+        flow_data (dict): Data representing the flow to run.
+        input_request (dict): Simplified API request data.
+        stream (bool, optional): Whether the response should be streamed. Defaults to False.
+        api_key_user (Any, optional): The API key user if available.
+        event_manager (Any, optional): The event manager, if any.
 
     Returns:
-        The built vertex.
+        Any: The result of running the flow task.
     """
-    try:
-        vertex.task_id = self.request.id
-        async_to_sync(vertex.build)()
-    except SoftTimeLimitExceeded as e:
-        raise self.retry(exc=SoftTimeLimitExceeded("Task took too long"), countdown=2) from e
-    return vertex
-
-
-@celery_app.task(acks_late=True)
-def process_graph_cached_task() -> dict[str, Any]:
-    msg = "This task is not implemented yet"
-    raise NotImplementedError(msg)
+    run_response_object = asyncio.run(
+        simple_run_flow_task(
+            flow_data, input_request, stream=stream, api_key_user=api_key_user, event_manager=event_manager
+        )
+    )
+    if run_response_object is not None:
+        return run_response_object.model_dump()
+    return None
