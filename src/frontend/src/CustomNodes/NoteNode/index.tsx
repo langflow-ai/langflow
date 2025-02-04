@@ -35,6 +35,7 @@ function NoteNode({
   });
   const [resizedNote, setResizedNote] = useState(false);
   const currentFlow = useFlowStore((state) => state.currentFlow);
+  const setNode = useFlowStore((state) => state.setNode);
   const [isResizing, setIsResizing] = useState(false);
 
   const nodeData = useMemo(
@@ -63,6 +64,13 @@ function NoteNode({
         setSize({
           width: width - NOTE_NODE_PADDING,
           height: height - NOTE_NODE_PADDING,
+        });
+        setNode(data.id, (node) => {
+          return {
+            ...node,
+            width: width,
+            height: height,
+          };
         });
       }, 5),
     [],
