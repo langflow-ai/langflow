@@ -7,11 +7,11 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { ReactNode, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
-import CodeTabsComponent from "../../components/core/codeTabsComponent";
 import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { useTweaksStore } from "../../stores/tweaksStore";
 import { FlowType } from "../../types/flow/index";
 import BaseModal from "../baseModal";
+import APITabsComponent from "./codeTabs/code-tabs";
 
 export default function ApiModal({
   flow,
@@ -45,7 +45,7 @@ export default function ApiModal({
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-large">
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={<>
+      <BaseModal.Header description={autoLogin?undefined:<>
       <span className="pr-2">
       API access requires an API key. You can <a href="/settings/api-keys" className="text-accent-pink-foreground"> create an API key</a> in settings.
       </span>
@@ -61,11 +61,8 @@ export default function ApiModal({
         {open && (
           <>
             <CustomAPIGenerator isOpen={open} />
-            <CodeTabsComponent
+            <APITabsComponent
               open={open}
-              tabs={tabs!}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
               activeTweaks={activeTweaks}
               setActiveTweaks={setActiveTweaks}
             />
