@@ -93,18 +93,16 @@ def add_tasks_to_database_url(database_url: str) -> str:
     return database_url
 
 
-async def log_stream(stream: asyncio.StreamReader, log_func: Callable) -> None:
-    """Asynchronously read and log stream output.
-
-    Args:
-        stream: Stream to read from
-        log_func: Logging function to use
-    """
-    while True:
-        line = await stream.readline()
-        if not line:
-            break
-        log_func(line.decode().rstrip())
+# Define an asynchronous helper for non-blocking stream reading.
+async def _async_log_stream(stream: asyncio.StreamReader, log_func: Callable) -> None:
+    try:
+        while True:
+            line = await stream.readline()
+            if not line:
+                break
+            log_func(line.decode().rstrip())
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error reading from stream: {e}")
 
 
 async def get_subscriptions(db_service: DatabaseService, task: TaskRead):
@@ -163,14 +161,18 @@ class TaskOrchestrationService(Service):
     async def start(self):
         """Start the task orchestration service.
 
-        If using internal Celery, spawns worker process and sets up logging.
+        If using internal Celery, spawns a worker process and sets up asynchronous logging using non-blocking I/O.
         For external Celery, verifies worker availability.
         """
+        # Construct the cache directory for task orchestrator notifications.
         cache_dir = Path(self.settings_service.settings.config_dir) / "task_orchestrator"
 
+        # Initialize the notification queue in a separate thread to avoid blocking the event loop.
         self.notification_queue = await asyncio.to_thread(Deque, directory=f"{cache_dir}/notifications")
+
         if not self.external_celery:
             python_executable = sys.executable
+            # Start the Celery worker process asynchronously with non-blocking stdout/stderr.
             self._celery_worker_proc = await asyncio.create_subprocess_exec(
                 python_executable,
                 "-m",
@@ -183,13 +185,15 @@ class TaskOrchestrationService(Service):
                 stderr=asyncio.subprocess.PIPE,
             )
 
+            # Schedule asynchronous tasks to log the worker's stdout and stderr.
             self._celery_worker_proc_stdout = asyncio.create_task(
-                log_stream(self._celery_worker_proc.stdout, logger.info)
+                _async_log_stream(self._celery_worker_proc.stdout, logger.info)
             )
             self._celery_worker_proc_stderr = asyncio.create_task(
-                log_stream(self._celery_worker_proc.stderr, logger.error)
+                _async_log_stream(self._celery_worker_proc.stderr, logger.error)
             )
 
+            # Allow some time for the worker to initialize.
             await asyncio.sleep(10)
             if self._celery_worker_proc.returncode is not None and self._celery_worker_proc.returncode != 0:
                 msg = f"Celery worker failed to start with return code {self._celery_worker_proc.returncode}"
@@ -197,6 +201,7 @@ class TaskOrchestrationService(Service):
         else:
             from langflow.core.celery_app import celery_app
 
+            # Ping the external Celery worker using a thread to avoid blocking.
             ping_response = await asyncio.to_thread(celery_app.control.ping, timeout=5.0)
             if not ping_response:
                 logger.warning("No response from the external celery worker; please check its status.")
