@@ -100,7 +100,7 @@ class ApifyActorsComponent(Component):
         return data
 
     def build_tool(self) -> Tool:
-        """Build a tool for agent that runs the Apify Actor."""
+        """Build a tool for an agent that runs the Apify Actor."""
         actor_id = self.actor_id
 
         build = self._get_actor_latest_build(actor_id)
@@ -115,7 +115,7 @@ class ApifyActorsComponent(Component):
         # works from input schema
         _info = [
             (
-                "JSON encoded as string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\n\n"
+                "JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\n\n"
                 f"{json.dumps(properties, separators=(',', ':'))}"
             )
         ]
@@ -141,7 +141,7 @@ class ApifyActorsComponent(Component):
             name: str = f"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}"
             description: str = (
                 "Run an Apify Actor with the given input. "
-                "Here is part of the currently loaded Actor README:\n\n"
+                "Here is a part of the currently loaded Actor README:\n\n"
                 f"{readme}\n\n"
             )
 
@@ -175,7 +175,10 @@ class ApifyActorsComponent(Component):
         return ActorInput
 
     def _get_apify_client(self) -> ApifyClient:
-        """Get the Apify client. Is created if not exists or token changes."""
+        """Get the Apify client.
+
+        Is created if not exists or token changes.
+        """
         if not self.apify_token:
             msg = "API token is required."
             raise ValueError(msg)
@@ -187,7 +190,7 @@ class ApifyActorsComponent(Component):
         return self._apify_client
 
     def _get_actor_latest_build(self, actor_id: str) -> dict:
-        """Get the latest build of an Actor from default build tag."""
+        """Get the latest build of an Actor from the default build tag."""
         client = self._get_apify_client()
         actor = client.actor(actor_id=actor_id)
         if not (actor_info := actor.get()):
@@ -247,7 +250,7 @@ class ApifyActorsComponent(Component):
         """Turn actor_id into a valid tool name.
 
         Tool name must only contain letters, numbers, underscores, dashes,
-        and cannot contain spaces.
+            and cannot contain spaces.
         """
         valid_chars = string.ascii_letters + string.digits + "_-"
         return "".join(char if char in valid_chars else "_" for char in actor_id)
@@ -255,9 +258,10 @@ class ApifyActorsComponent(Component):
     def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:
         """Run an Apify Actor and return the output dataset.
 
-        :param actor_id: Actor name from Apify store to run.
-        :param run_input: JSON input for the Actor.
-        :param fields: List of fields to extract from the dataset. Other fields will be ignored.
+        Args:
+            actor_id: Actor name from Apify store to run.
+            run_input: JSON input for the Actor.
+            fields: List of fields to extract from the dataset. Other fields will be ignored.
         """
         client = self._get_apify_client()
         if (details := client.actor(actor_id=actor_id).call(run_input=run_input, wait_secs=1)) is None:
