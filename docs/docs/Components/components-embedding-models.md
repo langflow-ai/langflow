@@ -55,6 +55,11 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 
 ## Astra DB vectorize
 
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store)
+:::
+
 Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
@@ -95,6 +100,28 @@ This component generates embeddings using Azure OpenAI models.
 | Name | Type | Description |
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using Azure OpenAI |
+
+## Cloudflare Workers AI Embeddings
+
+This component generates embeddings using [Cloudflare Workers AI models](https://developers.cloudflare.com/workers-ai/).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| account_id | Cloudflare account ID |[Find your Cloudflare account ID](https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/#find-account-id-workers-and-pages) |
+| api_token | Cloudflare API token | [Create an API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) |
+| model_name | Model Name | [List of supported models](https://developers.cloudflare.com/workers-ai/models/#text-embeddings) |
+| strip_new_lines | Strip New Lines | Whether to strip new lines from the input text |
+| batch_size | Batch Size | Number of texts to embed in each batch |
+| api_base_url | Cloudflare API base URL | Base URL for the Cloudflare API |
+| headers | Headers | Additional request headers |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings |  An instance for generating embeddings using Cloudflare Workers |
 
 ## Cohere Embeddings
 
@@ -169,11 +196,17 @@ Use this component to generate embeddings using locally downloaded Hugging Face 
 | Model Name | Model Name | Name of the HuggingFace model to use |
 | Multi Process | Multi-Process | Whether to use multiple processes |
 
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings |
+
 ## Hugging Face embeddings Inference API
 
-This component generates embeddings using Hugging Face Inference API models.
+This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/).
 
-Use this component to create embeddings with Hugging Face's hosted models. Ensure you have a valid Hugging Face API key.
+Use this component to create embeddings with Hugging Face's hosted models.
 
 ### Inputs
 
@@ -187,9 +220,35 @@ Use this component to create embeddings with Hugging Face's hosted models. Ensur
 | Model Kwargs | Model Arguments | Additional arguments for the model |
 | Multi Process | Multi-Process | Whether to use multiple processes |
 
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings |
+
+## LM Studio Embeddings
+
+This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| model | Model | The LM Studio model to use for generating embeddings |
+| base_url | LM Studio Base URL | The base URL for the LM Studio API |
+| api_key | LM Studio API Key | API key for authentication with LM Studio |
+| temperature | Model Temperature | Temperature setting for the model |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings |
+
+
 ## MistralAI
 
-This component generates embeddings using MistralAI models.
+This component generates embeddings using [MistralAI](https://docs.mistral.ai/) models.
 
 ### Inputs
 
@@ -210,7 +269,7 @@ This component generates embeddings using MistralAI models.
 
 ## NVIDIA
 
-This component generates embeddings using NVIDIA models.
+This component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
 
 ### Inputs
 
@@ -229,7 +288,7 @@ This component generates embeddings using NVIDIA models.
 
 ## Ollama Embeddings
 
-This component generates embeddings using Ollama models.
+This component generates embeddings using [Ollama models](https://ollama.com/).
 
 ### Inputs
 
