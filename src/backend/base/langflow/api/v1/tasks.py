@@ -1,7 +1,9 @@
 import contextlib
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from sqlmodel import Session, select
 
 from langflow.services.database.models.task.model import Task, TaskCreate, TaskRead, TaskUpdate
@@ -14,27 +16,27 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 @router.post("/", response_model=TaskRead, status_code=201)
 async def create_task(
     task_create: TaskCreate,
-    session: Session = Depends(get_session),
-    task_orchestration_service: TaskOrchestrationService = Depends(get_task_orchestration_service),
+    session: Annotated[Session, Depends(get_session)],
+    task_orchestration_service: Annotated[TaskOrchestrationService, Depends(get_task_orchestration_service)],
 ):
-    try:
-        # Attempt to orchestrate the task, but continue if it fails
-        try:
-            task_read = task_orchestration_service.create_task(task_create)
-        except Exception as e:
-            print(e)
+    """Create a new task.
 
-        return task_read
+    The task can include an input_request that will be used when notifying subscribers.
+    The flow_data will be fetched automatically using the flow_id when creating notifications.
+    """
+    try:
+        return await task_orchestration_service.create_task(task_create)
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        logger.error(f"Error creating task: {e!s}")
+        raise HTTPException(status_code=400, detail=f"Error creating task: {e!s}") from e
 
 
 @router.get("/", response_model=list[TaskRead])
 async def read_tasks(
+    session: Annotated[Session, Depends(get_session)],
     skip: int = 0,
     limit: int = 100,
-    session: Session = Depends(get_session),
 ):
     return session.exec(select(Task).offset(skip).limit(limit)).all()
 
@@ -42,7 +44,7 @@ async def read_tasks(
 @router.get("/{task_id}", response_model=TaskRead)
 async def read_task(
     task_id: UUID,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
 ):
     task = session.get(Task, task_id)
     if task is None:
@@ -54,8 +56,8 @@ async def read_task(
 async def update_task(
     task_id: UUID,
     task_update: TaskUpdate,
-    session: Session = Depends(get_session),
-    task_orchestration_service: TaskOrchestrationService = Depends(get_task_orchestration_service),
+    session: Annotated[Session, Depends(get_session)],
+    task_orchestration_service: Annotated[TaskOrchestrationService, Depends(get_task_orchestration_service)],
 ):
     task = session.get(Task, task_id)
     if task is None:
@@ -79,7 +81,7 @@ async def update_task(
 @router.delete("/{task_id}", response_model=TaskRead)
 async def delete_task(
     task_id: UUID,
-    session: Session = Depends(get_session),
+    session: Annotated[Session, Depends(get_session)],
 ):
     task = session.get(Task, task_id)
     if task is None:
