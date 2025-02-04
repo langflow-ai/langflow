@@ -31,6 +31,10 @@ export default function FileManagerModal({
     setInternalSelectedFiles(selectedFiles || []);
   }, [selectedFiles]);
 
+  const handleUpload = (filesPaths: string[]) => {
+    setInternalSelectedFiles([...internalSelectedFiles, ...filesPaths]);
+  };
+
   return (
     <>
       <BaseModal
@@ -55,7 +59,7 @@ export default function FileManagerModal({
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex flex-col gap-4">
-            <DragFilesComponent />
+            <DragFilesComponent onUpload={handleUpload} />
             <ImportFilesComponent />
             <RecentFilesComponent
               files={files}
