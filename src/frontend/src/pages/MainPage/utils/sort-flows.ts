@@ -27,3 +27,15 @@ export const sortByDate = (dateA: string, dateB: string) => {
     return 0;
   }
 };
+
+export const sortByBoolean = (a: boolean, b: boolean) => {
+  if (a && b) {
+    return 0;
+  } else if (a) {
+    return -1;
+  } else if (b) {
+    return 1;
+  } else {
+    return 0;
+  }
+};
