@@ -133,7 +133,35 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         }
       }
     }
+
+    newEdges = filterHiddenFieldsEdges(nodes, edge, newEdges);
   });
+  return newEdges;
+}
+
+export function filterHiddenFieldsEdges(
+  nodes: AllNodeType[],
+  edge: EdgeType,
+  newEdges: EdgeType[],
+) {
+  const node = nodes.find((n) => n.id === edge.target);
+
+  if (node) {
+    const nodeInputType = edge.data?.targetHandle?.inputTypes;
+    const nodeTemplates = node.data.node!.template;
+
+    Object.keys(nodeTemplates).forEach((key) => {
+      if (!nodeTemplates[key]?.input_types) return;
+      if (
+        nodeTemplates[key]?.input_types?.some((type) =>
+          nodeInputType!.includes(type),
+        ) &&
+        !nodeTemplates[key].show
+      ) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+      }
+    });
+  }
   return newEdges;
 }
 
