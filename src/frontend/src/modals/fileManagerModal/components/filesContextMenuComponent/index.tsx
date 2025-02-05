@@ -67,7 +67,7 @@ export default function FilesContextMenuComponent({
           data-testid="btn-edit-flow"
         >
           <ForwardedIconComponent
-            name="SquarePen"
+            name="FilePen"
             aria-hidden="true"
             className="mr-2 h-4 w-4"
           />
