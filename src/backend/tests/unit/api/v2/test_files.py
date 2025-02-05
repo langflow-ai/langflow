@@ -150,7 +150,7 @@ async def test_download_file(files_client, files_created_api_key):
     upload_response = response.json()
 
     # Then try to download it
-    response = await files_client.get(f"api/v2/files/{upload_response["id"]}", headers=headers)
+    response = await files_client.get(f"api/v2/files/{upload_response['id']}", headers=headers)
 
     assert response.status_code == 200
     assert response.content == b"test content"
@@ -185,7 +185,7 @@ async def test_delete_file(files_client, files_created_api_key):
     assert response.status_code == 201
     upload_response = response.json()
 
-    response = await files_client.delete(f"api/v2/files/{upload_response["id"]}", headers=headers)
+    response = await files_client.delete(f"api/v2/files/{upload_response['id']}", headers=headers)
     assert response.status_code == 200
     assert response.json() == {"message": "File deleted successfully"}
 
@@ -203,7 +203,7 @@ async def test_edit_file(files_client, files_created_api_key):
     upload_response = response.json()
 
     # Then list the files
-    response = await files_client.put(f"api/v2/files/{upload_response["id"]}?name=potato.txt", headers=headers)
+    response = await files_client.put(f"api/v2/files/{upload_response['id']}?name=potato.txt", headers=headers)
     assert response.status_code == 200
     file = response.json()
     assert file["name"] == "potato.txt"
