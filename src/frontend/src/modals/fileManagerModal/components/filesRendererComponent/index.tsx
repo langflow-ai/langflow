@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileType } from "@/types/file_management";
+import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
 import FilesContextMenuComponent from "../filesContextMenuComponent";
@@ -18,7 +19,7 @@ export default function FilesRendererComponent({
   handleRemove?: (name: string) => void;
 }) {
   return files.map((file, index) => {
-    const type = file.name.split(".").pop() ?? "";
+    const type = file.path.split(".").pop() ?? "";
     return (
       <div
         key={index}
@@ -39,11 +40,13 @@ export default function FilesRendererComponent({
           )}
           <div className="flex items-center gap-2">
             <ForwardedIconComponent
-              name={FILE_ICONS[type].icon}
+              name={FILE_ICONS[type]?.icon ?? "File"}
               className={cn("h-6 w-6 shrink-0", FILE_ICONS[type].color)}
             />
             <span className="text-sm font-medium">{file.name}</span>
-            <span className="text-xs text-muted-foreground">{file.size}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatFileSize(file.size)}
+            </span>
           </div>
         </div>
         {handleRemove ? (

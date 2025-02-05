@@ -8,6 +8,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import ImportButtonComponent from "@/modals/fileManagerModal/components/importButtonComponent";
+import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
@@ -29,8 +30,8 @@ export const FilesPage = () => {
         return (
           <div className="flex items-center gap-2 font-medium">
             <ForwardedIconComponent
-              name={FILE_ICONS[params.value.split(".")[1]]?.icon}
-              className={FILE_ICONS[params.value.split(".")[1]]?.color}
+              name={FILE_ICONS[params.data.path.split(".")[1]]?.icon ?? "File"}
+              className={FILE_ICONS[params.data.path.split(".")[1]]?.color}
             />
             {params.value}
           </div>
@@ -39,7 +40,7 @@ export const FilesPage = () => {
     }, //This column will be twice as wide as the others
     {
       headerName: "Type",
-      field: "name",
+      field: "path",
       flex: 1,
       filter: "agTextColumnFilter",
       editable: false,
@@ -52,6 +53,9 @@ export const FilesPage = () => {
       headerName: "Size",
       field: "size",
       flex: 1,
+      valueFormatter: (params) => {
+        return formatFileSize(params.value);
+      },
       editable: false,
       cellClass: "text-muted-foreground cursor-text select-text",
     },

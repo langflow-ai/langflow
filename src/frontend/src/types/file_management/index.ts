@@ -6,5 +6,5 @@ export type FileType = {
   updated_at?: string;
   path: string;
   created_at: string;
-  size: string;
+  size: number;
 };
