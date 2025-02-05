@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
+import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import useAlertStore from "@/stores/alertStore";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
-import { ColDef } from "ag-grid-community";
+import { cn } from "@/utils/utils";
+import { ColDef, NewValueParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useRef, useState } from "react";
 
@@ -20,6 +22,15 @@ export const FilesPage = () => {
   const { data: files } = useGetFilesV2();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
+  const { mutate: rename } = usePostRenameFileV2();
+
+  const handleRename = (params: NewValueParams<any, any>) => {
+    rename({
+      id: params.data.id,
+      name: params.newValue,
+    });
+  };
+
   const uploadFile = useUploadFile({});
 
   const colDefs: ColDef[] = [
@@ -27,7 +38,7 @@ export const FilesPage = () => {
       headerName: "Name",
       field: "name",
       flex: 2,
-      editable: false,
+      editable: true,
       filter: "agTextColumnFilter",
       cellClass: "cursor-text select-text",
       cellRenderer: (params) => {
@@ -35,7 +46,10 @@ export const FilesPage = () => {
           <div className="flex items-center gap-2 font-medium">
             <ForwardedIconComponent
               name={FILE_ICONS[params.data.path.split(".")[1]]?.icon ?? "File"}
-              className={FILE_ICONS[params.data.path.split(".")[1]]?.color}
+              className={cn(
+                FILE_ICONS[params.data.path.split(".")[1]]?.color,
+                "shrink-0",
+              )}
             />
             {params.value}
           </div>
@@ -193,6 +207,13 @@ export const FilesPage = () => {
                     tableOptions={{
                       hide_options: true,
                     }}
+                    editable={[
+                      {
+                        field: "name",
+                        onUpdate: handleRename,
+                        editableCell: true,
+                      },
+                    ]}
                     enableCellTextSelection={false}
                     columnDefs={colDefs}
                     rowData={files}
