@@ -145,7 +145,7 @@ class FileMixin(BaseModel):
             for item in v:
                 if not isinstance(item, str):
                     msg = "All file paths must be strings"
-                    raise ValueError(msg)
+                    raise TypeError(msg)
             return v
         # If it's a single string, that's also valid
         if isinstance(v, str):
