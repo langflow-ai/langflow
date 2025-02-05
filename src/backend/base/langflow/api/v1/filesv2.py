@@ -101,12 +101,15 @@ async def upload_user_file(
         # Compute the file size based on the path
         file_size = await storage_service.get_file_size(flow_id=folder, file_name=anonymized_file_name)
 
+        # Compute the file path
+        file_path = f"{folder}/{anonymized_file_name}"
+
         # Create a new file record
         new_file = UserFile(
             id=file_id,
             user_id=current_user.id,
             name=new_filename,
-            path=anonymized_file_name,
+            path=file_path,
             size=file_size,
         )
         session.add(new_file)
