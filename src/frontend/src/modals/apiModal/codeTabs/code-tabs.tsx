@@ -13,6 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TweaksComponent } from "@/components/core/codeTabsComponent/components/tweaksComponent";
 import { AllNodeType } from "@/types/flow";
 import { tabsArrayType } from "@/types/tabs";
+import { getNewPythonApiCode } from "../utils/get-python-api-code";
+import { getNewJsApiCode } from "../utils/get-js-api-code";
+import { getNewCurlCode } from "../utils/get-curl-code";
 
 type APITabsPropsType = {
     open?: boolean;
@@ -29,26 +32,36 @@ export default function APITabsComponent({
     const [isCopied, setIsCopied] = useState<Boolean>(false);
     const dark = useDarkStore((state) => state.dark);
     const nodes = useTweaksStore((state) => state.nodes);
+    const codeOptions = {
+        streaming:false,
+        flowId:"123",
+        isAuthenticated:false,
+        input_value:"Hello, world!",
+        input_type:"text",
+        output_type:"text",
+        tweaksObject:{},
+        activeTweaks:false
+    }
     const tabsList: tabsArrayType = [
         {
             title: "Python",
             icon: "BWPython",
             language: "python",
-            code: "print('Hello, world!')",
+            code: getNewPythonApiCode(codeOptions),
             copyCode: "print('Hello, world!')",
         },
         {
             title: "JavaScript",
             icon: "javascript",
             language: "javascript",
-            code: "console.log('Hello, world!');",
+            code: getNewJsApiCode(codeOptions),
             copyCode: "console.log('Hello, world!');",
         },
         {
             title: "cURL",
             icon: "TerminalSquare",
             language: "curl",
-            code: "curl -X GET 'https://api.example.com/endpoint'",
+            code: getNewCurlCode(codeOptions),
             copyCode: "curl -X GET 'https://api.example.com/endpoint'",
         },
     ];
