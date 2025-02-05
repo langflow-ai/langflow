@@ -28,9 +28,7 @@ class RunFlowBaseComponent(Component):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_tool_output = True
-        # self.tool_mode = True
 
-    # tool_mode=True
     _base_inputs: list[InputTypes] = [
         DropdownInput(
             name="flow_name_selected",
@@ -218,5 +216,4 @@ class RunFlowBaseComponent(Component):
         )
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        logger.info(tools)
         return tools
