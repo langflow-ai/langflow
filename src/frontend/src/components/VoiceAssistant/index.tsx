@@ -274,10 +274,11 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         if (data.code === "api_key_missing") {
           setShowApiKeyModal(true);
         }
-        if (data.error.message === "Cancellation failed: no active response found"){
-            interruptPlayback();
-        }
-        else {
+        if (
+          data.error.message === "Cancellation failed: no active response found"
+        ) {
+          interruptPlayback();
+        } else {
           setStatus("Error: " + data.error);
         }
         break;
@@ -376,6 +377,4 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       processorRef.current.port.postMessage({ type: "stop_playback" });
     }
   }
-
 }
-
