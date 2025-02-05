@@ -29,7 +29,7 @@ export default function InputFileComponent({
 }: InputProps<string, FileComponentType>): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { validateFileSize } = useFileSizeValidator(setErrorData);
+  const { validateFileSize } = useFileSizeValidator();
 
   // Clear component state
   useEffect(() => {
@@ -60,7 +60,14 @@ export default function InputFileComponent({
 
         // Validate all files
         for (const file of filesToProcess) {
-          if (!validateFileSize(file)) {
+          try {
+            validateFileSize(file);
+          } catch (e) {
+            if (e instanceof Error) {
+              setErrorData({
+                title: e.message,
+              });
+            }
             return;
           }
           if (!checkFileType(file.name)) {
