@@ -1,5 +1,6 @@
 import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
+import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 
 const useUploadFile = ({
   types,
@@ -9,6 +10,7 @@ const useUploadFile = ({
   multiple?: boolean;
 }) => {
   const { mutateAsync: uploadFileMutation } = usePostUploadFileV2();
+  const { validateFileSize } = useFileSizeValidator();
 
   const getFilesToUpload = async ({
     files,
@@ -34,6 +36,7 @@ const useUploadFile = ({
       const filesIds: string[] = [];
 
       for (const file of filesToUpload) {
+        validateFileSize(file);
         // Check if file extension is allowed
         const fileExtension = file.name.split(".").pop()?.toLowerCase();
         if (types && (!fileExtension || !types.includes(fileExtension))) {
