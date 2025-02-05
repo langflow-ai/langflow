@@ -9,6 +9,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { useState } from "react";
@@ -26,6 +27,8 @@ export default function UpdateAllComponents() {
   const updateAllNodes = useUpdateAllNodes(setNodes, updateNodeInternals);
 
   const [dismissed, setDismissed] = useState(false);
+
+  const setDismissAll = useUtilityStore((state) => state.setDismissAll);
 
   const handleUpdateAllComponents = () => {
     setLoadingUpdate(true);
@@ -124,8 +127,10 @@ export default function UpdateAllComponents() {
           variant="link"
           size="icon"
           className="shrink-0 text-sm text-warning-foreground"
-          onClick={() => {
+          onClick={(e) => {
             setDismissed(true);
+            setDismissAll(true);
+            e.stopPropagation();
           }}
         >
           Dismiss
