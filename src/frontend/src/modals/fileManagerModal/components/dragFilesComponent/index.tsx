@@ -6,14 +6,17 @@ import { useState } from "react";
 export default function DragFilesComponent({
   onUpload,
   types,
+  isList,
 }: {
   onUpload: (filesPaths: string[]) => void;
   types: string[];
+  isList: boolean;
 }) {
   const image = `url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23FFFFFF' stroke-width='2px' stroke-dasharray='5%2c 5' stroke-dashoffset='0' stroke-linecap='butt'/%3E%3C/svg%3E")`;
   const [isDragging, setIsDragging] = useState(false);
   const uploadFile = useUploadFile({
     types,
+    multiple: isList,
   });
   const setErrorData = useAlertStore((state) => state.setErrorData);
 

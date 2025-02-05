@@ -13,6 +13,7 @@ export default function FileManagerModal({
   disabled,
   files,
   types,
+  isList,
 }: {
   children?: ReactNode;
   selectedFiles?: string[];
@@ -22,6 +23,7 @@ export default function FileManagerModal({
   disabled?: boolean;
   files: FileType[];
   types: string[];
+  isList?: boolean;
 }): JSX.Element {
   const [internalOpen, internalSetOpen] = useState(false);
 
@@ -31,10 +33,12 @@ export default function FileManagerModal({
 
   useEffect(() => {
     setInternalSelectedFiles(selectedFiles || []);
-  }, [selectedFiles]);
+  }, [internalOpen]);
 
   const handleUpload = (filesPaths: string[]) => {
-    setInternalSelectedFiles([...internalSelectedFiles, ...filesPaths]);
+    setInternalSelectedFiles(
+      isList ? [...internalSelectedFiles, ...filesPaths] : [filesPaths[0]],
+    );
   };
 
   return (
@@ -61,13 +65,18 @@ export default function FileManagerModal({
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex flex-col gap-4">
-            <DragFilesComponent onUpload={handleUpload} types={types} />
+            <DragFilesComponent
+              onUpload={handleUpload}
+              types={types}
+              isList={isList ?? false}
+            />
             <ImportFilesComponent />
             <RecentFilesComponent
               files={files}
               selectedFiles={internalSelectedFiles}
               setSelectedFiles={setInternalSelectedFiles}
               types={types}
+              isList={isList ?? false}
             />
           </div>
         </BaseModal.Content>

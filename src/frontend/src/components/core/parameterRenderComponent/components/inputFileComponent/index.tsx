@@ -23,6 +23,7 @@ export default function InputFileComponent({
   handleOnNewValue,
   disabled,
   fileTypes,
+  isList,
   editNode = false,
   id,
 }: InputProps<string, FileComponentType>): JSX.Element {
@@ -47,48 +48,85 @@ export default function InputFileComponent({
     return false;
   }
 
-  const { mutate, isPending } = usePostUploadFile();
+  const { mutateAsync, isPending } = usePostUploadFile();
 
   const handleButtonClick = (): void => {
-    createFileUpload({ multiple: false, accept: fileTypes?.join(",") }).then(
+    createFileUpload({ multiple: isList, accept: fileTypes?.join(",") }).then(
       (files) => {
-        const file = files[0];
-        if (file) {
+        if (files.length === 0) return;
+
+        // For single file mode, only process the first file
+        const filesToProcess = isList ? files : [files[0]];
+
+        // Validate all files
+        for (const file of filesToProcess) {
           if (!validateFileSize(file)) {
             return;
           }
-
-          if (checkFileType(file.name)) {
-            // Upload the file
-            mutate(
-              { file, id: currentFlowId },
-              {
-                onSuccess: (data) => {
-                  // Get the file name from the response
-                  const { file_path } = data;
-
-                  // sets the value that goes to the backend
-                  // Update the state and on with the name of the file
-                  // sets the value to the user
-                  handleOnNewValue({ value: file.name, file_path });
-                },
-                onError: (error) => {
-                  console.error(CONSOLE_ERROR_MSG);
-                  setErrorData({
-                    title: "Error uploading file",
-                    list: [error.response?.data?.detail],
-                  });
-                },
-              },
-            );
-          } else {
-            // Show an error if the file type is not allowed
+          if (!checkFileType(file.name)) {
             setErrorData({
               title: INVALID_FILE_ALERT,
               list: [fileTypes?.join(", ") || ""],
             });
+            return;
           }
         }
+
+        // Upload all files
+        console.log(filesToProcess);
+        Promise.all(
+          filesToProcess.map(
+            (file) =>
+              new Promise<{ file_name: string; file_path: string } | null>(
+                async (resolve) => {
+                  const data = await mutateAsync(
+                    { file, id: currentFlowId },
+                    {
+                      onError: (error) => {
+                        console.error(CONSOLE_ERROR_MSG);
+                        setErrorData({
+                          title: "Error uploading file",
+                          list: [error.response?.data?.detail],
+                        });
+                        resolve(null);
+                      },
+                    },
+                  );
+                  resolve({
+                    file_name: file.name,
+                    file_path: data.file_path,
+                  });
+                },
+              ),
+          ),
+        )
+          .then((results) => {
+            console.log(results);
+            // Filter out any failed uploads
+            const successfulUploads = results.filter(
+              (r): r is { file_name: string; file_path: string } => r !== null,
+            );
+
+            if (successfulUploads.length > 0) {
+              const fileNames = successfulUploads.map(
+                (result) => result.file_name,
+              );
+              const filePaths = successfulUploads.map(
+                (result) => result.file_path,
+              );
+
+              // For single file mode, just use the first result
+              // For list mode, join with commas
+              handleOnNewValue({
+                value: isList ? fileNames : fileNames[0],
+                file_path: isList ? filePaths : filePaths[0],
+              });
+            }
+          })
+          .catch((e) => {
+            console.log(e);
+            // Error handling is done in the onError callback above
+          });
       },
     );
   };
@@ -97,8 +135,15 @@ export default function InputFileComponent({
 
   const { data: files } = useGetFilesV2();
 
-  const selectedFiles =
-    file_path?.split(",").filter((value) => value !== "") ?? [];
+  const selectedFiles = isList
+    ? Array.isArray(file_path)
+      ? file_path.filter((value) => value !== "")
+      : typeof file_path === "string"
+        ? [file_path]
+        : []
+    : Array.isArray(file_path)
+      ? (file_path ?? "")
+      : [file_path ?? ""];
 
   return (
     <div className="w-full">
@@ -116,10 +161,15 @@ export default function InputFileComponent({
                       (file) => file !== path,
                     );
                     handleOnNewValue({
-                      value: newSelectedFiles
-                        .map((file) => files.find((f) => f.path === file)?.name)
-                        .join(","),
-                      file_path: newSelectedFiles.join(","),
+                      value: isList
+                        ? newSelectedFiles.map(
+                            (file) => files.find((f) => f.path === file)?.name,
+                          )
+                        : (files.find((f) => f.path == newSelectedFiles[0]) ??
+                          ""),
+                      file_path: isList
+                        ? newSelectedFiles
+                        : (newSelectedFiles[0] ?? ""),
                     });
                   }}
                 />
@@ -129,14 +179,19 @@ export default function InputFileComponent({
                 selectedFiles={selectedFiles}
                 handleSubmit={(selectedFiles) => {
                   handleOnNewValue({
-                    value: selectedFiles
-                      .map((file) => files.find((f) => f.path === file)?.name)
-                      .join(","),
-                    file_path: selectedFiles.join(","),
+                    value: isList
+                      ? selectedFiles.map(
+                          (file) => files.find((f) => f.path === file)?.name,
+                        )
+                      : (files.find((f) => f.path == selectedFiles[0]) ?? ""),
+                    file_path: isList
+                      ? selectedFiles
+                      : (selectedFiles[0] ?? ""),
                   });
                 }}
                 disabled={isDisabled}
                 types={fileTypes}
+                isList={isList}
               >
                 <Button
                   disabled={isDisabled}

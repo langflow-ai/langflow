@@ -10,11 +10,13 @@ export default function RecentFilesComponent({
   selectedFiles,
   setSelectedFiles,
   types,
+  isList,
 }: {
   selectedFiles: string[];
   files: FileType[];
   setSelectedFiles: (files: string[]) => void;
   types: string[];
+  isList: boolean;
 }) {
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
 
@@ -38,7 +40,7 @@ export default function RecentFilesComponent({
         : (files ?? [])
     ).filter((file) => {
       const fileExtension = file.path.split(".").pop()?.toLowerCase();
-      return fileExtension && types.includes(fileExtension);
+      return fileExtension && (!types || types.includes(fileExtension));
     });
     return filteredFiles;
   }, [searchQuery, files, selectedFiles, types]);
@@ -47,7 +49,9 @@ export default function RecentFilesComponent({
     setSelectedFiles(
       selectedFiles.includes(filePath)
         ? selectedFiles.filter((path) => path !== filePath)
-        : [...selectedFiles, filePath],
+        : isList
+          ? [...selectedFiles, filePath]
+          : [filePath],
     );
   };
 

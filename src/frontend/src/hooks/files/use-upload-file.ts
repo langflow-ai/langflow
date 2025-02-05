@@ -1,7 +1,13 @@
 import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
 
-const useUploadFile = ({ types }: { types?: string[] }) => {
+const useUploadFile = ({
+  types,
+  multiple,
+}: {
+  types?: string[];
+  multiple?: boolean;
+}) => {
   const { mutateAsync: uploadFileMutation } = usePostUploadFileV2();
 
   const getFilesToUpload = async ({
@@ -12,7 +18,7 @@ const useUploadFile = ({ types }: { types?: string[] }) => {
     if (!files) {
       files = await createFileUpload({
         accept: types?.map((type) => `.${type}`).join(",") ?? "",
-        multiple: true,
+        multiple: multiple ?? false,
       });
     }
     return files;
@@ -34,6 +40,9 @@ const useUploadFile = ({ types }: { types?: string[] }) => {
           throw new Error(
             `File type not allowed. Allowed types: ${types.join(", ")}`,
           );
+        }
+        if (multiple && filesToUpload.length !== 1) {
+          throw new Error("Multiple files are not allowed");
         }
 
         const res = await uploadFileMutation({

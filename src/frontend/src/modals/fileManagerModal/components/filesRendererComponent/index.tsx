@@ -47,9 +47,11 @@ export default function FilesRendererComponent({
               )}
             />
             <span className="text-sm font-medium">{file.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {formatFileSize(file.size)}
-            </span>
+            {!handleRemove && (
+              <span className="text-xs text-muted-foreground">
+                {formatFileSize(file.size)}
+              </span>
+            )}
           </div>
         </div>
         {handleRemove ? (
