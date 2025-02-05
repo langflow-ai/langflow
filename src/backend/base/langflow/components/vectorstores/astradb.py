@@ -490,7 +490,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]
 
         # Reset the selected collection
-        build_config["collection_name"]["value"] = ""
+        if self.collection_name not in build_config["collection_name"]["options"]:
+            build_config["collection_name"]["value"] = ""
+        else:
+            build_config["collection_name"]["value"] = self.collection_name
 
         return build_config
 
@@ -505,7 +508,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]
 
         # Reset the selected database
-        build_config["api_endpoint"]["value"] = ""
+        cond1 = self.api_endpoint not in build_config["api_endpoint"]["options"]
+        cond2 = self.api_endpoint not in [db["api_endpoint"] for db in database_options]
+        if cond1 and cond2:
+            build_config["api_endpoint"]["value"] = ""
+        else:
+            build_config["api_endpoint"]["value"] = self.api_endpoint
 
         return build_config
 
@@ -536,6 +544,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Reset the build config to ensure we are starting fresh
             build_config = self.reset_build_config(build_config)
             build_config = self.reset_database_list(build_config)
+            build_config = self.reset_collection_list(build_config)
 
             # Get list of regions for a given cloud provider
             """
