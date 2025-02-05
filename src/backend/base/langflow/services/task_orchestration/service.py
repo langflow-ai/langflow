@@ -31,6 +31,7 @@ from pydantic import BaseModel, field_validator
 from sqlmodel import select
 
 from langflow.services.base import Service
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.subscription.model import Subscription
 from langflow.services.database.models.task.model import Task, TaskCreate, TaskRead, TaskUpdate
 from langflow.services.database.service import DatabaseService
@@ -426,6 +427,29 @@ class TaskOrchestrationService(Service):
 
         consume_task_celery.delay(task.id)
 
+    async def _process_task(self, task: TaskRead) -> dict:
+        from langflow.api.v1.endpoints import simple_run_flow_task
+
+        logger.info(f"Processing task {task.id}")
+        try:
+            # If input_request is empty, use a default similar to simple_run_flow_task endpoint.
+            input_req = task.input_request or {"session": task.flow_id}
+
+            # Process the task using the simple_run_flow_task endpoint
+            async with self.db.with_session() as session:
+                flow = (await session.exec(select(Flow).where(Flow.id == task.flow_id))).first()
+
+            run_response_object = await simple_run_flow_task(flow, input_req, stream=False)
+            if run_response_object is not None:
+                result = run_response_object.model_dump()
+            else:
+                result = {"result": "No output from task processing"}
+            logger.info(f"Task {task.id} processed with result: {result}")
+        except Exception as e:
+            logger.error(f"Error processing task {task.id}: {e}")
+            raise
+        return result
+
     async def _process_task_logic(self, task: TaskRead) -> dict:
         """Process the task: transition from pending -> processing -> completed (or failed).
 
@@ -451,7 +475,7 @@ class TaskOrchestrationService(Service):
 
         try:
             # Perform task processing logic here
-            result = self._process_task(task)
+            result = await self._process_task(task)
 
             # Update task with result and set status to "completed"
             await self.update_task(task.id, TaskUpdate(status="completed", state=task.state, result=result))
@@ -470,18 +494,3 @@ class TaskOrchestrationService(Service):
         """
         task = await self.get_task(str(task_id))
         await self._process_task_logic(task)
-
-    def _process_task(self, task: TaskRead) -> dict:
-        """Implement task processing logic based on task category.
-
-        This is a placeholder implementation that should be overridden
-        with actual task processing logic.
-
-        Args:
-            task (TaskRead): The task to process
-
-        Returns:
-            dict: The result of processing the task
-        """
-        logger.info(f"Processing task {task.id}")
-        return {"result": "Task processed successfully"}
