@@ -32,9 +32,7 @@ class FieldTypes(str, Enum):
     SLIDER = "slider"
 
 
-SerializableFieldTypes = Annotated[
-    FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)
-]
+SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
 
 
 # Base mixin for common input field attributes and methods
