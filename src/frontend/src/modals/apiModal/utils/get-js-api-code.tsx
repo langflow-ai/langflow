@@ -45,29 +45,50 @@ export default function getJsApiCode({
 `;
 }
 
-export function getNewJsApiCode({streaming,flowId,isAuthenticated,input_value,input_type,output_type,tweaksObject,activeTweaks}:
-  {streaming:boolean,flowId:string,isAuthenticated:boolean,input_value:string,input_type:string,output_type:string,tweaksObject:any,activeTweaks:boolean}):string{
-    // get the host from the window location
-    const host = window.location.host;
-    // get the protocol from the window location
-    const protocol = window.location.protocol;
-    // get the api url
-    const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
+export function getNewJsApiCode({
+  streaming,
+  flowId,
+  isAuthenticated,
+  input_value,
+  input_type,
+  output_type,
+  tweaksObject,
+  activeTweaks,
+}: {
+  streaming: boolean;
+  flowId: string;
+  isAuthenticated: boolean;
+  input_value: string;
+  input_type: string;
+  output_type: string;
+  tweaksObject: any;
+  activeTweaks: boolean;
+}): string {
+  // get the host from the window location
+  const host = window.location.host;
+  // get the protocol from the window location
+  const protocol = window.location.protocol;
+  // get the api url
+  const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
-    // Convert tweaks object to a string if it exists and is active
-    const tweaksString = tweaksObject && activeTweaks ?
-      JSON.stringify(tweaksObject, null, 2) : "{}";
+  // Convert tweaks object to a string if it exists and is active
+  const tweaksString =
+    tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
 
-    return `const payload = {
+  return `const payload = {
     "input_value": "${input_value}",
     "output_type": "${output_type}",
-    "input_type": "${input_type}"${activeTweaks && tweaksObject ? `,
-    "tweaks": ${tweaksString}` : ''}
+    "input_type": "${input_type}"${
+      activeTweaks && tweaksObject
+        ? `,
+    "tweaks": ${tweaksString}`
+        : ""
+    }
 };
 const options = {
     method: 'POST',
     headers: {
-        'Content-Type': 'application/json'${isAuthenticated ? ',\n        "x-api-key": "YOUR-API-KEY"' : ''}
+        'Content-Type': 'application/json'${isAuthenticated ? ',\n        "x-api-key": "YOUR-API-KEY"' : ""}
     },
     body: JSON.stringify(payload)
 };
@@ -75,5 +96,5 @@ fetch('${apiUrl}?stream=${streaming}')
     .then(response => response.json())
     .then(response => console.log(response))
     .catch(err => console.error(err));
-    `
+    `;
 }

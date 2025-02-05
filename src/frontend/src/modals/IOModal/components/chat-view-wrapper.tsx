@@ -24,7 +24,7 @@ export const ChatViewWrapper = ({
   canvasOpen,
   setOpen,
   playgroundTitle,
-  playgroundPage
+  playgroundPage,
 }: ChatViewWrapperProps) => {
   return (
     <div
@@ -35,7 +35,7 @@ export const ChatViewWrapper = ({
     >
       <div
         className={cn(
-          "flex items-center  mb-4 h-[5%] text-[16px] font-semibold",
+          "mb-4 flex h-[5%] items-center text-[16px] font-semibold",
           playgroundPage ? "justify-between" : "lg:justify-center",
         )}
       >
@@ -57,8 +57,8 @@ export const ChatViewWrapper = ({
         {visibleSession && sessions.length > 0 && (
           <div
             className={cn(
-              "font-semibold truncate text-center",
-              playgroundPage ? "" : "flex-grow mr-12 lg:mr-0",
+              "truncate text-center font-semibold",
+              playgroundPage ? "" : "mr-12 flex-grow lg:mr-0",
               sidebarOpen ? "blur-sm lg:blur-0" : "",
             )}
           >
@@ -70,8 +70,8 @@ export const ChatViewWrapper = ({
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "flex  items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            playgroundPage ? " right-2 top-4 " : "absolute right-12 top-2 h-8",
+            "flex items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            playgroundPage ? "right-2 top-4" : "absolute right-12 top-2 h-8",
           )}
         >
           <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
@@ -97,7 +97,7 @@ export const ChatViewWrapper = ({
         className={cn(
           visibleSession ? "h-[95%]" : "h-full",
           sidebarOpen
-            ? "pointer-events-none lg:pointer-events-auto blur-sm lg:blur-0"
+            ? "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
             : "",
         )}
       >

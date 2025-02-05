@@ -2,7 +2,10 @@ import { ProfileIcon } from "@/components/core/appHeaderComponent/components/Pro
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_PUBLISH,
+} from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -24,7 +27,6 @@ import EditMessageField from "./components/edit-message-field";
 import FileCardWrapper from "./components/file-card-wrapper";
 import { EditMessageButton } from "./components/message-options";
 import { convertFiles } from "./helpers/convert-files";
-import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 
 export default function ChatMessage({
   chat,
@@ -33,7 +35,7 @@ export default function ChatMessage({
   updateChat,
   setLockChat,
   closeChat,
-  playgroundPage
+  playgroundPage,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);

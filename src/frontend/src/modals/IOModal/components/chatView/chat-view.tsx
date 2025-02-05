@@ -35,7 +35,7 @@ export default function ChatView({
   visibleSession,
   focusChat,
   closeChat,
-  playgroundPage
+  playgroundPage,
 }: chatViewProps): JSX.Element {
   const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);

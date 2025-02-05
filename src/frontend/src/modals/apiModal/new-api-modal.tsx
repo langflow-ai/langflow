@@ -45,11 +45,25 @@ export default function ApiModal({
   return (
     <BaseModal open={open} setOpen={setOpen} size="medium">
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-      <BaseModal.Header description={autoLogin?undefined:<>
-      <span className="pr-2">
-      API access requires an API key. You can <a href="/settings/api-keys" className="text-accent-pink-foreground"> create an API key</a> in settings.
-      </span>
-      </>}>
+      <BaseModal.Header
+        description={
+          autoLogin ? undefined : (
+            <>
+              <span className="pr-2">
+                API access requires an API key. You can{" "}
+                <a
+                  href="/settings/api-keys"
+                  className="text-accent-pink-foreground"
+                >
+                  {" "}
+                  create an API key
+                </a>{" "}
+                in settings.
+              </span>
+            </>
+          )
+        }
+      >
         <IconComponent
           name="Code2"
           className="h-6 w-6 text-gray-800 dark:text-white"

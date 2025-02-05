@@ -115,24 +115,42 @@ if __name__ == "__main__":
 `;
 }
 
-export function getNewPythonApiCode({streaming,flowId,isAuthenticated,input_value,input_type,output_type,tweaksObject,activeTweaks}:
-  {streaming:boolean,flowId:string,isAuthenticated:boolean,input_value:string,input_type:string,output_type:string,tweaksObject:any,activeTweaks:boolean}):string
-  {
-    // get the host from the window location
-    const host = window.location.host;
-    // get the protocol from the window location
-    const protocol = window.location.protocol;
-    // get the api url
-    const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
+export function getNewPythonApiCode({
+  streaming,
+  flowId,
+  isAuthenticated,
+  input_value,
+  input_type,
+  output_type,
+  tweaksObject,
+  activeTweaks,
+}: {
+  streaming: boolean;
+  flowId: string;
+  isAuthenticated: boolean;
+  input_value: string;
+  input_type: string;
+  output_type: string;
+  tweaksObject: any;
+  activeTweaks: boolean;
+}): string {
+  // get the host from the window location
+  const host = window.location.host;
+  // get the protocol from the window location
+  const protocol = window.location.protocol;
+  // get the api url
+  const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
-    // Convert tweaks object to a properly formatted string if it exists and is active
-    const tweaksString = tweaksObject && activeTweaks ?
-      JSON.stringify(tweaksObject, null, 4)
-        .replace(/true/g, "True")
-        .replace(/false/g, "False")
-        .replace(/null/g, "None") : "{}";
+  // Convert tweaks object to a properly formatted string if it exists and is active
+  const tweaksString =
+    tweaksObject && activeTweaks
+      ? JSON.stringify(tweaksObject, null, 4)
+          .replace(/true/g, "True")
+          .replace(/false/g, "False")
+          .replace(/null/g, "None")
+      : "{}";
 
-    return `import requests
+  return `import requests
 
 url = "${apiUrl}"
 
@@ -143,16 +161,20 @@ querystring = {
 payload = {
     "input_value": "${input_value}",
     "output_type": "${output_type}",
-    "input_type": "${input_type}"${activeTweaks && tweaksObject ? `,
-    "tweaks": ${tweaksString}` : ''}
+    "input_type": "${input_type}"${
+      activeTweaks && tweaksObject
+        ? `,
+    "tweaks": ${tweaksString}`
+        : ""
+    }
 }
 
 headers = {
-    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": "YOUR-API-KEY"' : ''}
+    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": "YOUR-API-KEY"' : ""}
 }
 
 response = requests.request("POST", url, json=payload, headers=headers, params=querystring)
 
 print(response.text)
-    `
-  }
+    `;
+}

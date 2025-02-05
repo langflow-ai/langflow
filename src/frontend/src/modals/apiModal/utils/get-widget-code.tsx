@@ -11,16 +11,14 @@ export default function getWidgetCode({
   isAuth,
   copy = false,
 }: GetCodeType): string {
-
-  const source = copy? `<script
+  const source = copy
+    ? `<script
   src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js">
-</script>`:
-`<script
+</script>`
+    : `<script
   src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/
 build/static/js/bundle.min.js">
-</script>`
-
-
+</script>`;
 
   return `${source}
   <langflow-chat

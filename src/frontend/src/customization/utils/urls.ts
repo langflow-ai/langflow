@@ -1,3 +1,3 @@
 export const LangflowButtonRedirectTarget = () => {
-    return "https://langflow.org";
-  };
+  return "https://langflow.org";
+};

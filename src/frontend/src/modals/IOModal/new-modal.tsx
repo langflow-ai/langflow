@@ -1,8 +1,13 @@
+import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
+import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import { Separator } from "@/components/ui/separator";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
 } from "@/controllers/API/queries/messages";
+import { ENABLE_PUBLISH } from "@/customization/feature-flags";
+import { track } from "@/customization/utils/analytics";
+import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useCallback, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -19,11 +24,6 @@ import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import ChatView from "./components/chatView/chat-view";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
-import { ENABLE_PUBLISH } from "@/customization/feature-flags";
-import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
-import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
-import { track } from "@/customization/utils/analytics";
 export default function IOModal({
   children,
   open,
@@ -31,7 +31,7 @@ export default function IOModal({
   disable,
   isPlayground,
   canvasOpen,
-  playgroundPage
+  playgroundPage,
 }: IOModalPropsType): JSX.Element {
   const allNodes = useFlowStore((state) => state.nodes);
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
@@ -67,8 +67,8 @@ export default function IOModal({
     currentFlowId,
   );
   const flowName = useFlowStore((state) => state.currentFlow?.name);
-  const PlaygroundTitle = (playgroundPage && ENABLE_PUBLISH && flowName) ? flowName : "Playground";
-
+  const PlaygroundTitle =
+    playgroundPage && ENABLE_PUBLISH && flowName ? flowName : "Playground";
 
   useEffect(() => {
     setIOModalOpen(open);
@@ -285,9 +285,12 @@ export default function IOModal({
                   : "w-0",
               )}
             >
-              <div className={cn("flex relative h-full flex-col overflow-y-auto border-r border-border bg-muted p-4  text-center custom-scroll dark:bg-canvas",
-                playgroundPage ? "pt-[15px]" : "pt-3.5",
-              )}>
+              <div
+                className={cn(
+                  "relative flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas",
+                  playgroundPage ? "pt-[15px]" : "pt-3.5",
+                )}
+              >
                 <div className="flex items-center gap-2 pb-8">
                   <ShadTooltip
                     styleClasses="z-50"
@@ -306,7 +309,9 @@ export default function IOModal({
                     </Button>
                   </ShadTooltip>
                   {sidebarOpen && (
-                    <div className="font-semibold truncate">{PlaygroundTitle}</div>
+                    <div className="truncate font-semibold">
+                      {PlaygroundTitle}
+                    </div>
                   )}
                 </div>
                 {sidebarOpen && (
@@ -320,12 +325,16 @@ export default function IOModal({
                   />
                 )}
                 {sidebarOpen && showPublishOptions && (
-                  <div className="absolute bottom-2 left-0 border-t border-border py-4 px-2 flex flex-col gap-8 w-full transition-all">
+                  <div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
                     <div className="flex items-center justify-between px-2">
                       <div className="text-sm">Theme</div>
                       <ThemeButtons />
                     </div>
-                    <Button onClick={LangflowButtonClick} variant="primary" className="w-full !rounded-xl shadow-lg">
+                    <Button
+                      onClick={LangflowButtonClick}
+                      variant="primary"
+                      className="w-full !rounded-xl shadow-lg"
+                    >
                       <LangflowLogoColor />
                       <div className="text-sm">Built with Langflow</div>
                     </Button>
@@ -334,14 +343,18 @@ export default function IOModal({
               </div>
             </div>
             {!sidebarOpen && showPublishOptions && (
-              <div className="absolute left-4 bottom-6 transition-all hidden md:block">
+              <div className="absolute bottom-6 left-4 hidden transition-all md:block">
                 <ShadTooltip
                   styleClasses="z-50"
                   side="right"
                   content="Built with Langflow"
                 >
-                  <Button variant="primary" className="shadow-lg !rounded-xl !p-4 w-12 h-12" onClick={LangflowButtonClick}>
-                    <LangflowLogoColor className="scale-150 w-[18px] h-[18px]" />
+                  <Button
+                    variant="primary"
+                    className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
+                    onClick={LangflowButtonClick}
+                  >
+                    <LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
                   </Button>
                 </ShadTooltip>
               </div>

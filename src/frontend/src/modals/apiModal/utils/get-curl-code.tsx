@@ -61,31 +61,51 @@ export function getCurlWebhookCode({
   `;
 }
 
+export function getNewCurlCode({
+  flowId,
+  isAuthenticated,
+  input_value,
+  input_type,
+  output_type,
+  tweaksObject,
+  activeTweaks,
+}: {
+  flowId: string;
+  isAuthenticated: boolean;
+  input_value: string;
+  input_type: string;
+  output_type: string;
+  tweaksObject: any;
+  activeTweaks: boolean;
+}): string {
+  // get the host from the window location
+  const host = window.location.host;
+  // get the protocol from the window location
+  const protocol = window.location.protocol;
+  // get the api url
+  const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
-export function getNewCurlCode({flowId,isAuthenticated,input_value,input_type,output_type,tweaksObject,activeTweaks}:
-  {flowId:string,isAuthenticated:boolean,input_value:string,input_type:string,output_type:string,tweaksObject:any,activeTweaks:boolean}):string{
-    // get the host from the window location
-    const host = window.location.host;
-    // get the protocol from the window location
-    const protocol = window.location.protocol;
-    // get the api url
-    const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
+  // Convert tweaks object to a string if it exists and is active
+  const tweaksString =
+    tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
 
-    // Convert tweaks object to a string if it exists and is active
-    const tweaksString = tweaksObject && activeTweaks ?
-      JSON.stringify(tweaksObject, null, 2) : "{}";
+  // Construct the payload
+  const payload = {
+    input_value: input_value,
+    output_type: output_type,
+    input_type: input_type,
+    ...(activeTweaks && tweaksObject
+      ? { tweaks: JSON.parse(tweaksString) }
+      : {}),
+  };
 
-    // Construct the payload
-    const payload = {
-      input_value: input_value,
-      output_type: output_type,
-      input_type: input_type,
-      ...(activeTweaks && tweaksObject ? { tweaks: JSON.parse(tweaksString) } : {})
-    };
-
-    return `curl --request POST \\
+  return `curl --request POST \\
   --url '${apiUrl}?stream=false' \\
-  --header 'Content-Type: application/json' \\${isAuthenticated ? `
-  --header 'x-api-key: YOUR-API-KEY' \\` : ''}
-  --data '${JSON.stringify(payload, null, 2)}'`
+  --header 'Content-Type: application/json' \\${
+    isAuthenticated
+      ? `
+  --header 'x-api-key: YOUR-API-KEY' \\`
+      : ""
+  }
+  --data '${JSON.stringify(payload, null, 2)}'`;
 }
