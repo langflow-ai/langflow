@@ -326,3 +326,34 @@ async def test_subscribe_and_unsubscribe_flow(task_orchestration_service: TaskOr
     task2 = await task_orchestration_service.create_task(task_create)
     new_notifications = task_orchestration_service.get_notifications()
     assert not any(n.flow_id == str(flow_id) and n.task_id == str(task2.id) for n in new_notifications)
+
+
+@pytest.mark.asyncio
+async def test_consume_task_failure(task_orchestration_service: TaskOrchestrationService):
+    # Create a task that is expected to fail during processing
+    task_create = TaskCreate(
+        title="Failing Task",
+        description="This task should simulate a failure during processing",
+        author_id=uuid4(),
+        assignee_id=uuid4(),
+        category="fail",
+        state="initial",
+        status="pending",
+    )
+
+    # Prevent immediate scheduling consumption for isolation
+    with patch.object(task_orchestration_service, "_schedule_task", return_value=None):
+        task = await task_orchestration_service.create_task(task_create)
+
+    # Patch _process_task to simulate a failure in processing and expect an exception due to the simulated failure
+    with (
+        patch.object(task_orchestration_service, "_process_task", side_effect=Exception("Simulated failure")),
+        pytest.raises(Exception, match="Simulated failure"),
+    ):
+        await task_orchestration_service.consume_task(task.id)
+
+    # Now retrieve the updated task and assert that its status is "failed"
+    updated_task = await task_orchestration_service.get_task(task.id)
+    assert updated_task.status == "failed"
+    # Verify that the error message is included in the result of the task
+    assert "Simulated failure" in updated_task.result.get("error", "")
