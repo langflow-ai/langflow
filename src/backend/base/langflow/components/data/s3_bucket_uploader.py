@@ -47,6 +47,7 @@ class S3BucketUploaderComponent(Component):
 
         Please note that this component requires the boto3 library to be installed. It is designed to work with File and Director components as inputs
     """
+
     display_name = "S3 Bucket Uploader"
     description = "Uploads files to S3 bucket."
     icon = "Globe"
@@ -94,14 +95,13 @@ class S3BucketUploaderComponent(Component):
             info="Prefix for all files.",
             advanced=True,
         ),
-        BoolInput (
+        BoolInput(
             name="strip_path",
             display_name="Strip Path",
             info="Removes path from file path.",
             required=True,
             advanced=True,
         ),
-
     ]
 
     outputs = [
@@ -109,8 +109,7 @@ class S3BucketUploaderComponent(Component):
     ]
 
     def process_files(self) -> None:
-        """
-        Process files based on the selected strategy.
+        """Process files based on the selected strategy.
         This method uses a strategy pattern to process files. The strategy is determined
         by the `self.strategy` attribute, which can be either "By Data" or "By File Name".
         Depending on the strategy, the corresponding method (`process_files_by_data` or
@@ -139,12 +138,13 @@ class S3BucketUploaderComponent(Component):
             None
         """
         for data_item in self.data_inputs:
-
             file_path = data_item.data.get("file_path")
             text_content = data_item.data.get("text")
 
             if file_path and text_content:
-                self._s3_client().put_object(Bucket=self.bucket_name, Key=self._normalize_path(file_path), Body=text_content)
+                self._s3_client().put_object(
+                    Bucket=self.bucket_name, Key=self._normalize_path(file_path), Body=text_content
+                )
 
     def process_files_by_name(self) -> None:
         """Processes and uploads files to an S3 bucket based on their names.
@@ -175,12 +175,12 @@ class S3BucketUploaderComponent(Component):
 
     def _normalize_path(self, file_path) -> str:
         """Process the file path based on the s3_prefix and path_as_prefix.
-        
+
         Args:
             file_path (str): The original file path.
             s3_prefix (str): The S3 prefix to use.
             path_as_prefix (bool): Whether to use the file path as the S3 prefix.
-        
+
         Returns:
             str: The processed file path.
         """
@@ -194,6 +194,6 @@ class S3BucketUploaderComponent(Component):
 
         # Concatenate the s3_prefix if it exists
         if prefix:
-           processed_path = os.path.join(prefix, processed_path)
+            processed_path = os.path.join(prefix, processed_path)
 
         return processed_path
