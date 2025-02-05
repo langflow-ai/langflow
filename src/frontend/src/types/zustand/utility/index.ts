@@ -17,4 +17,6 @@ export type UtilityStoreType = {
   setFeatureFlags: (featureFlags: Record<string, any>) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
+  dismissAll: boolean;
+  setDismissAll: (dismissAll: boolean) => void;
 };
