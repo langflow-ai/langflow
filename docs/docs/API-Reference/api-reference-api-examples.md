@@ -79,7 +79,7 @@ export LANGFLOW_API_KEY="sk-..."
 
 ## Base
 
-Use the base Langflow API for running your flow and retrieving configuration information.
+Use the base Langflow API to run your flow and retrieve configuration information.
 
 ### Get all components
 
