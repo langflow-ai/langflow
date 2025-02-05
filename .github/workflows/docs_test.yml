@@ -34,5 +34,5 @@ jobs:
       - name: Install dependencies
         run: cd docs && yarn install --frozen-lockfile
 
-      - name: Build website
+      - name: Build docs
         run: cd docs && yarn build
