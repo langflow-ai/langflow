@@ -262,7 +262,7 @@ This component connects to a [Model Context Protocol (MCP)](https://modelcontext
 
 To use the MCP stdio component, follow these steps:
 
-1. Add the MCP stdiocomponent to your workflow, and connect it to an agent. The flow looks like this:
+1. Add the MCP stdio component to your workflow, and connect it to an agent. The flow looks like this:
 
 ![MCP stdio component](/img/mcp-stdio-component.png)
 
