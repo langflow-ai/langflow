@@ -144,7 +144,7 @@ async def websocket_endpoint(
         openai_key = await variable_service.get_variable(
             user_id=current_user.id, name="OPENAI_API_KEY", field="voice_mode", session=session
         )
-    except InvalidToken:
+    except (InvalidToken, ValueError):
         openai_key = os.getenv("OPENAI_API_KEY")
         if not openai_key:
             await websocket.send_json(
