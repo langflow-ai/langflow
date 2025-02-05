@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -19,12 +20,16 @@ from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.template import Output
 
+if TYPE_CHECKING:
+    from langflow.base.tools.component_tool import ComponentToolkit
+
 
 class RunFlowBaseComponent(Component):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_tool_output = True
-
+        # self.tool_mode = True
+    # tool_mode=True
     _base_inputs: list[InputTypes] = [
         DropdownInput(
             name="flow_name_selected",
@@ -198,7 +203,7 @@ class RunFlowBaseComponent(Component):
         return fields
 
     async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         flow_description, tool_mode_inputs = await self.get_required_data(self.flow_name_selected)
         # # convert list of dicts to list of dotdicts
         tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]
@@ -212,5 +217,6 @@ class RunFlowBaseComponent(Component):
         )
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        # self.status = tools
+        self.status = tools
+        logger.info(tools)
         return tools
