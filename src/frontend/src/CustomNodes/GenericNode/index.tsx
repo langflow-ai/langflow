@@ -20,6 +20,7 @@ import { NodeDataType } from "../../types/flow";
 import { checkHasToolMode } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 
+import { useUtilityStore } from "@/stores/utilityStore";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useCheckCodeValidity from "../hooks/use-check-code-validity";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
@@ -87,6 +88,7 @@ function GenericNode({
   const edges = useFlowStore((state) => state.edges);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const buildStatus = useBuildStatus(data, data.id);
+  const dismissAll = useUtilityStore((state) => state.dismissAll);
 
   const showNode = data.showNode ?? true;
 
@@ -322,6 +324,7 @@ function GenericNode({
         isOutdated={isOutdated}
         isUserEdited={isUserEdited}
         getValidationStatus={getValidationStatus}
+        handleUpdateComponent={handleUpdateCode}
       />
     );
   }, [
@@ -332,6 +335,8 @@ function GenericNode({
     isOutdated,
     isUserEdited,
     getValidationStatus,
+    dismissAll,
+    handleUpdateCode,
   ]);
 
   const renderDescription = useCallback(() => {
@@ -359,7 +364,11 @@ function GenericNode({
   }, [data, types, isToolMode, showNode, shownOutputs, showHiddenOutputs]);
 
   return (
-    <div className={cn(isOutdated && !isUserEdited ? "relative -mt-10" : "")}>
+    <div
+      className={cn(
+        isOutdated && !isUserEdited && !dismissAll ? "relative -mt-10" : "",
+      )}
+    >
       <div
         className={cn(
           borderColor,
@@ -369,7 +378,7 @@ function GenericNode({
         )}
       >
         {memoizedNodeToolbarComponent}
-        {isOutdated && !isUserEdited && (
+        {isOutdated && !isUserEdited && !dismissAll && (
           <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
             <ForwardedIconComponent
               name="AlertTriangle"
