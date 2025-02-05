@@ -48,7 +48,7 @@ export default function Dropdown({
     ? formatPlaceholderName(name)
     : "Choose an option...";
 
-  const { firstWord } = formatName(name);
+  const { firstWord } = name ? formatName(name) : { firstWord: "Option" };
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
 

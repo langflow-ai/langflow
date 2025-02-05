@@ -1,5 +1,5 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import {
   Popover,
@@ -46,7 +46,13 @@ export default function AlertDropdown({
         }
       }}
     >
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverTrigger asChild>
+        {React.isValidElement(children) && typeof children.type !== "string" ? (
+          <span>{children}</span>
+        ) : (
+          children
+        )}
+      </PopoverTrigger>
       <PopoverContent
         ref={notificationRef}
         data-testid="notification-dropdown-content"
