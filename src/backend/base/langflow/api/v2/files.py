@@ -1,6 +1,7 @@
 import uuid
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -13,7 +14,7 @@ from langflow.services.database.models.file import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 
-router = APIRouter(tags=["Files V2"], prefix="/filesv2")
+router = APIRouter(tags=["Files"], prefix="/files")
 
 
 async def byte_stream_generator(file_bytes: bytes, chunk_size: int = 8192) -> AsyncGenerator[bytes, None]:
@@ -54,6 +55,10 @@ async def upload_user_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Settings error: {e}") from e
 
+    # Validate that a file is actually provided
+    if not file or not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
     # Validate file size (convert MB to bytes)
     if file.size > max_file_size_upload * 1024 * 1024:
         raise HTTPException(
@@ -68,7 +73,7 @@ async def upload_user_file(
         file_content = await file.read()
 
         # Get file extension of the file
-        file_extension = "." + file.filename.split(".")[-1] if "." in file.filename else ""
+        file_extension = "." + file.filename.split(".")[-1] if file.filename and "." in file.filename else ""
         anonymized_file_name = f"{file_id!s}{file_extension}"
 
         # Here we use the current user's id as the folder name
@@ -120,7 +125,7 @@ async def upload_user_file(
         # Optionally, you could also delete the file from disk if the DB insert fails.
         raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
-    return UploadFileResponse(id=new_file.id, name=new_file.name, path=new_file.path, size=new_file.size)
+    return UploadFileResponse(id=new_file.id, name=new_file.name, path=Path(new_file.path), size=new_file.size)
 
 
 @router.get("")
@@ -134,7 +139,7 @@ async def list_files(
         stmt = select(UserFile).where(UserFile.user_id == current_user.id)
         results = await session.exec(stmt)
 
-        return results.all()
+        return list(results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 
@@ -151,8 +156,11 @@ async def download_file(
         # Fetch the file from the DB
         file = await fetch_file_object(file_id, current_user, session)
 
+        # Get the basename of the file path
+        file_name = file.path.split("/")[-1]
+
         # Get file stream
-        file_stream = await storage_service.get_file(flow_id=str(current_user.id), file_name=file.path)
+        file_stream = await storage_service.get_file(flow_id=str(current_user.id), file_name=file_name)
 
         # Ensure file_stream is an async iterator returning bytes
         byte_stream = byte_stream_generator(file_stream)
@@ -185,7 +193,7 @@ async def edit_file_name(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
-    return UploadFileResponse(id=file.id, name=file.name, path=file.path)
+    return UploadFileResponse(id=file.id, name=file.name, path=file.path, size=file.size)
 
 
 @router.delete("/{file_id}")
