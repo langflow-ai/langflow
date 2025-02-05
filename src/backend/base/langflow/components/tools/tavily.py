@@ -43,6 +43,15 @@ class TavilySearchComponent(Component):
             value="general",
             advanced=True,
         ),
+        DropdownInput(
+            name="time_range",
+            display_name="Time Range",
+            info="The time range back from the current date to include in the search results.",
+            options=["day", "week", "month", "year"],
+            value=None,
+            advanced=True,
+            combobox=True,
+        ),
         IntInput(
             name="max_results",
             display_name="Max Results",
@@ -86,6 +95,7 @@ class TavilySearchComponent(Component):
                 "max_results": self.max_results,
                 "include_images": self.include_images,
                 "include_answer": self.include_answer,
+                "time_range": self.time_range,
             }
 
             with httpx.Client() as client:
