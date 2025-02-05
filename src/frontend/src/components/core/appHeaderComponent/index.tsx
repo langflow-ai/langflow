@@ -13,6 +13,7 @@ import {
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
@@ -45,6 +46,8 @@ export default function AppHeader(): JSX.Element {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  useResetDismissUpdateAll();
 
   return (
     <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
