@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 from dataclasses import dataclass, field
+from functools import cache
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -442,6 +443,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return {}
 
+    @cache
     def _initialize_database_options(self):
         try:
             return [
@@ -504,19 +506,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the list of options we have based on the token provided
         database_options = self._initialize_database_options()
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
-        build_config["api_endpoint"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        # Prepare the options and metadata in separate list comprehensions
+        api_endpoint_options = [db["name"] for db in database_options]
+        api_endpoint_options_metadata = [{k: v for k, v in db.items() if k != "name"} for db in database_options]
+
+        build_config["api_endpoint"]["options"] = api_endpoint_options
+        build_config["api_endpoint"]["options_metadata"] = api_endpoint_options_metadata
+
+        # Access api_endpoint value once
+        api_endpoint_value = self.api_endpoint
 
         # Reset the selected database
-        cond1 = self.api_endpoint not in build_config["api_endpoint"]["options"]
-        cond2 = self.api_endpoint not in [db["api_endpoint"] for db in database_options]
-        if cond1 and cond2:
+        if api_endpoint_value not in api_endpoint_options and api_endpoint_value not in [
+            db["api_endpoint"] for db in database_options
+        ]:
             build_config["api_endpoint"]["value"] = ""
         else:
-            build_config["api_endpoint"]["value"] = self.api_endpoint
+            build_config["api_endpoint"]["value"] = api_endpoint_value
 
         return build_config
 
