@@ -39,8 +39,7 @@ async def read_tasks(
     skip: int = 0,
     limit: int = 100,
 ):
-    result = await session.execute(select(Task).offset(skip).limit(limit))
-    return result.scalars().all()
+    return (await session.exec(select(Task).offset(skip).limit(limit))).all()
 
 
 @router.get("/{task_id}", response_model=TaskRead)
@@ -75,7 +74,7 @@ async def update_task(
 
     # Attempt to re-orchestrate the task after update, but continue if it fails
     with contextlib.suppress(Exception):
-        await task_orchestration_service.orchestrate_task(task)
+        await task_orchestration_service.update_task(task)
 
     return task
 
