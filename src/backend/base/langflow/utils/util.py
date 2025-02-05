@@ -9,7 +9,7 @@ from typing import Any
 
 from docstring_parser import parse
 
-from langflow.logging.logger import logger
+from langflow.logs.logger import logger
 from langflow.schema import Data
 from langflow.services.deps import get_settings_service
 from langflow.services.utils import initialize_settings_service
