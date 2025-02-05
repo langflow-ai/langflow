@@ -1,7 +1,7 @@
 import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management/use-post-upload-file";
 import { createFileUpload } from "@/helpers/create-file-upload";
 
-const useUploadFile = ({ types }: { types: string[] }) => {
+const useUploadFile = ({ types }: { types?: string[] }) => {
   const { mutateAsync: uploadFileMutation } = usePostUploadFileV2();
 
   const getFilesToUpload = async ({
@@ -11,7 +11,7 @@ const useUploadFile = ({ types }: { types: string[] }) => {
   }): Promise<File[]> => {
     if (!files) {
       files = await createFileUpload({
-        accept: types.map((type) => `.${type}`).join(","),
+        accept: types?.map((type) => `.${type}`).join(",") ?? "",
         multiple: true,
       });
     }
@@ -30,7 +30,7 @@ const useUploadFile = ({ types }: { types: string[] }) => {
       for (const file of filesToUpload) {
         // Check if file extension is allowed
         const fileExtension = file.name.split(".").pop()?.toLowerCase();
-        if (!fileExtension || !types.includes(fileExtension)) {
+        if (types && (!fileExtension || !types.includes(fileExtension))) {
           throw new Error(
             `File type not allowed. Allowed types: ${types.join(", ")}`,
           );

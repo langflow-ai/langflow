@@ -21,9 +21,7 @@ export const FilesPage = () => {
   const { data: files } = useGetFilesV2();
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const uploadFile = useUploadFile({
-    types: [".json", ".csv", ".pdf"],
-  });
+  const uploadFile = useUploadFile({});
 
   const colDefs: ColDef[] = [
     {
@@ -166,7 +164,9 @@ export const FilesPage = () => {
                         <Button
                           variant="outline"
                           className="!px-3 md:!px-4 md:!pl-3.5"
-                          onClick={() => {}}
+                          onClick={async () => {
+                            await uploadFile({});
+                          }}
                           id="new-project-btn"
                           data-testid="new-project-btn"
                         >
