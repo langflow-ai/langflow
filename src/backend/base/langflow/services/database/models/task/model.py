@@ -66,6 +66,12 @@ class TaskRead(TaskBase):
 
 
 class TaskUpdate(SQLModel):
+    title: str | None = None
+    description: str | None = None
+    attachments: list[str] | None = None
+    author_id: UUID | None = None
+    assignee_id: UUID | None = None
+    category: str | None = None
     status: str | None = None
     state: str | None = None
     result: dict | None = None
