@@ -2,13 +2,15 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import IOModal from "@/modals/IOModal/new-modal";
+import useFlowStore from "@/stores/flowStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import cloneFLowWithParent, { getInputsAndOutputs } from "../../utils/storeUtils";
-import useFlowStore from "@/stores/flowStore";
+import cloneFLowWithParent, {
+  getInputsAndOutputs,
+} from "../../utils/storeUtils";
 
 export default function PlaygroundPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -66,8 +68,10 @@ export default function PlaygroundPage() {
 
   useEffect(() => {
     document.title = currentSavedFlow?.name || "Langflow";
-    const { inputs, outputs } = getInputsAndOutputs(currentSavedFlow?.data?.nodes||[]);
-    if(inputs.length === 0 && outputs.length === 0){
+    const { inputs, outputs } = getInputsAndOutputs(
+      currentSavedFlow?.data?.nodes || [],
+    );
+    if (inputs.length === 0 && outputs.length === 0) {
       // redirect to the home page
       navigate("/");
     }
