@@ -444,17 +444,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_database_options(self):
         try:
+            database_list = self.get_database_list()
             return [
                 {
                     "name": name,
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in database_list.items()
             ]
         except Exception as e:
-            msg = f"Error fetching database options: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error fetching database options: {e}") from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Retrieve the database object
@@ -498,22 +498,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def reset_database_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
         database_options = self._initialize_database_options()
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
-        build_config["api_endpoint"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        # Prepare options and metadata in a single step
+        options = []
+        options_metadata = []
+        for db in database_options:
+            options.append(db["name"])
+            options_metadata.append({"collections": db["collections"], "api_endpoint": db["api_endpoint"]})
 
-        # Reset the selected database
-        cond1 = self.api_endpoint not in build_config["api_endpoint"]["options"]
-        cond2 = self.api_endpoint not in [db["api_endpoint"] for db in database_options]
-        if cond1 and cond2:
-            build_config["api_endpoint"]["value"] = ""
-        else:
+        build_config["api_endpoint"]["options"] = options
+        build_config["api_endpoint"]["options_metadata"] = options_metadata
+
+        # Check if the current api_endpoint value is valid and set accordingly
+        if self.api_endpoint in options or self.api_endpoint in [db["api_endpoint"] for db in database_options]:
             build_config["api_endpoint"]["value"] = self.api_endpoint
+        else:
+            build_config["api_endpoint"]["value"] = ""
 
         return build_config
 
