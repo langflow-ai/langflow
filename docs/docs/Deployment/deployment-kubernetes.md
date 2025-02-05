@@ -6,8 +6,8 @@ slug: /deployment-kubernetes
 
 This guide demonstrates deploying Langflow on a Kubernetes cluster. Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
 
-- Install [Langflow as an IDE](/deployment-kubernetes#langflow-ide) in a Kubernetes cluster for the complete Langflow development environment.
-- Install [Langflow as a standalone application](/deployment-kubernetes#langflow-runtime) to deploy a Langflow application in a more secure and stable environment.
+- Install [Langflow as an IDE](deployment-kubernetes#install-the-langflow-ide-helm-chart) in a Kubernetes cluster for the complete Langflow development environment.
+- Install [Langflow as a standalone application](/deployment-kubernetes#install-the-langflow-runtime-helm-chart) to deploy a Langflow application in a more secure and stable environment.
 
 ## Langflow IDE deployment
 
@@ -240,7 +240,7 @@ kubectl get pods -n langflow
 kubectl get svc -n langflow
 ```
 
-The service name is your release name followed by `-langflow-runtime`. For example, if you used `helm install my-langflow-app-with-flow` the service would be `my-langflow-app-with-flow-langflow-runtime`
+The service name is your release name followed by `-langflow-runtime`. For example, if you used `helm install my-langflow-app-with-flow` the service name is `my-langflow-app-with-flow-langflow-runtime`.
 
 2. Enable port forwarding to access Langflow from your local machine:
 
@@ -318,11 +318,7 @@ helm upgrade my-langflow-app-image langflow/langflow-runtime -n langflow \
   --set "extraEnv[0].name=OPENAI_API_KEY" \
   --set "extraEnv[0].valueFrom.secretKeyRef.name=openai-credentials" \
   --set "extraEnv[0].valueFrom.secretKeyRef.key=OPENAI_API_KEY"
-  ```
-
-### Configure storage
-
-In this case, storage is not needed, as your deployment is stateless.
+```
 
 ### Configure log level
 

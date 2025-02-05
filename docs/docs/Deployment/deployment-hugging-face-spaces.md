@@ -1,22 +1,22 @@
 ---
-title: Deploy Langflow on HuggingFace Spaces
+title: Deploy Langflow on HuggingFace Spaces
 slug: /deployment-hugging-face-spaces
 ---
 
-This guide demonstrates deploying Langflow on [HuggingFace Spaces](https://huggingface.co/spaces/).
+This guide explains how to deploy Langflow on [HuggingFace Spaces](https://huggingface.co/spaces/).
 
-1. **Access Langflow Space**: Open a Chromium-based browser and navigate to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true). This link directs you to a pre-configured environment for Langflow.
+## Deploy Langflow
 
+1. Go to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true).
 
-2. **Duplicate the Space**: You'll encounter an option to duplicate the Langflow space. This step involves a few simple decisions:
+2. Click **Duplicate Space**. In the configuration dialog:
+   - Enter a name for your Space
+   - Select visibility (Public or Private)
+   - Click **Duplicate Space**
 
-	- **Naming Your Space**: Assign a unique name to your new Space.
-	- **Visibility Settings**: Choose between Public or Private visibility for your Space.
-	- After setting these parameters, click on **Duplicate Space** to initiate the setup.
+   ![Hugging Face deployment dialog](/img/hugging-face-deployment.png)
 
-![](/img/hugging-face-deployment.png)
+3. Wait for the setup to complete. You'll be redirected to your new Space automatically.
 
-3. **Complete Installation**: The duplication and setup process begins immediately after you click **Duplicate Space**. Once completed, you are automatically redirected to the main page of your new Space.
-
-4. **Start Exploring Langflow**: With the setup complete, Langflow is now ready for use in your Space and you can start exploring its features and capabilities right away!
+4. Your Langflow instance is now ready to use.
 

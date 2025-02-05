@@ -69,7 +69,7 @@ If you want to use a specific version of LangFlow, you can modify the `image` fi
 
 ## Package your flow as a Docker image
 
-An example flow is available in the [Langflow Helm Charts](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/flows) repository, or you can provide your own `.JSON` file.
+An example flow is available in the [Langflow Helm Charts](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/flows) repository, or you can provide your own `JSON` file.
 
 1. Create a project directory:
 ```shell
@@ -104,5 +104,5 @@ docker build -t myuser/langflow-hello-world:1.0.0 .
 docker push myuser/langflow-hello-world:1.0.0
 ```
 
-To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#langflow-runtime).
+To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#install-the-langflow-runtime-helm-chart).
 
