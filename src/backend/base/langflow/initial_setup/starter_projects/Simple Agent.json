@@ -7,27 +7,23 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Kdh0W",
+            "id": "ChatInput-vSKY8",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-3NhNI",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "Agent-EPjLx",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Kdh0W{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Kdh0Wœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-3NhNI{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3NhNIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-vSKY8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vSKY8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-EPjLx{œfieldNameœ:œinput_valueœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Kdh0W",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Kdh0Wœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-3NhNI",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3NhNIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-vSKY8",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vSKY8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-EPjLx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,79 +31,67 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-3NhNI",
+            "id": "Agent-EPjLx",
             "name": "response",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-SzD3j",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "ChatOutput-x6tZi",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-3NhNI{œdataTypeœ:œAgentœ,œidœ:œAgent-3NhNIœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-SzD3j{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SzD3jœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-EPjLx{œdataTypeœ:œAgentœ,œidœ:œAgent-EPjLxœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-x6tZi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-x6tZiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-3NhNI",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3NhNIœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-SzD3j",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-SzD3jœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-EPjLx",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-EPjLxœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-x6tZi",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-x6tZiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-F89Ck",
+            "id": "CalculatorComponent-zxpIu",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-3NhNI",
-            "inputTypes": [
-              "Tool"
-            ],
+            "id": "Agent-EPjLx",
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-F89Ck{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-F89Ckœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3NhNI{œfieldNameœ:œtoolsœ,œidœ:œAgent-3NhNIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-F89Ck",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-F89Ckœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-3NhNI",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3NhNIœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorComponent-zxpIu{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-zxpIuœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-EPjLx{œfieldNameœ:œtoolsœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-zxpIu",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-zxpIuœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-EPjLx",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-4Q2PI",
+            "id": "URL-yM3pY",
             "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
+            "output_types": ["Tool"]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-3NhNI",
-            "inputTypes": [
-              "Tool"
-            ],
+            "id": "Agent-EPjLx",
+            "inputTypes": ["Tool"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-4Q2PI{œdataTypeœ:œURLœ,œidœ:œURL-4Q2PIœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3NhNI{œfieldNameœ:œtoolsœ,œidœ:œAgent-3NhNIœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "URL-4Q2PI",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-4Q2PIœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-3NhNI",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3NhNIœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-URL-yM3pY{œdataTypeœ:œURLœ,œidœ:œURL-yM3pYœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-EPjLx{œfieldNameœ:œtoolsœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "URL-yM3pY",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-yM3pYœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-EPjLx",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -115,11 +99,9 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-3NhNI",
+          "id": "Agent-EPjLx",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -201,9 +183,7 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -253,9 +233,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -264,7 +242,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -306,9 +284,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -382,9 +358,7 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "Memory"
-                ],
+                "input_types": ["Memory"],
                 "list": false,
                 "name": "memory",
                 "placeholder": "",
@@ -478,10 +452,7 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
+                "options": ["Ascending", "Descending"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -515,11 +486,7 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
+                "options": ["Machine", "User", "Machine and User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -535,9 +502,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -557,9 +522,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -579,9 +542,7 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -618,9 +579,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -641,9 +600,7 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
+                "input_types": ["Tool"],
                 "list": true,
                 "name": "tools",
                 "placeholder": "",
@@ -676,25 +633,23 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-3NhNI",
+        "id": "Agent-EPjLx",
         "measured": {
-          "height": 698,
-          "width": 360
+          "height": 621,
+          "width": 320
         },
         "position": {
           "x": 1652.2479633316434,
           "y": 297.9085084144251
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-Kdh0W",
+          "id": "ChatInput-vSKY8",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -743,9 +698,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -765,9 +718,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -870,10 +821,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -889,9 +837,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -911,9 +857,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -949,9 +893,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -971,10 +913,10 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-Kdh0W",
+        "id": "ChatInput-vSKY8",
         "measured": {
-          "height": 257,
-          "width": 360
+          "height": 229,
+          "width": 320
         },
         "position": {
           "x": 1241.9566260691947,
@@ -987,11 +929,9 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-SzD3j",
+          "id": "ChatOutput-x6tZi",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1040,9 +980,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -1062,9 +1000,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -1102,9 +1038,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -1124,9 +1058,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -1147,10 +1079,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1166,9 +1095,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -1188,9 +1115,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -1226,9 +1151,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -1247,10 +1170,10 @@
           },
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-SzD3j",
+        "id": "ChatOutput-x6tZi",
         "measured": {
-          "height": 257,
-          "width": 360
+          "height": 229,
+          "width": 320
         },
         "position": {
           "x": 2029.726227044409,
@@ -1263,13 +1186,9 @@
         "data": {
           "description": "Load and retrive data from specified URLs.",
           "display_name": "URL",
-          "id": "URL-4Q2PI",
+          "id": "URL-yM3pY",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "base_classes": ["Data", "DataFrame", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1277,10 +1196,7 @@
             "display_name": "URL",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "urls",
-              "format"
-            ],
+            "field_order": ["urls", "format"],
             "frozen": false,
             "icon": "layout-template",
             "legacy": false,
@@ -1296,9 +1212,7 @@
                 "name": "component_as_tool",
                 "required_inputs": null,
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1331,10 +1245,7 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
                 "name": "format",
-                "options": [
-                  "Text",
-                  "Raw HTML"
-                ],
+                "options": ["Text", "Raw HTML"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1369,10 +1280,7 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
+                    "name": ["snake_case", "no_blank"]
                   },
                   "hide_options": true
                 },
@@ -1423,23 +1331,17 @@
                   {
                     "description": "fetch_content() - Load and retrive data from specified URLs.",
                     "name": "URL-fetch_content",
-                    "tags": [
-                      "URL-fetch_content"
-                    ]
+                    "tags": ["URL-fetch_content"]
                   },
                   {
                     "description": "fetch_content_text() - Load and retrive data from specified URLs.",
                     "name": "URL-fetch_content_text",
-                    "tags": [
-                      "URL-fetch_content_text"
-                    ]
+                    "tags": ["URL-fetch_content_text"]
                   },
                   {
                     "description": "as_dataframe() - Load and retrive data from specified URLs.",
                     "name": "URL-as_dataframe",
-                    "tags": [
-                      "URL-as_dataframe"
-                    ]
+                    "tags": ["URL-as_dataframe"]
                   }
                 ]
               },
@@ -1449,9 +1351,7 @@
                 "display_name": "URLs",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": true,
                 "list_add_label": "Add URL",
                 "load_from_db": false,
@@ -1472,10 +1372,10 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-4Q2PI",
+        "id": "URL-yM3pY",
         "measured": {
-          "height": 453,
-          "width": 360
+          "height": 403,
+          "width": 320
         },
         "position": {
           "x": 1225.8773509111968,
@@ -1486,7 +1386,7 @@
       },
       {
         "data": {
-          "id": "note-MeseW",
+          "id": "note-Zo71g",
           "node": {
             "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
             "display_name": "",
@@ -1498,21 +1398,21 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-MeseW",
+        "id": "note-Zo71g",
         "measured": {
-          "height": 328,
-          "width": 328
+          "height": 324,
+          "width": 324
         },
         "position": {
           "x": 775.5268622081468,
           "y": 27.927425537464444
         },
-        "selected": false,
+        "selected": true,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "note-yfpyo",
+          "id": "note-enlN0",
           "node": {
             "description": "### 💡 Add your OpenAI API key here👇",
             "display_name": "",
@@ -1523,10 +1423,10 @@
           },
           "type": "note"
         },
-        "id": "note-yfpyo",
+        "id": "note-enlN0",
         "measured": {
-          "height": 326,
-          "width": 326
+          "height": 698,
+          "width": 324
         },
         "position": {
           "x": 1648.6876745095624,
@@ -1537,11 +1437,9 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-F89Ck",
+          "id": "CalculatorComponent-zxpIu",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
             "category": "tools",
             "conditional_paths": [],
@@ -1550,9 +1448,7 @@
             "display_name": "Calculator",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "expression"
-            ],
+            "field_order": ["expression"],
             "frozen": false,
             "icon": "calculator",
             "key": "CalculatorComponent",
@@ -1571,9 +1467,7 @@
                 "name": "component_as_tool",
                 "required_inputs": null,
                 "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
+                "types": ["Tool"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1605,9 +1499,7 @@
                 "display_name": "Expression",
                 "dynamic": false,
                 "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1647,10 +1539,7 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
+                    "name": ["snake_case", "no_blank"]
                   },
                   "hide_options": true
                 },
@@ -1701,9 +1590,7 @@
                   {
                     "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
                     "name": "None-evaluate_expression",
-                    "tags": [
-                      "None-evaluate_expression"
-                    ]
+                    "tags": ["None-evaluate_expression"]
                   }
                 ]
               }
@@ -1714,10 +1601,10 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-F89Ck",
+        "id": "CalculatorComponent-zxpIu",
         "measured": {
-          "height": 374,
-          "width": 360
+          "height": 333,
+          "width": 320
         },
         "position": {
           "x": 1233.166256931297,
@@ -1728,9 +1615,9 @@
       }
     ],
     "viewport": {
-      "x": -311.5761975342741,
-      "y": 21.53149314357762,
-      "zoom": 0.7039413065053529
+      "x": 528.5325055091846,
+      "y": 51.2172319875898,
+      "zoom": 0.12508906569071757
     }
   },
   "description": "A simple but powerful starter agent.",
@@ -1739,8 +1626,5 @@
   "is_component": false,
   "last_tested_version": "1.1.1",
   "name": "Simple Agent",
-  "tags": [
-    "assistants",
-    "agents"
-  ]
+  "tags": ["assistants", "agents"]
 }

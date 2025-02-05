@@ -50,7 +50,10 @@ export default function AppHeader(): JSX.Element {
   useResetDismissUpdateAll();
 
   return (
-    <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
+    <div
+      className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background"
+      data-testid="app-header"
+    >
       {/* Left Section */}
       <div
         className={`flex items-center gap-2`}

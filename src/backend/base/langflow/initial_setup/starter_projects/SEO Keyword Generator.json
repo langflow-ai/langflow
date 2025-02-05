@@ -2,79 +2,73 @@
   "data": {
     "edges": [
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-QFfcl",
+            "id": "Prompt-a6SIY",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-3mbCD",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-brPVM",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-QFfcl{œdataTypeœ:œPromptœ,œidœ:œPrompt-QFfclœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-3mbCD{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-3mbCDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-QFfcl",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-QFfclœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-3mbCD",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-3mbCDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-a6SIY{œdataTypeœ:œPromptœ,œidœ:œPrompt-a6SIYœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-brPVM{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-brPVMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-a6SIY",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-a6SIYœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-brPVM",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-brPVMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-RpVoN",
+            "id": "Prompt-jkCpO",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-3mbCD",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-brPVM",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-RpVoN{œdataTypeœ:œPromptœ,œidœ:œPrompt-RpVoNœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-3mbCD{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-3mbCDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-RpVoN",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-RpVoNœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-3mbCD",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-3mbCDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-jkCpO{œdataTypeœ:œPromptœ,œidœ:œPrompt-jkCpOœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-brPVM{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-brPVMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-jkCpO",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-jkCpOœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-brPVM",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-brPVMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-3mbCD",
+            "id": "OpenAIModel-brPVM",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-vBbvi",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "ChatOutput-oE2ic",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__OpenAIModel-3mbCD{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-3mbCDœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-vBbvi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-vBbviœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-3mbCD",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-3mbCDœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-vBbvi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-vBbviœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-brPVM{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-brPVMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-oE2ic{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oE2icœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-brPVM",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-brPVMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-oE2ic",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-oE2icœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -82,11 +76,9 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-RpVoN",
+          "id": "Prompt-jkCpO",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -103,9 +95,7 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "legacy": false,
@@ -156,10 +146,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -179,10 +166,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -202,10 +186,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -225,10 +206,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -248,10 +226,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -271,10 +246,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -310,9 +282,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -333,10 +303,10 @@
         },
         "dragging": false,
         "height": 779,
-        "id": "Prompt-RpVoN",
+        "id": "Prompt-jkCpO",
         "measured": {
           "height": 779,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 816.9328565352126,
@@ -352,7 +322,7 @@
       },
       {
         "data": {
-          "id": "note-bzlUs",
+          "id": "note-nssRq",
           "node": {
             "description": "# SEO Keyword Generator\nWelcome to the SEO Keywords Generator - an AI tool to create strategic keywords based on your product and audience profile!\n\n## Instructions\n\n1. **Fill Product Information**\n   - Enter your product name and description\n   - Keep it clear and specific\n   - Highlight unique features and benefits\n\n2. **Define Pain Points**\n   - List customer problems and challenges\n   - Be specific about what frustrations they face\n   - Include both practical and emotional pain points\n\n3. **Set Goals & Solutions**\n   - Specify customer objectives\n   - Detail how they currently solve problems\n   - Outline desired outcomes\n\n4. **Target Audience Details**\n   - Define demographics and characteristics\n   - Include expertise level\n   - Describe behavior patterns and preferences\n\n5. **Review Output**\n   - Examine generated keywords\n   - Check relevance and search intent\n   - Use insights for SEO strategy planning\n\nRemember: The more detailed your input, the more targeted and effective your keywords will be! 🎯🔍✨",
             "display_name": "",
@@ -363,10 +333,10 @@
         },
         "dragging": false,
         "height": 607,
-        "id": "note-bzlUs",
+        "id": "note-nssRq",
         "measured": {
-          "height": 607,
-          "width": 328
+          "height": 608,
+          "width": 324
         },
         "position": {
           "x": 221.74248905040588,
@@ -380,20 +350,18 @@
         "selected": false,
         "style": {
           "height": 607,
-          "width": 489
+          "width": 324
         },
         "type": "noteNode",
-        "width": 489
+        "width": 324
       },
       {
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-QFfcl",
+          "id": "Prompt-a6SIY",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -403,9 +371,7 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "legacy": false,
@@ -472,9 +438,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -495,10 +459,10 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-QFfcl",
+        "id": "Prompt-a6SIY",
         "measured": {
           "height": 260,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 813.5727530934735,
@@ -516,11 +480,9 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-vBbvi",
+          "id": "ChatOutput-oE2ic",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -569,9 +531,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -591,9 +551,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -631,9 +589,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -653,9 +609,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -676,10 +630,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -695,9 +646,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -717,9 +666,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -755,9 +702,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -778,10 +723,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-vBbvi",
+        "id": "ChatOutput-oE2ic",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1598.2529634286327,
@@ -797,7 +742,7 @@
       },
       {
         "data": {
-          "id": "note-BWTHt",
+          "id": "note-aLkdy",
           "node": {
             "description": "## Make sure to add your OpenAI API key from [platform.openai.com](https://platform.openai.com). ",
             "display_name": "",
@@ -808,10 +753,10 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-BWTHt",
+        "id": "note-aLkdy",
         "measured": {
           "height": 325,
-          "width": 328
+          "width": 326
         },
         "position": {
           "x": 1207.1996899547116,
@@ -827,12 +772,9 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-3mbCD",
+          "id": "OpenAIModel-brPVM",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -882,9 +824,7 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -903,9 +843,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -914,7 +852,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -940,9 +878,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1106,9 +1042,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1159,10 +1093,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-3mbCD",
+        "id": "OpenAIModel-brPVM",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 653,
+          "width": 320
         },
         "position": {
           "x": 1211.6745177781336,
@@ -1186,8 +1120,5 @@
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "SEO Keyword Generator",
-  "tags": [
-    "chatbots",
-    "assistants"
-  ]
+  "tags": ["chatbots", "assistants"]
 }

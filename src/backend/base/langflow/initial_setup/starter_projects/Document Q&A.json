@@ -6,128 +6,115 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-wUadf",
+            "id": "File-GwJQZ",
             "name": "data",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-IJwYj",
-            "inputTypes": [
-              "Data"
-            ],
+            "id": "ParseData-BbvKb",
+            "inputTypes": ["Data"],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-wUadf{œdataTypeœ:œFileœ,œidœ:œFile-wUadfœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-IJwYj{œfieldNameœ:œdataœ,œidœ:œParseData-IJwYjœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-wUadf",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-wUadfœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-IJwYj",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-IJwYjœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-GwJQZ{œdataTypeœ:œFileœ,œidœ:œFile-GwJQZœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-BbvKb{œfieldNameœ:œdataœ,œidœ:œParseData-BbvKbœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "File-GwJQZ",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-GwJQZœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-BbvKb",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-BbvKbœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-IJwYj",
+            "id": "ParseData-BbvKb",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "Document",
-            "id": "Prompt-5ubri",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "id": "Prompt-yvZHT",
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-IJwYj{œdataTypeœ:œParseDataœ,œidœ:œParseData-IJwYjœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-5ubri{œfieldNameœ:œDocumentœ,œidœ:œPrompt-5ubriœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-IJwYj",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-IJwYjœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-5ubri",
-        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-5ubriœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-BbvKb{œdataTypeœ:œParseDataœ,œidœ:œParseData-BbvKbœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-yvZHT{œfieldNameœ:œDocumentœ,œidœ:œPrompt-yvZHTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-BbvKb",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-BbvKbœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-yvZHT",
+        "targetHandle": "{œfieldNameœ: œDocumentœ, œidœ: œPrompt-yvZHTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-VApZJ",
+            "id": "ChatInput-li477",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-toIc8",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-atkmo",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-VApZJ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VApZJœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-toIc8{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-toIc8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-VApZJ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VApZJœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-toIc8",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-toIc8œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-li477{œdataTypeœ:œChatInputœ,œidœ:œChatInput-li477œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-atkmo{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-atkmoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-li477",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-li477œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-atkmo",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-atkmoœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-5ubri",
+            "id": "Prompt-yvZHT",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-toIc8",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-atkmo",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-5ubri{œdataTypeœ:œPromptœ,œidœ:œPrompt-5ubriœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-toIc8{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-toIc8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-5ubri",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-5ubriœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-toIc8",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-toIc8œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-yvZHT{œdataTypeœ:œPromptœ,œidœ:œPrompt-yvZHTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-atkmo{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-atkmoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-yvZHT",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-yvZHTœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-atkmo",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-atkmoœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-toIc8",
+            "id": "OpenAIModel-atkmo",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-8lufz",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "ChatOutput-8pgwS",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__OpenAIModel-toIc8{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-toIc8œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8lufz{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8lufzœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-toIc8",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-toIc8œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-8lufz",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8lufzœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-atkmo{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-atkmoœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-8pgwS{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-8pgwSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-atkmo",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-atkmoœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-8pgwS",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-8pgwSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -135,11 +122,9 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-VApZJ",
+          "id": "ChatInput-li477",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -185,9 +170,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -206,9 +189,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -305,10 +286,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -322,9 +300,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -342,9 +318,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -379,9 +353,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -400,10 +372,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-VApZJ",
+        "id": "ChatInput-li477",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 516.7529480335185,
@@ -421,11 +393,9 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-8lufz",
+          "id": "ChatOutput-8pgwS",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -474,9 +444,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -496,9 +464,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -536,9 +502,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -558,9 +522,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -581,10 +543,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -600,9 +559,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -622,9 +579,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -660,9 +615,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -683,10 +636,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-8lufz",
+        "id": "ChatOutput-8pgwS",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1631.3766926569258,
@@ -704,11 +657,9 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-IJwYj",
+          "id": "ParseData-BbvKb",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -716,11 +667,7 @@
             "display_name": "Parse Data",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "data",
-              "template",
-              "sep"
-            ],
+            "field_order": ["data", "template", "sep"],
             "frozen": false,
             "icon": "message-square",
             "legacy": false,
@@ -781,9 +728,7 @@
                 "display_name": "Data",
                 "dynamic": false,
                 "info": "The data to convert to text.",
-                "input_types": [
-                  "Data"
-                ],
+                "input_types": ["Data"],
                 "list": true,
                 "name": "data",
                 "placeholder": "",
@@ -816,9 +761,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -838,10 +781,10 @@
         },
         "dragging": false,
         "height": 302,
-        "id": "ParseData-IJwYj",
+        "id": "ParseData-BbvKb",
         "measured": {
           "height": 302,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 514.8054600415829,
@@ -857,7 +800,7 @@
       },
       {
         "data": {
-          "id": "note-bAopU",
+          "id": "note-e77cr",
           "node": {
             "description": "## Get Your OpenAI API Key\n\n**Steps**:\n\n1. **Visit** [OpenAI's API Key Page](https://platform.openai.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new OpenAI account.\n\n3. **Generate API Key**:\n   - Click \"Create New Secret Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the OpenAI API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
             "display_name": "",
@@ -870,10 +813,10 @@
         },
         "dragging": true,
         "height": 325,
-        "id": "note-bAopU",
+        "id": "note-e77cr",
         "measured": {
-          "height": 325,
-          "width": 328
+          "height": 324,
+          "width": 325
         },
         "position": {
           "x": 1253.2038187140245,
@@ -889,7 +832,7 @@
       },
       {
         "data": {
-          "id": "note-XuFcb",
+          "id": "note-0kA8I",
           "node": {
             "description": "# Document Q&A\n\n**Purpose:**\nThis flow leverages a language model to answer questions based on content from a loaded document. It's ideal for obtaining quick insights from PDFs or other text files by asking direct questions.\n\n**Components**:\n1. **File Component**: Loads and processes your document in supported formats.\n2. **Parse Data**: Converts the loaded document into text using a specified template for consistent processing.\n3. **Prompt Component**: Forms a structured query by combining the parsed document content with user questions.\n4. **OpenAI Model**: Engages OpenAI's language model to generate responses to queries based on the document context.\n5. **Chat Input/Output**: Facilitates user queries and displays AI-generated answers seamlessly.\n\n**Steps to Use**:\n1. **Upload Document**: Use the \"File\" component to upload a document or text file you want to query.\n2. **Enter Question**: Through the \"Chat Input\" field, type your question related to the document content.\n3. **Run the Flow**: Activate the flow to process the input and generate an answer using the OpenAI model.\n4. **View Response**: Read the generated answer in the \"Chat Output\" field for immediate insights.\n\n**Benefits**:\n- Simplifies the process of extracting information from documents.\n- Provides a user-friendly interface for interactive document exploration using AI.\n",
             "display_name": "",
@@ -900,10 +843,10 @@
         },
         "dragging": false,
         "height": 452,
-        "id": "note-XuFcb",
+        "id": "note-0kA8I",
         "measured": {
-          "height": 452,
-          "width": 328
+          "height": 408,
+          "width": 325
         },
         "position": {
           "x": -338.7070086205371,
@@ -917,18 +860,16 @@
         "selected": false,
         "style": {
           "height": 452,
-          "width": 469
+          "width": 324
         },
         "type": "noteNode",
-        "width": 469
+        "width": 324
       },
       {
         "data": {
-          "id": "File-wUadf",
+          "id": "File-GwJQZ",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1022,10 +963,7 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "Message"
-                ],
+                "input_types": ["Data", "Message"],
                 "list": true,
                 "name": "file_path",
                 "placeholder": "",
@@ -1149,10 +1087,10 @@
         },
         "dragging": false,
         "height": 232,
-        "id": "File-wUadf",
+        "id": "File-GwJQZ",
         "measured": {
           "height": 232,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 150.6029945346864,
@@ -1162,7 +1100,7 @@
           "x": 155.39382083637838,
           "y": -82.32805525710685
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode",
         "width": 320
       },
@@ -1170,26 +1108,20 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-5ubri",
+          "id": "Prompt-yvZHT",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "Document"
-              ]
+              "template": ["Document"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -1226,10 +1158,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -1282,9 +1211,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -1305,10 +1232,10 @@
         },
         "dragging": false,
         "height": 347,
-        "id": "Prompt-5ubri",
+        "id": "Prompt-yvZHT",
         "measured": {
           "height": 347,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 882.4192413332464,
@@ -1324,12 +1251,9 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-toIc8",
+          "id": "OpenAIModel-atkmo",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1379,9 +1303,7 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1400,9 +1322,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1411,7 +1331,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1437,9 +1357,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1603,9 +1521,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1656,10 +1572,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-toIc8",
+        "id": "OpenAIModel-atkmo",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 653,
+          "width": 320
         },
         "position": {
           "x": 1257.1422612381514,
@@ -1683,9 +1599,5 @@
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "Document Q&A",
-  "tags": [
-    "rag",
-    "q-a",
-    "openai"
-  ]
+  "tags": ["rag", "q-a", "openai"]
 }
