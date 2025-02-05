@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
+import useUploadFile from "@/hooks/files/use-upload-file";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import ImportButtonComponent from "@/modals/fileManagerModal/components/importButtonComponent";
+import useAlertStore from "@/stores/alertStore";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { ColDef } from "ag-grid-community";
@@ -17,6 +19,11 @@ import { useRef, useState } from "react";
 export const FilesPage = () => {
   const tableRef = useRef<AgGridReact<any>>(null);
   const { data: files } = useGetFilesV2();
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const uploadFile = useUploadFile({
+    types: [".json", ".csv", ".pdf"],
+  });
 
   const colDefs: ColDef[] = [
     {
@@ -89,11 +96,29 @@ export const FilesPage = () => {
     },
   ];
 
+  const onFileDrop = async (e: React.DragEvent) => {
+    e.preventDefault;
+    e.stopPropagation();
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      try {
+        await uploadFile({
+          files: droppedFiles,
+        });
+      } catch (error: any) {
+        setErrorData({
+          title: "Error uploading file",
+          list: [error.message || "An error occurred while uploading the file"],
+        });
+      }
+    }
+  };
+
   const [quickFilterText, setQuickFilterText] = useState("");
   return (
     <CardsWrapComponent
-      onFileDrop={() => {}}
-      dragMessage={`Drag your files here`}
+      onFileDrop={onFileDrop}
+      dragMessage={`Drop your files here`}
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
