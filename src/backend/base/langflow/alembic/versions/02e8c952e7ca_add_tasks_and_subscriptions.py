@@ -47,6 +47,7 @@ def upgrade() -> None:
             sa.Column("state", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("result", sa.JSON(), nullable=True),
+            sa.Column("input_request", sa.JSON(), nullable=True),
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.Column("id", sqlmodel.sql.sqltypes.types.Uuid(), nullable=False),
@@ -56,7 +57,7 @@ def upgrade() -> None:
         )
         with op.batch_alter_table("task", schema=None) as batch_op:
             batch_op.create_index(batch_op.f("ix_task_assignee_id"), ["assignee_id"], unique=False)
-        batch_op.create_index(batch_op.f("ix_task_author_id"), ["author_id"], unique=False)
+            batch_op.create_index(batch_op.f("ix_task_author_id"), ["author_id"], unique=False)
 
     with op.batch_alter_table("vertex_build", schema=None) as batch_op:
         batch_op.alter_column("id", existing_type=sa.VARCHAR(), nullable=False)
@@ -74,7 +75,7 @@ def downgrade() -> None:
     if migration.table_exists(conn=conn, name="task"):
         with op.batch_alter_table("task", schema=None) as batch_op:
             batch_op.drop_index(batch_op.f("ix_task_author_id"))
-        batch_op.drop_index(batch_op.f("ix_task_assignee_id"))
+            batch_op.drop_index(batch_op.f("ix_task_assignee_id"))
 
     if migration.table_exists(conn=conn, name="task"):
         op.drop_table("task")
