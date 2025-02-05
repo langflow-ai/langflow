@@ -4,18 +4,17 @@ import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useDarkStore } from "../../../stores/darkStore";
-import { codeTabsPropsType } from "../../../types/components";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TweaksComponent } from "@/components/core/codeTabsComponent/components/tweaksComponent";
+import { hasStreaming } from "@/utils/reactflowUtils";
 import { AllNodeType } from "@/types/flow";
 import { tabsArrayType } from "@/types/tabs";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewCurlCode } from "../utils/get-curl-code";
+import useFlowStore from "@/stores/flowStore";
+import useAuthStore from "@/stores/authStore";
 
 type APITabsPropsType = {
     open?: boolean;
@@ -32,10 +31,13 @@ export default function APITabsComponent({
     const [isCopied, setIsCopied] = useState<Boolean>(false);
     const dark = useDarkStore((state) => state.dark);
     const nodes = useTweaksStore((state) => state.nodes);
+    const flowId = useFlowStore((state) => state.currentFlow?.id);
+    const isAuthenticated = useAuthStore((state) => state.autoLogin);
+    const streaming = hasStreaming(nodes);
     const codeOptions = {
-        streaming:false,
-        flowId:"123",
-        isAuthenticated:false,
+        streaming:streaming,
+        flowId:flowId || "",
+        isAuthenticated:isAuthenticated || false,
         input_value:"Hello, world!",
         input_type:"text",
         output_type:"text",
