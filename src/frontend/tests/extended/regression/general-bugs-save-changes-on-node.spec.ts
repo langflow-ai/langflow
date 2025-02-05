@@ -9,6 +9,8 @@ async function verifyTextareaValue(page: Page, value: string) {
 
   await expect(page.getByTestId("textarea_str_input_value")).toHaveValue(value);
 
+  await page.waitForTimeout(500);
+
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.waitForSelector('[data-testid="list-card"]', {
@@ -16,6 +18,7 @@ async function verifyTextareaValue(page: Page, value: string) {
     state: "visible",
   });
 
+  await page.waitForTimeout(500);
   await page.getByTestId("list-card").first().click();
 
   await page.waitForSelector('[data-testid="textarea_str_input_value"]', {
@@ -23,6 +26,7 @@ async function verifyTextareaValue(page: Page, value: string) {
     state: "visible",
   });
 
+  await page.waitForTimeout(500);
   const inputValue = await page
     .getByTestId("textarea_str_input_value")
     .inputValue();
