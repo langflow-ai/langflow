@@ -1881,5 +1881,5 @@ export function buildPositionDictionary(nodes: AllNodeType[]) {
 
 
 export function hasStreaming(nodes: AllNodeType[]) {
-  return nodes.some((node) => node.data.node?.template.stream.value);
+  return nodes.some((node) => node.data.node?.template?.stream?.value);
 }

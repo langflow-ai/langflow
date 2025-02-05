@@ -24,23 +24,34 @@ type APITabsPropsType = {
 };
 
 export default function APITabsComponent({
-    open,
     setActiveTweaks,
     activeTweaks,
 }: APITabsPropsType) {
     const [isCopied, setIsCopied] = useState<Boolean>(false);
     const dark = useDarkStore((state) => state.dark);
-    const nodes = useTweaksStore((state) => state.nodes);
+    const nodes = useFlowStore((state) => state.nodes);
     const flowId = useFlowStore((state) => state.currentFlow?.id);
     const isAuthenticated = useAuthStore((state) => state.autoLogin);
+    const inputs = useFlowStore((state) => state.inputs);
+    const outputs = useFlowStore((state) => state.outputs);
+    const hasChatInput = inputs.some((input) => input.type === "ChatInput");
+    const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
+    let input_value = "hello world!";
+    if(hasChatInput){
+        const chatInputId = inputs.find(input=>input.type === "ChatInput")?.id;
+        const inputNode = nodes.find(node=>node.id === chatInputId);
+        if(inputNode && inputNode?.data.node?.template?.input_value?.value){
+            input_value = inputNode?.data.node?.template.input_value?.value;
+        }
+    }
     const streaming = hasStreaming(nodes);
     const codeOptions = {
         streaming:streaming,
         flowId:flowId || "",
         isAuthenticated:isAuthenticated || false,
-        input_value:"Hello, world!",
-        input_type:"text",
-        output_type:"text",
+        input_value:input_value,
+        input_type:hasChatInput ? "chat" : "text",
+        output_type:hasChatOutput ? "chat" : "text",
         tweaksObject:{},
         activeTweaks:false
     }
