@@ -5,6 +5,8 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
 const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 const { remarkCodeHike } = require("@code-hike/mdx");
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Langflow Documentation",
@@ -27,7 +29,32 @@ const config = {
     defaultLocale: "en",
     locales: ["en"],
   },
-
+  headTags: isProduction
+    ? [
+        // Ketch consent management script
+        {
+          tagName: 'script',
+          attributes: {},
+          innerHTML: `<script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();</script>`,
+        },
+        // Ketch geographically dynamic link text
+        {
+          tagName: 'script',
+          attributes: {},
+          innerHTML: `
+            ketch('on', 'regionInfo', regionInfo => {
+              var customTextRegions = ['US-CA'];
+              if (customTextRegions.includes(regionInfo)) {
+                var preferenceCenterLinkElement = document.getElementById("preferenceCenterLink");
+                if (preferenceCenterLinkElement) {
+                  preferenceCenterLinkElement.textContent = "Do Not Sell My Personal Information";
+                }
+              }
+            });
+          `,
+        },
+      ]
+    : [],
   presets: [
     [
       "docusaurus-preset-openapi",
@@ -253,6 +280,19 @@ const config = {
         sidebar: {
           hideable: true,
         },
+      },
+      footer: {
+        style: 'light',
+        links: [
+          {
+            title: 'Privacy',
+            items: [
+              {
+                html: '<a id="preferenceCenterLink" href="https://www.langflow.org/preferences">Manage Privacy Choices</a>'
+              },
+            ],
+          },
+        ],
       },
     }),
 };
