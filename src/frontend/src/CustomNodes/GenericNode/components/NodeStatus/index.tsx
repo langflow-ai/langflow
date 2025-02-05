@@ -11,6 +11,7 @@ import { track } from "@/customization/utils/analytics";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { VertexBuildTypeAPI } from "@/types/api";
 import { NodeDataType } from "@/types/flow";
 import { findLastNode } from "@/utils/reactflowUtils";
@@ -34,6 +35,7 @@ export default function NodeStatus({
   isOutdated,
   isUserEdited,
   getValidationStatus,
+  handleUpdateComponent,
 }: {
   nodeId: string;
   display_name: string;
@@ -46,6 +48,7 @@ export default function NodeStatus({
   isOutdated: boolean;
   isUserEdited: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
+  handleUpdateComponent: () => void;
 }) {
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
@@ -84,6 +87,8 @@ export default function NodeStatus({
     getValidationStatus,
   );
 
+  const dismissAll = useUtilityStore((state) => state.dismissAll);
+
   const getBaseBorderClass = (selected) => {
     let className =
       selected && !isBuilding
@@ -91,7 +96,9 @@ export default function NodeStatus({
         : "border ring-[0.5px] hover:shadow-node ring-border";
     let frozenClass = selected ? "border-ring-frozen" : "border-frozen";
     let updateClass =
-      isOutdated && !isUserEdited ? "border-warning ring-2 ring-warning" : "";
+      isOutdated && !isUserEdited && !dismissAll
+        ? "border-warning ring-2 ring-warning"
+        : "";
     return cn(frozen ? frozenClass : className, updateClass);
   };
   const getNodeBorderClassName = (
@@ -122,6 +129,7 @@ export default function NodeStatus({
     isOutdated,
     isUserEdited,
     frozen,
+    dismissAll,
   ]);
 
   useEffect(() => {
@@ -236,7 +244,7 @@ export default function NodeStatus({
             onClick={handleClickRun}
           >
             {showNode && (
-              <Button unstyled className="group">
+              <Button unstyled className="nodrag group">
                 <div data-testid={`button_run_` + display_name.toLowerCase()}>
                   <IconComponent
                     name={iconName}
@@ -248,6 +256,36 @@ export default function NodeStatus({
             )}
           </div>
         </ShadTooltip>
+        {dismissAll && isOutdated && !isUserEdited && (
+          <ShadTooltip content="Update component">
+            <div
+              className="button-run-bg hit-area-icon ml-1 bg-warning hover:bg-warning/80"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleUpdateComponent();
+                e.stopPropagation();
+              }}
+            >
+              {showNode && (
+                <Button
+                  unstyled
+                  type="button"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <div
+                    data-testid={`button_update_` + display_name.toLowerCase()}
+                  >
+                    <IconComponent
+                      name={"AlertTriangle"}
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className="icon-size text-black"
+                    />
+                  </div>
+                </Button>
+              )}
+            </div>
+          </ShadTooltip>
+        )}
       </div>
     </>
   ) : (
