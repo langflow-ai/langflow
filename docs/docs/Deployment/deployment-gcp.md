@@ -1,9 +1,7 @@
 ---
-title: GCP
+title: Deploy Langflow on Google Cloud Platform
 slug: /deployment-gcp
 ---
-
-# Deploy on Google Cloud Platform
 
 To deploy Langflow on Google Cloud Platform using Cloud Shell, use the below script.
 The script will guide you through setting up a Debian-based VM with the Langflow package, Nginx, and the necessary configurations to run the Langflow dev environment in GCP.

@@ -1,5 +1,5 @@
 ---
-title: HuggingFace Spaces
+title: Deploy Langflow on HuggingFace Spaces
 slug: /deployment-hugging-face-spaces
 ---
 

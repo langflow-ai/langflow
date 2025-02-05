@@ -1,5 +1,5 @@
 ---
-title: Kubernetes
+title: Deploy Langflow on Kubernetes
 slug: /deployment-kubernetes
 ---
 

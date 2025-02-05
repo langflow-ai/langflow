@@ -1,5 +1,5 @@
 ---
-title: Docker
+title: Deploy Langflow on Docker
 slug: /deployment-docker
 ---
 

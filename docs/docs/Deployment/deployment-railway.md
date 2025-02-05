@@ -1,9 +1,7 @@
 ---
-title: Railway
+title: Deploy Langflow on Railway
 slug: /deployment-railway
 ---
-
-# Deploy Langflow on Railway
 
 Railway is a cloud infrastructure platform that enables developers to deploy and manage applications effortlessly. It provides an intuitive interface, seamless integrations, and powerful features like auto-deploy from GitHub, managed databases, and automatic scaling.
 

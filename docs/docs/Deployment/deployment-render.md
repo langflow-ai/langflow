@@ -1,9 +1,7 @@
 ---
-title: Render
+title: Deploy Langflow on Render
 slug: /deployment-render
 ---
-
-## Deploy Langflow on Render
 
 [Render.com](http://render.com/) is a unified cloud platform designed to make deploying web applications, APIs, and static sites easy. It provides a streamlined experience with powerful features like automatic SSL, managed databases, and auto-deploy from Git, making it a popular choice for developers looking to simplify their deployment workflows.
 
