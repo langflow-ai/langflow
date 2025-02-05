@@ -1,7 +1,7 @@
 """add column 'access_type' to flow
 
 Revision ID: f3b2d1f1002d
-Revises: af9e9e93cd24
+Revises: e3162c1804e6
 Create Date: 2025-02-05 14:35:29.658101
 
 """
@@ -14,7 +14,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = 'f3b2d1f1002d'
-down_revision: Union[str, None] = 'af9e9e93cd24'
+down_revision: Union[str, None] = 'e3162c1804e6'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -50,7 +50,6 @@ class FlowBase(SQLModel):
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
-    public: bool | None = Field(default=False, nullable=True)
     access_type: AccessTypeEnum = Field(
         default=AccessTypeEnum.PRIVATE,
         sa_column=Column(
