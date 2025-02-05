@@ -60,7 +60,7 @@ export default function APITabsComponent({
         {
             title: "cURL",
             icon: "TerminalSquare",
-            language: "curl",
+            language: "shell",
             code: getNewCurlCode(codeOptions),
             copyCode: "curl -X GET 'https://api.example.com/endpoint'",
         },
@@ -113,7 +113,7 @@ export default function APITabsComponent({
             {tabsList.map((tab, idx) => (
                 <TabsContent
                     value={idx.toString()}
-                    className="api-modal-tabs-content overflow-hidden dark"
+                    className="api-modal-tabs-content overflow-hidden"
                     key={idx} // Remember to add a unique key prop
                 >
                     <div className=" flex h-full w-full relative">
@@ -139,7 +139,7 @@ export default function APITabsComponent({
                         <SyntaxHighlighter
                             showLineNumbers={true}
                             wrapLongLines={true}
-                            language="html"
+                            language={tab.language}
                             style={dark ? oneDark : oneLight}
                             className="!mt-0 h-full w-full overflow-scroll !rounded-b-md border border-border text-left !custom-scroll"
                         >

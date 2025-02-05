@@ -250,6 +250,9 @@ pre code {
   width: 100%;
   /* Background color */
   background-color: hsl(var(--muted)) !important;
+}
+
+.dark pre code {
   color: hsl(var(--code-foreground)) !important;
 }
 
