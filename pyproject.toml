@@ -3,7 +3,7 @@
 name = "langflow"
 version = "1.1.4"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -26,7 +26,7 @@ dependencies = [
     "huggingface-hub[inference]>=0.23.2,<1.0.0",
     "networkx==3.4.2",
     "fake-useragent==1.5.1",
-    "pyarrow==17.0.0",
+    "pyarrow==19.0.0",
     "wikipedia==1.4.0",
     "qdrant-client==1.9.2",
     "weaviate-client==4.10.2",
@@ -104,7 +104,7 @@ dependencies = [
     "sseclient-py==1.8.0",
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
-    "crewai~=0.86.0",
+    "crewai~=0.100.1",
     "mcp>=0.9.1",
     "uv>=0.5.7",
     "ag2>=0.1.0",
