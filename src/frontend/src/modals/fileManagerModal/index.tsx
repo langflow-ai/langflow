@@ -3,7 +3,6 @@ import { ReactNode, useEffect, useState } from "react";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
 import DragFilesComponent from "./components/dragFilesComponent";
-import ImportFilesComponent from "./components/importFilesComponent";
 import RecentFilesComponent from "./components/recentFilesComponent";
 
 export default function FileManagerModal({
@@ -70,7 +69,7 @@ export default function FileManagerModal({
               types={types}
               isList={isList ?? false}
             />
-            <ImportFilesComponent />
+            {/* <ImportFilesComponent /> */}
             <RecentFilesComponent
               files={files}
               selectedFiles={internalSelectedFiles}
