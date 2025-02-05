@@ -26,4 +26,4 @@ export const BWSvgPython = (props) => (
     </defs>
   </svg>
 );
-export default SvgPython;
+export default BWSvgPython;
