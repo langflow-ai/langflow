@@ -458,7 +458,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Retrieve the database object
-        database = self.get_database_object(api_endpoint=api_endpoint)
+        try:
+            database = self.get_database_object(api_endpoint=api_endpoint)
+        except Exception as _:  # noqa: BLE001
+            return []
 
         # Get the list of collections
         collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
@@ -479,9 +482,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             for col in collection_list
         ]
 
-    def reset_collection_list(self, build_config: dict):
+    def reset_collection_list(self, build_config: dict, api_endpoint: str | None = None):
         # Get the list of options we have based on the token provided
-        collection_options = self._initialize_collection_options()
+        collection_options = self._initialize_collection_options(api_endpoint=api_endpoint)
 
         # If we retrieved options based on the token, show the dropdown
         build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
@@ -544,7 +547,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Reset the build config to ensure we are starting fresh
             build_config = self.reset_build_config(build_config)
             build_config = self.reset_database_list(build_config)
-            build_config = self.reset_collection_list(build_config)
+
+            # Get the two conditions for the api endpoint
+            cond1 = self.api_endpoint in build_config["api_endpoint"]["options"]
+            cond2 = self.api_endpoint in [db["api_endpoint"] for db in build_config["api_endpoint"]["options_metadata"]]
+            if self.api_endpoint and (cond1 or cond2):
+                build_config = self.reset_collection_list(build_config)
 
             # Get list of regions for a given cloud provider
             """
@@ -576,8 +584,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 build_config["d_api_endpoint"]["value"] = ""
 
+            # Choose the right api endpiong
+            api_endpoint = build_config["d_api_endpoint"]["value"] or field_value
+
             # Reset the list of collections we have based on the token provided
-            return self.reset_collection_list(build_config)
+            return self.reset_collection_list(build_config, api_endpoint=api_endpoint)
 
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
