@@ -73,7 +73,7 @@ export default function FilesContextMenuComponent({
           />
           Rename
         </DropdownMenuItem>
-        <DropdownMenuItem
+        {/* <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
             handleSelectOptionsChange("replace");
@@ -87,7 +87,7 @@ export default function FilesContextMenuComponent({
             className="mr-2 h-4 w-4"
           />
           Replace
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
