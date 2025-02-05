@@ -257,6 +257,7 @@ const config = {
         "terminal-green": "hsl(var(--terminal-green))",
         "cosmic-void": "hsl(var(--cosmic-void))",
         "slider-input-border": "var(--slider-input-border)",
+        "zinc-foreground": "hsl(var(--zinc-foreground))",
       },
       borderRadius: {
         lg: `var(--radius)`,

@@ -34,21 +34,15 @@ test(
 
     //connection 1
 
-    const elementPrompt = await page
+    await page
       .getByTestId("handle-prompt-shownode-prompt message-right")
-      .first();
-    await elementPrompt.hover();
-    await page.mouse.down();
+      .first()
+      .click();
 
-    await page.locator('//*[@id="react-flow-id"]').hover();
-
-    const elementChatOutput = await page
+    await page
       .getByTestId("handle-chatoutput-shownode-text-left")
-      .first();
-    await elementChatOutput.hover();
-    await page.mouse.up();
-
-    await page.locator('//*[@id="react-flow-id"]').hover();
+      .first()
+      .click();
 
     await page.getByTestId("button_open_prompt_modal").click();
 
@@ -58,7 +52,7 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully");
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -70,7 +64,7 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.getByText("Prompt", { exact: true }).click();
+    await page.getByText("Prompt", { exact: true }).last().click();
 
     await page.getByTestId("more-options-modal").click();
 
@@ -79,8 +73,6 @@ test(
     await page.waitForSelector(".border-ring-frozen", { timeout: 3000 });
 
     expect(page.locator(".border-ring-frozen")).toHaveCount(1);
-
-    await page.locator('//*[@id="react-flow-id"]').click();
 
     await page.getByTestId("button_open_prompt_modal").click();
 
