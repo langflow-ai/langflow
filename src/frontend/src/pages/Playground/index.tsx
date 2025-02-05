@@ -7,7 +7,8 @@ import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import cloneFLowWithParent from "../../utils/storeUtils";
+import cloneFLowWithParent, { getInputsAndOutputs } from "../../utils/storeUtils";
+import useFlowStore from "@/stores/flowStore";
 
 export default function PlaygroundPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -65,6 +66,11 @@ export default function PlaygroundPage() {
 
   useEffect(() => {
     document.title = currentSavedFlow?.name || "Langflow";
+    const { inputs, outputs } = getInputsAndOutputs(currentSavedFlow?.data?.nodes||[]);
+    if(inputs.length === 0 && outputs.length === 0){
+      // redirect to the home page
+      navigate("/");
+    }
   }, [currentSavedFlow]);
 
   return (
