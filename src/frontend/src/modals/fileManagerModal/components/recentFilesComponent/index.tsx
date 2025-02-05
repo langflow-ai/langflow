@@ -9,10 +9,12 @@ export default function RecentFilesComponent({
   files,
   selectedFiles,
   setSelectedFiles,
+  types,
 }: {
   selectedFiles: string[];
   files: FileType[];
   setSelectedFiles: (files: string[]) => void;
+  types: string[];
 }) {
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
 
@@ -30,9 +32,16 @@ export default function RecentFilesComponent({
   const [searchQuery, setSearchQuery] = useState("");
 
   const searchResults = useMemo(() => {
-    if (!searchQuery) return files ?? [];
-    return fuse.search(searchQuery).map(({ item }) => item);
-  }, [searchQuery, files, selectedFiles]);
+    const filteredFiles = (
+      searchQuery
+        ? fuse.search(searchQuery).map(({ item }) => item)
+        : (files ?? [])
+    ).filter((file) => {
+      const fileExtension = file.path.split(".").pop()?.toLowerCase();
+      return fileExtension && types.includes(fileExtension);
+    });
+    return filteredFiles;
+  }, [searchQuery, files, selectedFiles, types]);
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFiles(

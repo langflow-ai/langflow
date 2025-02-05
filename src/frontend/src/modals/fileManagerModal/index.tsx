@@ -67,6 +67,7 @@ export default function FileManagerModal({
               files={files}
               selectedFiles={internalSelectedFiles}
               setSelectedFiles={setInternalSelectedFiles}
+              types={types}
             />
           </div>
         </BaseModal.Content>
