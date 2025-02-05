@@ -1,3 +1,4 @@
+import { useDarkStore } from "@/stores/darkStore";
 import React, { forwardRef } from "react";
 import SvgJSIcon from "./JSIcon";
 
@@ -5,5 +6,6 @@ export const JSIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SvgJSIcon ref={ref} {...props} />;
+  const isdark = useDarkStore((state) => state.dark)
+  return <SvgJSIcon ref={ref} {...props} isdark={isdark} />;
 });
