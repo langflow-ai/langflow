@@ -3,6 +3,7 @@ import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
+import { useAlternate } from "@/shared/hooks/use-alternate";
 import useFlowStore from "@/stores/flowStore";
 import { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
@@ -92,6 +93,8 @@ function NoteNode({
     }
   }, [nodeData, nodeDataWidth, nodeDataHeight, resizedNote]);
 
+  const [editNameDescription, set] = useAlternate(false);
+
   const MemoNoteToolbarComponent = useMemo(
     () =>
       selected ? (
@@ -173,6 +176,9 @@ function NoteNode({
             placeholderClassName={
               COLOR_OPTIONS[bgColor] === null ? "" : "dark:!text-background"
             }
+            editNameDescription={editNameDescription}
+            setEditNameDescription={set}
+            stickyNote
           />
         </div>
       </div>
