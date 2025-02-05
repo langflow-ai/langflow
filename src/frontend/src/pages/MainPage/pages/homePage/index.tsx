@@ -77,7 +77,7 @@ const HomePage = ({ type }) => {
     flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
     undefined;
 
-  const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : type);
+  const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
   useEffect(() => {
     if (
@@ -95,7 +95,7 @@ const HomePage = ({ type }) => {
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
-      dragMessage={`Drag your ${isEmptyFolder ? "flow or component" : type.slice(0, -1)} here`}
+      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
