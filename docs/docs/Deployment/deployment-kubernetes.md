@@ -6,7 +6,7 @@ slug: /deployment-kubernetes
 
 This guide will help you get Langflow up and running in a Kubernetes cluster. Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
 
-- Install [Langflow as IDE](/deployment-kubernetes#langflow-ide) in a Kubernetes cluster for the complete Langflow development environment.
+- Install [Langflow as an IDE](/deployment-kubernetes#langflow-ide) in a Kubernetes cluster for the complete Langflow development environment.
 - Install [Langflow as a standalone application](/deployment-kubernetes#langflow-runtime) to deploy a Langflow application in a more secure and stable environment.
 
 ## Langflow IDE deployment
@@ -83,8 +83,8 @@ kubectl port-forward -n langflow svc/langflow-service 8080:8080
 ```
 
 Now you can access:
-- Langflow UI at `http://localhost:8080`
-- Langflow API at `http://localhost:7860`
+- The Langflow UI at `http://localhost:8080`
+- The Langflow API at `http://localhost:7860`
 
 
 ### Configure the Langflow version
@@ -276,7 +276,7 @@ curl -X POST \
 
 To inject secrets and Langflow global variables, use the `secrets` and `env` sections in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
-For example, the [example flow JSON](https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json) uses a global variable which is a secret. When you export the flow as JSON, it's recommended to not include the secret.
+For example, the [example flow JSON](https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json) uses a global variable that is a secret. When you export the flow as JSON, it's recommended to not include the secret.
 
 Instead, when importing the flow in the Langflow runtime, set the global variable using the `env` section in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file. Assuming you have a global variable called `openai_key_var`, you can read it directly from a secret:
 
@@ -306,12 +306,12 @@ kubectl create secret generic openai-credentials \
   --from-literal=OPENAI_API_KEY=your-api-key-here
 ```
 
-2. Verify secret exists (the result is encrypted).
+2. Verify the secret exists. The result is encrypted.
 ```shell
 kubectl get secrets -n langflow openai-credentials
 ```
 
-3. Upgrade the helm release to use the secret.
+3. Upgrade the Helm release to use the secret.
 ```shell
 helm upgrade my-langflow-app-image langflow/langflow-runtime -n langflow \
   --reuse-values \
