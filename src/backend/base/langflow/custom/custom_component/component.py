@@ -440,7 +440,7 @@ class Component(CustomComponent):
 
     async def run_and_validate_update_outputs(self, frontend_node: dict, field_name: str, field_value: Any):
         frontend_node = self.update_outputs(frontend_node, field_name, field_value)
-        if field_name == "tool_mode" or frontend_node.get("tool_mode") or self.add_tool_output:
+        if field_name == "tool_mode" or frontend_node.get("tool_mode"):
             is_tool_mode = field_value or frontend_node.get("tool_mode")
             frontend_node["outputs"] = [self._build_tool_output()] if is_tool_mode else frontend_node["outputs"]
             if is_tool_mode:
