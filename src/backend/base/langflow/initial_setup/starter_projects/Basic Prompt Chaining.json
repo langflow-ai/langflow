@@ -2,179 +2,165 @@
   "data": {
     "edges": [
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-PG8Vd",
+            "id": "Prompt-f1f2v",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-3VRcc",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-lL9HA",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-PG8Vd{œdataTypeœ:œPromptœ,œidœ:œPrompt-PG8Vdœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-3VRcc{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-3VRccœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-PG8Vd",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-PG8Vdœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-3VRcc",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-3VRccœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-f1f2v{œdataTypeœ:œPromptœ,œidœ:œPrompt-f1f2vœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-lL9HA{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-lL9HAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-f1f2v",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-f1f2vœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-lL9HA",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-lL9HAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-nB59E",
+            "id": "ChatInput-GyBUF",
             "name": "message",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-3VRcc",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-lL9HA",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-nB59E{œdataTypeœ:œChatInputœ,œidœ:œChatInput-nB59Eœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-3VRcc{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-3VRccœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-nB59E",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nB59Eœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-3VRcc",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-3VRccœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-GyBUF{œdataTypeœ:œChatInputœ,œidœ:œChatInput-GyBUFœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-lL9HA{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-lL9HAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-GyBUF",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-GyBUFœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-lL9HA",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-lL9HAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-3VRcc",
+            "id": "OpenAIModel-lL9HA",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-01mE2",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-JieGw",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__OpenAIModel-3VRcc{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-3VRccœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-01mE2{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-01mE2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-3VRcc",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-3VRccœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-01mE2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-01mE2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-lL9HA{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-lL9HAœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-JieGw{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-JieGwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-lL9HA",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-lL9HAœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-JieGw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-JieGwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-aDWJD",
+            "id": "Prompt-4IOgm",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-01mE2",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-JieGw",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-aDWJD{œdataTypeœ:œPromptœ,œidœ:œPrompt-aDWJDœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-01mE2{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-01mE2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-aDWJD",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-aDWJDœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-01mE2",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-01mE2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-4IOgm{œdataTypeœ:œPromptœ,œidœ:œPrompt-4IOgmœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-JieGw{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-JieGwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-4IOgm",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-4IOgmœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-JieGw",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-JieGwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-01mE2",
+            "id": "OpenAIModel-JieGw",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-4DgWt",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-dXMRv",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__OpenAIModel-01mE2{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-01mE2œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-4DgWt{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-4DgWtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-01mE2",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-01mE2œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-4DgWt",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-4DgWtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-JieGw{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-JieGwœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-dXMRv{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-dXMRvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-JieGw",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-JieGwœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-dXMRv",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-dXMRvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-fv4MA",
+            "id": "Prompt-FRjO8",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-4DgWt",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-dXMRv",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-fv4MA{œdataTypeœ:œPromptœ,œidœ:œPrompt-fv4MAœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-4DgWt{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-4DgWtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-fv4MA",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-fv4MAœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-4DgWt",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-4DgWtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-FRjO8{œdataTypeœ:œPromptœ,œidœ:œPrompt-FRjO8œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-dXMRv{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-dXMRvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-FRjO8",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-FRjO8œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-dXMRv",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-dXMRvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-4DgWt",
+            "id": "OpenAIModel-dXMRv",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-PE0wW",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "ChatOutput-KXQMh",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "xy-edge__OpenAIModel-4DgWt{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-4DgWtœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PE0wW{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PE0wWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-4DgWt",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-4DgWtœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-PE0wW",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-PE0wWœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-dXMRv{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-dXMRvœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KXQMh{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KXQMhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "OpenAIModel-dXMRv",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-dXMRvœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-KXQMh",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-KXQMhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -182,11 +168,9 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-aDWJD",
+          "id": "Prompt-4IOgm",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -196,9 +180,7 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "legacy": false,
@@ -265,9 +247,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -288,10 +268,10 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-aDWJD",
+        "id": "Prompt-4IOgm",
         "measured": {
           "height": 260,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1921.9168573384,
@@ -307,11 +287,9 @@
       },
       {
         "data": {
-          "id": "ChatInput-nB59E",
+          "id": "ChatInput-GyBUF",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -362,9 +340,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -383,9 +359,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -486,10 +460,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -504,9 +475,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -525,9 +494,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -562,9 +529,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -583,10 +548,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-nB59E",
+        "id": "ChatInput-GyBUF",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1178.0239685549568,
@@ -604,11 +569,9 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-PE0wW",
+          "id": "ChatOutput-KXQMh",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -657,9 +620,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -679,9 +640,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -719,9 +678,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -741,9 +698,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -764,10 +719,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -783,9 +735,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -805,9 +755,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -843,9 +791,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -866,10 +812,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-PE0wW",
+        "id": "ChatOutput-KXQMh",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 3389.8335347035913,
@@ -887,11 +833,9 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-fv4MA",
+          "id": "Prompt-FRjO8",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -901,9 +845,7 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "legacy": false,
@@ -970,9 +912,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -993,10 +933,10 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-fv4MA",
+        "id": "Prompt-FRjO8",
         "measured": {
           "height": 260,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 2647.8305106628454,
@@ -1014,11 +954,9 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-PG8Vd",
+          "id": "Prompt-f1f2v",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -1028,9 +966,7 @@
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "legacy": false,
@@ -1097,9 +1033,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -1120,10 +1054,10 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-PG8Vd",
+        "id": "Prompt-f1f2v",
         "measured": {
           "height": 260,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1178.7099500302636,
@@ -1139,7 +1073,7 @@
       },
       {
         "data": {
-          "id": "note-rGShm",
+          "id": "note-UUVIc",
           "node": {
             "description": "### Input Examples\n1.\n    \"The growing demand for personalized, AI-driven mental health support tools that can provide real-time interventions and track long-term emotional well-being.\"\n\n\n2. \n    \"The increasing need for secure and user-friendly decentralized finance (DeFi) platforms that make cryptocurrency investments accessible to non-tech-savvy users.\"\n \n\n3. \n    \"The rising popularity of immersive, augmented reality (AR) experiences for remote collaboration and virtual team-building in distributed workforces.\"\n\n\n4. \n    \"The expanding market for smart, IoT-enabled urban farming solutions that allow city dwellers to grow their own food efficiently in small spaces.\"\n\n\n5. \n    \"The emerging demand for AI-powered personal styling and shopping assistants that consider sustainability, body positivity, and individual style preferences.\"\n\n",
             "display_name": "",
@@ -1151,11 +1085,11 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 430,
-        "id": "note-rGShm",
+        "height": 324,
+        "id": "note-UUVIc",
         "measured": {
-          "height": 430,
-          "width": 328
+          "height": 324,
+          "width": 324
         },
         "position": {
           "x": 528.0392006831054,
@@ -1168,15 +1102,15 @@
         "resizing": false,
         "selected": false,
         "style": {
-          "height": 430,
-          "width": 600
+          "height": 324,
+          "width": 324
         },
         "type": "noteNode",
-        "width": 600
+        "width": 324
       },
       {
         "data": {
-          "id": "note-ECxh2",
+          "id": "note-DqpAx",
           "node": {
             "description": "### Prompt Chaining\n\nThis flow demonstrates fundamental prompt chaining principles:\n\n1. **Chain Structure**\n   • User input → First Prompt → LLM\n   • First output → Second Prompt → LLM\n   • Second output → Final Prompt → LLM\n   • Final output\n\n2. **Key Technique Elements**\n   • Each prompt is specifically designed to process previous output\n   • Output formatting ensures clean handoff between stages\n   • Context flows naturally through the chain\n   • Each LLM call builds upon previous results\n\n3. **Technical Implementation**\n   • Multiple prompt templates working in sequence\n   • Strategic input/output connections\n   • Consistent message handling between stages\n   • Progressive refinement through the chain\n\nThis pattern can be adapted for any use case by modifying the prompt templates while keeping the same chaining structure.",
             "display_name": "",
@@ -1188,11 +1122,11 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 451,
-        "id": "note-ECxh2",
+        "height": 324,
+        "id": "note-DqpAx",
         "measured": {
-          "height": 451,
-          "width": 328
+          "height": 324,
+          "width": 324
         },
         "position": {
           "x": 892.4280059782889,
@@ -1205,20 +1139,17 @@
         "resizing": false,
         "selected": false,
         "style": {
-          "height": 451,
-          "width": 600
+          "height": 324,
+          "width": 324
         },
         "type": "noteNode",
-        "width": 600
+        "width": 324
       },
       {
         "data": {
-          "id": "OpenAIModel-3VRcc",
+          "id": "OpenAIModel-lL9HA",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1268,9 +1199,7 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1289,9 +1218,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1300,7 +1227,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1326,9 +1253,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1492,9 +1417,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1545,10 +1468,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-3VRcc",
+        "id": "OpenAIModel-lL9HA",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 653,
+          "width": 320
         },
         "position": {
           "x": 1563.1591714154865,
@@ -1559,12 +1482,9 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-01mE2",
+          "id": "OpenAIModel-JieGw",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1614,9 +1534,7 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1635,9 +1553,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1646,7 +1562,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1672,9 +1588,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1838,9 +1752,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1891,10 +1803,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-01mE2",
+        "id": "OpenAIModel-JieGw",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 653,
+          "width": 320
         },
         "position": {
           "x": 2289.2925714867265,
@@ -1905,12 +1817,9 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-4DgWt",
+          "id": "OpenAIModel-dXMRv",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1960,9 +1869,7 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
                 "tool_mode": true,
                 "types": [
@@ -1981,9 +1888,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1992,7 +1897,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2018,9 +1923,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2184,9 +2087,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2237,10 +2138,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-4DgWt",
+        "id": "OpenAIModel-dXMRv",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 653,
+          "width": 320
         },
         "position": {
           "x": 3018.8917918926063,
@@ -2264,7 +2165,5 @@
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "Prompt Chaining",
-  "tags": [
-    "chatbots"
-  ]
+  "tags": ["chatbots"]
 }

@@ -194,9 +194,28 @@ This component fetches content from one or more URLs, processes the content, and
 
 ## Webhook
 
-This component defines a webhook input for the flow. The flow can be triggered by an external HTTP POST request (webhook) sending a JSON payload.
+This component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
 
-If the input is not valid JSON, the component wraps it in a "payload" field. The component's status reflects any errors on the processed data.
+If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. The component does not require an API key.
+
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+
+```bash
+curl -X POST \
+  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  -H 'Content-Type: application/json'\
+  -d '{"any": "data"}'
+  ```
+
+To test the webhook component:
+
+1. Add a **Webhook** component to the flow.
+2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Data to Message](/components-processing#parse-data-data-to-message) component.
+3. Connect the **Data to Message** component's **Message** output to the **Text** input of a [Chat Output](/components-io#chat-output) component.
+4. To send a POST request, copy the code from the **Webhook cURL** tab in the **API** pane and paste it into a terminal.
+5. Send the POST request.
+6. Open the **Playground**.
+Your JSON data is posted to the **Chat Output** component, which indicates that the webhook component is correctly triggering the flow.
 
 ### Inputs
 
