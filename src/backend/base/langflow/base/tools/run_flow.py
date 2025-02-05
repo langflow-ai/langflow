@@ -29,6 +29,7 @@ class RunFlowBaseComponent(Component):
         super().__init__(*args, **kwargs)
         self.add_tool_output = True
         # self.tool_mode = True
+
     # tool_mode=True
     _base_inputs: list[InputTypes] = [
         DropdownInput(
