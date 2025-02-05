@@ -44,7 +44,7 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service, session_scope
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
@@ -764,8 +764,8 @@ async def build_public_tmp(
     log_builds: bool | None = True,
     session: DbSession,
 ):
-    is_public_flow = (await session.exec(select(Flow.public).where(Flow.id == flow_id))).first()
-    if not is_public_flow:
+    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
+    if access_type is not AccessTypeEnum.PUBLIC:
         raise HTTPException(status_code=403, detail="Flow is not public")
 
     current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
