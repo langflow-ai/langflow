@@ -112,9 +112,11 @@ class ParseComponent(Component):
         if df is not None:
             lines = [self._format_dataframe_row(row.to_dict()) for _, row in df.iterrows()]
         else:
-            lines = data_to_text(template, data, sep).split(sep) if template else [
-                json.dumps(d.__dict__, ensure_ascii=False) for d in data if d
-            ]
+            lines = (
+                data_to_text(template, data, sep).split(sep)
+                if template
+                else [json.dumps(d.__dict__, ensure_ascii=False) for d in data if d]
+            )
 
         result = sep.join(lines)
         self.status = result
@@ -124,8 +126,7 @@ class ParseComponent(Component):
         df, data, template, _ = self._clean_args()
 
         if df is not None:
-            return [Data(text=self._format_dataframe_row(row.to_dict()))
-                   for _, row in df.iterrows()]
+            return [Data(text=self._format_dataframe_row(row.to_dict())) for _, row in df.iterrows()]
 
         if template:
             texts, items = data_to_text_list(template, data)
