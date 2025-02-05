@@ -5,13 +5,15 @@ import { useState } from "react";
 
 export default function DragFilesComponent({
   onUpload,
+  types,
 }: {
   onUpload: (filesPaths: string[]) => void;
+  types: string[];
 }) {
   const image = `url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23FFFFFF' stroke-width='2px' stroke-dasharray='5%2c 5' stroke-dashoffset='0' stroke-linecap='butt'/%3E%3C/svg%3E")`;
   const [isDragging, setIsDragging] = useState(false);
   const uploadFile = useUploadFile({
-    types: [".json", ".csv", ".pdf"],
+    types,
   });
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -85,12 +87,14 @@ export default function DragFilesComponent({
           {isDragging ? "Drop files here" : "Click or drag files here"}
         </h3>
         <p className="flex items-center gap-1 text-xs">
-          <span>csv, json, pdf</span>
-          <ShadTooltip content="txt, md, mdx, csv, json, yaml, yml, xml, html, htm, pdf, docx, py, sh, sql, js, ts, tsx, or zip">
-            <span className="cursor-help text-accent-pink-foreground underline">
-              +16 more
-            </span>
-          </ShadTooltip>
+          <span>{types.slice(0, 3).join(", ")}</span>
+          {types.length > 3 && (
+            <ShadTooltip content={types.slice(3).join(", ")}>
+              <span className="cursor-help text-accent-pink-foreground underline">
+                +{types.length - 3} more
+              </span>
+            </ShadTooltip>
+          )}
           <span className="font-semibold">150 MB</span>
           <span>max</span>
         </p>

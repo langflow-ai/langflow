@@ -136,6 +136,7 @@ export default function InputFileComponent({
                   });
                 }}
                 disabled={isDisabled}
+                types={fileTypes}
               >
                 <Button
                   disabled={isDisabled}

@@ -11,7 +11,7 @@ const useUploadFile = ({ types }: { types: string[] }) => {
   }): Promise<File[]> => {
     if (!files) {
       files = await createFileUpload({
-        accept: types.join(","),
+        accept: types.map((type) => `.${type}`).join(","),
         multiple: true,
       });
     }
@@ -28,6 +28,14 @@ const useUploadFile = ({ types }: { types: string[] }) => {
       const filesIds: string[] = [];
 
       for (const file of filesToUpload) {
+        // Check if file extension is allowed
+        const fileExtension = file.name.split(".").pop()?.toLowerCase();
+        if (!fileExtension || !types.includes(fileExtension)) {
+          throw new Error(
+            `File type not allowed. Allowed types: ${types.join(", ")}`,
+          );
+        }
+
         const res = await uploadFileMutation({
           file,
         });

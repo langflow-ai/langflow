@@ -12,6 +12,7 @@ export default function FileManagerModal({
   selectedFiles,
   disabled,
   files,
+  types,
 }: {
   children?: ReactNode;
   selectedFiles?: string[];
@@ -20,6 +21,7 @@ export default function FileManagerModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
   files: FileType[];
+  types: string[];
 }): JSX.Element {
   const [internalOpen, internalSetOpen] = useState(false);
 
@@ -59,7 +61,7 @@ export default function FileManagerModal({
         </BaseModal.Header>
         <BaseModal.Content>
           <div className="flex flex-col gap-4">
-            <DragFilesComponent onUpload={handleUpload} />
+            <DragFilesComponent onUpload={handleUpload} types={types} />
             <ImportFilesComponent />
             <RecentFilesComponent
               files={files}

@@ -41,7 +41,10 @@ export default function FilesRendererComponent({
           <div className="flex items-center gap-2">
             <ForwardedIconComponent
               name={FILE_ICONS[type]?.icon ?? "File"}
-              className={cn("h-6 w-6 shrink-0", FILE_ICONS[type].color)}
+              className={cn(
+                "h-6 w-6 shrink-0",
+                FILE_ICONS[type]?.color ?? undefined,
+              )}
             />
             <span className="text-sm font-medium">{file.name}</span>
             <span className="text-xs text-muted-foreground">
