@@ -134,21 +134,19 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       }
     }
 
-    newEdges = filterHiddenFieldsEdges(nodes, edge, newEdges);
+    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
   return newEdges;
 }
 
 export function filterHiddenFieldsEdges(
-  nodes: AllNodeType[],
   edge: EdgeType,
   newEdges: EdgeType[],
+  targetNode: AllNodeType,
 ) {
-  const node = nodes.find((n) => n.id === edge.target);
-
-  if (node) {
+  if (targetNode) {
     const nodeInputType = edge.data?.targetHandle?.inputTypes;
-    const nodeTemplates = node.data.node!.template;
+    const nodeTemplates = targetNode.data.node!.template;
 
     Object.keys(nodeTemplates).forEach((key) => {
       if (!nodeTemplates[key]?.input_types) return;
