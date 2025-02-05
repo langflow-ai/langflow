@@ -38,7 +38,7 @@ async def read_tasks(
     skip: int = 0,
     limit: int = 100,
 ):
-    return session.exec(select(Task).offset(skip).limit(limit)).all()
+    return (await session.exec(select(Task).offset(skip).limit(limit))).all()
 
 
 @router.get("/{task_id}", response_model=TaskRead)
