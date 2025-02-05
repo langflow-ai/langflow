@@ -145,6 +145,42 @@ export default function InputFileComponent({
       ? (file_path ?? "")
       : [file_path ?? ""];
 
+  useEffect(() => {
+    if (files !== null) {
+      if (isList) {
+        if (
+          Array.isArray(value) &&
+          value.every((v) => files?.find((f) => f.name === v)) &&
+          Array.isArray(file_path) &&
+          file_path.every((v) => files?.find((f) => f.path === v))
+        ) {
+          return;
+        }
+      } else {
+        if (
+          typeof value === "string" &&
+          files?.find((f) => f.name === value) &&
+          typeof file_path === "string" &&
+          files?.find((f) => f.path === file_path)
+        ) {
+          return;
+        }
+      }
+      handleOnNewValue({
+        value: isList
+          ? (files
+              ?.filter((f) => selectedFiles.includes(f.path))
+              .map((f) => f.name) ?? [])
+          : (files?.find((f) => selectedFiles.includes(f.path))?.name ?? ""),
+        file_path: isList
+          ? (files
+              ?.filter((f) => selectedFiles.includes(f.path))
+              .map((f) => f.path) ?? [])
+          : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
+      });
+    }
+  }, [files, value, file_path]);
+
   return (
     <div className="w-full">
       <div className="flex flex-col gap-2.5">
@@ -198,7 +234,7 @@ export default function InputFileComponent({
                   className="font-semibold"
                   data-testid="button_open_file_management"
                 >
-                  <div>Select files</div>
+                  <div>Select file{isList ? "s" : ""}</div>
                 </Button>
               </FileManagerModal>
             </div>
