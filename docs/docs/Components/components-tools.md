@@ -299,10 +299,6 @@ To use the MCP SSE component, follow these steps:
 2. In the MCP SSE component, in the **url** field, enter the URL of your current Langflow server's `mcp/sse` endpoint.
 This will fetch all currently available tools from the Langflow server.
 
-```
-http://localhost:7860/api/v1/mcp/sse
-```
-
 ### Inputs
 
 | Name | Type   | Description                                          |
