@@ -24,7 +24,7 @@ This component modifies metadata of input objects. It can add new metadata, upda
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_value | Input | Objects to which Metadata should be added |
-| text_in | User Text | Text input; value will be in 'text' attribute of [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
+| text_in | User Text | Text input; the value will be in the 'text' attribute of the [Data](/concepts-objects#data-object) object. Empty text entries are ignored. |
 | metadata | Metadata | Metadata to add to each object |
 | remove_fields | Fields to Remove | Metadata Fields to Remove |
 
@@ -134,8 +134,8 @@ The Filter values component filters a list of data items based on a specified ke
 | Name | Display Name | Info |
 |------|--------------|------|
 | input_data | Input data | The list of data items to filter. |
-| filter_key | Filter Key | The key to filter on (for example, 'route'). |
-| filter_value | Filter Value | The value to filter by (for example, 'CMIP'). |
+| filter_key | Filter Key | The key to filter on, for example, 'route'. |
+| filter_value | Filter Value | The value to filter by, for example, 'CMIP'. |
 | operator | Comparison Operator | The operator to apply for comparing the values. |
 
 ### Outputs
@@ -193,13 +193,13 @@ The component iterates through the input list of data objects, merging them into
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | A list of data objects to be merged |
+| data | Data | A list of data objects to be merged. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects |
+| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
 
 
 ## Message to data
@@ -210,13 +210,13 @@ This component converts [Message](/concepts-objects#message-object) objects to [
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| message | Message | The [Message](/concepts-objects#message-object) object to convert to a [Data](/concepts-objects#data-object) object |
+| message | Message | The [Message](/concepts-objects#message-object) object to convert to a [Data](/concepts-objects#data-object) object. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | The converted [Data](/concepts-objects#data-object) object |
+| data | Data | The converted [Data](/concepts-objects#data-object) object. |
 
 ## Parse Data (Data to message)
 
@@ -228,7 +228,7 @@ This component transforms structured data into human-readable text formats, allo
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | The data to convert to text. |
-| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}` or any other key in the data. |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}`, or any other key in the data. |
 | sep | Separator | The separator to use between multiple data items. |
 
 ### Outputs
@@ -264,14 +264,14 @@ This component converts and extracts JSON fields using JQ queries.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| input_value | Input | Data object to filter ([Message](/concepts-objects#message-object) or [Data](/concepts-objects#data-object)) |
+| input_value | Input | Data object to filter ([Message](/concepts-objects#message-object) or [Data](/concepts-objects#data-object)). |
 | query | JQ Query | JQ Query to filter the data |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects |
+| filtered_data | Filtered Data | Filtered data as list of [Data](/concepts-objects#data-object) objects. |
 
 ## Select data
 
@@ -288,7 +288,7 @@ This component selects a single [Data](/concepts-objects#data-object) item from 
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object |
+| selected_data | Selected Data | The selected [Data](/concepts-objects#data-object) object. |
 
 ## Split text
 
@@ -307,7 +307,7 @@ This component splits text into chunks based on specified criteria.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| chunks | Chunks | List of split text chunks as [Data](/concepts-objects#data-object) objects |
+| chunks | Chunks | List of split text chunks as [Data](/concepts-objects#data-object) objects. |
 | dataframe | DataFrame | The chunks as a DataFrame |
 
 ## Update data
@@ -327,4 +327,4 @@ This component dynamically updates or appends data with specified fields.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | Updated [Data](/concepts-objects#data-object) objects |
+| data | Data | Updated [Data](/concepts-objects#data-object) objects. |
