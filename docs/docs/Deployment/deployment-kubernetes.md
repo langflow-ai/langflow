@@ -4,7 +4,7 @@ slug: /deployment-kubernetes
 ---
 
 
-This guide will help you get Langflow up and running in a Kubernetes cluster. Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
+This guide demonstrates deploying Langflow on a Kubernetes cluster. Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
 
 - Install [Langflow as an IDE](/deployment-kubernetes#langflow-ide) in a Kubernetes cluster for the complete Langflow development environment.
 - Install [Langflow as a standalone application](/deployment-kubernetes#langflow-runtime) to deploy a Langflow application in a more secure and stable environment.
@@ -108,7 +108,7 @@ langflow:
 
 ### Configure external storage
 
-By default, the chart will use a SQLite database stored in a local persistent disk.
+By default, the chart deploys a SQLite database stored in a local persistent disk.
 If you want to use an external PostgreSQL database, you can configure it in two ways:
 
 * Use the built-in PostgreSQL chart:
@@ -240,7 +240,7 @@ kubectl get pods -n langflow
 kubectl get svc -n langflow
 ```
 
-The service name will be your release name followed by `-langflow-runtime`. For example, if you used `helm install my-langflow-app-with-flow` the service would be `my-langflow-app-with-flow-langflow-runtime`
+The service name is your release name followed by `-langflow-runtime`. For example, if you used `helm install my-langflow-app-with-flow` the service would be `my-langflow-app-with-flow-langflow-runtime`
 
 2. Enable port forwarding to access Langflow from your local machine:
 
@@ -255,7 +255,7 @@ curl -v http://localhost:7860/api/v1/flows/
 
 4. Execute the packaged flow.
 
-The following command will get the first flow ID from the flows list and run the flow.
+The following command gets the first flow ID from the flows list and runs the flow.
 
 ```shell
 # Get flow ID

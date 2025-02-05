@@ -3,7 +3,7 @@ title: Deploy Langflow on HuggingFace Spaces
 slug: /deployment-hugging-face-spaces
 ---
 
-Run Langflow in a [HuggingFace Spaces](https://huggingface.co/spaces/) environment with no local installation required.
+This guide demonstrates deploying Langflow on [HuggingFace Spaces](https://huggingface.co/spaces/).
 
 1. **Access Langflow Space**: Open a Chromium-based browser and navigate to the [Langflow Space](https://huggingface.co/spaces/Langflow/Langflow?duplicate=true). This link directs you to a pre-configured environment for Langflow.
 
@@ -16,8 +16,7 @@ Run Langflow in a [HuggingFace Spaces](https://huggingface.co/spaces/) environme
 
 ![](/img/hugging-face-deployment.png)
 
-3. **Complete Installation**: The duplication and setup process begins immediately after you click **Duplicate Space**. Once completed, you will be automatically redirected to the main page of your new Space.
+3. **Complete Installation**: The duplication and setup process begins immediately after you click **Duplicate Space**. Once completed, you are automatically redirected to the main page of your new Space.
 
-
-4. **Start Exploring Langflow**: With the setup complete, Langflow is now ready for use in your Space and you can start exploring its features and capabilities right away! 
+4. **Start Exploring Langflow**: With the setup complete, Langflow is now ready for use in your Space and you can start exploring its features and capabilities right away!
 

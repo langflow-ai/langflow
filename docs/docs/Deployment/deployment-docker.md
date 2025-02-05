@@ -3,11 +3,9 @@ title: Deploy Langflow on Docker
 slug: /deployment-docker
 ---
 
-This guide will help you get Langflow up and running using Docker and Docker Compose.
-
+This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
 ## Prerequisites
-
 
 - [Docker](https://docs.docker.com/)
 - [Docker Compose](https://docs.docker.com/compose/)
@@ -27,7 +25,7 @@ This guide will help you get Langflow up and running using Docker and Docker Com
 	`docker compose up`
 
 
-Langflow will now be accessible at `http://localhost:7860/`.
+Langflow is now accessible at `http://localhost:7860/`.
 
 
 ## Configure Docker Compose
