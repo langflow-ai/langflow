@@ -150,7 +150,9 @@ def create_app():
     """Create the FastAPI app and include the router."""
     from langflow.utils.version import get_version_info
 
-    __version__ = get_version_info()["version"]
+    version_info = get_version_info()
+    # TODO: Remove this once we have a proper versioning system
+    __version__ = version_info["version"] if version_info else "dev"
 
     configure()
     lifespan = get_lifespan(version=__version__)

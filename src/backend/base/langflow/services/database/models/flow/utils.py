@@ -34,7 +34,8 @@ def get_components_versions(flow: Flow):
 
 def get_outdated_components(flow: Flow):
     component_versions = get_components_versions(flow)
-    lf_version = get_version_info()["version"]
+    version_info = get_version_info()
+    lf_version = version_info["version"] if version_info else "dev"
     outdated_components = []
     for key, value in component_versions.items():
         if value != lf_version:

@@ -282,7 +282,8 @@ class Settings(BaseSettings):
             from langflow.utils.version import get_version_info
             from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
-            version = get_version_info()["version"]
+            version_info = get_version_info()
+            version = version_info["version"] if version_info else "dev"
             is_pre_release = langflow_is_pre_release(version)
 
             if info.data["save_db_in_config_dir"]:

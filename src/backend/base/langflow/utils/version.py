@@ -1,6 +1,7 @@
 from importlib import metadata
 
 import httpx
+from loguru import logger
 from packaging import version as pkg_version
 
 
@@ -36,7 +37,7 @@ def _get_version_info():
             prerelease_version = __version__
             version = _compute_non_prerelease_version(prerelease_version)
         except (ImportError, metadata.PackageNotFoundError):
-            pass
+            logger.warning(f"Package {pkg_name} not found")
         else:
             return {
                 "version": prerelease_version,
@@ -46,7 +47,7 @@ def _get_version_info():
 
     if __version__ is None:
         msg = f"Package not found from options {package_options}"
-        raise ValueError(msg)
+        logger.error(msg)
     return None
 
 
