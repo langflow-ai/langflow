@@ -88,7 +88,7 @@ def execute_function(code, function_name, *args, **kwargs):
 
     module = ast.parse(code)
     exec_globals = globals().copy()
-
+    locals_dict = locals()
     for node in module.body:
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -96,7 +96,7 @@ def execute_function(code, function_name, *args, **kwargs):
                     exec(
                         f"{alias.asname or alias.name} = importlib.import_module('{alias.name}')",
                         exec_globals,
-                        locals(),
+                        locals_dict,
                     )
                     exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
                 except ModuleNotFoundError as e:
@@ -109,13 +109,13 @@ def execute_function(code, function_name, *args, **kwargs):
     function_code.parent = None
     code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
     try:
-        exec(code_obj, exec_globals, locals())
+        exec(code_obj, exec_globals, locals_dict)
     except Exception as exc:
         msg = "Function string does not contain a function"
         raise ValueError(msg) from exc
 
     # Add the function to the exec_globals dictionary
-    exec_globals[function_name] = locals()[function_name]
+    exec_globals[function_name] = locals_dict[function_name]
 
     return exec_globals[function_name](*args, **kwargs)
 
@@ -152,9 +152,10 @@ def create_function(code, function_name):
     )
     function_code.parent = None
     code_obj = compile(ast.Module(body=[function_code], type_ignores=[]), "<string>", "exec")
+    locals_dict = locals()
     with contextlib.suppress(Exception):
-        exec(code_obj, exec_globals, locals())
-    exec_globals[function_name] = locals()[function_name]
+        exec(code_obj, exec_globals, locals_dict)
+    exec_globals[function_name] = locals_dict[function_name]
 
     # Return a function that imports necessary modules and calls the target function
     def wrapped_function(*args, **kwargs):
@@ -306,8 +307,9 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
     Returns:
          Constructor function for the class
     """
-    exec(compiled_class, exec_globals, locals())
-    exec_globals[class_name] = locals()[class_name]
+    locals_dict = locals()
+    exec(compiled_class, exec_globals, locals_dict)
+    exec_globals[class_name] = locals_dict[class_name]
 
     # Return a function that imports necessary modules and creates an instance of the target class
     def build_custom_class():
