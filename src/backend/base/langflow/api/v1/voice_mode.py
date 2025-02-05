@@ -19,7 +19,7 @@ from langflow.api.v1.schemas import InputValueRequest
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
-from langflow.utils.voice_utils import resample_24k_to_16k, BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K
+from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -34,6 +34,7 @@ SESSION_INSTRUCTIONS = (
     "And let them know what it does."
 )
 
+
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
     async with session_scope() as session:
@@ -45,15 +46,16 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
             raise ValueError(error_message)
         return flow.description
 
+
 async def handle_function_call(
-        websocket: WebSocket,
-        openai_ws: websockets.WebSocketClientProtocol,
-        function_call: dict,
-        function_call_args: str,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        current_user: CurrentActiveUser,
-        session: DbSession,
+    websocket: WebSocket,
+    openai_ws: websockets.WebSocketClientProtocol,
+    function_call: dict,
+    function_call_args: str,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentActiveUser,
+    session: DbSession,
 ):
     """Execute the flow, gather the streaming response,
     and send the result back to OpenAI as a function_call_output.
@@ -126,10 +128,10 @@ async def handle_function_call(
 
 @router.websocket("/ws/{flow_id}")
 async def websocket_endpoint(
-        websocket: WebSocket,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        session: DbSession,
+    websocket: WebSocket,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
 ):
     """Main WebSocket endpoint.
     - Connects to OpenAI Realtime.
@@ -154,7 +156,6 @@ async def websocket_endpoint(
                     "message": "OpenAI API key not found. Please set your API key in the variables section.",
                 }
             )
-            await websocket.close()
             return
     except Exception as e:
         logger.error("exception")
@@ -219,14 +220,11 @@ async def websocket_endpoint(
         vad = webrtcvad.Vad(mode=3)
 
         async def write_debug_audio(raw_chunk_24k: bytes) -> None:
-            """
-            Offload debug file I/O to a background thread so that it doesn't block the event loop.
-            """
+            """Offload debug file I/O to a background thread so that it doesn't block the event loop."""
             await asyncio.to_thread(lambda: open("debug_incoming_24k.raw", "ab").write(raw_chunk_24k))
 
         async def process_vad_audio() -> None:
-            """
-            Continuously process audio chunks from the vad_queue.
+            """Continuously process audio chunks from the vad_queue.
             Accumulate audio into vad_audio_buffer, extract 20ms frames,
             and run VAD on each frame. If speech is detected while the bot is speaking,
             send a cancellation message to OpenAI.
@@ -263,8 +261,7 @@ async def websocket_endpoint(
                         break
 
         async def forward_to_openai() -> None:
-            """
-            Forwards messages from the client to OpenAI.
+            """Forwards messages from the client to OpenAI.
             For audio messages, immediately forwards the raw audio
             and enqueues the raw chunk for background VAD processing.
             """
@@ -282,12 +279,10 @@ async def websocket_endpoint(
                         raw_chunk_24k = base64.b64decode(base64_data)
 
                         # Immediately forward the original audio message to OpenAI.
-                        await openai_ws.send(
-                            json.dumps({"type": "input_audio_buffer.append", "audio": base64_data})
-                        )
+                        await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
 
                         # Offload the debug file write (if desired) without blocking.
-                        #asyncio.create_task(write_debug_audio(raw_chunk_24k))
+                        # asyncio.create_task(write_debug_audio(raw_chunk_24k))
 
                         # Enqueue the raw audio chunk for background VAD processing.
                         await vad_queue.put(raw_chunk_24k)
@@ -298,8 +293,7 @@ async def websocket_endpoint(
                 pass
 
         async def forward_to_client() -> None:
-            """
-            Forwards messages from OpenAI to the client.
+            """Forwards messages from OpenAI to the client.
             Also updates bot_speaking_flag based on the events received.
             """
             nonlocal bot_speaking_flag
