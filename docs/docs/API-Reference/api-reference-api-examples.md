@@ -105,6 +105,7 @@ A dictionary of all Langflow components.
 ### Run flow
 
 Execute a specified flow by ID or name.
+The flow is executed as a batch, but LLM responses can be streamed.
 For more configuration options when building your flow, use the [`/build` endpoint](/api-reference-api-examples#build-flow) instead.
 
 <Tabs>
@@ -128,7 +129,7 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-For streaming execution of your flows, append the `?stream=true` query parameter to the request. LLM chat responses are streamed back as `token` events until the `end` event closes the connection.
+To stream LLM token responses, append the `?stream=true` query parameter to the request. LLM chat responses are streamed back as `token` events until the `end` event closes the connection.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
@@ -164,7 +165,7 @@ curl -X POST \
   </TabItem>
 </Tabs>
 
-This result is abbreviated, but the `end` event completes the LLM's token streaming response.
+This result is abbreviated, but illustrates where the `end` event completes the LLM's token streaming response.
 
 ### Webhook run flow
 
