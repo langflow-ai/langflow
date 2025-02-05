@@ -1,25 +1,28 @@
+import json
+
 from langflow.custom import Component
+from langflow.helpers.data import data_to_text, data_to_text_list
 from langflow.io import (
-    DataInput,
     DataFrameInput,
-    MultilineInput,
+    DataInput,
     DropdownInput,
+    MultilineInput,
     Output,
     StrInput,
 )
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
+DATAFRAME_ERROR = "Expected a DataFrame"
+DATA_ERROR = "Expected Data object(s)"
+
 
 class ParseComponent(Component):
     display_name = "Parse"
-    description = (
-        "Parse a DataFrame or a Data object into plain text using a specified template. "
-        "For DataFrames, column names can be used as keys in the template, e.g., '{col_name}'. "
-        "For a Data object, keys like '{text}' or '{data}' can be used."
-    )
+    description = "Parse DataFrames or Data objects into text using templates or default formatting."
     icon = "braces"
     name = "Parse"
+    legacy = True
 
     inputs = [
         DropdownInput(
@@ -27,39 +30,37 @@ class ParseComponent(Component):
             display_name="Input Type",
             options=["DataFrame", "Data"],
             value="DataFrame",
-            info="Choose whether to parse a DataFrame or a single Data object.",
+            info="Choose whether to parse a DataFrame or Data object(s).",
             required=True,
             real_time_refresh=True,
         ),
         DataFrameInput(
             name="df",
             display_name="DataFrame",
-            info="The DataFrame to parse (used when Input Type is 'DataFrame').",
+            info="DataFrame to parse.",
             dynamic=True,
             show=True,
         ),
         DataInput(
             name="data",
             display_name="Data",
-            info="A single Data object to parse (used when Input Type is 'Data').",
+            info="Data object(s) to parse.",
             dynamic=True,
             show=False,
+            is_list=True,
         ),
         MultilineInput(
             name="template",
             display_name="Template",
-            info=(
-                "Template to format the input. For DataFrames, use column names as keys, e.g., '{col_name}'. "
-                "For Data, use keys like '{text}', '{data}', or other Data object fields."
-            ),
-            value="{text}",
+            info="Optional template. Leave empty to include all fields.",
+            value="",
+            required=False,
         ),
         StrInput(
             name="sep",
             display_name="Separator",
             advanced=True,
             value="\n",
-            info="String used to separate rows/items when combining them into a single text.",
         ),
     ]
 
@@ -67,78 +68,69 @@ class ParseComponent(Component):
         Output(
             display_name="Parsed Text",
             name="parsed_text",
-            info="Combined text for all rows/items, formatted by the template and separated by `sep`.",
+            info="Combined text with items separated by separator.",
             method="parse_combined_text",
         ),
         Output(
-            display_name="Parsed Texts",
-            name="parsed_texts",
-            info="A DataFrame with one row per parsed item, containing the formatted text.",
-            method="parse_as_dataframe",
+            display_name="Parsed Items",
+            name="parsed_items",
+            info="List of parsed items.",
+            method="parse_as_list",
         ),
     ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        """Dynamically update visibility of inputs based on selected input type."""
         if field_name == "input_type":
-            if field_value == "DataFrame":
-                build_config["df"]["show"] = True
-                build_config["data"]["show"] = False
-            else:  # Data
-                build_config["df"]["show"] = False
-                build_config["data"]["show"] = True
+            build_config["df"]["show"] = field_value == "DataFrame"
+            build_config["data"]["show"] = field_value == "Data"
         return build_config
 
     def _clean_args(self):
-        """Prepare arguments based on input type."""
-        input_type = self.input_type
-        if input_type == "DataFrame":
+        if self.input_type == "DataFrame":
             if not isinstance(self.df, DataFrame):
-                raise ValueError("Expected a valid DataFrame for input type 'DataFrame'.")
+                err_msg = DATAFRAME_ERROR
+                raise ValueError(err_msg)
             return self.df, None, self.template, self.sep
-        elif input_type == "Data":
-            if not isinstance(self.data, Data):
-                raise ValueError("Expected a valid Data object for input type 'Data'.")
-            return None, self.data, self.template, self.sep
-        else:
-            raise ValueError(f"Unsupported input type: {input_type}")
+
+        data = self.data if isinstance(self.data, list) else [self.data]
+        if not all(isinstance(d, Data) for d in data if d is not None):
+            err_msg = DATA_ERROR
+            raise ValueError(err_msg)
+        return None, data, self.template, self.sep
+
+    def _format_dataframe_row(self, row: dict) -> str:
+        if not self.template:
+            return json.dumps(row, ensure_ascii=False)
+        try:
+            return self.template.format(**row)
+        except KeyError:
+            return json.dumps(row, ensure_ascii=False)
 
     def parse_combined_text(self) -> Message:
-        """Parse all items/rows into a single combined text."""
         df, data, template, sep = self._clean_args()
-        lines = []
 
         if df is not None:
-            # Process DataFrame rows
-            for _, row in df.iterrows():
-                formatted_text = template.format(**row.to_dict())
-                lines.append(formatted_text)
-        elif data is not None:
-            # Process single Data object
-            formatted_text = template.format(text=data.get_text())
-            lines.append(formatted_text)
+            lines = [self._format_dataframe_row(row.to_dict()) for _, row in df.iterrows()]
+        else:
+            lines = data_to_text(template, data, sep).split(sep) if template else [
+                json.dumps(d.__dict__, ensure_ascii=False) for d in data if d
+            ]
 
-        # Combine lines using the separator
-        combined_text = sep.join(lines)
-        self.status = combined_text
-        return Message(text=combined_text)
+        result = sep.join(lines)
+        self.status = result
+        return Message(text=result)
 
-    def parse_as_dataframe(self) -> DataFrame:
-        """Parse all items/rows into a new DataFrame with a single 'parsed_text' column."""
+    def parse_as_list(self) -> list[Data]:
         df, data, template, _ = self._clean_args()
-        parsed_rows = []
 
         if df is not None:
-            # Process DataFrame rows
-            for _, row in df.iterrows():
-                formatted_text = template.format(**row.to_dict())
-                parsed_rows.append({"parsed_text": formatted_text})
-        elif data is not None:
-            # Process single Data object
-            formatted_text = template.format(text=data.get_text())
-            parsed_rows.append({"parsed_text": formatted_text})
+            return [Data(text=self._format_dataframe_row(row.to_dict()))
+                   for _, row in df.iterrows()]
 
-        # Create a new DataFrame from parsed rows
-        parsed_df = DataFrame(parsed_rows)
-        self.status = parsed_df  # Store for UI logs
-        return parsed_df
+        if template:
+            texts, items = data_to_text_list(template, data)
+            for item, text in zip(items, texts, strict=True):
+                item.set_text(text)
+            return items
+
+        return [Data(text=json.dumps(d.__dict__, ensure_ascii=False)) for d in data if d]
