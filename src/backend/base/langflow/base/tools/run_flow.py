@@ -218,6 +218,5 @@ class RunFlowBaseComponent(Component):
         )
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        self.status = tools
         logger.info(tools)
         return tools
