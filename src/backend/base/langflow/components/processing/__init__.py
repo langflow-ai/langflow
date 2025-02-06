@@ -1,5 +1,5 @@
 from .alter_metadata import AlterMetadataComponent
-from .merge_data import MergeDataComponent
+from .combine_text import CombineTextComponent
 from .create_data import CreateDataComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
