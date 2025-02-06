@@ -1,0 +1,87 @@
+{
+    "description": "A template that extracts structured data from any website using ScrapeGraph AI. Simply input a URL and your API key to get detailed information from the webpage.",
+    "name": "Website Scraper",
+    "type": "web-scraping",
+    "flow_id": "scraping-website",
+    "data": {
+        "nodes": [
+            {
+                "id": "text_input",
+                "type": "TextInput",
+                "position": {
+                    "x": 100,
+                    "y": 200
+                },
+                "data": {
+                    "node": {
+                        "display_name": "URL Input",
+                        "description": "Enter the website URL to scrape"
+                    }
+                }
+            },
+            {
+                "id": "api_key_input",
+                "type": "SecretStr",
+                "position": {
+                    "x": 100,
+                    "y": 400
+                },
+                "data": {
+                    "node": {
+                        "display_name": "ScrapeGraph API Key",
+                        "description": "Enter your ScrapeGraph API key"
+                    }
+                }
+            },
+            {
+                "id": "scraper",
+                "type": "ScrapeGraphSmartScraperApi",
+                "position": {
+                    "x": 400,
+                    "y": 300
+                },
+                "data": {
+                    "node": {
+                        "display_name": "ScrapeGraph Scraper",
+                        "description": "Extracts structured data from the provided URL"
+                    }
+                }
+            },
+            {
+                "id": "text_output",
+                "type": "TextOutput",
+                "position": {
+                    "x": 700,
+                    "y": 300
+                },
+                "data": {
+                    "node": {
+                        "display_name": "Scraped Data",
+                        "description": "Displays the structured data from the website"
+                    }
+                }
+            }
+        ],
+        "edges": [
+            {
+                "source": "text_input",
+                "target": "scraper",
+                "sourceHandle": "text_value",
+                "targetHandle": "url"
+            },
+            {
+                "source": "api_key_input",
+                "target": "scraper",
+                "sourceHandle": "value",
+                "targetHandle": "api_key"
+            },
+            {
+                "source": "scraper",
+                "target": "text_output",
+                "sourceHandle": "data",
+                "targetHandle": "input_value"
+            }
+        ]
+    },
+    "icon": "globe"
+}
