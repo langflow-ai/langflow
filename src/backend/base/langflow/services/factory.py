@@ -37,7 +37,7 @@ def hash_infer_service_types_args(factory: ServiceFactory, available_services=No
     return f"{factory_hash}_{services_hash}"
 
 
-@cached(cache=LRUCache(maxsize=10), key=hash_infer_service_types_args)
+@cached(cache=LRUCache(maxsize=20), key=hash_infer_service_types_args)
 def infer_service_types(factory: ServiceFactory, available_services=None) -> list["ServiceType"]:
     create_method = factory.create
     type_hints = get_type_hints(create_method, globalns=available_services)

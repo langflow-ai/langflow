@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
+    from langflow.services.event_bus.service import EventBusService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
@@ -250,3 +251,14 @@ def get_task_orchestration_service() -> TaskOrchestrationService:
 
     """
     return get_service(ServiceType.TASK_ORCHESTRATION_SERVICE)  # type: ignore[return-value]
+
+
+def get_event_bus_service() -> EventBusService:
+    """Retrieves the EventBusService instance from the service manager.
+
+    Returns:
+        The EventBusService instance.
+    """
+    from langflow.services.event_bus.factory import EventBusServiceFactory
+
+    return get_service(ServiceType.EVENTBUS_SERVICE, EventBusServiceFactory())

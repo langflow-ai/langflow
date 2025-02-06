@@ -20,3 +20,4 @@ class ServiceType(str, Enum):
     TRACING_SERVICE = "tracing_service"
     TELEMETRY_SERVICE = "telemetry_service"
     TASK_ORCHESTRATION_SERVICE = "task_orchestration_service"
+    EVENTBUS_SERVICE = "event_bus_service"
