@@ -15,10 +15,12 @@ export default function FilesContextMenuComponent({
   children,
   file,
   handleRename,
+  simplified,
 }: {
   children: ReactNode;
   file: FileType;
   handleRename: (id: string, name: string) => void;
+  simplified?: boolean;
 }) {
   const isLocal = file.provider == null;
 
@@ -107,21 +109,23 @@ export default function FilesContextMenuComponent({
           />
           Download
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSelectOptionsChange("duplicate");
-          }}
-          className="cursor-pointer"
-          data-testid="btn-duplicate-flow"
-        >
-          <ForwardedIconComponent
-            name="CopyPlus"
-            aria-hidden="true"
-            className="mr-2 h-4 w-4"
-          />
-          Duplicate
-        </DropdownMenuItem>
+        {!simplified && (
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSelectOptionsChange("duplicate");
+            }}
+            className="cursor-pointer"
+            data-testid="btn-duplicate-flow"
+          >
+            <ForwardedIconComponent
+              name="CopyPlus"
+              aria-hidden="true"
+              className="mr-2 h-4 w-4"
+            />
+            Duplicate
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();

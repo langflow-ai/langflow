@@ -118,7 +118,11 @@ export default function FileRendererComponent({
           />
         </Button>
       ) : (
-        <FilesContextMenuComponent handleRename={handleOpenRename} file={file}>
+        <FilesContextMenuComponent
+          handleRename={handleOpenRename}
+          file={file}
+          simplified
+        >
           <Button
             size="iconMd"
             variant="ghost"
