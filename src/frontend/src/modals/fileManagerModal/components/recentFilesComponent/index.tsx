@@ -101,8 +101,10 @@ export default function RecentFilesComponent({
         ) : (
           <div className="flex h-full w-full items-center justify-center text-sm">
             <span>
-              No files found,{" "}
-              {searchQuery !== "" ? "try again" : "upload a file"} or visit the{" "}
+              {searchQuery !== ""
+                ? "No files found, try again "
+                : "Upload or import files, "}
+              or visit the{" "}
               <CustomLink
                 className="text-accent-pink-foreground underline"
                 to="/files"
