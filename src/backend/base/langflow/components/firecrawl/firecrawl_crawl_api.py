@@ -6,7 +6,8 @@ from langflow.io import (
     IntInput,
     Output,
     SecretStrInput,
-    MultilineInput
+    MultilineInput,
+    StrInput
 )
 from langflow.schema import Data
 
