@@ -14,12 +14,7 @@ import pandas as pd
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
-from langflow.graph.schema import (
-    INPUT_COMPONENTS,
-    OUTPUT_COMPONENTS,
-    InterfaceComponentTypes,
-    ResultData,
-)
+from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
@@ -363,6 +358,8 @@ class Vertex:
                         full_path: str | list[str] = ""
                         if field.get("list"):
                             full_path = []
+                            if isinstance(file_path, str):
+                                file_path = [file_path]
                             for p in file_path:
                                 flow_id, file_name = os.path.split(p)
                                 path = storage_service.build_full_path(flow_id, file_name)
