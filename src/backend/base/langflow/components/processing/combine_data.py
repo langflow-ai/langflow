@@ -15,7 +15,7 @@ class DataOperation(str, Enum):
     JOIN = "Join"
 
 
-class CombineDataComponent(Component):
+class MergeDataComponent(Component):
     display_name = "Combine Data"
     description = "Combines data using different operations"
     icon = "merge"
