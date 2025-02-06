@@ -5,7 +5,7 @@ from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
 from .llm_router import LLMRouterComponent
-from .merge_data import MergeDataComponent
+from .combine_data import CombineDataComponent
 from .message_to_data import MessageToDataComponent
 from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
@@ -21,7 +21,7 @@ __all__ = [
     "ExtractDataKeyComponent",
     "JSONCleaner",
     "LLMRouterComponent",
-    "MergeDataComponent",
+    "CombineDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
     "ParseDataFrameComponent",
