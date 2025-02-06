@@ -19,6 +19,7 @@ export default function DragFilesComponent({
     multiple: isList,
   });
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -51,6 +52,9 @@ export default function DragFilesComponent({
           files: droppedFiles,
         });
         onUpload(filesIds);
+        setSuccessData({
+          title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+        });
       } catch (error: any) {
         setErrorData({
           title: "Error uploading file",
@@ -64,6 +68,9 @@ export default function DragFilesComponent({
     try {
       const filesIds = await uploadFile({});
       onUpload(filesIds);
+      setSuccessData({
+        title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+      });
     } catch (error: any) {
       setErrorData({
         title: "Error uploading file",
