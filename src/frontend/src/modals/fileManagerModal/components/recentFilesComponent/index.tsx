@@ -65,8 +65,8 @@ export default function RecentFilesComponent({
 
   return (
     <div className="flex flex-col gap-4 overflow-hidden">
-      <div className="flex items-center justify-between gap-6">
-        <div className="w-2/3 flex-1">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
           <Input
             icon="Search"
             placeholder="Search files..."
@@ -75,7 +75,7 @@ export default function RecentFilesComponent({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex w-1/3 justify-end">
+        <div className="flex w-48 justify-end">
           <ImportButtonComponent variant="small" />
         </div>
       </div>
