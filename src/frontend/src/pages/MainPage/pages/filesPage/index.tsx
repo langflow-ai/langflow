@@ -31,6 +31,15 @@ export const FilesPage = () => {
     });
   };
 
+  const handleOpenRename = (id: string, name: string) => {
+    if (tableRef.current) {
+      tableRef.current.api.startEditingCell({
+        rowIndex: files?.findIndex((file) => file.id === id) ?? 0,
+        colKey: "name",
+      });
+    }
+  };
+
   const uploadFile = useUploadFile({});
 
   const colDefs: ColDef[] = [
@@ -96,7 +105,10 @@ export const FilesPage = () => {
       cellRenderer: (params) => {
         return (
           <div className="flex h-full cursor-default items-center justify-center">
-            <FilesContextMenuComponent file={params.data}>
+            <FilesContextMenuComponent
+              file={params.data}
+              handleRename={handleOpenRename}
+            >
               <Button variant="ghost" size="iconMd">
                 <ForwardedIconComponent name="EllipsisVertical" />
               </Button>
@@ -222,8 +234,8 @@ export const FilesPage = () => {
                     ref={tableRef}
                     quickFilterText={quickFilterText}
                     gridOptions={{
-                      suppressCellFocus: true,
                       enableCellTextSelection: true,
+                      stopEditingWhenCellsLoseFocus: true,
                       ensureDomOrder: true,
                       colResizeDefault: "shift",
                     }}

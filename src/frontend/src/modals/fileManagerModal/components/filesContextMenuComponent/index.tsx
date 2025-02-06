@@ -14,9 +14,11 @@ import { ReactNode } from "react";
 export default function FilesContextMenuComponent({
   children,
   file,
+  handleRename,
 }: {
   children: ReactNode;
   file: FileType;
+  handleRename: (id: string, name: string) => void;
 }) {
   const isLocal = file.provider == null;
 
@@ -39,7 +41,7 @@ export default function FilesContextMenuComponent({
   const handleSelectOptionsChange = (option: string) => {
     switch (option) {
       case "rename":
-        console.log("rename");
+        handleRename(file.id, file.name);
         break;
       case "replace":
         console.log("replace");

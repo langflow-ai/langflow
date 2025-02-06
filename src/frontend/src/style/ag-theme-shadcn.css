@@ -93,3 +93,9 @@
 .ag-no-border .ag-paging-panel {
   border-top: none !important;
 }
+
+.ag-no-border .ag-cell-focus:not(.ag-cell-inline-editing) {
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
