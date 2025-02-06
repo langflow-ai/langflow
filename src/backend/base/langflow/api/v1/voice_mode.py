@@ -133,7 +133,7 @@ async def handle_function_call(
 
 @router.websocket("/ws/{flow_id}")
 async def websocket_endpoint(
-    websocket: WebSocket,
+    client_websocket: WebSocket,
     flow_id: str,
     background_tasks: BackgroundTasks,
     session: DbSession,
@@ -142,8 +142,8 @@ async def websocket_endpoint(
     - Connects to OpenAI Realtime.
     - Uses local WebRTC VAD for barge‑in detection.
     """
-    current_user = await get_current_user_by_jwt(websocket.cookies.get("access_token_lf"), session)
-    await websocket.accept()
+    current_user = await get_current_user_by_jwt(client_websocket.cookies.get("access_token_lf"), session)
+    await client_websocket.accept()
 
     # Check for OpenAI API key.
     variable_service = get_variable_service()
@@ -154,7 +154,7 @@ async def websocket_endpoint(
     except (InvalidToken, ValueError):
         openai_key = os.getenv("OPENAI_API_KEY")
         if not openai_key:
-            await websocket.send_json(
+            await client_websocket.send_json(
                 {
                     "type": "error",
                     "code": "api_key_missing",
@@ -182,7 +182,7 @@ async def websocket_endpoint(
             },
         }
     except Exception as e:  # noqa: BLE001
-        await websocket.send_json({"error": f"Failed to load flow: {e!s}"})
+        await client_websocket.send_json({"error": f"Failed to load flow: {e!s}"})
         logger.error(e)
         return
 
@@ -233,12 +233,38 @@ async def websocket_endpoint(
             send a cancellation message to OpenAI.
             """
             nonlocal vad_audio_buffer
-            while True:
-                # Wait for the next raw audio chunk from the queue.
-                chunk = await vad_queue.get()
-                vad_audio_buffer.extend(chunk)
+            last_speech_time = datetime.now()
+            last_queue_check = datetime.now()
+            disable_vad = False
 
-                # Process complete 20ms frames.
+            while True:
+                # Monitor queue depth every second
+                #current_time = datetime.now()
+                #if (current_time - last_queue_check).total_seconds() >= 2.0:
+                #    queue_size = vad_queue.qsize()
+                #    print(f"VAD queue depth: {queue_size} chunks")
+                #    last_queue_check = current_time
+
+                base64_data = await vad_queue.get()
+                raw_chunk_24k = base64.b64decode(base64_data)
+                
+                # Check if any samples exceed amplitude threshold using memoryview for efficiency
+                view = memoryview(raw_chunk_24k)
+                # Process 2 bytes at a time without creating intermediate lists
+                for i in range(0, len(view), 2):
+                    # Convert bytes directly to int and normalize in one step
+                    sample = abs(int.from_bytes(view[i:i+2], byteorder='little', signed=True) / 32768.0)
+                    if sample > 0.01:
+                        print("&", end="")
+                        break
+
+                if disable_vad:
+                    await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
+                asyncio.create_task(write_audio_to_file(base64_data, "vad_disabled.raw"))
+
+                vad_audio_buffer.extend(raw_chunk_24k)
+
+                has_speech = False
                 while len(vad_audio_buffer) >= BYTES_PER_24K_FRAME:
                     frame_24k = vad_audio_buffer[:BYTES_PER_24K_FRAME]
                     del vad_audio_buffer[:BYTES_PER_24K_FRAME]
@@ -262,57 +288,97 @@ async def websocket_endpoint(
                         bot_speaking_flag[0] = False
                         # Optionally, clear the accumulated audio if desired.
                         # vad_audio_buffer = bytearray()
-                        break
-                    # elif is_speech:
-                    #    print(f"Speaking but not barging!", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                    if is_speech:
+                        # send audio chunk over the websocket
+                        print("!", end="")
+                        has_speech = True
+
+                if has_speech:
+                    last_speech_time = datetime.now()  # Update timestamp when speech detected
+                time_since_speech = (datetime.now() - last_speech_time).total_seconds()
+                if time_since_speech < 1.0:
+                    print(".", end="")
+                    if not disable_vad:
+                        await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
+                    asyncio.create_task(write_audio_to_file(base64_data, "vad_enabled.raw"))
+                # Only send silence if it's been more than 1 second since last speech
+                else:
+                    print("_", end="")
+                    num_samples = len(raw_chunk_24k) // 2
+                    silence_chunk = bytes(num_samples * 2)  # 2 bytes per sample for PCM16
+                    silence_base64 = base64.b64encode(silence_chunk).decode("utf-8")
+
+                    if not disable_vad:
+                        await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": silence_base64}))
+                    asyncio.create_task(write_audio_to_file(silence_base64, "vad_enabled.raw"))
+
+
+
+    # Shared state for event tracking
+        shared_state = {
+            "last_event_type": None,
+            "event_count": 0
+        }
+
+        def log_event(event_type: str, direction: str) -> None:
+            """Helper to log events consistently"""
+            if event_type != shared_state["last_event_type"]:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                print(f"\n  {timestamp} --  {direction} {event_type} ", end="", flush=True)
+                shared_state["last_event_type"] = event_type
+                shared_state["event_count"] = 0
+            
+            shared_state["event_count"] += 1
+            #if shared_state["event_count"] % 10 == 0:
+            #    print(f"[{shared_state['event_count']}]", end="", flush=True)
+            #else:
+            #    print(".", end="", flush=True)
 
         async def forward_to_openai() -> None:
-            """Forwards messages from the client to OpenAI.
-            For audio messages, immediately forwards the raw audio
-            and enqueues the raw chunk for background VAD processing.
-            """
+            """Forwards messages from the client to OpenAI."""
             try:
                 while True:
-                    message_text = await websocket.receive_text()
+                    message_text = await client_websocket.receive_text()
                     msg = json.loads(message_text)
-                    await openai_ws.send(message_text)
+                    event_type = msg.get("type")
+                    log_event(event_type, "↑")
 
                     if msg.get("type") == "input_audio_buffer.append":
+                        print(f"buffer_id {msg.get("buffer_id", "")}")
                         base64_data = msg.get("audio", "")
                         if not base64_data:
                             continue
-
-                        # Decode the incoming base64 audio chunk (24kHz PCM16).
-                        raw_chunk_24k = base64.b64decode(base64_data)
-
-                        # Offload the debug file write (if desired) without blocking.
-                        if False:
-                            asyncio.create_task(write_audio_to_file(base64_data))
-
                         # Enqueue the raw audio chunk for background VAD processing.
-                        await vad_queue.put(raw_chunk_24k)
+                        await vad_queue.put(base64_data)
+                    else:
+                        # we don't send audio events, vad does those
+                        await openai_ws.send(message_text)
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                 pass
 
         async def forward_to_client() -> None:
-            """Forwards messages from OpenAI to the client.
-            Also updates bot_speaking_flag based on the events received.
-            """
+            """Forwards messages from OpenAI to the client."""
             nonlocal bot_speaking_flag
             function_call = None
             function_call_args = ""
             try:
                 while True:
                     data = await openai_ws.recv()
-                    await websocket.send_text(data)
+                    await client_websocket.send_text(data)
                     event = json.loads(data)
                     event_type = event.get("type")
 
+                    # Debug print the full event for session events
+                    if event_type in ["session.created", "session.updated"]:
+                        print(f"\nDEBUG - Full event: {event}")
+
+                    log_event(event_type, "↓")
+
                     if "transcript" in event:
                         if event_type == "response.audio_transcript.done":
-                            print(f"bot transcript: {event.get("transcript")}")
+                            print(f"\n      bot transcript: {event.get('transcript')}")
                         else:
-                            print(f"user transcript: {event.get("transcript")}")
+                            print(f"\n      user transcript: {event.get('transcript')}")
                     if event_type == "response.output_item.added":
                         print("Bot speaking = True")
                         bot_speaking_flag[0] = True
@@ -329,7 +395,7 @@ async def websocket_endpoint(
                         if function_call:
                             asyncio.create_task(
                                 handle_function_call(
-                                    websocket,
+                                    client_websocket,
                                     openai_ws,
                                     function_call,
                                     function_call_args,
@@ -343,8 +409,9 @@ async def websocket_endpoint(
                             function_call_args = ""
                     elif event_type == "response.audio.delta":
                         audio_delta = event.get("delta", "")
-                        if audio_delta and False:
-                            asyncio.create_task(write_audio_to_file(audio_delta))
+                        if audio_delta and True:
+                            asyncio.create_task(write_audio_to_file(audio_delta, "vad_enabled.raw"))
+                            asyncio.create_task(write_audio_to_file(audio_delta, "vad_disabled.raw"))
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                 print("Websocket exception {e}")
 
