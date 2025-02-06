@@ -17,7 +17,7 @@ from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_event_bus_service
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -115,6 +115,7 @@ def max_file_size_upload_10mb_fixture(monkeypatch):
 async def files_client_fixture(
     monkeypatch,
     request,
+    fake_redis,
 ):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -131,6 +132,11 @@ async def files_client_fixture(
             service_manager.factories.clear()
             service_manager.services.clear()  # Clear the services cache
             app = create_app()
+            db_service = get_db_service()
+            db_service.database_url = f"sqlite:///{db_path}"
+            db_service.reload_engine()
+            event_bus_service = get_event_bus_service()
+            event_bus_service.redis_client = fake_redis
             return app, db_path
 
         app, db_path = await asyncio.to_thread(init_app)
