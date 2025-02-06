@@ -22,7 +22,6 @@ export default function RecentFilesComponent({
   isList: boolean;
 }) {
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
-  const [containerHeight, setContainerHeight] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { mutate: renameFile } = usePostRenameFileV2();
