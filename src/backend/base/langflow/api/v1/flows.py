@@ -260,7 +260,6 @@ async def read_public_flow(
     *,
     session: DbSession,
     flow_id: UUID,
-    current_user: CurrentActiveUser,
 ):
     """Read a flow."""
     access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
