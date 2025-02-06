@@ -28,7 +28,7 @@ class ParseComponent(Component):
 
     inputs = [
         DropdownInput(
-            name="input_type",
+            name="parse_input_type",
             display_name="Input Type",
             options=["DataFrame", "Data"],
             value="DataFrame",
@@ -52,7 +52,7 @@ class ParseComponent(Component):
             is_list=True,
         ),
         MultilineInput(
-            name="template",
+            name="template_to_parse",
             display_name="Template",
             info="Optional template. Leave empty to include all fields.",
             value="",
@@ -83,57 +83,61 @@ class ParseComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update the build configuration based on the input type selection."""
-        if field_name == "input_type":
+        if field_name == "parse_input_type":
             build_config["df"]["show"] = field_value == "DataFrame"
             build_config["data"]["show"] = field_value == "Data"
         return build_config
 
     def _clean_args(self) -> tuple[DataFrame | None, list[Data] | None, str, str]:
         """Validate and clean input arguments."""
-        if self.input_type == "DataFrame":
+        if self.parse_input_type == "DataFrame":
             if not isinstance(self.df, DataFrame):
                 raise ValueError(DATAFRAME_ERROR)
-            return self.df, None, self.template, self.sep
+            return self.df, None, self.template_to_parse, self.sep
 
         data = self.data if isinstance(self.data, list) else [self.data]
         if not all(isinstance(d, Data) for d in data if d is not None):
             raise ValueError(DATA_ERROR)
-        return None, data, self.template, self.sep
+        return None, data, self.template_to_parse, self.sep
 
     def _format_dataframe_row(self, row: dict[str, Any]) -> str:
         """Format a DataFrame row using the template or default to JSON."""
-        if not self.template:
+        if not self.template_to_parse:
             return json.dumps(row, ensure_ascii=False)
         try:
-            return self.template.format(**row)
+            return self.template_to_parse.format(**row)
         except KeyError:
             return json.dumps(row, ensure_ascii=False)
 
     def _format_data_object(self, data_obj: Data) -> str:
         """Format a Data object using the template or default formatting."""
-        if not self.template:
+        if not self.template_to_parse:
+            # Create a dictionary of all available attributes
             data_dict = {
                 "text": data_obj.text,
                 "data": data_obj.data,
+                # Add any other relevant attributes you want to expose
             }
             return json.dumps(data_dict, ensure_ascii=False)
         try:
-            return self.template.format(
+            return self.template_to_parse.format(
                 text=data_obj.text,
                 data=data_obj.data,
+                # Add other attributes as needed
             )
         except KeyError:
+            # Fallback to basic formatting if template fails
             return f"{data_obj.text}"
 
     def parse_combined_text(self) -> Message:
         """Parse input into a single combined text message."""
-        df, data, template, sep = self._clean_args()
+        df, data, template_to_parse, sep = self._clean_args()
 
         if df is not None:
             lines = [self._format_dataframe_row(row.to_dict()) for _, row in df.iterrows()]
         else:
-            if template:
-                return Message(text=data_to_text(template, data, sep))
+            if template_to_parse:
+                return Message(text=data_to_text(template_to_parse, data, sep))
             lines = [self._format_data_object(d) for d in data if d]
 
         result = sep.join(lines)
@@ -142,13 +146,13 @@ class ParseComponent(Component):
 
     def parse_as_list(self) -> list[Data]:
         """Parse input into a list of Data objects."""
-        df, data, template, _ = self._clean_args()
+        df, data, template_to_parse, _ = self._clean_args()
 
         if df is not None:
             return [Data(text=self._format_dataframe_row(row.to_dict())) for _, row in df.iterrows()]
 
-        if template:
-            texts, items = data_to_text_list(template, data)
+        if template_to_parse:
+            texts, items = data_to_text_list(template_to_parse, data)
             for item, text in zip(items, texts, strict=True):
                 item.set_text(text)
             return items
