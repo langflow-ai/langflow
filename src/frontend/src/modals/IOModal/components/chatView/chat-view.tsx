@@ -30,8 +30,6 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
 
 export default function ChatView({
   sendMessage,
-  lockChat,
-  setLockChat,
   visibleSession,
   focusChat,
   closeChat,
@@ -50,6 +48,8 @@ export default function ChatView({
   const displayLoadingMessage = useMessagesStore(
     (state) => state.displayLoadingMessage,
   );
+
+  const lockChat = useFlowStore((state) => state.lockChat);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
@@ -168,8 +168,6 @@ export default function ChatView({
             <>
               {chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
-                  setLockChat={setLockChat}
-                  lockChat={lockChat}
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
                   key={`${chat.id}-${index}`}

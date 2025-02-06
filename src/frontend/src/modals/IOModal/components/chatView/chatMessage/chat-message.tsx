@@ -6,6 +6,7 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { ChatMessageType } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import Robot from "../../../../../assets/robot.png";
@@ -27,12 +28,13 @@ import { convertFiles } from "./helpers/convert-files";
 
 export default function ChatMessage({
   chat,
-  lockChat,
   lastMessage,
   updateChat,
-  setLockChat,
   closeChat,
 }: chatMessagePropsType): JSX.Element {
+  const setLockChat = useFlowStore((state) => state.setLockChat);
+  const lockChat = useFlowStore((state) => state.lockChat);
+
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
@@ -53,7 +55,10 @@ export default function ChatMessage({
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
-  }, [chat]);
+    chatMessageRef.current = chatMessage;
+  }, [chat, setLockChat]);
+
+  console.log(lockChat);
 
   const playgroundScrollBehaves = useUtilityStore(
     (state) => state.playgroundScrollBehaves,
@@ -61,10 +66,6 @@ export default function ChatMessage({
   const setPlaygroundScrollBehaves = useUtilityStore(
     (state) => state.setPlaygroundScrollBehaves,
   );
-  // Sync ref with state
-  useEffect(() => {
-    chatMessageRef.current = chatMessage;
-  }, [chatMessage]);
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
   // probably the message is empty when we have a stream_url
@@ -360,7 +361,7 @@ export default function ChatMessage({
                         }
                         className="flex w-full flex-col"
                       >
-                        {chatMessage === "" && lockChat ? (
+                        {chatMessage === "" && lockChat && lastMessage ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"

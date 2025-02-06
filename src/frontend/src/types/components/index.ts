@@ -593,9 +593,7 @@ export type codeAreaModalPropsType = {
 
 export type chatMessagePropsType = {
   chat: ChatMessageType;
-  lockChat: boolean;
   lastMessage: boolean;
-  setLockChat: (lock: boolean) => void;
   updateChat: (
     chat: ChatMessageType,
     message: string,
@@ -772,8 +770,6 @@ export type chatViewProps = {
     repeat: number;
     files?: string[];
   }) => void;
-  lockChat: boolean;
-  setLockChat: (lock: boolean) => void;
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
