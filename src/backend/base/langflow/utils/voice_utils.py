@@ -1,5 +1,12 @@
+import asyncio
+import base64
+
 import numpy as np
+import pyaudio
+import simpleaudio
 from scipy.signal import resample_poly, resample
+
+from langflow.logging import logger
 
 SAMPLE_RATE_24K = 24000
 VAD_SAMPLE_RATE_16K = 16000
@@ -52,3 +59,15 @@ def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
 #        )
 #    return frame_16k_bytes
 #
+
+async def write_audio_to_file(audio_base64: str, filename: str = "output_audio.raw") -> None:
+    """
+    Decode the base64-encoded audio and write (append) it to a file asynchronously.
+    """
+    try:
+        audio_bytes = base64.b64decode(audio_base64)
+        # Use asyncio.to_thread to perform file I/O without blocking the event loop
+        await asyncio.to_thread(lambda: open(filename, "ab").write(audio_bytes))
+        logger.info(f"Wrote {len(audio_bytes)} bytes to {filename}")
+    except Exception as e:
+        logger.error(f"Error writing audio to file: {e}")

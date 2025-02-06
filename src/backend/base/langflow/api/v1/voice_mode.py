@@ -3,23 +3,25 @@ import base64
 import json
 import os
 import traceback
+from datetime import datetime
 from uuid import UUID, uuid4
 
 import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, BackgroundTasks
-from loguru import logger
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow
 from langflow.api.v1.schemas import InputValueRequest
+from langflow.logging import logger
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
-from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
+from langflow.utils.voice_utils import resample_24k_to_16k, BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, \
+    write_audio_to_file
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -33,7 +35,6 @@ SESSION_INSTRUCTIONS = (
     "Always tell the user before you call a function to assist with their question. "
     "And let them know what it does."
 )
-
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
@@ -74,7 +75,6 @@ async def handle_function_call(
             inputs=input_request,
             background_tasks=background_tasks,
             current_user=current_user,
-            session=session,
         )
 
         # Collect results from the stream
@@ -182,7 +182,8 @@ async def websocket_endpoint(
         return
 
     # Connect to OpenAI Realtime.
-    url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
+    url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview"
+    #url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview"
     headers = {
         "Authorization": f"Bearer {openai_key}",
         "OpenAI-Beta": "realtime=v1",
@@ -205,6 +206,9 @@ async def websocket_endpoint(
                     "prefix_padding_ms": PREFIX_PADDING_MS,
                     "silence_duration_ms": SILENCE_DURATION_MS,
                 },
+                "input_audio_transcription": {
+                    "model": "whisper-1"
+                },
                 "tools": [flow_tool],
                 "tool_choice": "auto",
             },
@@ -218,10 +222,6 @@ async def websocket_endpoint(
 
         # Set up WebRTC VAD instance.
         vad = webrtcvad.Vad(mode=3)
-
-        async def write_debug_audio(raw_chunk_24k: bytes) -> None:
-            """Offload debug file I/O to a background thread so that it doesn't block the event loop."""
-            await asyncio.to_thread(lambda: open("debug_incoming_24k.raw", "ab").write(raw_chunk_24k))
 
         async def process_vad_audio() -> None:
             """Continuously process audio chunks from the vad_queue.
@@ -253,12 +253,15 @@ async def websocket_endpoint(
                         continue
 
                     if is_speech and bot_speaking_flag[0]:
-                        logger.info("Barge-in detected!")
+                        print("Barge-in detected!", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                         await openai_ws.send(json.dumps({"type": "response.cancel"}))
+                        print("bot speaking false")
                         bot_speaking_flag[0] = False
                         # Optionally, clear the accumulated audio if desired.
-                        vad_audio_buffer = bytearray()
+                        #vad_audio_buffer = bytearray()
                         break
+                    #elif is_speech:
+                    #    print(f"Speaking but not barging!", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
         async def forward_to_openai() -> None:
             """Forwards messages from the client to OpenAI.
@@ -269,6 +272,7 @@ async def websocket_endpoint(
                 while True:
                     message_text = await websocket.receive_text()
                     msg = json.loads(message_text)
+                    await openai_ws.send(message_text)
 
                     if msg.get("type") == "input_audio_buffer.append":
                         base64_data = msg.get("audio", "")
@@ -278,17 +282,12 @@ async def websocket_endpoint(
                         # Decode the incoming base64 audio chunk (24kHz PCM16).
                         raw_chunk_24k = base64.b64decode(base64_data)
 
-                        # Immediately forward the original audio message to OpenAI.
-                        await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
-
                         # Offload the debug file write (if desired) without blocking.
-                        # asyncio.create_task(write_debug_audio(raw_chunk_24k))
+                        if False:
+                            asyncio.create_task(write_audio_to_file(base64_data))
 
                         # Enqueue the raw audio chunk for background VAD processing.
                         await vad_queue.put(raw_chunk_24k)
-                    else:
-                        # For all non-audio messages, forward them directly.
-                        await openai_ws.send(message_text)
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                 pass
 
@@ -302,18 +301,24 @@ async def websocket_endpoint(
             try:
                 while True:
                     data = await openai_ws.recv()
+                    await websocket.send_text(data)
                     event = json.loads(data)
                     event_type = event.get("type")
 
+                    if "transcript" in event:
+                        if event_type == "response.audio_transcript.done":
+                            print(f"bot transcript: {event.get("transcript")}")
+                        else:
+                            print(f"user transcript: {event.get("transcript")}")
                     if event_type == "response.output_item.added":
-                        logger.debug("Bot speaking = True")
+                        print("Bot speaking = True")
                         bot_speaking_flag[0] = True
                         item = event.get("item", {})
                         if item.get("type") == "function_call":
                             function_call = item
                             function_call_args = ""
                     elif event_type == "response.output.complete":
-                        logger.debug("Bot speaking = False")
+                        print("Bot speaking = False")
                         bot_speaking_flag[0] = False
                     elif event_type == "response.function_call_arguments.delta":
                         function_call_args += event.get("delta", "")
@@ -333,9 +338,12 @@ async def websocket_endpoint(
                             )
                             function_call = None
                             function_call_args = ""
-                    # Forward all events to the client.
-                    await websocket.send_text(data)
-            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
+                    elif event_type == "response.audio.delta":
+                        audio_delta = event.get("delta", "")
+                        if audio_delta and False:
+                            asyncio.create_task(write_audio_to_file(audio_delta))
+            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
+                print("Websocket exception {e}")
                 pass
 
         # Start the background VAD processing task.
