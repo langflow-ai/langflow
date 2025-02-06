@@ -22,28 +22,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || github.ref }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+          cache-dependency-path: ./docs/yarn.lock
 
-      - name: Cache Node.js dependencies
-        uses: actions/cache@v4
-        id: npm-cache
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('docs/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: cd docs && yarn install --frozen-lockfile
 
-      - name: Install Node.js dependencies
-        run: |
-          cd docs
-          npm install --legacy-peer-deps
-        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
-
-      - name: Build Docs
-        run: |
-          cd docs
-          npm run build
+      - name: Build docs
+        run: cd docs && yarn build
