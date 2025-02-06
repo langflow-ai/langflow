@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text, data_to_text_list
@@ -18,11 +19,12 @@ DATA_ERROR = "Expected Data object(s)"
 
 
 class ParseComponent(Component):
+    """Parse DataFrames or Data objects into text using templates or default formatting."""
+
     display_name = "Parse"
     description = "Parse DataFrames or Data objects into text using templates or default formatting."
     icon = "braces"
     name = "Parse"
-    legacy = True
 
     inputs = [
         DropdownInput(
@@ -80,25 +82,26 @@ class ParseComponent(Component):
     ]
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Update the build configuration based on the input type selection."""
         if field_name == "input_type":
             build_config["df"]["show"] = field_value == "DataFrame"
             build_config["data"]["show"] = field_value == "Data"
         return build_config
 
-    def _clean_args(self):
+    def _clean_args(self) -> tuple[DataFrame | None, list[Data] | None, str, str]:
+        """Validate and clean input arguments."""
         if self.input_type == "DataFrame":
             if not isinstance(self.df, DataFrame):
-                err_msg = DATAFRAME_ERROR
-                raise ValueError(err_msg)
+                raise ValueError(DATAFRAME_ERROR)
             return self.df, None, self.template, self.sep
 
         data = self.data if isinstance(self.data, list) else [self.data]
         if not all(isinstance(d, Data) for d in data if d is not None):
-            err_msg = DATA_ERROR
-            raise ValueError(err_msg)
+            raise ValueError(DATA_ERROR)
         return None, data, self.template, self.sep
 
-    def _format_dataframe_row(self, row: dict) -> str:
+    def _format_dataframe_row(self, row: dict[str, Any]) -> str:
+        """Format a DataFrame row using the template or default to JSON."""
         if not self.template:
             return json.dumps(row, ensure_ascii=False)
         try:
@@ -106,23 +109,39 @@ class ParseComponent(Component):
         except KeyError:
             return json.dumps(row, ensure_ascii=False)
 
+    def _format_data_object(self, data_obj: Data) -> str:
+        """Format a Data object using the template or default formatting."""
+        if not self.template:
+            data_dict = {
+                "text": data_obj.text,
+                "data": data_obj.data,
+            }
+            return json.dumps(data_dict, ensure_ascii=False)
+        try:
+            return self.template.format(
+                text=data_obj.text,
+                data=data_obj.data,
+            )
+        except KeyError:
+            return f"{data_obj.text}"
+
     def parse_combined_text(self) -> Message:
+        """Parse input into a single combined text message."""
         df, data, template, sep = self._clean_args()
 
         if df is not None:
             lines = [self._format_dataframe_row(row.to_dict()) for _, row in df.iterrows()]
         else:
-            lines = (
-                data_to_text(template, data, sep).split(sep)
-                if template
-                else [json.dumps(d.__dict__, ensure_ascii=False) for d in data if d]
-            )
+            if template:
+                return Message(text=data_to_text(template, data, sep))
+            lines = [self._format_data_object(d) for d in data if d]
 
         result = sep.join(lines)
         self.status = result
         return Message(text=result)
 
     def parse_as_list(self) -> list[Data]:
+        """Parse input into a list of Data objects."""
         df, data, template, _ = self._clean_args()
 
         if df is not None:
@@ -134,4 +153,4 @@ class ParseComponent(Component):
                 item.set_text(text)
             return items
 
-        return [Data(text=json.dumps(d.__dict__, ensure_ascii=False)) for d in data if d]
+        return [Data(text=self._format_data_object(d)) for d in data if d]
