@@ -106,7 +106,7 @@ export default function FileRendererComponent({
         <Button
           size="iconMd"
           variant="ghost"
-          className="hover:bg-destructive/5"
+          className="hover:bg-accent"
           onClick={(e) => {
             e.stopPropagation();
             handleRemove?.(file.path);
@@ -114,7 +114,7 @@ export default function FileRendererComponent({
         >
           <ForwardedIconComponent
             name="X"
-            className="h-5 w-5 shrink-0 text-destructive"
+            className="h-5 w-5 shrink-0 text-muted-foreground"
           />
         </Button>
       ) : (

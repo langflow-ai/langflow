@@ -1,3 +1,4 @@
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { ENABLE_FILE_MANAGEMENT } from "@/customization/feature-flags";
@@ -13,7 +14,9 @@ import {
 } from "../../../../../constants/alerts_constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
-import IconComponent from "../../../../common/genericIconComponent";
+import IconComponent, {
+  ForwardedIconComponent,
+} from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { FileComponentType, InputProps } from "../../types";
 
@@ -142,15 +145,17 @@ export default function InputFileComponent({
 
   const { data: files } = useGetFilesV2();
 
-  const selectedFiles = isList
-    ? Array.isArray(file_path)
-      ? file_path.filter((value) => value !== "")
-      : typeof file_path === "string"
-        ? [file_path]
-        : []
-    : Array.isArray(file_path)
-      ? (file_path ?? "")
-      : [file_path ?? ""];
+  const selectedFiles = (
+    isList
+      ? Array.isArray(file_path)
+        ? file_path.filter((value) => value !== "")
+        : typeof file_path === "string"
+          ? [file_path]
+          : []
+      : Array.isArray(file_path)
+        ? (file_path ?? "")
+        : [file_path ?? ""]
+  ).filter((value) => value !== "");
 
   useEffect(() => {
     if (files !== null) {
@@ -193,7 +198,7 @@ export default function InputFileComponent({
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
           {ENABLE_FILE_MANAGEMENT && files ? (
-            <div className="flex w-full flex-col gap-2">
+            <div className="relative flex w-full flex-col gap-2">
               <div className="flex flex-col">
                 <FilesRendererComponent
                   files={files.filter((file) =>
@@ -236,13 +241,29 @@ export default function InputFileComponent({
                 types={fileTypes}
                 isList={isList}
               >
-                <Button
-                  disabled={isDisabled}
-                  className="font-semibold"
-                  data-testid="button_open_file_management"
-                >
-                  <div>Select file{isList ? "s" : ""}</div>
-                </Button>
+                {(selectedFiles.length === 0 || isList) && (
+                  <Button
+                    disabled={isDisabled}
+                    variant={selectedFiles.length !== 0 ? "ghost" : "default"}
+                    size={selectedFiles.length !== 0 ? "iconMd" : "default"}
+                    className={cn(
+                      selectedFiles.length !== 0 &&
+                        "hit-area-icon absolute -top-8 right-0",
+                      "font-semibold",
+                    )}
+                    data-testid="button_open_file_management"
+                  >
+                    {selectedFiles.length !== 0 ? (
+                      <ForwardedIconComponent
+                        name="Plus"
+                        className="icon-size"
+                        strokeWidth={ICON_STROKE_WIDTH}
+                      />
+                    ) : (
+                      <div>Select file{isList ? "s" : ""}</div>
+                    )}
+                  </Button>
+                )}
               </FileManagerModal>
             </div>
           ) : (
