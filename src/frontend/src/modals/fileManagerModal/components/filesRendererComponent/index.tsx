@@ -9,6 +9,7 @@ export default function FilesRendererComponent({
   handleRename,
 }: {
   files: FileType[];
+  isSearch?: boolean;
   handleFileSelect?: (name: string) => void;
   selectedFiles?: string[];
   handleRemove?: (name: string) => void;

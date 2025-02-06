@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
+import { CustomLink } from "@/customization/components/custom-link";
 import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
 import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
@@ -77,25 +78,40 @@ export default function RecentFilesComponent({
         </div>
       </div>
       <div className="flex h-56 flex-col gap-1">
-        <FilesRendererComponent
-          files={searchResults
-            .toSorted((a, b) => {
-              const selectedOrder = sortByBoolean(
-                selectedFiles.includes(a.path),
-                selectedFiles.includes(b.path),
-              );
-              return selectedOrder === 0
-                ? sortByDate(
-                    a.updated_at ?? a.created_at,
-                    b.updated_at ?? b.created_at,
-                  )
-                : selectedOrder;
-            })
-            .slice(0, 5)}
-          handleFileSelect={handleFileSelect}
-          selectedFiles={selectedFiles}
-          handleRename={handleRename}
-        />
+        {searchResults.length > 0 ? (
+          <FilesRendererComponent
+            files={searchResults
+              .toSorted((a, b) => {
+                const selectedOrder = sortByBoolean(
+                  selectedFiles.includes(a.path),
+                  selectedFiles.includes(b.path),
+                );
+                return selectedOrder === 0
+                  ? sortByDate(
+                      a.updated_at ?? a.created_at,
+                      b.updated_at ?? b.created_at,
+                    )
+                  : selectedOrder;
+              })
+              .slice(0, 5)}
+            handleFileSelect={handleFileSelect}
+            selectedFiles={selectedFiles}
+            handleRename={handleRename}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-sm">
+            <span>
+              No files found,{" "}
+              {searchQuery !== "" ? "try again" : "upload a file"} or visit the{" "}
+              <CustomLink
+                className="text-accent-pink-foreground underline"
+                to="/files"
+              >
+                file browser.
+              </CustomLink>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
