@@ -15,7 +15,7 @@ import cloneFLowWithParent, {
 export default function PlaygroundPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
+
   const { id } = useParams();
   const { mutateAsync: getFlow } = useGetFlow();
 
@@ -26,22 +26,11 @@ export default function PlaygroundPage() {
 
   async function getFlowData() {
     try {
-      const flow = await getFlow({ id: id! });
+      const flow = await getFlow({ id: id!, public: true });
       return flow;
     } catch (error: any) {
-      if (error?.response?.status === 404) {
-        if (!validApiKey) {
-          return null;
-        }
-        try {
-          const res = await getComponent(id!);
-          const newFlow = cloneFLowWithParent(res, res.id, false, true);
-          return newFlow;
-        } catch (componentError) {
-          return null;
-        }
-      }
-      return null;
+      console.log(error);
+      navigate("/");
     }
   }
 
@@ -49,6 +38,7 @@ export default function PlaygroundPage() {
     const initializeFlow = async () => {
       setIsLoading(true);
       if (currentFlowId === "") {
+        debugger;
         const flow = await getFlowData();
         if (flow) {
           setCurrentFlow(flow);
@@ -60,7 +50,7 @@ export default function PlaygroundPage() {
 
     initializeFlow();
     setIsLoading(false);
-  }, [id, validApiKey]);
+  }, [id]);
 
   useEffect(() => {
     if (id) track("Playground Page Loaded", { flowId: id });
@@ -82,7 +72,7 @@ export default function PlaygroundPage() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
       {currentSavedFlow && (
-        <IOModal open={true} setOpen={() => {}} isPlayground playgroundPage>
+        <IOModal open={true} setOpen={() => { }} isPlayground playgroundPage>
           <></>
         </IOModal>
       )}
