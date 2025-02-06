@@ -1,3 +1,4 @@
+import re
 import uuid
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
@@ -101,10 +102,19 @@ async def upload_user_file(
 
         # If there are files with the same name, append a count to the filename
         if files:
-            count = len(files)  # Count occurrences
+            counts = []
+
+            # Extract the count from the filename
+            for my_file in files:
+                match = re.search(r"\((\d+)\)(?=\.\w+$|$)", my_file.name)  # Match (number) before extension or at end
+                if match:
+                    counts.append(int(match.group(1)))
+
+            # Get the max count and increment by 1
+            count = max(counts) if counts else 0  # Default to 0 if no matches found
 
             # Split the extension from the filename
-            root_filename = f"{root_filename} ({count})"
+            root_filename = f"{root_filename} ({count + 1})"
 
         # Compute the file size based on the path
         file_size = await storage_service.get_file_size(flow_id=folder, file_name=anonymized_file_name)
@@ -226,3 +236,32 @@ async def delete_file(
         raise HTTPException(status_code=500, detail=f"Error deleting file: {e}") from e
 
     return {"message": "File deleted successfully"}
+
+
+@router.delete("")
+async def delete_all_files(
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
+):
+    """Delete all files for the current user."""
+    try:
+        # Fetch all files from the DB
+        stmt = select(UserFile).where(UserFile.user_id == current_user.id)
+        results = await session.exec(stmt)
+        files = results.all()
+
+        # Delete all files from the storage service
+        for file in files:
+            await storage_service.delete_file(flow_id=str(current_user.id), file_name=file.path)
+            await session.delete(file)
+
+        # Delete all files from the database
+        await session.flush()  # Ensures delete is staged
+        await session.commit()  # Commit deletion
+
+    except Exception as e:
+        await session.rollback()  # Rollback on failure
+        raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
+
+    return {"message": "All files deleted successfully"}
