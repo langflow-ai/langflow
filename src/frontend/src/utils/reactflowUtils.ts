@@ -152,7 +152,7 @@ export function filterHiddenFieldsEdges(
       if (!nodeTemplates[key]?.input_types) return;
       if (
         nodeTemplates[key]?.input_types?.some((type) =>
-          nodeInputType!.includes(type),
+          nodeInputType?.includes(type),
         ) &&
         !nodeTemplates[key].show
       ) {
