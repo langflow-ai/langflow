@@ -1907,6 +1907,20 @@ wheels = [
 ]
 
 [[package]]
+name = "fakeredis"
+version = "2.26.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "redis" },
+    { name = "sortedcontainers" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/06/c9/078a39baa743cd6def32b7bcc33a6853e48a5334b2e59034c6734c0747a4/fakeredis-2.26.2.tar.gz", hash = "sha256:3ee5003a314954032b96b1365290541346c9cc24aab071b52cc983bb99ecafbf", size = 150563 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/8f/9697564d0052a400ca23680c08c8f84066bf3282bd0cb03aa180cab6f855/fakeredis-2.26.2-py3-none-any.whl", hash = "sha256:86d4129df001efc25793cb334008160fccc98425d9f94de47884a92b63988c14", size = 103477 },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.115.7"
 source = { registry = "https://pypi.org/simple" }
@@ -3913,6 +3927,7 @@ dev = [
     { name = "blockbuster" },
     { name = "codeflash" },
     { name = "dictdiffer" },
+    { name = "fakeredis" },
     { name = "httpx" },
     { name = "hypothesis" },
     { name = "ipykernel" },
@@ -4057,6 +4072,7 @@ dev = [
     { name = "blockbuster", specifier = ">=1.5.8,<1.6" },
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
+    { name = "fakeredis", specifier = ">=2.26.2" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "hypothesis", specifier = ">=6.123.17" },
     { name = "ipykernel", specifier = ">=6.29.0" },
@@ -4105,7 +4121,7 @@ dependencies = [
     { name = "asyncer" },
     { name = "bcrypt" },
     { name = "cachetools" },
-    { name = "celery", extra = ["sqlalchemy"] },
+    { name = "celery", extra = ["redis", "sqlalchemy"] },
     { name = "chardet" },
     { name = "clickhouse-connect" },
     { name = "cryptography" },
@@ -4219,6 +4235,7 @@ local = [
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
+    { name = "fakeredis" },
     { name = "pytest-codspeed" },
     { name = "pytest-github-actions-annotate-failures" },
     { name = "types-aiofiles" },
@@ -4236,7 +4253,7 @@ requires-dist = [
     { name = "cachetools", specifier = ">=5.5.0,<6.0.0" },
     { name = "celery", marker = "extra == 'all'", specifier = ">=5.3.1" },
     { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
-    { name = "celery", extras = ["sqlalchemy"], specifier = ">=5.4.0" },
+    { name = "celery", extras = ["redis", "sqlalchemy"], specifier = ">=5.4.0" },
     { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "codeflash", marker = "extra == 'dev'", specifier = ">=0.8.4" },
@@ -4338,6 +4355,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "fakeredis", specifier = ">=2.26.2" },
     { name = "pytest-codspeed", specifier = ">=3.0.0" },
     { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
     { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },

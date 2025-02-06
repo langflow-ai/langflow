@@ -81,7 +81,7 @@ dependencies = [
     "mcp>=1.1.2",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
-    "celery[sqlalchemy]>=5.4.0",
+    "celery[redis,sqlalchemy]>=5.4.0",
 ]
 
 
@@ -162,6 +162,7 @@ ignore = [
 [tool.uv]
 dev-dependencies = [
     "asgi-lifespan>=2.1.0",
+    "fakeredis>=2.26.2",
     "pytest-codspeed>=3.0.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "types-aiofiles>=24.1.0.20240626",
