@@ -7,6 +7,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface DuplicateFileQueryParams {
   id: string;
   filename: string;
+  type: string;
 }
 
 export const useDuplicateFileV2: useMutationFunctionType<
@@ -28,7 +29,7 @@ export const useDuplicateFileV2: useMutationFunctionType<
     const blob = await response.blob();
 
     // Create a File object from the blob
-    const file = new File([blob], params.filename, {
+    const file = new File([blob], params.filename + "." + params.type, {
       type: blob.type,
     });
 

@@ -5,6 +5,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface DownloadFileQueryParams {
   id: string;
   filename: string;
+  type: string;
 }
 
 export const useGetDownloadFileV2: useMutationFunctionType<
@@ -29,7 +30,7 @@ export const useGetDownloadFileV2: useMutationFunctionType<
 
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", params.filename); // Set the filename
+    link.setAttribute("download", params.filename + "." + params.type); // Set the filename
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

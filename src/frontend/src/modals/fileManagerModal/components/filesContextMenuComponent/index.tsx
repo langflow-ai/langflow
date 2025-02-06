@@ -23,6 +23,7 @@ export default function FilesContextMenuComponent({
   const { mutate: downloadFile } = useGetDownloadFileV2({
     id: file.id,
     filename: file.name,
+    type: file.path.split(".").pop() || "",
   });
 
   const { mutate: deleteFile } = useDeleteFileV2({
@@ -32,6 +33,7 @@ export default function FilesContextMenuComponent({
   const { mutate: duplicateFile } = useDuplicateFileV2({
     id: file.id,
     filename: file.name,
+    type: file.path.split(".").pop() || "",
   });
 
   const handleSelectOptionsChange = (option: string) => {
