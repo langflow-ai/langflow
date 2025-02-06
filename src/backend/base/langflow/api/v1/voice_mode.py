@@ -20,8 +20,12 @@ from langflow.logging import logger
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
-from langflow.utils.voice_utils import resample_24k_to_16k, BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, \
-    write_audio_to_file
+from langflow.utils.voice_utils import (
+    BYTES_PER_24K_FRAME,
+    VAD_SAMPLE_RATE_16K,
+    resample_24k_to_16k,
+    write_audio_to_file,
+)
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -35,6 +39,7 @@ SESSION_INSTRUCTIONS = (
     "Always tell the user before you call a function to assist with their question. "
     "And let them know what it does."
 )
+
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
@@ -183,7 +188,7 @@ async def websocket_endpoint(
 
     # Connect to OpenAI Realtime.
     url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview"
-    #url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview"
+    # url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview"
     headers = {
         "Authorization": f"Bearer {openai_key}",
         "OpenAI-Beta": "realtime=v1",
@@ -206,9 +211,7 @@ async def websocket_endpoint(
                     "prefix_padding_ms": PREFIX_PADDING_MS,
                     "silence_duration_ms": SILENCE_DURATION_MS,
                 },
-                "input_audio_transcription": {
-                    "model": "whisper-1"
-                },
+                "input_audio_transcription": {"model": "whisper-1"},
                 "tools": [flow_tool],
                 "tool_choice": "auto",
             },
@@ -253,14 +256,14 @@ async def websocket_endpoint(
                         continue
 
                     if is_speech and bot_speaking_flag[0]:
-                        print("Barge-in detected!", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                        print("Barge-in detected!", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                         await openai_ws.send(json.dumps({"type": "response.cancel"}))
                         print("bot speaking false")
                         bot_speaking_flag[0] = False
                         # Optionally, clear the accumulated audio if desired.
-                        #vad_audio_buffer = bytearray()
+                        # vad_audio_buffer = bytearray()
                         break
-                    #elif is_speech:
+                    # elif is_speech:
                     #    print(f"Speaking but not barging!", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
         async def forward_to_openai() -> None:
@@ -342,9 +345,8 @@ async def websocket_endpoint(
                         audio_delta = event.get("delta", "")
                         if audio_delta and False:
                             asyncio.create_task(write_audio_to_file(audio_delta))
-            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
+            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                 print("Websocket exception {e}")
-                pass
 
         # Start the background VAD processing task.
         asyncio.create_task(process_vad_audio())

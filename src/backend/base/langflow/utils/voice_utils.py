@@ -2,9 +2,7 @@ import asyncio
 import base64
 
 import numpy as np
-import pyaudio
-import simpleaudio
-from scipy.signal import resample_poly, resample
+from scipy.signal import resample
 
 from langflow.logging import logger
 
@@ -16,10 +14,8 @@ BYTES_PER_SAMPLE = 2
 BYTES_PER_24K_FRAME = int(SAMPLE_RATE_24K * FRAME_DURATION_MS / 1000) * BYTES_PER_SAMPLE
 BYTES_PER_16K_FRAME = int(VAD_SAMPLE_RATE_16K * FRAME_DURATION_MS / 1000) * BYTES_PER_SAMPLE
 
-def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
-    import numpy as np
-    from scipy.signal import resample_poly
 
+def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
     # Convert bytes to NumPy array
     samples_24k = np.frombuffer(frame_24k_bytes, dtype=np.int16)
     # Resample from 24kHz -> 16kHz
@@ -30,7 +26,8 @@ def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
 
     return frame_16k_bytes
 
-#def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
+
+# def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
 #    """
 #    Convert one 20ms chunk (960 bytes @ 24kHz) to 20ms @ 16kHz (640 bytes).
 #    Raises ValueError if the frame is not exactly 960 bytes.
@@ -60,10 +57,9 @@ def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
 #    return frame_16k_bytes
 #
 
+
 async def write_audio_to_file(audio_base64: str, filename: str = "output_audio.raw") -> None:
-    """
-    Decode the base64-encoded audio and write (append) it to a file asynchronously.
-    """
+    """Decode the base64-encoded audio and write (append) it to a file asynchronously."""
     try:
         audio_bytes = base64.b64decode(audio_base64)
         # Use asyncio.to_thread to perform file I/O without blocking the event loop
