@@ -1,6 +1,10 @@
 import { MorphingMenu } from "@/components/ui/morphing-menu";
 
-export default function ImportButtonComponent({}: {}) {
+export default function ImportButtonComponent({
+  variant = "large",
+}: {
+  variant?: "large" | "small";
+}) {
   const items = [
     {
       icon: "GoogleDrive",
@@ -25,5 +29,7 @@ export default function ImportButtonComponent({}: {}) {
     },
   ];
 
-  return <MorphingMenu trigger="Import from..." items={items} />;
+  return (
+    <MorphingMenu variant={variant} trigger="Import from..." items={items} />
+  );
 }

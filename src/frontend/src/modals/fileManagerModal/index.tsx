@@ -59,7 +59,7 @@ export default function FileManagerModal({
             <div className="rounded-md bg-muted p-1.5">
               <ForwardedIconComponent name="File" className="h-5 w-5" />
             </div>
-            File Manager
+            My Files
           </span>
         </BaseModal.Header>
         <BaseModal.Content>
@@ -69,7 +69,6 @@ export default function FileManagerModal({
               types={types}
               isList={isList ?? false}
             />
-            {/* <ImportFilesComponent /> */}
             <RecentFilesComponent
               files={files}
               selectedFiles={internalSelectedFiles}

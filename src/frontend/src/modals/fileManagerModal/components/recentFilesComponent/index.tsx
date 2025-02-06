@@ -6,6 +6,7 @@ import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useState } from "react";
 import FilesRendererComponent from "../filesRendererComponent";
+import ImportButtonComponent from "../importButtonComponent";
 
 export default function RecentFilesComponent({
   files,
@@ -66,15 +67,17 @@ export default function RecentFilesComponent({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-6">
-        <span className="text-sm font-medium">Recent Files</span>
-        <div className="flex-1">
+        <div className="w-2/3 flex-1">
           <Input
             icon="Search"
             placeholder="Search files..."
-            className=""
+            inputClassName="h-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+        </div>
+        <div className="flex w-1/3 justify-end">
+          <ImportButtonComponent variant="small" />
         </div>
       </div>
       <div className="flex h-56 flex-col gap-1">

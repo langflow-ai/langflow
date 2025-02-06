@@ -89,7 +89,7 @@ export default function DragFilesComponent({
         <h3 className="text-sm font-semibold">
           {isDragging ? "Drop files here" : "Click or drag files here"}
         </h3>
-        <p className="flex items-center gap-1 text-xs">
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
           <span>{types.slice(0, 3).join(", ")}</span>
           {types.length > 3 && (
             <ShadTooltip content={types.slice(3).join(", ")}>
