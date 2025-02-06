@@ -360,6 +360,7 @@ class Vertex:
                 if file_path := field.get("file_path"):
                     storage_service = get_storage_service()
                     try:
+                        full_path: str | list[str] = ""
                         if field.get("list"):
                             full_path = []
                             for p in file_path:
@@ -368,8 +369,7 @@ class Vertex:
                                 full_path.append(path)
                         else:
                             flow_id, file_name = os.path.split(file_path)
-                            path = storage_service.build_full_path(flow_id, file_name)
-                            full_path = path
+                            full_path = storage_service.build_full_path(flow_id, file_name)
                     except ValueError as e:
                         if "too many values to unpack" in str(e):
                             full_path = file_path
