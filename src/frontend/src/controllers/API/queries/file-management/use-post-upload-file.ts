@@ -19,7 +19,7 @@ export const usePostUploadFileV2: useMutationFunctionType<
     formData.append("file", payload.file);
 
     const response = await api.post<any>(
-      `${getURL("FILE_MANAGEMENT")}/`,
+      `${getURL("FILE_MANAGEMENT", {}, true)}/`,
       formData,
     );
 

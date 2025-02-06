@@ -16,7 +16,7 @@ export const useDeleteFileV2: useMutationFunctionType<IDeleteFile, void> = (
 
   const deleteFileFn = async (): Promise<any> => {
     const response = await api.delete<any>(
-      `${getURL("FILE_MANAGEMENT")}/${params.id}`,
+      `${getURL("FILE_MANAGEMENT", { id: params.id }, true)}/`,
     );
 
     return response.data;

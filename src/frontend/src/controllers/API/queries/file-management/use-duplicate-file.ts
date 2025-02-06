@@ -17,11 +17,14 @@ export const useDuplicateFileV2: useMutationFunctionType<
 
   const duplicateFileFn = async (): Promise<any> => {
     // First download the file
-    const response = await fetch(`${getURL("FILE_MANAGEMENT")}/${params.id}`, {
-      headers: {
-        Accept: "*/*",
+    const response = await fetch(
+      `${getURL("FILE_MANAGEMENT", { id: params.id }, true)}/`,
+      {
+        headers: {
+          Accept: "*/*",
+        },
       },
-    });
+    );
     const blob = await response.blob();
 
     // Create a File object from the blob
@@ -34,7 +37,7 @@ export const useDuplicateFileV2: useMutationFunctionType<
     formData.append("file", file);
 
     const uploadResponse = await api.post<any>(
-      `${getURL("FILE_MANAGEMENT")}/`,
+      `${getURL("FILE_MANAGEMENT", {}, true)}/`,
       formData,
     );
 

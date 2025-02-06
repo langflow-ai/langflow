@@ -14,7 +14,7 @@ export const useGetFilesV2: useQueryFunctionType<undefined, FilesResponse> = (
 
   const getFilesFn = async () => {
     const response = await api.get<FilesResponse>(
-      `${getURL("FILE_MANAGEMENT")}/`,
+      `${getURL("FILE_MANAGEMENT", {}, true)}/`,
     );
     return response["data"];
   };
