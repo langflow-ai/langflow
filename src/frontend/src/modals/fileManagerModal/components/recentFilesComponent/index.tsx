@@ -1,4 +1,5 @@
 import { Input } from "@/components/ui/input";
+import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
 import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
@@ -19,6 +20,8 @@ export default function RecentFilesComponent({
   isList: boolean;
 }) {
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
+
+  const { mutate: renameFile } = usePostRenameFileV2();
 
   useEffect(() => {
     if (files) {
@@ -55,6 +58,10 @@ export default function RecentFilesComponent({
     );
   };
 
+  const handleRename = (id: string, name: string) => {
+    renameFile({ id, name });
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-6">
@@ -87,6 +94,7 @@ export default function RecentFilesComponent({
             .slice(0, 5)}
           handleFileSelect={handleFileSelect}
           selectedFiles={selectedFiles}
+          handleRename={handleRename}
         />
       </div>
     </div>
