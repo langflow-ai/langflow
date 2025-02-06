@@ -8,8 +8,7 @@ from typing_extensions import TypedDict
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.serialization.serialization import \
-    serialize as original_serialize
+from langflow.serialization.serialization import serialize as original_serialize
 
 INPUT_FIELD_NAME = "input_value"
 
