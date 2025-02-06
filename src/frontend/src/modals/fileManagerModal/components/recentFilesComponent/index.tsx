@@ -4,7 +4,7 @@ import { CustomLink } from "@/customization/components/custom-link";
 import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
 import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import FilesRendererComponent from "../filesRendererComponent";
 import ImportButtonComponent from "../importButtonComponent";
 
@@ -22,21 +22,11 @@ export default function RecentFilesComponent({
   isList: boolean;
 }) {
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
+  const [containerHeight, setContainerHeight] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { mutate: renameFile } = usePostRenameFileV2();
-
-  useEffect(() => {
-    if (files) {
-      setFuse(
-        new Fuse(files, {
-          keys: ["name"],
-          threshold: 0.3,
-        }),
-      );
-    }
-  }, [files]);
-
-  const [searchQuery, setSearchQuery] = useState("");
 
   const searchResults = useMemo(() => {
     const filteredFiles = (
@@ -49,6 +39,23 @@ export default function RecentFilesComponent({
     });
     return filteredFiles;
   }, [searchQuery, files, selectedFiles, types]);
+
+  useEffect(() => {
+    if (files) {
+      setFuse(
+        new Fuse(files, {
+          keys: ["name"],
+          threshold: 0.3,
+        }),
+      );
+    }
+  }, [files]);
+
+  useEffect(() => {
+    if (containerRef.current && !containerHeight) {
+      setContainerHeight(containerRef.current.scrollHeight);
+    }
+  }, [searchResults, containerHeight]);
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFiles(
@@ -65,7 +72,7 @@ export default function RecentFilesComponent({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 overflow-hidden">
       <div className="flex items-center justify-between gap-6">
         <div className="w-2/3 flex-1">
           <Input
@@ -80,7 +87,11 @@ export default function RecentFilesComponent({
           <ImportButtonComponent variant="small" />
         </div>
       </div>
-      <div className="flex h-56 flex-col gap-1">
+      <div
+        ref={containerRef}
+        className={`flex flex-col gap-1 overflow-y-auto ${containerHeight ? "transition-none" : ""}`}
+        style={{ height: containerHeight ? `${containerHeight}px` : "auto" }}
+      >
         {searchResults.length > 0 ? (
           <FilesRendererComponent
             files={searchResults
@@ -96,7 +107,7 @@ export default function RecentFilesComponent({
                     )
                   : selectedOrder;
               })
-              .slice(0, 5)}
+              .slice(0, 10)}
             handleFileSelect={handleFileSelect}
             selectedFiles={selectedFiles}
             handleRename={handleRename}

@@ -225,7 +225,7 @@ function BaseModal({
   const contentClasses = cn(
     minWidth,
     height,
-    "flex flex-col duration-300 overflow-hidden",
+    "flex flex-col duration-300 overflow-hidden max-h-[98dvh]",
     className,
   );
 
@@ -253,7 +253,7 @@ function BaseModal({
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex h-full flex-col gap-6"
+                className="flex h-full flex-col gap-6 overflow-hidden"
               >
                 {modalContent}
               </Form.Root>

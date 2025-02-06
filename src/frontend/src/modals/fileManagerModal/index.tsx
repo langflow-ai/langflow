@@ -62,20 +62,24 @@ export default function FileManagerModal({
             My Files
           </span>
         </BaseModal.Header>
-        <BaseModal.Content>
-          <div className="flex flex-col gap-4">
-            <DragFilesComponent
-              onUpload={handleUpload}
-              types={types}
-              isList={isList ?? false}
-            />
-            <RecentFilesComponent
-              files={files}
-              selectedFiles={internalSelectedFiles}
-              setSelectedFiles={setInternalSelectedFiles}
-              types={types}
-              isList={isList ?? false}
-            />
+        <BaseModal.Content overflowHidden>
+          <div className="flex flex-col gap-4 overflow-hidden">
+            <div className="flex shrink-0 flex-col">
+              <DragFilesComponent
+                onUpload={handleUpload}
+                types={types}
+                isList={isList ?? false}
+              />
+            </div>
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <RecentFilesComponent
+                files={files}
+                selectedFiles={internalSelectedFiles}
+                setSelectedFiles={setInternalSelectedFiles}
+                types={types}
+                isList={isList ?? false}
+              />
+            </div>
           </div>
         </BaseModal.Content>
 

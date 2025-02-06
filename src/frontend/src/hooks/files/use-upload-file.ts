@@ -44,7 +44,7 @@ const useUploadFile = ({
             `File type not allowed. Allowed types: ${types.join(", ")}`,
           );
         }
-        if (multiple && filesToUpload.length !== 1) {
+        if (!multiple && filesToUpload.length !== 1) {
           throw new Error("Multiple files are not allowed");
         }
 
