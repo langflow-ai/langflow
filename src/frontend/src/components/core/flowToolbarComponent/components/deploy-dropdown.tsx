@@ -8,23 +8,65 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ENABLE_WIDGET } from "@/customization/feature-flags";
-import getWidgetCode from "@/modals/apiModal/utils/get-widget-code";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
 import { Switch } from "@/components/ui/switch";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import useAuthStore from "@/stores/authStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import useAlertStore from "@/stores/alertStore";
 export default function PublishDropdown() {
   const domain = window.location.origin;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
   const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
   const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { mutate } = usePatchUpdateFlow();
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const setFlows = useFlowsManagerStore((state) => state.setFlows);
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
   const isPublished = useFlowsManagerStore(
-    (state) => state.currentFlow?.public,
+    (state) => state.currentFlow?.access_type === "public",
   );
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
+
+  useEffect(() => {
+    console.log(isPublished,"isPublished");
+  }, [isPublished]);
+
+  const handlePublishedSwitch = (checked: boolean) => {
+    mutate({
+      id: flowId ?? "",
+      access_type: checked ? "private" : "public",
+    },{
+      onSuccess: (updatedFlow) => {
+        if (flows) {
+          setFlows(
+            flows.map((flow) => {
+              if (flow.id === updatedFlow.id) {
+                return updatedFlow;
+              }
+              return flow;
+            }),
+          );
+          setCurrentFlow(updatedFlow);
+        } else {
+          setErrorData({
+            title: "Failed to save flow",
+            list: ["Flows variable undefined"],
+          });
+        }
+      },
+      onError: (e) => {
+        setErrorData({
+          title: "Failed to save flow",
+          list: [e.message],
+        });
+      },
+    },);
+  };
 
   // using js const instead of applies.css because of group tag
   const groupStyle = "text-muted-foreground group-hover:text-foreground";
@@ -62,7 +104,11 @@ export default function PublishDropdown() {
               className="deploy-dropdown-item group"
               onClick={() => {
                 if (hasIO) {
-                  window.open(`${domain}/playground/${flowId}`, "_blank");
+                  if(isPublished) {
+                    window.open(`${domain}/playground/${flowId}`, "_blank");
+                  } else {
+                    handlePublishedSwitch(isPublished);
+                  }
                 }
               }}
             >
@@ -72,16 +118,14 @@ export default function PublishDropdown() {
                   className={`${groupStyle} icon-size mr-2`}
                 />
                 <span>Standalone app</span>
-                <div className={`icon-size ml-auto pr-8 text-foreground`}>
+                <div className={`icon-size ml-auto pr-10 pb-6  text-foreground`}>
                   <Switch
-                    className="h-5 w-9"
+                    className="scale-[85%]"
                     checked={isPublished}
-                    onCheckedChange={(checked) => {
-                      console.log(checked);
-                    }}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      handlePublishedSwitch(isPublished);
                     }}
                   />
                 </div>
