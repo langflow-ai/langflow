@@ -50,9 +50,17 @@ class NvidiaRerankComponent(LCCompressorComponent):
         return build_config
 
     def build_compressor(self) -> BaseDocumentCompressor:
-        try:
-            from langchain_nvidia_ai_endpoints import NVIDIARerank
-        except ImportError as e:
-            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
-            raise ImportError(msg) from e
-        return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url, top_n=self.top_n)
+        if self._compressor_cache is None:
+            try:
+                from langchain_nvidia_ai_endpoints import NVIDIARerank
+            except ImportError as e:
+                msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+                raise ImportError(msg) from e
+            self._compressor_cache = NVIDIARerank(
+                api_key=self.api_key, model=self.model, base_url=self.base_url, top_n=self.top_n
+            )
+        return self._compressor_cache
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._compressor_cache = None
