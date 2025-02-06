@@ -21,6 +21,7 @@ Table of Contents:
 import asyncio
 import sys
 from collections.abc import Callable
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -246,8 +247,8 @@ class TaskOrchestrationService(Service):
                 msg = f"Task with id {task_id} not found"
                 raise ValueError(msg)
 
-            for key, value in task_update.model_dump(exclude_unset=True).items():
-                setattr(task, key, value)
+            task.sqlmodel_update(task_update.model_dump(exclude_unset=True))
+            task.updated_at = datetime.now(timezone.utc)
 
             await session.commit()
             await session.refresh(task)
