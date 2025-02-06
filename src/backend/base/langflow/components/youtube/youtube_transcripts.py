@@ -5,7 +5,7 @@ from langchain_community.document_loaders.youtube import TranscriptFormat
 
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, IntInput, MultilineInput
-from langflow.schema import Data, DataFrame, Message
+from langflow.schema import DataFrame, Message
 from langflow.template import Output
 
 
@@ -13,7 +13,7 @@ class YouTubeTranscriptsComponent(Component):
     """A component that extracts spoken content from YouTube videos as transcripts."""
 
     display_name: str = "YouTube Transcripts"
-    description: str = "Extracts spoken content from YouTube videos with multiple output options."
+    description: str = "Extracts spoken content from YouTube videos with both DataFrame and text output options."
     icon: str = "YouTube"
     name = "YouTubeTranscripts"
 
@@ -43,7 +43,6 @@ class YouTubeTranscriptsComponent(Component):
     outputs = [
         Output(name="dataframe", display_name="Chunks", method="get_dataframe_output"),
         Output(name="message", display_name="Transcript", method="get_message_output"),
-        Output(name="data_output", display_name="Transcript + Source", method="get_data_output"),
     ]
 
     def _load_transcripts(self, *, as_chunks: bool = True):
@@ -69,7 +68,6 @@ class YouTubeTranscriptsComponent(Component):
                 start_seconds %= 60
                 timestamp = f"{start_minutes:02d}:{start_seconds:02d}"
                 data.append({"timestamp": timestamp, "text": doc.page_content})
-
             return DataFrame(pd.DataFrame(data))
 
         except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:
@@ -85,25 +83,3 @@ class YouTubeTranscriptsComponent(Component):
         except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:
             error_msg = f"Failed to get YouTube transcripts: {exc!s}"
             return Message(text=error_msg)
-
-    def get_data_output(self) -> Data:
-        """
-        Returns a Data object containing:
-          - 'transcript': continuous text from the entire video
-          - 'video_url': the input YouTube URL
-        """
-        try:
-            transcripts = self._load_transcripts(as_chunks=False)
-            result = transcripts[0].page_content if transcripts and transcripts[0].page_content else None
-
-            # Build the Data object with two fields
-            data_dict = {
-                "transcript": result,
-                "video_url": self.url
-            }
-            return Data(data=data_dict)
-
-        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:
-            error_msg = f"Failed to get YouTube transcripts: {exc!s}"
-            return Data(data={"error": error_msg, "video_url": self.url})
-
