@@ -4,7 +4,7 @@ import { CustomLink } from "@/customization/components/custom-link";
 import { sortByBoolean, sortByDate } from "@/pages/MainPage/utils/sort-flows";
 import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import FilesRendererComponent from "../filesRendererComponent";
 import ImportButtonComponent from "../importButtonComponent";
 
@@ -23,7 +23,6 @@ export default function RecentFilesComponent({
 }) {
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
   const [containerHeight, setContainerHeight] = useState<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { mutate: renameFile } = usePostRenameFileV2();
@@ -50,12 +49,6 @@ export default function RecentFilesComponent({
       );
     }
   }, [files]);
-
-  useEffect(() => {
-    if (containerRef.current && !containerHeight) {
-      setContainerHeight(containerRef.current.scrollHeight);
-    }
-  }, [searchResults, containerHeight]);
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFiles(
@@ -87,11 +80,7 @@ export default function RecentFilesComponent({
           <ImportButtonComponent variant="small" />
         </div>
       </div>
-      <div
-        ref={containerRef}
-        className={`flex min-h-60 flex-col gap-1 overflow-y-auto ${containerHeight ? "transition-none" : ""}`}
-        style={{ height: containerHeight ? `${containerHeight}px` : "auto" }}
-      >
+      <div className={`flex h-80 min-h-80 flex-col gap-1 overflow-y-auto`}>
         {searchResults.length > 0 ? (
           <FilesRendererComponent
             files={searchResults
