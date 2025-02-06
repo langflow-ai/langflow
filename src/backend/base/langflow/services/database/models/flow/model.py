@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime, timezone
+from enum import Enum
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
@@ -15,7 +16,8 @@ from pydantic import (
     field_serializer,
     field_validator,
 )
-from sqlalchemy import Text, UniqueConstraint
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema import Data
@@ -28,6 +30,11 @@ if TYPE_CHECKING:
     from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 HEX_COLOR_LENGTH = 7
+
+
+class AccessTypeEnum(str, Enum):
+    PRIVATE = "private"
+    PUBLIC = "public"
 
 
 class FlowBase(SQLModel):
@@ -43,6 +50,16 @@ class FlowBase(SQLModel):
     endpoint_name: str | None = Field(default=None, nullable=True, index=True)
     tags: list[str] | None = None
     locked: bool | None = Field(default=False, nullable=True)
+    access_type: AccessTypeEnum = Field(
+        default=AccessTypeEnum.PRIVATE,
+        sa_column=Column(
+            SQLEnum(
+                AccessTypeEnum, name="access_type_enum", values_callable=lambda enum: [member.value for member in enum]
+            ),
+            nullable=False,
+            server_default=text("'private'"),
+        ),
+    )
 
     @field_validator("endpoint_name")
     @classmethod
