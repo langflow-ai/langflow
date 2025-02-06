@@ -2,9 +2,9 @@ from langflow.custom import Component
 from langflow.io import (
     DataInput,
     IntInput,
+    MultilineInput,
     Output,
     SecretStrInput,
-    MultilineInput,
 )
 from langflow.schema import Data
 
