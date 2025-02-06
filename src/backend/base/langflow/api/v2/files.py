@@ -95,7 +95,7 @@ async def upload_user_file(
             root_filename, _ = new_filename, ""
 
         # Check if there are files with the same name
-        stmt = select(UserFile).where(cast(File.name, String).like(f"{root_filename}%"))
+        stmt = select(UserFile).where(cast(UserFile.name, String).like(f"{root_filename}%"))
         existing_files = await session.exec(stmt)
         files = existing_files.all()  # Fetch all matching records
 
