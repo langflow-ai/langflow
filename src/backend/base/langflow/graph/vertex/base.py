@@ -368,7 +368,8 @@ class Vertex:
                                 full_path.append(path)
                         else:
                             flow_id, file_name = os.path.split(file_path)
-                            full_path = storage_service.build_full_path(flow_id, file_name)
+                            path = storage_service.build_full_path(flow_id, file_name)
+                            full_path = path
                     except ValueError as e:
                         if "too many values to unpack" in str(e):
                             full_path = file_path
