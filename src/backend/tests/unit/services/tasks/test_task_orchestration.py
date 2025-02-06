@@ -77,6 +77,7 @@ async def test_update_task(task_orchestration_service: TaskOrchestrationService)
     assert updated_task.category == created_task.category
     assert updated_task.state == created_task.state
     assert isinstance(updated_task.updated_at, datetime)
+    assert updated_task.updated_at.tzinfo == created_task.updated_at.tzinfo
     assert updated_task.updated_at > created_task.updated_at
 
 
