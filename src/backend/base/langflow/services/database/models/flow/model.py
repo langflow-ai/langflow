@@ -248,6 +248,7 @@ class FlowUpdate(SQLModel):
     folder_id: UUID | None = None
     endpoint_name: str | None = None
     locked: bool | None = None
+    access_type: AccessTypeEnum | None = None
 
     @field_validator("endpoint_name")
     @classmethod
