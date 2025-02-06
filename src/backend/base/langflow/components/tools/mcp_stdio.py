@@ -84,7 +84,7 @@ class MCPStdio(Component):
     description = (
         "Connects to an MCP server over stdio and exposes it's tools as langflow tools to be used by an Agent."
     )
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "code"
     name = "MCPStdio"
 

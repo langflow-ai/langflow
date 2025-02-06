@@ -61,7 +61,7 @@ from langflow.schema.message import Message
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
 
