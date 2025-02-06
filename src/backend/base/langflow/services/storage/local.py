@@ -108,3 +108,15 @@ class LocalStorageService(StorageService):
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for local
+
+    async def get_file_size(self, flow_id: str, file_name: str) -> None:
+        """Get the size of a file in the local storage."""
+        # Get the file size from the file path
+        file_path = self.data_dir / flow_id / file_name
+        if not await file_path.exists():
+            logger.warning(f"File {file_name} not found in flow {flow_id}.")
+            msg = f"File {file_name} not found in flow {flow_id}"
+            raise FileNotFoundError(msg)
+
+        file_size_stat = await file_path.stat()
+        return file_size_stat.st_size
