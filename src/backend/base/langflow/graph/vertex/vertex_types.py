@@ -102,8 +102,11 @@ class ComponentVertex(Vertex):
             for edge in self.get_edge_with_target(requester.id):
                 # We need to check if the edge is a normal edge
                 if edge.is_cycle and edge.target_param:
-                    default_value = (None if edge.target_param in requester.output_names
-                                    else requester.get_value_from_template_dict(edge.target_param))
+                    default_value = (
+                        None
+                        if edge.target_param in requester.output_names
+                        else requester.get_value_from_template_dict(edge.target_param)
+                    )
                 else:
                     default_value = requester.get_value_from_template_dict(target_handle_name)
 
