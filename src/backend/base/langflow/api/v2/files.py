@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
-from sqlmodel import select
+from sqlmodel import String, cast, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -95,7 +95,7 @@ async def upload_user_file(
             root_filename, _ = new_filename, ""
 
         # Check if there are files with the same name
-        stmt = select(UserFile).where(UserFile.name.like(f"{root_filename}%"))
+        stmt = select(UserFile).where(cast(File.name, String).like(f"{root_filename}%"))
         existing_files = await session.exec(stmt)
         files = existing_files.all()  # Fetch all matching records
 
