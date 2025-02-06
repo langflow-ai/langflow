@@ -6,7 +6,7 @@ from langflow.io import (
     IntInput,
     Output,
     SecretStrInput,
-    StrInput,
+    MultilineInput
 )
 from langflow.schema import Data
 
@@ -27,7 +27,7 @@ class FirecrawlCrawlApi(Component):
             password=True,
             info="The API key to use Firecrawl API.",
         ),
-        StrInput(
+        MultilineInput(
             name="url",
             display_name="URL",
             required=True,
