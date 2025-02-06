@@ -14,7 +14,12 @@ import pandas as pd
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
-from langflow.graph.schema import INPUT_COMPONENTS, OUTPUT_COMPONENTS, InterfaceComponentTypes, ResultData
+from langflow.graph.schema import (
+    INPUT_COMPONENTS,
+    OUTPUT_COMPONENTS,
+    InterfaceComponentTypes,
+    ResultData,
+)
 from langflow.graph.utils import UnbuiltObject, UnbuiltResult, log_transaction
 from langflow.interface import initialize
 from langflow.interface.listing import lazy_load_dict
@@ -355,8 +360,16 @@ class Vertex:
                 if file_path := field.get("file_path"):
                     storage_service = get_storage_service()
                     try:
-                        flow_id, file_name = os.path.split(file_path)
-                        full_path = storage_service.build_full_path(flow_id, file_name)
+                        full_path: str | list[str] = ""
+                        if field.get("list"):
+                            full_path = []
+                            for p in file_path:
+                                flow_id, file_name = os.path.split(p)
+                                path = storage_service.build_full_path(flow_id, file_name)
+                                full_path.append(path)
+                        else:
+                            flow_id, file_name = os.path.split(file_path)
+                            full_path = storage_service.build_full_path(flow_id, file_name)
                     except ValueError as e:
                         if "too many values to unpack" in str(e):
                             full_path = file_path
@@ -621,7 +634,12 @@ class Vertex:
             return await self._get_result(requester, target_handle_name)
 
     async def _log_transaction_async(
-        self, flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
+        self,
+        flow_id: str | UUID,
+        source: Vertex,
+        status,
+        target: Vertex | None = None,
+        error=None,
     ) -> None:
         """Log a transaction asynchronously with proper task handling and cancellation.
 
@@ -723,7 +741,12 @@ class Vertex:
             self.params[key].extend(result)
 
     async def _build_results(
-        self, custom_component, custom_params, base_type: str, *, fallback_to_env_vars=False
+        self,
+        custom_component,
+        custom_params,
+        base_type: str,
+        *,
+        fallback_to_env_vars=False,
     ) -> None:
         try:
             result = await initialize.loading.get_instance_results(
