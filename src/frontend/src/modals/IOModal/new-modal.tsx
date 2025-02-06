@@ -21,7 +21,6 @@ import { IOModalPropsType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
-import ChatView from "./components/chatView/chat-view";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
 export default function IOModal({
@@ -61,6 +60,8 @@ export default function IOModal({
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
+  setPlaygroundPage(!!playgroundPage);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
@@ -261,6 +262,12 @@ export default function IOModal({
     track("LangflowButtonClick");
     window.open(LangflowButtonRedirectTarget(), "_blank");
   };
+
+  useEffect(() => {
+    if (playgroundPage && messages.length > 0) {
+      window.localStorage.setItem(currentFlowId, JSON.stringify(messages));
+    }
+  }, [playgroundPage,messages]);
 
   return (
     <BaseModal
