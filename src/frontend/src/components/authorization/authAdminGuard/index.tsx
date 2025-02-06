@@ -5,6 +5,7 @@ import useAuthStore from "@/stores/authStore";
 import { useContext } from "react";
 
 export const ProtectedAdminRoute = ({ children }) => {
+
   const { userData } = useContext(AuthContext);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const autoLogin = useAuthStore((state) => state.autoLogin);
