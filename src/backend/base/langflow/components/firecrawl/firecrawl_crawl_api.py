@@ -1,14 +1,7 @@
 import uuid
 
 from langflow.custom import Component
-from langflow.io import (
-    DataInput,
-    IntInput,
-    Output,
-    SecretStrInput,
-    MultilineInput,
-    StrInput
-)
+from langflow.io import DataInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
