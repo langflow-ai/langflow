@@ -89,10 +89,13 @@ async def upload_user_file(
         # Name it as filename (1), (2), etc.
         # Check if the file name already exists
         new_filename = file.filename
-        filename, extension = new_filename.rsplit(".", 1)
+        try:
+            root_filename, _ = new_filename.rsplit(".", 1)
+        except ValueError:
+            root_filename, _ = new_filename, ""
 
         # Check if there are files with the same name
-        stmt = select(UserFile).where(UserFile.name.like(f"{filename}%"))
+        stmt = select(UserFile).where(UserFile.name.like(f"{root_filename}%"))
         existing_files = await session.exec(stmt)
         files = existing_files.all()  # Fetch all matching records
 
@@ -101,7 +104,7 @@ async def upload_user_file(
             count = len(files)  # Count occurrences
 
             # Split the extension from the filename
-            new_filename = f"{filename} ({count}).{extension}" if "." in file.filename else f"{file.filename} ({count})"
+            root_filename = f"{root_filename} ({count})"
 
         # Compute the file size based on the path
         file_size = await storage_service.get_file_size(flow_id=folder, file_name=anonymized_file_name)
@@ -113,7 +116,7 @@ async def upload_user_file(
         new_file = UserFile(
             id=file_id,
             user_id=current_user.id,
-            name=new_filename,
+            name=root_filename,
             path=file_path,
             size=file_size,
         )
