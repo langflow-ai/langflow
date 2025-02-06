@@ -68,12 +68,14 @@ export default function PlaygroundPage() {
 
   useEffect(() => {
     document.title = currentSavedFlow?.name || "Langflow";
-    const { inputs, outputs } = getInputsAndOutputs(
-      currentSavedFlow?.data?.nodes || [],
-    );
-    if (inputs.length === 0 && outputs.length === 0) {
-      // redirect to the home page
-      navigate("/");
+    if (currentSavedFlow?.data) {
+      const { inputs, outputs } = getInputsAndOutputs(
+        currentSavedFlow?.data?.nodes || [],
+      );
+      if (inputs.length === 0 && outputs.length === 0) {
+        // redirect to the home page
+        navigate("/");
+      }
     }
   }, [currentSavedFlow]);
 
