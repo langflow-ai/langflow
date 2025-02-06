@@ -18,7 +18,7 @@ class SambaNovaComponent(LCModelComponent):
     inputs = [
         *LCModelComponent._base_inputs,
         StrInput(
-            name="sambanova_url",
+            name="base_url",
             display_name="SambaNova Cloud Base Url",
             advanced=True,
             info="The base URL of the Sambanova Cloud API. "
@@ -33,7 +33,7 @@ class SambaNovaComponent(LCModelComponent):
             value=SAMBANOVA_MODEL_NAMES[0],
         ),
         SecretStrInput(
-            name="sambanova_api_key",
+            name="api_key",
             display_name="Sambanova API Key",
             info="The Sambanova API Key to use for the Sambanova model.",
             advanced=False,
@@ -61,8 +61,8 @@ class SambaNovaComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        sambanova_url = self.sambanova_url
-        sambanova_api_key = self.sambanova_api_key
+        sambanova_url = self.base_url
+        sambanova_api_key = self.api_key
         model_name = self.model_name
         max_tokens = self.max_tokens
         top_p = self.top_p
