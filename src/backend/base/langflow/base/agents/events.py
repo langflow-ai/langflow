@@ -20,7 +20,11 @@ class ExceptionWithMessageError(Exception):
         self.message = message
 
     def __str__(self):
-        return f"{self.message}"
+        return (
+            f"Agent message: {self.agent_message.text} \nError: {self.message}."
+            if self.agent_message.error or self.agent_message.text
+            else f"{self.message}."
+        )
 
 
 class InputDict(TypedDict):
