@@ -4,7 +4,7 @@
   "private": false,
   "scripts": {
     "clear-docs": "rimraf ./docs/",
-    "pull": "npm run clear-docs && npx @sillsdev/docu-notion -n $NOTION_TOKEN -r $NOTION_DOCS_ROOT_PAGE_ID",
+    "pull": "yarn clear-docs && yarn dlx @sillsdev/docu-notion -n $NOTION_TOKEN -r $NOTION_DOCS_ROOT_PAGE_ID",
     "start": "docusaurus start",
     "build": "docusaurus build",
     "deploy": "docusaurus deploy",
