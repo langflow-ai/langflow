@@ -1,11 +1,11 @@
 from .alter_metadata import AlterMetadataComponent
+from .combine_data import CombineDataComponent
 from .combine_text import CombineTextComponent
 from .create_data import CreateDataComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
 from .llm_router import LLMRouterComponent
-from .combine_data import CombineDataComponent
 from .message_to_data import MessageToDataComponent
 from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
@@ -15,13 +15,13 @@ from .update_data import UpdateDataComponent
 
 __all__ = [
     "AlterMetadataComponent",
+    "CombineDataComponent",
     "CombineTextComponent",
     "CreateDataComponent",
     "DataFilterComponent",
     "ExtractDataKeyComponent",
     "JSONCleaner",
     "LLMRouterComponent",
-    "CombineDataComponent",
     "MessageToDataComponent",
     "ParseDataComponent",
     "ParseDataFrameComponent",
