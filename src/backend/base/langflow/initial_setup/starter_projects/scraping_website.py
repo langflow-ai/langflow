@@ -1,4 +1,4 @@
-from langflow.components.inputs import TextInput, SecretStrInput
+from langflow.components.inputs import SecretStrInput, TextInput
 from langflow.components.outputs import TextOutput
 from langflow.components.scrapegraph import ScrapeGraphSmartScraperApi
 from langflow.graph import Graph

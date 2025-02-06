@@ -4031,7 +4031,7 @@ requires-dist = [
     { name = "qianfan", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
     { name = "redis", specifier = "==5.2.1" },
-    { name = "scrapegraph-py", specifier = ">=1.10.2" },
+    { name = "scrapegraph-py", specifier = ">=1.12.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
     { name = "spider-client", specifier = "==0.1.24" },
     { name = "sqlalchemy", extras = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"], specifier = ">=2.0.36,<3.0.0" },
@@ -7624,7 +7624,7 @@ wheels = [
 
 [[package]]
 name = "scrapegraph-py"
-version = "1.10.2"
+version = "1.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -7633,9 +7633,9 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/25/e0a55d0b5bced151f30203bf9c187dd52725b2cd4dd0b0c195fff97f8a47/scrapegraph_py-1.10.2.tar.gz", hash = "sha256:42eb27de0da25b9b912a5b4da9851398b79dec147af749fea4a36f54511a5e8b", size = 110397 }
+sdist = { url = "https://files.pythonhosted.org/packages/42/36/10546d18157cd2efb2de09098fac8dd6f689b98842a4cc71bb7fc29ba4b9/scrapegraph_py-1.12.0.tar.gz", hash = "sha256:82d27e8ea325975f768f80d4edf403b6294518dae6a1e3ae63e27b8934a5dacb", size = 113290 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/7e/7c31a844c2f944fd7851bc4d2c2924fa21e30cd0a274a21a8460da0b4350/scrapegraph_py-1.10.2-py3-none-any.whl", hash = "sha256:c69baa8d4f1b21f4f728705b4798246f728080e9d6eaf6a90c203991df872dfc", size = 14523 },
+    { url = "https://files.pythonhosted.org/packages/11/a8/8610143e9ebad9596e402260f63cbb6168f99719f07e13847b1df5a28f4d/scrapegraph_py-1.12.0-py3-none-any.whl", hash = "sha256:fd74d091529d3f8f5ba057950333e15a48ac5c0be7e2a56a8f2bad04cebdac30", size = 15458 },
 ]
 
 [[package]]
