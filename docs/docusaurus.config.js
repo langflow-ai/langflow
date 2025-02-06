@@ -35,20 +35,26 @@ const config = {
         {
           tagName: 'script',
           attributes: {},
-          innerHTML: `<script>!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();</script>`,
+          innerHTML: `!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();`,
         },
         // Ketch geographically dynamic link text
         {
           tagName: 'script',
-          attributes: {},
+          attributes: {
+            defer: "true"
+          },
           innerHTML: `
-            ketch('on', 'regionInfo', regionInfo => {
-              var customTextRegions = ['US-CA'];
-              if (customTextRegions.includes(regionInfo)) {
-                var preferenceCenterLinkElement = document.getElementById("preferenceCenterLink");
-                if (preferenceCenterLinkElement) {
-                  preferenceCenterLinkElement.textContent = "Do Not Sell My Personal Information";
-                }
+            window.addEventListener('load', function() {
+              if (typeof ketch !== 'undefined') {
+                ketch('on', 'regionInfo', regionInfo => {
+                  var customTextRegions = ['US-CA'];
+                  if (customTextRegions.includes(regionInfo)) {
+                    var preferenceCenterLinkElement = document.getElementById("preferenceCenterLink");
+                    if (preferenceCenterLinkElement) {
+                      preferenceCenterLinkElement.textContent = "Do Not Sell My Personal Information";
+                    }
+                  }
+                });
               }
             });
           `,
@@ -85,6 +91,7 @@ const config = {
           lastmod: "datetime",
           changefreq: null,
           priority: null,
+          ignorePatterns: ['/preferences'],
         },
         gtag: {
           trackingID: "G-XHC7G628ZP",
@@ -282,13 +289,18 @@ const config = {
         },
       },
       footer: {
-        style: 'light',
+        style: 'dark',
         links: [
           {
-            title: 'Privacy',
+            title: null,
             items: [
               {
-                html: '<a id="preferenceCenterLink" href="https://www.langflow.org/preferences">Manage Privacy Choices</a>'
+                html: `<div class="footer-content">
+                  <span class="footer__copyright">© ${new Date().getFullYear()} Langflow</span>
+                  <div class="footer-links">
+                    <a href="/cookies">Manage Privacy Choices</a>
+                  </div>
+                </div>`
               },
             ],
           },

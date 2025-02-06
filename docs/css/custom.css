@@ -276,3 +276,33 @@ body {
   ) {
   margin-top: 0.25rem !important;
 }
+
+/* Footer Styles */
+.footer {
+  padding: 8px 0;
+  background-color: var(--ifm-navbar-background-color);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--ifm-navbar-padding-horizontal);
+  max-width: var(--ifm-container-width);
+  margin: 0 auto;
+  font-size: 12px;
+}
+
+.footer__copyright {
+  color: var(--ifm-navbar-link-color);
+}
+
+.footer-links a {
+  color: var(--ifm-navbar-link-color);
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
