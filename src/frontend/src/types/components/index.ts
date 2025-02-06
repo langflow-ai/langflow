@@ -574,7 +574,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | JSX.Element | null;
+  description?: string | JSX.Element | null;
 };
 
 export type codeAreaModalPropsType = {
