@@ -206,3 +206,16 @@ Props with the type JSON need to be passed as stringified JSONs, with the format
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
 | window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
 
+## Webhook cURL
+
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+
+```bash
+curl -X POST \
+  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  -H 'Content-Type: application/json'\
+  -d '{"any": "data"}'
+  ```
+
+To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
+
