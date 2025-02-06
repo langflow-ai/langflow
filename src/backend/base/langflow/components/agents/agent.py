@@ -10,7 +10,9 @@ from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
 from langflow.components.helpers.memory import MemoryComponent
 from langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.custom.utils import update_component_build_config
+from langflow.field_typing import Tool
 from langflow.io import BoolInput, DropdownInput, MultilineInput, Output
 from langflow.logging import logger
 from langflow.schema.dotdict import dotdict
@@ -84,8 +86,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 if not isinstance(self.tools, list):  # type: ignore[has-type]
                     self.tools = []
                 # Convert CurrentDateComponent to a StructuredTool
-                current_date_tool = (await CurrentDateComponent().to_toolkit()).pop(0)
-                # current_date_tool = CurrentDateComponent().to_toolkit()[0]
+                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)
                 if isinstance(current_date_tool, StructuredTool):
                     self.tools.append(current_date_tool)
                 else:
@@ -122,7 +123,7 @@ class AgentComponent(ToolCallingAgentComponent):
         # filter out empty values
         memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}
 
-        return await MemoryComponent().set(**memory_kwargs).retrieve_messages()
+        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 
     def get_llm(self):
         if isinstance(self.agent_llm, str):
@@ -265,3 +266,16 @@ class AgentComponent(ToolCallingAgentComponent):
                         component_class, build_config, field_value, "model_name"
                     )
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
+
+    async def to_toolkit(self) -> list[Tool]:
+        component_toolkit = _get_component_toolkit()
+        tools_names = self._build_tools_names()
+        agent_description = self.get_tool_description()
+        # TODO: Agent Description Depreciated Feature to be removed
+        description = f"{agent_description}{tools_names}"
+        tools = component_toolkit(component=self).get_tools(
+            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()
+        )
+        if hasattr(self, "tools_metadata"):
+            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+        return tools
