@@ -72,11 +72,9 @@ export default function PublishDropdown() {
                   className={`${groupStyle} icon-size mr-2`}
                 />
                 <span>Standalone app</span>
-                <div
-                  className={`icon-size ml-auto pr-8 text-foreground`}
-                >
+                <div className={`icon-size ml-auto pr-8 text-foreground`}>
                   <Switch
-                    className="w-9 h-5"
+                    className="h-5 w-9"
                     checked={isPublished}
                     onCheckedChange={(checked) => {
                       console.log(checked);
