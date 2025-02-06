@@ -19,6 +19,7 @@ from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.util.concurrency import greenlet_spawn
 from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -362,7 +363,7 @@ class DatabaseService(Service):
             except Exception:  # noqa: BLE001
                 logger.debug("Alembic not initialized")
                 should_initialize_alembic = True
-        await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+        await greenlet_spawn(self._run_migrations, should_initialize_alembic, fix)
 
     @staticmethod
     def try_downgrade_upgrade_until_success(alembic_cfg, retries=5) -> None:
