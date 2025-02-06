@@ -4,12 +4,13 @@ import shutil
 
 # we need to import tmpdir
 import tempfile
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
 import anyio
+import fakeredis
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
@@ -29,8 +30,9 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service
+from langflow.services.deps import get_db_service, get_event_bus_service
 from loguru import logger
+from redis import asyncio as redis
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -339,9 +341,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(name="fake_redis")
+async def fake_redis_client() -> AsyncIterator[redis.Redis]:
+    async with fakeredis.FakeAsyncRedis() as client:
+        yield client
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
+    fake_redis: fakeredis.aioredis.FakeRedis,
     monkeypatch,
     request,
     load_flows_dir,
@@ -371,6 +380,8 @@ async def client_fixture(
             db_service = get_db_service()
             db_service.database_url = f"sqlite:///{db_path}"
             db_service.reload_engine()
+            event_bus_service = get_event_bus_service()
+            event_bus_service.redis_client = fake_redis
             return app, db_path
 
         app, db_path = await asyncio.to_thread(init_app)
