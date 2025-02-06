@@ -46,6 +46,16 @@ const PlaygroundPage = lazy(() => import("./pages/Playground"));
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
   createRoutesFromElements([
+    <Route path="/playground/:id/">
+      <Route
+        path=""
+        element={
+          <ContextWrapper>
+            <PlaygroundPage />
+          </ContextWrapper>
+        }
+      />
+    </Route>,
     <Route
       path={ENABLE_CUSTOM_PARAM ? "/:customParam?" : "/"}
       element={
@@ -202,9 +212,6 @@ const router = createBrowserRouter(
                   <Route path="" element={<FlowPage />} />
                 </Route>
                 <Route path="view" element={<ViewPage />} />
-              </Route>
-              <Route path="playground/:id/">
-                <Route path="" element={<PlaygroundPage />} />
               </Route>
             </Route>
           </Route>
