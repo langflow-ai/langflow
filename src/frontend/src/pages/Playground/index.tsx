@@ -72,7 +72,7 @@ export default function PlaygroundPage() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
       {currentSavedFlow && (
-        <IOModal open={true} setOpen={() => { }} isPlayground playgroundPage>
+        <IOModal open={true} setOpen={() => {}} isPlayground playgroundPage>
           <></>
         </IOModal>
       )}

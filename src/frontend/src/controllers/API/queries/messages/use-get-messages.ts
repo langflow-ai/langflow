@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { keepPreviousData } from "@tanstack/react-query";
 import { ColDef, ColGroupDef } from "ag-grid-community";
@@ -6,7 +7,6 @@ import { extractColumnsFromRows } from "../../../../utils/utils";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import useFlowStore from "@/stores/flowStore";
 
 interface MessagesQueryParams {
   id?: string;
@@ -38,7 +38,9 @@ export const useGetMessagesQuery: useQueryFunctionType<
     if (!isPlaygroundPage) {
       return await api.get<any>(`${getURL("MESSAGES")}`, config);
     } else {
-      return {data:JSON.parse(window.localStorage.getItem(id??"") || "[]")}
+      return {
+        data: JSON.parse(window.localStorage.getItem(id ?? "") || "[]"),
+      };
     }
   };
 

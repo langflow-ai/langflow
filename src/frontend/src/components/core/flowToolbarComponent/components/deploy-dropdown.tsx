@@ -7,15 +7,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { ENABLE_WIDGET } from "@/customization/feature-flags";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
-import { Switch } from "@/components/ui/switch";
+import useAlertStore from "@/stores/alertStore";
+import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import useAuthStore from "@/stores/authStore";
 import { useEffect, useState } from "react";
-import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
-import useAlertStore from "@/stores/alertStore";
 export default function PublishDropdown() {
   const domain = window.location.origin;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
@@ -33,39 +33,42 @@ export default function PublishDropdown() {
   const isAuth = useAuthStore((state) => !!state.autoLogin);
 
   useEffect(() => {
-    console.log(isPublished,"isPublished");
+    console.log(isPublished, "isPublished");
   }, [isPublished]);
 
   const handlePublishedSwitch = (checked: boolean) => {
-    mutate({
-      id: flowId ?? "",
-      access_type: checked ? "private" : "public",
-    },{
-      onSuccess: (updatedFlow) => {
-        if (flows) {
-          setFlows(
-            flows.map((flow) => {
-              if (flow.id === updatedFlow.id) {
-                return updatedFlow;
-              }
-              return flow;
-            }),
-          );
-          setCurrentFlow(updatedFlow);
-        } else {
+    mutate(
+      {
+        id: flowId ?? "",
+        access_type: checked ? "private" : "public",
+      },
+      {
+        onSuccess: (updatedFlow) => {
+          if (flows) {
+            setFlows(
+              flows.map((flow) => {
+                if (flow.id === updatedFlow.id) {
+                  return updatedFlow;
+                }
+                return flow;
+              }),
+            );
+            setCurrentFlow(updatedFlow);
+          } else {
+            setErrorData({
+              title: "Failed to save flow",
+              list: ["Flows variable undefined"],
+            });
+          }
+        },
+        onError: (e) => {
           setErrorData({
             title: "Failed to save flow",
-            list: ["Flows variable undefined"],
+            list: [e.message],
           });
-        }
+        },
       },
-      onError: (e) => {
-        setErrorData({
-          title: "Failed to save flow",
-          list: [e.message],
-        });
-      },
-    },);
+    );
   };
 
   // using js const instead of applies.css because of group tag
@@ -75,98 +78,116 @@ export default function PublishDropdown() {
 
   return (
     <>
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="default" className="!h-8 !w-[95px] font-medium">
-          Publish
-          <IconComponent name="ChevronDown" className="icon-size font-medium" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-      forceMount
-        sideOffset={10}
-        alignOffset={-10}
-        align="end"
-        className="min-w-[300px] max-w-[400px]"
-      >
-        <ShadTooltipComponent
-          styleClasses="truncate"
-          side="left"
-          content={
-            hasIO
-              ? encodeURI(`${domain}/playground/${flowId}`)
-              : "Add a Chat Input or Chat Output to access your flow"
-          }
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="default" className="!h-8 !w-[95px] font-medium">
+            Publish
+            <IconComponent
+              name="ChevronDown"
+              className="icon-size font-medium"
+            />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          forceMount
+          sideOffset={10}
+          alignOffset={-10}
+          align="end"
+          className="min-w-[300px] max-w-[400px]"
         >
-          <div className={!hasIO ? "cursor-not-allowed" : ""}>
-            <DropdownMenuItem
-              disabled={!hasIO}
-              className="deploy-dropdown-item group"
-              onClick={() => {
-                if (hasIO) {
-                  if(isPublished) {
-                    window.open(`${domain}/playground/${flowId}`, "_blank");
-                  } else {
-                    handlePublishedSwitch(isPublished);
+          <ShadTooltipComponent
+            styleClasses="truncate"
+            side="left"
+            content={
+              hasIO
+                ? encodeURI(`${domain}/playground/${flowId}`)
+                : "Add a Chat Input or Chat Output to access your flow"
+            }
+          >
+            <div className={!hasIO ? "cursor-not-allowed" : ""}>
+              <DropdownMenuItem
+                disabled={!hasIO}
+                className="deploy-dropdown-item group"
+                onClick={() => {
+                  if (hasIO) {
+                    if (isPublished) {
+                      window.open(`${domain}/playground/${flowId}`, "_blank");
+                    } else {
+                      handlePublishedSwitch(isPublished);
+                    }
                   }
-                }
-              }}
+                }}
+              >
+                <div className="group-hover:bg-accent">
+                  <IconComponent
+                    name="Globe"
+                    className={`${groupStyle} icon-size mr-2`}
+                  />
+                  <span>Standalone app</span>
+                  <div
+                    className={`icon-size ml-auto pb-6 pr-10 text-foreground`}
+                  >
+                    <Switch
+                      className="scale-[85%]"
+                      checked={isPublished}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handlePublishedSwitch(isPublished);
+                      }}
+                    />
+                  </div>
+                </div>
+              </DropdownMenuItem>
+            </div>
+          </ShadTooltipComponent>
+          <DropdownMenuItem className="deploy-dropdown-item group">
+            <div className="group-hover:bg-accent">
+              <IconComponent
+                name="Code2"
+                className={`${groupStyle} icon-size mr-2`}
+              />
+              <span>API access</span>
+            </div>
+          </DropdownMenuItem>
+          {ENABLE_WIDGET && (
+            <DropdownMenuItem
+              onClick={() => setOpenEmbedModal(true)}
+              className="deploy-dropdown-item group"
             >
               <div className="group-hover:bg-accent">
                 <IconComponent
-                  name="Globe"
+                  name="Columns2"
                   className={`${groupStyle} icon-size mr-2`}
                 />
-                <span>Standalone app</span>
-                <div className={`icon-size ml-auto pr-10 pb-6  text-foreground`}>
-                  <Switch
-                    className="scale-[85%]"
-                    checked={isPublished}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handlePublishedSwitch(isPublished);
-                    }}
-                  />
-                </div>
+                <span>Embed into site</span>
               </div>
             </DropdownMenuItem>
-          </div>
-        </ShadTooltipComponent>
-        <DropdownMenuItem className="deploy-dropdown-item group">
-          <div className="group-hover:bg-accent">
-            <IconComponent
-              name="Code2"
-              className={`${groupStyle} icon-size mr-2`}
-            />
-            <span>API access</span>
-          </div>
-        </DropdownMenuItem>
-        {ENABLE_WIDGET && <DropdownMenuItem onClick={() => setOpenEmbedModal(true)} className="deploy-dropdown-item group">
-          <div className="group-hover:bg-accent">
-            <IconComponent
-              name="Columns2"
-              className={`${groupStyle} icon-size mr-2`}
-            />
-            <span>Embed into site</span>
-          </div>
-        </DropdownMenuItem>}
-        <DropdownMenuItem className="deploy-dropdown-item group">
-          <div className="group-hover:bg-accent">
-            <IconComponent
-              name="FileCode2"
-              className={`${groupStyle} icon-size mr-2`}
-            />
-            <span>Langflow SDK</span>
-            <IconComponent
-              name="ExternalLink"
-              className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
-            />
-          </div>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    <EmbedModal open={openEmbedModal} setOpen={setOpenEmbedModal} flowId={flowId ?? ""} flowName={flowName ?? ""} isAuth={isAuth} tweaksBuildedObject={{}} activeTweaks={false}></EmbedModal>
+          )}
+          <DropdownMenuItem className="deploy-dropdown-item group">
+            <div className="group-hover:bg-accent">
+              <IconComponent
+                name="FileCode2"
+                className={`${groupStyle} icon-size mr-2`}
+              />
+              <span>Langflow SDK</span>
+              <IconComponent
+                name="ExternalLink"
+                className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
+              />
+            </div>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <EmbedModal
+        open={openEmbedModal}
+        setOpen={setOpenEmbedModal}
+        flowId={flowId ?? ""}
+        flowName={flowName ?? ""}
+        isAuth={isAuth}
+        tweaksBuildedObject={{}}
+        activeTweaks={false}
+      ></EmbedModal>
     </>
   );
 }

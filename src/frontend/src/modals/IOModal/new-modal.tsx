@@ -267,7 +267,7 @@ export default function IOModal({
     if (playgroundPage && messages.length > 0) {
       window.localStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
-  }, [playgroundPage,messages]);
+  }, [playgroundPage, messages]);
 
   return (
     <BaseModal
