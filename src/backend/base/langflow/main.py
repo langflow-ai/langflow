@@ -34,8 +34,7 @@ from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_settings_service, get_telemetry_service
-from langflow.services.task.consumer import notification_dispatcher
+from langflow.services.deps import get_event_bus_service, get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -128,7 +127,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
             await load_flows_from_directory()
-            await notification_dispatcher.start()
+            await get_event_bus_service().connect()
             yield
 
         except Exception as exc:
@@ -138,7 +137,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         finally:
             # Clean shutdown
             logger.info("Cleaning up resources...")
-            await notification_dispatcher.stop()
+            await get_event_bus_service().disconnect()
             await teardown_services()
             await logger.complete()
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
