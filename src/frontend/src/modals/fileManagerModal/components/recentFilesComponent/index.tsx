@@ -89,7 +89,7 @@ export default function RecentFilesComponent({
       </div>
       <div
         ref={containerRef}
-        className={`flex flex-col gap-1 overflow-y-auto ${containerHeight ? "transition-none" : ""}`}
+        className={`flex min-h-60 flex-col gap-1 overflow-y-auto ${containerHeight ? "transition-none" : ""}`}
         style={{ height: containerHeight ? `${containerHeight}px` : "auto" }}
       >
         {searchResults.length > 0 ? (
