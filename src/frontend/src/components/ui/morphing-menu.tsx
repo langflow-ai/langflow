@@ -14,35 +14,47 @@ interface MorphingMenuProps {
   className?: string;
   buttonClassName?: string;
   itemsClassName?: string;
+  variant?: "large" | "small";
 }
 
 const MorphingMenu = React.forwardRef<HTMLDivElement, MorphingMenuProps>(
-  ({ trigger, items, className, buttonClassName, itemsClassName }, ref) => {
+  (
+    { trigger, items, className, buttonClassName, itemsClassName, variant },
+    ref,
+  ) => {
     const [isOpen, setIsOpen] = React.useState(false);
 
     // Calculate menu height: header (40px) + (items * 36px) + padding (16px)
-    const menuHeight = 40 + items.length * 32 + 8;
+    const menuHeight = (variant == "large" ? 40 : 32) + items.length * 32 + 8;
 
     return (
       <div
         ref={ref}
         className={cn(
-          "relative flex h-10 w-fit select-none flex-col items-center justify-center whitespace-nowrap transition-all",
-          isOpen ? "w-40" : "w-36",
+          "relative flex w-fit select-none flex-col items-center justify-center whitespace-nowrap transition-all",
+          variant === "large" ? "h-10" : "h-8",
+          isOpen ? "w-40" : variant === "large" ? "w-36" : "w-[134px]",
           className,
         )}
       >
         <div
-          style={{ height: isOpen ? `${menuHeight}px` : "40px" }}
+          style={{
+            height: isOpen
+              ? `${menuHeight}px`
+              : variant === "large"
+                ? "40px"
+                : "32px",
+          }}
           className={cn(
-            "absolute right-0 top-0 z-50 flex w-full flex-col items-start overflow-hidden rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-all duration-200",
+            "absolute right-0 top-0 z-50 flex w-full flex-col items-start overflow-hidden rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-all duration-200",
             !isOpen && "hover:bg-primary-hover",
             buttonClassName,
           )}
         >
           <div
             className={cn(
-              "flex h-10 w-full shrink-0 cursor-pointer items-center justify-between gap-2 px-3 transition-all",
+              "flex w-full shrink-0 cursor-pointer items-center justify-between gap-2 pl-3 pr-3 transition-all",
+              variant === "large" ? "h-10" : "h-8 text-[13px] font-medium",
             )}
             onClick={() => setIsOpen(!isOpen)}
           >
