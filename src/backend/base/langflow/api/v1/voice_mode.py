@@ -320,7 +320,7 @@ async def websocket_endpoint(
                         if item.get("type") == "function_call":
                             function_call = item
                             function_call_args = ""
-                    elif event_type == "response.output.complete":
+                    elif event_type == "response.output_item.done":
                         print("Bot speaking = False")
                         bot_speaking_flag[0] = False
                     elif event_type == "response.function_call_arguments.delta":
