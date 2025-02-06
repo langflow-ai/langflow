@@ -77,7 +77,7 @@ class YouTubeTranscriptsComponent(Component):
         """Provides transcript output as continuous text."""
         try:
             transcripts = self._load_transcripts(as_chunks=False)
-            result = transcripts[0].page_content
+            result = transcripts[0].page_content if transcripts and transcripts[0].page_content else None
             return Message(text=result)
 
         except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:
