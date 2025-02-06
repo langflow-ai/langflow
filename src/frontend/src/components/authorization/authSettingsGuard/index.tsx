@@ -4,6 +4,7 @@ import useAuthStore from "@/stores/authStore";
 import { useStoreStore } from "@/stores/storeStore";
 
 export const AuthSettingsGuard = ({ children }) => {
+
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const hasStore = useStoreStore((state) => state.hasStore);
 
