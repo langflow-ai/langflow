@@ -21,22 +21,20 @@ Table of Contents:
 import asyncio
 import sys
 from collections.abc import Callable
-from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from diskcache import Deque
 from loguru import logger
 from pydantic import BaseModel, field_validator
 from sqlmodel import select
 
 from langflow.services.base import Service
-from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.subscription.model import Subscription
 from langflow.services.database.models.task.model import Task, TaskCreate, TaskRead, TaskUpdate
 from langflow.services.database.service import DatabaseService
 
 if TYPE_CHECKING:
+    from langflow.services.event_bus.service import EventBusService
     from langflow.services.settings.service import SettingsService
 
 
@@ -127,15 +125,7 @@ async def get_subscriptions(db_service: DatabaseService, task: TaskRead):
 
 
 class TaskOrchestrationService(Service):
-    """Core task orchestration service handling task lifecycle and processing.
-
-    Attributes:
-        name: Service name identifier
-        cache: Disk-based cache for task data
-        notification_queue: Queue for task notifications
-        db: Database service instance
-        external_celery: Flag indicating external Celery usage
-    """
+    """Core task orchestration service handling task lifecycle and processing."""
 
     name = "task_orchestration_service"
 
@@ -143,21 +133,23 @@ class TaskOrchestrationService(Service):
         self,
         settings_service: "SettingsService",
         db_service: "DatabaseService",
+        event_bus_service: "EventBusService",
     ):
         """Initialize task orchestration service.
 
         Args:
             settings_service: Application settings service
             db_service: Database service instance
+            event_bus_service: Event bus service instance
         """
         self.settings_service = settings_service
-        self.notification_queue = None
         self.db: DatabaseService = db_service
         add_tasks_to_database_url(self.db.database_url)
         self.external_celery = settings_service.settings.external_celery
         self._celery_worker_proc = None
         self._celery_worker_proc_stdout = None
         self._celery_worker_proc_stderr = None
+        self.event_bus_service = event_bus_service
 
     async def start(self):
         """Start the task orchestration service.
@@ -165,12 +157,6 @@ class TaskOrchestrationService(Service):
         If using internal Celery, spawns a worker process and sets up asynchronous logging using non-blocking I/O.
         For external Celery, verifies worker availability.
         """
-        # Construct the cache directory for task orchestrator notifications.
-        cache_dir = Path(self.settings_service.settings.config_dir) / "task_orchestrator"
-
-        # Initialize the notification queue in a separate thread to avoid blocking the event loop.
-        self.notification_queue = await asyncio.to_thread(Deque, directory=f"{cache_dir}/notifications")
-
         if not self.external_celery:
             python_executable = sys.executable
             # Start the Celery worker process asynchronously with non-blocking stdout/stderr.
@@ -222,7 +208,7 @@ class TaskOrchestrationService(Service):
             self._celery_worker_proc = None
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
-        """Create a new task.
+        """Create a new task and publish a TaskCreated event.
 
         Args:
             task_create: Task creation data
@@ -238,12 +224,12 @@ class TaskOrchestrationService(Service):
             await session.refresh(task)
 
         task_read = TaskRead.model_validate(task, from_attributes=True)
-        await self._notify(task_read, "task_created")
-        self._schedule_task(task_read)
+        # Publish TaskCreated event
+        await self.event_bus_service.publish("TaskCreated", task_read.model_dump())
         return task_read
 
     async def update_task(self, task_id: UUID | str, task_update: TaskUpdate) -> TaskRead:
-        """Update an existing task.
+        """Update an existing task and publish a TaskUpdated event.
 
         Args:
             task_id: Task identifier
@@ -261,15 +247,14 @@ class TaskOrchestrationService(Service):
                 raise ValueError(msg)
 
             for key, value in task_update.model_dump(exclude_unset=True).items():
-                if key == "status":
-                    setattr(task, key, value)
-                else:
-                    setattr(task, key, value)
+                setattr(task, key, value)
 
-                await session.commit()
-                await session.refresh(task)
+            await session.commit()
+            await session.refresh(task)
         task_read = TaskRead.model_validate(task, from_attributes=True)
-        await self._notify(task_read, "task_updated")
+
+        # Publish TaskUpdated event
+        await self.event_bus_service.publish("TaskUpdated", task_read.model_dump())
         return task_read
 
     async def get_task(self, task_id: str | UUID) -> TaskRead:
@@ -324,173 +309,3 @@ class TaskOrchestrationService(Service):
                 raise ValueError(msg)
             await session.delete(task)
             await session.commit()
-
-    async def _notify(self, task: TaskRead, event_type: str) -> None:
-        """Send notifications about task events.
-
-        Args:
-            task (TaskRead): The task that triggered the notification
-            event_type (str): The type of event (e.g., "task_created", "task_updated")
-        """
-        self._add_notification(task, event_type, task.assignee_id)
-
-        # Notify subscribers
-        subscriptions = await get_subscriptions(self.db, task)
-        for subscription in subscriptions:
-            self._add_notification(task, event_type, subscription.flow_id)
-
-    def _add_notification(self, task: TaskRead, event_type: str, flow_id: str) -> None:
-        """Add a notification to the queue.
-
-        Args:
-            task: Task that triggered the notification
-            event_type: The type of event (e.g., "task_created", "task_updated")
-            flow_id: The ID of the flow to notify
-        """
-        if self.notification_queue is None:
-            msg = "Notification queue not initialized"
-            raise RuntimeError(msg)
-        notification = TaskNotification(
-            task_id=task.id,
-            event_type=event_type,
-            flow_id=flow_id,
-            category=task.category,
-            state=task.state,
-            status=task.status,
-            input_request=task.input_request,
-        )
-        self.notification_queue.append(notification.model_dump())
-
-    def get_notifications(self) -> list[TaskNotification]:
-        """Get all notifications from the queue.
-
-        Returns:
-            list[TaskNotification]: List of notifications.
-        """
-        if self.notification_queue is None:
-            msg = "Notification queue not initialized"
-            raise RuntimeError(msg)
-        notifications = []
-        while self.notification_queue:
-            notifications.append(TaskNotification(**self.notification_queue.popleft()))
-        return notifications
-
-    async def subscribe_flow(
-        self, flow_id: str, event_type: str, category: str | None = None, state: str | None = None
-    ) -> None:
-        """Subscribe a flow to task events.
-
-        Args:
-            flow_id (str): The ID of the flow to subscribe
-            event_type (str): The type of event to subscribe to
-            category (str | None, optional): Filter by task category. Defaults to None.
-            state (str | None, optional): Filter by task state. Defaults to None.
-        """
-        subscription = Subscription(flow_id=UUID(flow_id), event_type=event_type, category=category, state=state)
-        async with self.db.with_session() as session:
-            session.add(subscription)
-            await session.commit()
-            await session.refresh(subscription)
-
-    async def unsubscribe_flow(
-        self, flow_id: str, event_type: str, category: str | None = None, state: str | None = None
-    ) -> None:
-        """Unsubscribe a flow from task events.
-
-        Args:
-            flow_id (str): The ID of the flow to unsubscribe
-            event_type (str): The type of event to unsubscribe from
-            category (str | None, optional): Filter by task category. Defaults to None.
-            state (str | None, optional): Filter by task state. Defaults to None.
-        """
-        async with self.db.with_session() as session:
-            query = select(Subscription).where(
-                Subscription.flow_id == UUID(flow_id),
-                Subscription.event_type == event_type,
-                Subscription.category == category,
-                Subscription.state == state,
-            )
-            result = await session.exec(query)
-            subscription = result.first()
-            if subscription:
-                await session.delete(subscription)
-                await session.commit()
-
-    def _schedule_task(self, task: TaskRead) -> None:
-        """Schedule a task using Celery.
-
-        Args:
-            task (TaskRead): The task to schedule.
-        """
-        # Using Celery to schedule the task instead of APScheduler
-        from langflow.services.task.consumer import consume_task_celery
-
-        consume_task_celery.delay(task.id)
-
-    async def _process_task(self, task: TaskRead) -> dict:
-        from langflow.api.v1.endpoints import simple_run_flow_task
-
-        logger.info(f"Processing task {task.id}")
-        try:
-            # If input_request is empty, use a default similar to simple_run_flow_task endpoint.
-            input_req = task.input_request or {"session": task.flow_id}
-
-            # Process the task using the simple_run_flow_task endpoint
-            async with self.db.with_session() as session:
-                flow = (await session.exec(select(Flow).where(Flow.id == task.flow_id))).first()
-
-            run_response_object = await simple_run_flow_task(flow, input_req, stream=False)
-            if run_response_object is not None:
-                result = run_response_object.model_dump()
-            else:
-                result = {"result": "No output from task processing"}
-            logger.info(f"Task {task.id} processed with result: {result}")
-        except Exception as e:
-            logger.error(f"Error processing task {task.id}: {e}")
-            raise
-        return result
-
-    async def _process_task_logic(self, task: TaskRead) -> dict:
-        """Process the task: transition from pending -> processing -> completed (or failed).
-
-        This function encapsulates all business logic required to process a task.
-        It returns the result of the task processing.
-
-        Args:
-            task (TaskRead): The task to process
-
-        Raises:
-            ValueError: If the task is not in pending status
-            Exception: If any error occurs during task processing
-
-        Returns:
-            dict: The result of the task processing
-        """
-        if task.status != "pending":
-            msg = f"Task {task.id} is not in pending status: {task.status}"
-            raise ValueError(msg)
-
-        # Update task status to "processing"
-        await self.update_task(task.id, TaskUpdate(status="processing", state=task.state))
-
-        try:
-            # Perform task processing logic here
-            result = await self._process_task(task)
-
-            # Update task with result and set status to "completed"
-            await self.update_task(task.id, TaskUpdate(status="completed", state=task.state, result=result))
-        except Exception as e:
-            # If an error occurs, update task status to "failed"
-            error_result = {"error": str(e)}
-            await self.update_task(task.id, TaskUpdate(status="failed", state=task.state, result=error_result))
-            raise
-        return result
-
-    async def consume_task(self, task_id: str | UUID) -> None:
-        """Retrieve the task and process it by delegating to the core business logic.
-
-        Args:
-            task_id (str | UUID): The ID of the task to process
-        """
-        task = await self.get_task(str(task_id))
-        await self._process_task_logic(task)
