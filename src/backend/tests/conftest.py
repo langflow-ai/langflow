@@ -339,12 +339,38 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(name="service_override_func")
+def original_service_override_func(monkeypatch, request, load_flows_dir):
+    def _service_override_func():
+        db_dir = tempfile.mkdtemp()
+        db_path = Path(db_dir) / "test.db"
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        if "load_flows" in request.keywords:
+            shutil.copyfile(
+                pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
+            )
+            monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
+        from langflow.services.manager import service_manager
+
+        service_manager.factories.clear()
+        service_manager.services.clear()  # Clear the services cache
+        app = create_app()
+        db_service = get_db_service()
+        db_service.database_url = f"sqlite:///{db_path}"
+        db_service.reload_engine()
+        return app, db_path
+
+    return _service_override_func
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
     monkeypatch,
     request,
-    load_flows_dir,
+    service_override_func,
 ):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -352,25 +378,7 @@ async def client_fixture(
     else:
 
         def init_app():
-            db_dir = tempfile.mkdtemp()
-            db_path = Path(db_dir) / "test.db"
-            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-            if "load_flows" in request.keywords:
-                shutil.copyfile(
-                    pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
-                )
-                monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
-            # Clear the services cache
-            from langflow.services.manager import service_manager
-
-            service_manager.factories.clear()
-            service_manager.services.clear()  # Clear the services cache
-            app = create_app()
-            db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
-            db_service.reload_engine()
+            app, db_path = service_override_func()
             return app, db_path
 
         app, db_path = await asyncio.to_thread(init_app)
