@@ -251,6 +251,8 @@ def custom_serializer(obj):
         return str(obj)
     if isinstance(obj, BaseModel):
         return obj.model_dump()
+    if isinstance(obj, bytes):
+        return obj.decode('utf-8', errors='replace')
     # Add more custom serialization rules as needed
     msg = f"Type {type(obj)} not serializable"
     raise TypeError(msg)

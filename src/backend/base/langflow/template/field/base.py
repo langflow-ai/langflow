@@ -201,7 +201,7 @@ class Output(BaseModel):
     allows_loop: bool = Field(default=False)
     """Specifies if the output allows looping."""
 
-    options: BaseModel | None = Field(default=None)
+    options: BaseModel | dict | None = Field(default=None) 
     """Options for the output."""
 
     def to_dict(self):
