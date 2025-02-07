@@ -1,11 +1,12 @@
+import { jsonquery } from "@jsonquerylang/jsonquery";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   Content,
   createJSONEditor,
   JsonEditor as VanillaJsonEditor,
 } from "vanilla-jsoneditor";
-import { jsonquery } from '@jsonquerylang/jsonquery';
 import useAlertStore from "../../../stores/alertStore";
+import { cn } from "../../../utils/utils";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 
@@ -55,7 +56,8 @@ const JsonEditor = ({
     // Only allow objects and arrays
     return (
       result !== null &&
-      (Array.isArray(result) || (typeof result === 'object' && !Array.isArray(result)))
+      (Array.isArray(result) ||
+        (typeof result === "object" && !Array.isArray(result)))
     );
   };
 
@@ -70,7 +72,10 @@ const JsonEditor = ({
 
     try {
       // Always start with original data for transformation
-      const json = 'json' in originalData ? originalData.json : JSON.parse(originalData.text!);
+      const json =
+        "json" in originalData
+          ? originalData.json
+          : JSON.parse(originalData.text!);
 
       // Try JSONQuery first
       try {
@@ -87,25 +92,32 @@ const JsonEditor = ({
             } catch (jsonError) {
               setErrorData({
                 title: "Invalid Result",
-                list: ["The filtered result contains values that cannot be serialized to JSON"],
+                list: [
+                  "The filtered result contains values that cannot be serialized to JSON",
+                ],
               });
               return;
             }
           } else {
             setErrorData({
               title: "Invalid Result",
-              list: ["The filtered result must be a JSON object or array, not a primitive value"],
+              list: [
+                "The filtered result must be a JSON object or array, not a primitive value",
+              ],
             });
             return;
           }
         }
       } catch (jsonQueryError) {
         // If JSONQuery fails, continue with our path-based method
-        console.debug('JSONQuery parsing failed, falling back to path-based method:', jsonQueryError);
+        console.debug(
+          "JSONQuery parsing failed, falling back to path-based method:",
+          jsonQueryError,
+        );
       }
 
       // Fallback to our path-based method
-      const normalizedQuery = transformQuery.replace(/\[/g, '.[');
+      const normalizedQuery = transformQuery.replace(/\[/g, ".[");
       const path = normalizedQuery.trim().split(".").filter(Boolean);
       let result = json;
 
@@ -170,13 +182,17 @@ const JsonEditor = ({
           } catch (jsonError) {
             setErrorData({
               title: "Invalid Result",
-              list: ["The filtered result contains values that cannot be serialized to JSON"],
+              list: [
+                "The filtered result contains values that cannot be serialized to JSON",
+              ],
             });
           }
         } else {
           setErrorData({
             title: "Invalid Result",
-            list: ["The filtered result must be a JSON object or array, not a primitive value"],
+            list: [
+              "The filtered result must be a JSON object or array, not a primitive value",
+            ],
           });
         }
       } else {
@@ -216,7 +232,7 @@ const JsonEditor = ({
     let initialContent = data;
     if (initialFilter) {
       try {
-        const json = 'json' in data ? data.json : JSON.parse(data.text!);
+        const json = "json" in data ? data.json : JSON.parse(data.text!);
         const path = initialFilter.trim().split(".").filter(Boolean);
         let result = json;
 
@@ -231,7 +247,9 @@ const JsonEditor = ({
               }
               continue;
             }
-            result = result.map((item) => item[key]).filter((item) => item !== undefined);
+            result = result
+              .map((item) => item[key])
+              .filter((item) => item !== undefined);
           } else {
             if (key in result) {
               result = result[key];
@@ -243,7 +261,7 @@ const JsonEditor = ({
           initialContent = { json: result };
         }
       } catch (error) {
-        console.error('Error applying initial filter:', error);
+        console.error("Error applying initial filter:", error);
       }
     }
 
@@ -274,9 +292,9 @@ const JsonEditor = ({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
       {allowFilter && (
-        <div className="flex gap-2">
+        <div className="mb-2 flex shrink-0 gap-2">
           <Input
             placeholder="Enter path (e.g. users[0].name) or JSONQuery (e.g. .users | filter(.age > 25))"
             value={transformQuery}
@@ -302,7 +320,9 @@ const JsonEditor = ({
           </Button>
         </div>
       )}
-      <div ref={containerRef} style={{ width, height }} className={className} />
+      <div className="relative min-h-0 flex-1">
+        <div ref={containerRef} className={cn("absolute inset-0", className)} />
+      </div>
     </div>
   );
 };

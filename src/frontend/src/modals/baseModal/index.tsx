@@ -44,8 +44,8 @@ const Content: React.FC<ContentProps> = ({
   return (
     <div
       className={cn(
-        `flex w-full flex-grow flex-col transition-all duration-300`,
-        overflowHidden ? "overflow-hidden" : "overflow-visible",
+        `flex flex-1 flex-col rounded-md transition-all duration-300`,
+        overflowHidden ? "overflow-hidden" : "overflow-auto",
         className,
       )}
     >
@@ -225,9 +225,11 @@ function BaseModal({
   const contentClasses = cn(
     minWidth,
     height,
-    "flex flex-col duration-300 overflow-hidden",
+    "flex flex-col flex-1 overflow-hidden",
     className,
   );
+
+  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
@@ -238,7 +240,9 @@ function BaseModal({
           <ModalContent className={contentClasses}>{modalContent}</ModalContent>
         </Modal>
       ) : type === "full-screen" ? (
-        <div className="min-h-full w-full flex-1">{modalContent}</div>
+        <div className="min-h-full w-full flex-1 overflow-hidden">
+          {modalContent}
+        </div>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
@@ -253,7 +257,7 @@ function BaseModal({
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex h-full flex-col gap-6"
+                className={formClasses}
               >
                 {modalContent}
               </Form.Root>

@@ -238,3 +238,11 @@ code {
 .jse-group-button.jse-button.jse-selected:not(.jse-first) {
   border-right: none !important;
 }
+
+.jse-menu .jse-separator {
+  margin-left: 10px !important;
+}
+
+.cm-gutters {
+  display: none !important;
+}
