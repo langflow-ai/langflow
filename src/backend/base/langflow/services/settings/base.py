@@ -70,9 +70,9 @@ class Settings(BaseSettings):
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
-    """Database driver name async. If not provided, Langflow will use a SQLite driver async."""
+    """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""    
     database_driver_async: str | None = None
-    """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
+    """Database driver name async. If not provided, Langflow will use a SQLite driver async."""
     database_connection_retry: bool = False
     """If True, Langflow will retry to connect to the database if it fails."""
     pool_size: int = 10
