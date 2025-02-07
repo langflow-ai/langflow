@@ -71,6 +71,7 @@ class LCVectorStoreComponent(Component):
             method="search_documents",
         ),
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Vector Store Connection", name="vectorstore", method="as_vectorstore", hidden=True)
     ]
 
     def _validate_outputs(self) -> None:
@@ -150,6 +151,10 @@ class LCVectorStoreComponent(Component):
     def get_retriever_kwargs(self):
         """Get the retriever kwargs. Implementations can override this method to provide custom retriever kwargs."""
         return {}
+
+    def as_vectorstore(self) -> VectorStore:
+        """Returns the vector store object."""
+        return self.build_vector_store()
 
     @abstractmethod
     @check_cached_vector_store
