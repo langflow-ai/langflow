@@ -9,6 +9,7 @@ import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
+import ImportButtonComponent from "@/modals/fileManagerModal/components/importButtonComponent";
 import useAlertStore from "@/stores/alertStore";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
@@ -219,7 +220,7 @@ export const FilesPage = () => {
                           </span>
                         </Button>
                       </ShadTooltip>
-                      {/* <ImportButtonComponent /> */}
+                      <ImportButtonComponent />
                     </div>
                   </div>
                 </>

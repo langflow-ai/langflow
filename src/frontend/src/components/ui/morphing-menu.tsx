@@ -46,8 +46,9 @@ const MorphingMenu = React.forwardRef<HTMLDivElement, MorphingMenuProps>(
                 : "32px",
           }}
           className={cn(
-            "absolute right-0 top-0 z-50 flex w-full flex-col items-start overflow-hidden rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-all duration-200",
+            "absolute right-0 top-0 z-50 flex w-full flex-col items-start overflow-hidden bg-primary text-sm font-semibold text-primary-foreground transition-all duration-200",
             !isOpen && "hover:bg-primary-hover",
+            variant === "large" ? "rounded-md" : "rounded-lg",
             buttonClassName,
           )}
         >
