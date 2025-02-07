@@ -392,14 +392,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             )
             return self._database
         except Exception as e:
-            msg = f"Error fetching database object: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error fetching database object: {e}") from e
 
     def collection_data(self, collection_name: str, database: Database | None = None):
-        try:
-            if database is None:
-                database = self.get_database_object()
+        if database is None:
+            database = self.get_database_object()
 
+        try:
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
             return collection.estimated_document_count()
         except Exception as e:
@@ -452,19 +451,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         keyspace = self.get_keyspace()
         collection_list = database.list_collections(keyspace=keyspace)
 
-        results = []
-        for col in collection_list:
-            records_count = self.collection_data(collection_name=col.name, database=database)
-            vector_service = col.options.vector.service if col.options.vector else None
-            results.append(
-                {
-                    "name": col.name,
-                    "records": records_count,
-                    "provider": vector_service.provider if vector_service else None,
-                    "icon": "",
-                    "model": vector_service.model_name if vector_service else None,
-                }
-            )
+        results = [
+            {
+                "name": col.name,
+                "records": self.collection_data(collection_name=col.name, database=database),
+                "provider": col.options.vector.service.provider if col.options.vector else None,
+                "icon": "",
+                "model": col.options.vector.service.model_name if col.options.vector else None,
+            }
+            for col in collection_list
+        ]
 
         return results
 
