@@ -4,7 +4,7 @@ from typing import Literal
 
 from loguru import logger
 from passlib.context import CryptContext
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from langflow.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
@@ -51,6 +51,31 @@ class AuthSettings(BaseSettings):
     """The domain attribute of the cookies. If None, the domain is not set."""
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+    # SSO Configuration
+    SSO_ENABLED: bool = False
+    """Enable Single Sign-On (SSO) authentication."""
+
+    SSO_AUTH_URL: str | None = None
+    """SSO provider's authorization endpoint URL."""
+
+    SSO_TOKEN_URL: str | None = None
+    """SSO provider's token endpoint URL."""
+
+    SSO_USERINFO_URL: str | None = None
+    """SSO provider's user info endpoint URL."""
+
+    SSO_CLIENT_ID: SecretStr | None = None
+    """SSO Client ID."""
+
+    SSO_CLIENT_SECRET: SecretStr | None = None
+    """SSO Client Secret."""
+
+    SSO_REDIRECT_URI: str | None = None
+    """Redirect URI for SSO callback."""
+
+    SSO_SCOPES: str = "openid profile"
+    """Scopes for SSO authentication."""
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
@@ -108,3 +133,24 @@ class AuthSettings(BaseSettings):
                 logger.debug("Saved secret key")
 
         return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()
+
+    @model_validator(mode="after")
+    def check_sso_config(self):
+        if self.SSO_ENABLED:
+            missing = []
+            if not self.SSO_AUTH_URL:
+                missing.append("SSO_AUTH_URL")
+            if not self.SSO_TOKEN_URL:
+                missing.append("SSO_TOKEN_URL")
+            if not self.SSO_USERINFO_URL:
+                missing.append("SSO_USERINFO_URL")
+            if not self.SSO_CLIENT_ID:
+                missing.append("SSO_CLIENT_ID")
+            if not self.SSO_CLIENT_SECRET:
+                missing.append("SSO_CLIENT_SECRET")
+            if not self.SSO_REDIRECT_URI:
+                missing.append("SSO_REDIRECT_URI")
+            if missing:
+                msg = f"SSO is enabled, but missing configuration for: {', '.join(missing)}"
+                raise ValueError(msg)
+        return self
