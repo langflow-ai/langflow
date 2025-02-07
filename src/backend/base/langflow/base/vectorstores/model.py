@@ -71,7 +71,7 @@ class LCVectorStoreComponent(Component):
             method="search_documents",
         ),
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
-        Output(display_name="Vector Store Connection", name="vectorstore", method="as_vectorstore", hidden=True)
+        Output(display_name="Vector Store Connection", name="vectorstore", method="as_vectorstore", hidden=True),
     ]
 
     def _validate_outputs(self) -> None:

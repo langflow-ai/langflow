@@ -24,7 +24,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     name = "AstraDBGraph"
     icon: str = "AstraDB"
     legacy: bool = True
-    
+
     inputs = [
         SecretStrInput(
             name="token",
