@@ -49,7 +49,6 @@ export default function ChatMessage({
   const [editMessage, setEditMessage] = useState(false);
   const [showError, setShowError] = useState(false);
   const isBuilding = useFlowStore((state) => state.isBuilding);
-  const [lockChat, setLockChat] = useState(false);
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
@@ -101,17 +100,14 @@ export default function ChatMessage({
 
   useEffect(() => {
     if (streamUrl && !isStreaming) {
-      setLockChat(true);
       streamChunks(streamUrl)
         .then(() => {
-          setLockChat(false);
           if (updateChat) {
             updateChat(chat, chatMessageRef.current);
           }
         })
         .catch((error) => {
           console.error(error);
-          setLockChat(false);
         });
     }
   }, [streamUrl, chatMessage]);
@@ -231,8 +227,6 @@ export default function ChatMessage({
     );
   }
 
-  const shouldLockChat = isBuilding || lockChat;
-
   return (
     <>
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
@@ -319,7 +313,7 @@ export default function ChatMessage({
                 contentBlocks={chat.content_blocks}
                 isLoading={
                   chatMessage === "" &&
-                  shouldLockChat &&
+                  isBuilding &&
                   chat.properties?.state === "partial"
                 }
                 state={chat.properties?.state}
@@ -359,7 +353,7 @@ export default function ChatMessage({
                         }
                         className="flex w-full flex-col"
                       >
-                        {chatMessage === "" && shouldLockChat && lastMessage ? (
+                        {chatMessage === "" && isBuilding && lastMessage ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"

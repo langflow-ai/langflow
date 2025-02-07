@@ -222,7 +222,6 @@ export default function ChatView({
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
           noInput={!inputTypes.includes("ChatInput")}
-          lockChat={isBuilding}
           sendMessage={({ repeat, files }) => {
             sendMessage({ repeat, files });
             track("Playground Message Sent");

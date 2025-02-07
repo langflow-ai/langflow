@@ -505,7 +505,6 @@ export type ChatInputType = {
   inputRef: {
     current: any;
   };
-  lockChat: boolean;
   noInput: boolean;
   sendMessage: ({
     repeat,
