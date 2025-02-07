@@ -90,7 +90,7 @@ export default function CollectionPage(): JSX.Element {
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <CustomLoader />
+            <CustomLoader remSize={30} />
           </div>
         )}
       </main>

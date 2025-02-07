@@ -303,7 +303,7 @@ export default function AdminPage() {
           </div>
           {isPending || isIdle ? (
             <div className="flex h-full w-full items-center justify-center">
-              <CustomLoader />
+              <CustomLoader remSize={12} />
             </div>
           ) : userList.current.length === 0 && !isIdle ? (
             <>
