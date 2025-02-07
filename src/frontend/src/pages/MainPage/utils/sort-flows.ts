@@ -31,9 +31,9 @@ export const sortByDate = (dateA: string, dateB: string) => {
 export const sortByBoolean = (a: boolean, b: boolean) => {
   if (a && b) {
     return 0;
-  } else if (a) {
+  } else if (a && !b) {
     return -1;
-  } else if (b) {
+  } else if (!a && b) {
     return 1;
   } else {
     return 0;

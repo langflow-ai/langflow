@@ -16,6 +16,7 @@ import { cn } from "@/utils/utils";
 import { ColDef, NewValueParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useRef, useState } from "react";
+import { sortByDate } from "../../utils/sort-flows";
 
 export const FilesPage = () => {
   const tableRef = useRef<AgGridReact<any>>(null);
@@ -53,13 +54,22 @@ export const FilesPage = () => {
       cellRenderer: (params) => {
         return (
           <div className="flex items-center gap-2 font-medium">
-            <ForwardedIconComponent
-              name={FILE_ICONS[params.data.path.split(".")[1]]?.icon ?? "File"}
-              className={cn(
-                FILE_ICONS[params.data.path.split(".")[1]]?.color,
-                "shrink-0",
-              )}
-            />
+            {params.data.progress ? (
+              <div className="text-xs font-semibold text-muted-foreground">
+                {Math.round(params.data.progress * 100)}%
+              </div>
+            ) : (
+              <ForwardedIconComponent
+                name={
+                  FILE_ICONS[params.data.path.split(".")[1]]?.icon ?? "File"
+                }
+                className={cn(
+                  FILE_ICONS[params.data.path.split(".")[1]]?.color,
+                  "shrink-0",
+                )}
+              />
+            )}
+
             {params.value}
           </div>
         );
@@ -90,7 +100,9 @@ export const FilesPage = () => {
       headerName: "Modified",
       field: "updated_at",
       valueFormatter: (params) => {
-        return new Date(params.value).toLocaleString();
+        return params.data.progress
+          ? ""
+          : new Date(params.value).toLocaleString();
       },
       editable: false,
       flex: 1,
@@ -228,7 +240,12 @@ export const FilesPage = () => {
                     ]}
                     enableCellTextSelection={false}
                     columnDefs={colDefs}
-                    rowData={files}
+                    rowData={files.sort((a, b) => {
+                      return sortByDate(
+                        a.updated_at ?? a.created_at,
+                        b.updated_at ?? b.created_at,
+                      );
+                    })}
                     className="ag-no-border w-full"
                     pagination
                     ref={tableRef}

@@ -48,7 +48,10 @@ export default function FileRendererComponent({
     >
       <div className="flex items-center gap-4">
         {handleFileSelect && (
-          <div className="flex" onClick={(e) => e.stopPropagation()}>
+          <div
+            className={cn("flex", file.progress && "opacity-0")}
+            onClick={(e) => e.stopPropagation()}
+          >
             <Checkbox
               checked={selectedFiles?.includes(file.path)}
               onCheckedChange={() => handleFileSelect?.(file.path)}
@@ -56,13 +59,19 @@ export default function FileRendererComponent({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <ForwardedIconComponent
-            name={FILE_ICONS[type]?.icon ?? "File"}
-            className={cn(
-              "h-6 w-6 shrink-0",
-              FILE_ICONS[type]?.color ?? undefined,
-            )}
-          />
+          {file.progress ? (
+            <div className="text-xs font-semibold text-muted-foreground">
+              {Math.round(file.progress * 100)}%
+            </div>
+          ) : (
+            <ForwardedIconComponent
+              name={FILE_ICONS[type]?.icon ?? "File"}
+              className={cn(
+                "h-6 w-6 shrink-0",
+                FILE_ICONS[type]?.color ?? undefined,
+              )}
+            />
+          )}
 
           {openRename ? (
             <div className="w-full">

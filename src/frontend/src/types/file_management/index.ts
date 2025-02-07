@@ -7,4 +7,5 @@ export type FileType = {
   path: string;
   created_at: string;
   size: number;
+  progress?: number;
 };
