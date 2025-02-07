@@ -8,8 +8,9 @@ import {
 import { useGetDownloadFileV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFileV2 } from "@/controllers/API/queries/file-management/use-delete-file";
 import { useDuplicateFileV2 } from "@/controllers/API/queries/file-management/use-duplicate-file";
+import ConfirmationModal from "@/modals/confirmationModal";
 import { FileType } from "@/types/file_management";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 
 export default function FilesContextMenuComponent({
   children,
@@ -23,6 +24,7 @@ export default function FilesContextMenuComponent({
   simplified?: boolean;
 }) {
   const isLocal = file.provider == null;
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   const { mutate: downloadFile } = useGetDownloadFileV2({
     id: file.id,
@@ -52,7 +54,7 @@ export default function FilesContextMenuComponent({
         downloadFile();
         break;
       case "delete":
-        deleteFile();
+        setShowDeleteConfirmation(true);
         break;
       case "duplicate":
         duplicateFile();
@@ -61,86 +63,113 @@ export default function FilesContextMenuComponent({
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent sideOffset={0} side="bottom" className="-ml-24">
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSelectOptionsChange("rename");
-          }}
-          className="cursor-pointer"
-          data-testid="btn-edit-flow"
-        >
-          <ForwardedIconComponent
-            name="SquarePen"
-            aria-hidden="true"
-            className="mr-2 h-4 w-4"
-          />
-          Rename
-        </DropdownMenuItem>
-        {/* <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSelectOptionsChange("replace");
-          }}
-          className="cursor-pointer"
-          data-testid="btn-edit-flow"
-        >
-          <ForwardedIconComponent
-            name="Replace"
-            aria-hidden="true"
-            className="mr-2 h-4 w-4"
-          />
-          Replace
-        </DropdownMenuItem> */}
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSelectOptionsChange("download");
-          }}
-          className="cursor-pointer"
-          data-testid="btn-download-json"
-        >
-          <ForwardedIconComponent
-            name="Download"
-            aria-hidden="true"
-            className="mr-2 h-4 w-4"
-          />
-          Download
-        </DropdownMenuItem>
-        {!simplified && (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
+        <DropdownMenuContent sideOffset={0} side="bottom" className="-ml-24">
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              handleSelectOptionsChange("duplicate");
+              handleSelectOptionsChange("rename");
             }}
             className="cursor-pointer"
-            data-testid="btn-duplicate-flow"
+            data-testid="btn-edit-flow"
           >
             <ForwardedIconComponent
-              name="CopyPlus"
+              name="SquarePen"
               aria-hidden="true"
               className="mr-2 h-4 w-4"
             />
-            Duplicate
+            Rename
           </DropdownMenuItem>
-        )}
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSelectOptionsChange("delete");
-          }}
-          className="cursor-pointer text-destructive"
-        >
-          <ForwardedIconComponent
-            name={isLocal ? "Trash2" : "ListX"}
-            aria-hidden="true"
-            className="mr-2 h-4 w-4"
-          />
-          {isLocal ? "Delete" : "Remove"}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {/* <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSelectOptionsChange("replace");
+            }}
+            className="cursor-pointer"
+            data-testid="btn-edit-flow"
+          >
+            <ForwardedIconComponent
+              name="Replace"
+              aria-hidden="true"
+              className="mr-2 h-4 w-4"
+            />
+            Replace
+          </DropdownMenuItem> */}
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSelectOptionsChange("download");
+            }}
+            className="cursor-pointer"
+            data-testid="btn-download-json"
+          >
+            <ForwardedIconComponent
+              name="Download"
+              aria-hidden="true"
+              className="mr-2 h-4 w-4"
+            />
+            Download
+          </DropdownMenuItem>
+          {!simplified && (
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSelectOptionsChange("duplicate");
+              }}
+              className="cursor-pointer"
+              data-testid="btn-duplicate-flow"
+            >
+              <ForwardedIconComponent
+                name="CopyPlus"
+                aria-hidden="true"
+                className="mr-2 h-4 w-4"
+              />
+              Duplicate
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleSelectOptionsChange("delete");
+            }}
+            className="cursor-pointer text-destructive"
+          >
+            <ForwardedIconComponent
+              name={isLocal ? "Trash2" : "ListX"}
+              aria-hidden="true"
+              className="mr-2 h-4 w-4"
+            />
+            {isLocal ? "Delete" : "Remove"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ConfirmationModal
+        open={showDeleteConfirmation}
+        onClose={() => setShowDeleteConfirmation(false)}
+        onCancel={() => setShowDeleteConfirmation(false)}
+        title={isLocal ? "Delete File" : "Remove File"}
+        titleHeader={`Are you sure you want to ${isLocal ? "delete" : "remove"} "${file.name}"?`}
+        cancelText="Cancel"
+        size="x-small"
+        confirmationText={isLocal ? "Delete" : "Remove"}
+        icon={isLocal ? "Trash2" : "ListX"}
+        destructive
+        onConfirm={() => {
+          deleteFile();
+          setShowDeleteConfirmation(false);
+        }}
+      >
+        <ConfirmationModal.Content>
+          <div className="text-sm text-muted-foreground">
+            {isLocal
+              ? "This action cannot be undone. The file will be permanently deleted."
+              : "This will remove the file from your list. You can add it back later if needed."}
+          </div>
+        </ConfirmationModal.Content>
+      </ConfirmationModal>
+    </>
   );
 }
