@@ -4,6 +4,7 @@ import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Loading from "@/components/ui/loading";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
@@ -16,7 +17,7 @@ import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
 import { ColDef, NewValueParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { sortByDate } from "../../utils/sort-flows";
 
 export const FilesPage = () => {
@@ -152,6 +153,31 @@ export const FilesPage = () => {
     }
   };
 
+  const UploadButtonComponent = useMemo(() => {
+    return (
+      <ShadTooltip content="Upload File" side="bottom">
+        <Button
+          variant="outline"
+          className="!px-3 md:!px-4 md:!pl-3.5"
+          onClick={async () => {
+            await uploadFile({});
+          }}
+          id="new-project-btn"
+          data-testid="new-project-btn"
+        >
+          <ForwardedIconComponent
+            name="Plus"
+            aria-hidden="true"
+            className="h-4 w-4"
+          />
+          <span className="hidden whitespace-nowrap font-semibold md:inline">
+            Upload
+          </span>
+        </Button>
+      </ShadTooltip>
+    );
+  }, [uploadFile]);
+
   const [quickFilterText, setQuickFilterText] = useState("");
   return (
     <CardsWrapComponent
@@ -180,53 +206,38 @@ export const FilesPage = () => {
                     </SidebarTrigger>
                   </div>
                 </div>
-                Files
+                My Files
               </div>
-              {
-                <>
-                  {/* Search and filters */}
-                  <div className="flex justify-between">
-                    <div className="flex w-full xl:w-5/12">
-                      <Input
-                        icon="Search"
-                        data-testid="search-store-input"
-                        type="text"
-                        placeholder={`Search files...`}
-                        className="mr-2 w-full"
-                        value={quickFilterText || ""}
-                        onChange={(event) => {
-                          setQuickFilterText(event.target.value);
-                        }}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <ShadTooltip content="Upload File" side="bottom">
-                        <Button
-                          variant="outline"
-                          className="!px-3 md:!px-4 md:!pl-3.5"
-                          onClick={async () => {
-                            await uploadFile({});
-                          }}
-                          id="new-project-btn"
-                          data-testid="new-project-btn"
-                        >
-                          <ForwardedIconComponent
-                            name="Plus"
-                            aria-hidden="true"
-                            className="h-4 w-4"
-                          />
-                          <span className="hidden whitespace-nowrap font-semibold md:inline">
-                            Upload
-                          </span>
-                        </Button>
-                      </ShadTooltip>
-                      <ImportButtonComponent />
-                    </div>
+              {files && files.length !== 0 ? (
+                <div className="flex justify-between">
+                  <div className="flex w-full xl:w-5/12">
+                    <Input
+                      icon="Search"
+                      data-testid="search-store-input"
+                      type="text"
+                      placeholder={`Search files...`}
+                      className="mr-2 w-full"
+                      value={quickFilterText || ""}
+                      onChange={(event) => {
+                        setQuickFilterText(event.target.value);
+                      }}
+                    />
                   </div>
-                </>
-              }
+                  <div className="flex items-center gap-2">
+                    {UploadButtonComponent}
+                    <ImportButtonComponent />
+                  </div>
+                </div>
+              ) : (
+                <></>
+              )}
+
               <div className="flex h-full flex-col py-4">
-                {files && (
+                {!files ? (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Loading />
+                  </div>
+                ) : files.length > 0 ? (
                   <TableComponent
                     rowHeight={45}
                     headerHeight={45}
@@ -260,6 +271,19 @@ export const FilesPage = () => {
                       colResizeDefault: "shift",
                     }}
                   />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
+                    <div className="flex flex-col items-center gap-2">
+                      <h3 className="text-2xl font-semibold">No files</h3>
+                      <p className="text-lg text-secondary-foreground">
+                        Upload files or import from your preferred cloud.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {UploadButtonComponent}
+                      <ImportButtonComponent />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
