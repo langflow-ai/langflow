@@ -1,6 +1,6 @@
-<!-- markdownlint-disable MD030 -->
+<!-my words!>- markdownlint-disable MD030 -->
 
-![Langflow](./docs/static/img/hero.png)
+![Langflow](/static/img/hero.png)
 
 <p align="center" style="font-size: 12px;">
     Langflow is a low-code app builder for RAG and multi-agent AI applications. It’s Python-based and agnostic to any model, API, or database.
