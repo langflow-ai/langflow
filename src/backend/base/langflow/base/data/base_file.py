@@ -43,9 +43,7 @@ class BaseFileComponent(Component, ABC):
         def data(self, value: Data | list[Data]):
             if isinstance(value, Data):
                 self._data = [value]
-            elif isinstance(value, list) and all(
-                isinstance(item, Data) for item in value
-            ):
+            elif isinstance(value, list) and all(isinstance(item, Data) for item in value):
                 self._data = value
             else:
                 msg = f"data must be a Data object or a list of Data objects. Got: {type(value)}"
@@ -67,9 +65,7 @@ class BaseFileComponent(Component, ABC):
 
             if isinstance(new_data, Data):
                 new_data_list = [new_data]
-            elif isinstance(new_data, list) and all(
-                isinstance(item, Data) for item in new_data
-            ):
+            elif isinstance(new_data, list) and all(isinstance(item, Data) for item in new_data):
                 new_data_list = new_data
             else:
                 msg = "new_data must be a Data object, a list of Data objects, or None."
@@ -78,9 +74,7 @@ class BaseFileComponent(Component, ABC):
                 return self.data
 
             return [
-                Data(data={**data.data, **new_data_item.data})
-                for data in self.data
-                for new_data_item in new_data_list
+                Data(data={**data.data, **new_data_item.data}) for data in self.data for new_data_item in new_data_list
             ]
 
         def __str__(self):
@@ -113,9 +107,9 @@ class BaseFileComponent(Component, ABC):
 
         file_types = ", ".join(self.valid_extensions)
         bundles = ", ".join(self.SUPPORTED_BUNDLE_EXTENSIONS)
-        self._base_inputs[0].info = (
-            f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
-        )
+        self._base_inputs[
+            0
+        ].info = f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
 
     _base_inputs = [
         FileInput(
@@ -256,9 +250,7 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A new list of BaseFile objects with merged `data` attributes.
         """
 
-        def _build_data_dict(
-            data_list: list[Data | None], data_list_field: str
-        ) -> dict[str, list[Data]]:
+        def _build_data_dict(data_list: list[Data | None], data_list_field: str) -> dict[str, list[Data]]:
             """Builds a dictionary grouping Data objects by a specified field."""
             data_dict: dict[str, list[Data]] = {}
             for data in data_list:
@@ -307,9 +299,7 @@ class BaseFileComponent(Component, ABC):
         elif isinstance(file_path, Message):
             file_path = [_message_to_data(file_path)]
         elif not isinstance(file_path, list):
-            msg = (
-                f"Expected list of Data objects in file_path but got {type(file_path)}."
-            )
+            msg = f"Expected list of Data objects in file_path but got {type(file_path)}."
             self.log(msg)
             if not self.silent_errors:
                 raise ValueError(msg)
@@ -349,9 +339,7 @@ class BaseFileComponent(Component, ABC):
                 if not self.silent_errors:
                     raise ValueError(msg)
             resolved_files.append(
-                BaseFileComponent.BaseFile(
-                    data, resolved_path, delete_after_processing=delete_after_processing
-                )
+                BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
             )
 
         file_path = self._file_path_as_list()
@@ -437,9 +425,7 @@ class BaseFileComponent(Component, ABC):
 
         # Recurse again if any directories or bundles are left in the list
         if any(
-            file.path.is_dir()
-            or file.path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS
-            for file in collected_files
+            file.path.is_dir() or file.path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS for file in collected_files
         ):
             return self._unpack_and_collect_files(collected_files)
 
