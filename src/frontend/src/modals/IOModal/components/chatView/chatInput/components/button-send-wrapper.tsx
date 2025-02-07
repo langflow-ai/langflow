@@ -55,7 +55,6 @@ const ButtonSendWrapper = ({
   return (
     <Button
       className={buttonClasses}
-      disabled={isBuilding}
       onClick={handleClick}
       unstyled
       data-testid={showStopButton ? "button-stop" : "button-send"}
