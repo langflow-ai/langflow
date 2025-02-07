@@ -355,8 +355,18 @@ class Vertex:
                 if file_path := field.get("file_path"):
                     storage_service = get_storage_service()
                     try:
-                        flow_id, file_name = os.path.split(file_path)
-                        full_path = storage_service.build_full_path(flow_id, file_name)
+                        full_path: str | list[str] = ""
+                        if field.get("list"):
+                            full_path = []
+                            if isinstance(file_path, str):
+                                file_path = [file_path]
+                            for p in file_path:
+                                flow_id, file_name = os.path.split(p)
+                                path = storage_service.build_full_path(flow_id, file_name)
+                                full_path.append(path)
+                        else:
+                            flow_id, file_name = os.path.split(file_path)
+                            full_path = storage_service.build_full_path(flow_id, file_name)
                     except ValueError as e:
                         if "too many values to unpack" in str(e):
                             full_path = file_path
@@ -620,9 +630,29 @@ class Vertex:
         async with self._lock:
             return await self._get_result(requester, target_handle_name)
 
-    def _log_transaction_async(
-        self, flow_id: str | UUID, source: Vertex, status, target: Vertex | None = None, error=None
+    async def _log_transaction_async(
+        self,
+        flow_id: str | UUID,
+        source: Vertex,
+        status,
+        target: Vertex | None = None,
+        error=None,
     ) -> None:
+        """Log a transaction asynchronously with proper task handling and cancellation.
+
+        Args:
+            flow_id: The ID of the flow
+            source: Source vertex
+            status: Transaction status
+            target: Optional target vertex
+            error: Optional error information
+        """
+        if self.log_transaction_tasks:
+            # Safely await and remove completed tasks
+            task = self.log_transaction_tasks.pop()
+            await task
+
+            # Create and track new task
         task = asyncio.create_task(log_transaction(flow_id, source, status, target, error))
         self.log_transaction_tasks.add(task)
         task.add_done_callback(self.log_transaction_tasks.discard)
@@ -642,13 +672,13 @@ class Vertex:
         flow_id = self.graph.flow_id
         if not self.built:
             if flow_id:
-                self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
+                await self._log_transaction_async(str(flow_id), source=self, target=requester, status="error")
             msg = f"Component {self.display_name} has not been built yet"
             raise ValueError(msg)
 
         result = self.built_result if self.use_result else self.built_object
         if flow_id:
-            self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
+            await self._log_transaction_async(str(flow_id), source=self, target=requester, status="success")
         return result
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
@@ -708,7 +738,12 @@ class Vertex:
             self.params[key].extend(result)
 
     async def _build_results(
-        self, custom_component, custom_params, base_type: str, *, fallback_to_env_vars=False
+        self,
+        custom_component,
+        custom_params,
+        base_type: str,
+        *,
+        fallback_to_env_vars=False,
     ) -> None:
         try:
             result = await initialize.loading.get_instance_results(

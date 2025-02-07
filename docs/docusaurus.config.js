@@ -145,8 +145,11 @@ const config = {
             ],
           },
           {
-            to: "/configuration-objects",
-            from: "/guides-data-message",
+            to: "/concepts-objects",
+            from: [
+              "/guides-data-message",
+              "/configuration-objects",
+            ]
           },
           {
             to: "/tutorials-sequential-agent",
@@ -171,6 +174,10 @@ const config = {
           {
             to: "/concepts-api",
             from: "/workspace-api",
+          },
+          {
+            to: "/components-custom-components",
+            from: "/components/custom",
           },
           // add more redirects like this
           // {

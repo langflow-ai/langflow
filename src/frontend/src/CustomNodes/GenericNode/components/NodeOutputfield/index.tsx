@@ -70,6 +70,7 @@ const HideShowButton = memo(
       unstyled
       onClick={onClick}
       data-testid={`input-inspection-${title.toLowerCase()}`}
+      className="cursor-pointer"
     >
       <ShadTooltip
         content={disabled ? null : hidden ? "Show output" : "Hide output"}
@@ -378,6 +379,7 @@ function NodeOutputField({
                   : "Inspect output"
                 : "Please build the component first"
             }
+            styleClasses="z-40"
           >
             <div className="flex items-center gap-2">
               <OutputModal

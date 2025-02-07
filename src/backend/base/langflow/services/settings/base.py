@@ -76,9 +76,11 @@ class Settings(BaseSettings):
     database_connection_retry: bool = False
     """If True, Langflow will retry to connect to the database if it fails."""
     pool_size: int = 10
-    """The number of connections to keep open in the connection pool. If not provided, the default is 10."""
+    """DEPRECATED: Use db_connection_settings['pool_size'] instead.
+    The number of connections to keep open in the connection pool. If not provided, the default is 10."""
     max_overflow: int = 20
-    """The number of connections to allow that can be opened beyond the pool size.
+    """DEPRECATED: Use db_connection_settings['max_overflow'] instead.
+    The number of connections to allow that can be opened beyond the pool size.
     If not provided, the default is 20."""
     db_connect_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
@@ -87,6 +89,14 @@ class Settings(BaseSettings):
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
+
+    db_connection_settings: dict | None = {
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_timeout": 30,
+        "pool_pre_ping": True,
+    }
+    """Common database connection settings."""
 
     # cache configuration
     cache_type: Literal["async", "redis", "memory", "disk"] = "async"
