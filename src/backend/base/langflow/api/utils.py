@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, Query
 from fastapi_pagination import Params
 from loguru import logger
 from sqlalchemy import delete
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.base import Graph
@@ -301,3 +302,47 @@ def custom_params(
     if page is None and size is None:
         return None
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
+
+
+async def get_or_create_user_by_sub(sub: str, userinfo: dict, db: DbSession) -> User:
+    """Retrieve a user by SSO subject identifier or create a new user using the provided SSO user information."""
+    query = select(User).where(User.username == f"sso_{sub}")
+    result = await db.exec(query)
+    user = result.one_or_none()
+
+    # Extract profile information from userinfo
+    profile_image = userinfo.get("picture")  # OpenID standard claim for profile picture
+
+    if user is None:
+        # Create a new user using details from SSO
+        import secrets
+
+        random_password = secrets.token_urlsafe(32)
+        # If name is provided, use it to create a more friendly username
+        username = f"sso_{sub}"
+        if name := userinfo.get("name"):
+            username = f"sso_{name}_{sub[-6:]}"  # Use last 6 chars of sub for uniqueness
+
+        new_user = User(
+            username=username[:50],  # Ensure username length is reasonable
+            password=random_password,  # This password won't be used but is required by the model
+            profile_image=profile_image,
+            store_api_key="",
+            is_active=True,  # SSO users are automatically active
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        return new_user
+
+    # Update existing user's profile if new information is available
+    update_needed = False
+    if profile_image and user.profile_image != profile_image:
+        user.profile_image = profile_image
+        update_needed = True
+
+    if update_needed:
+        await db.commit()
+        await db.refresh(user)
+
+    return user
