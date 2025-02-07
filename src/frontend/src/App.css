@@ -239,6 +239,10 @@ code {
   border-right: none !important;
 }
 
+.jse-menu .jse-button.jse-group-button {
+  border: 1px solid var(--jse-menu-color, var(--jse-text-color-inverse, #fff)) !important;
+}
+
 .jse-menu .jse-separator {
   margin-left: 10px !important;
 }
