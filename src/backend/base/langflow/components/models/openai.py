@@ -68,6 +68,20 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=True,
             value=1,
         ),
+        IntInput(
+            name="max_retries",
+            display_name="Max Retries",
+            info="The maximum number of retries to make when generating.",
+            advanced=True,
+            value=5,
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            info="The timeout for requests to OpenAI completion API.",
+            advanced=True,
+            value=700,
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
@@ -79,6 +93,8 @@ class OpenAIModelComponent(LCModelComponent):
         openai_api_base = self.openai_api_base or "https://api.openai.com/v1"
         json_mode = self.json_mode
         seed = self.seed
+        max_retries = self.max_retries
+        timeout = self.timeout
 
         api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None
         output = ChatOpenAI(
@@ -89,6 +105,8 @@ class OpenAIModelComponent(LCModelComponent):
             api_key=api_key,
             temperature=temperature if temperature is not None else 0.1,
             seed=seed,
+            max_retries=max_retries,
+            request_timeout=timeout,
         )
         if json_mode:
             output = output.bind(response_format={"type": "json_object"})
