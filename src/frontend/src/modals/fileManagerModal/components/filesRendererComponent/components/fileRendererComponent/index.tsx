@@ -2,6 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management";
 import { FileType } from "@/types/file_management";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
@@ -31,6 +32,8 @@ export default function FileRendererComponent({
   const handleOpenRename = () => {
     handleRename && setOpenRename(true);
   };
+
+  const { mutate: uploadFile } = usePostUploadFileV2();
 
   useEffect(() => {
     setNewName(file.name);
@@ -125,6 +128,9 @@ export default function FileRendererComponent({
                 className="cursor-pointer text-accent-pink-foreground underline"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (file.file) {
+                    uploadFile({ file: file.file });
+                  }
                 }}
               >
                 try again?

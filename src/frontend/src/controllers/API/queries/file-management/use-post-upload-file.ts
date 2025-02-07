@@ -25,6 +25,7 @@ export const usePostUploadFileV2: useMutationFunctionType<
       name: payload.file.name.split(".").slice(0, -1).join("."),
       path: payload.file.name,
       size: payload.file.size,
+      file: payload.file,
       updated_at: data,
       created_at: data,
       progress: 0,

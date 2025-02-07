@@ -8,4 +8,5 @@ export type FileType = {
   created_at: string;
   size: number;
   progress?: number;
+  file?: File;
 };
