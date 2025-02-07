@@ -275,16 +275,27 @@ class ResultDataResponse(BaseModel):
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
         """Custom serializer for the entire model."""
-        return {
-            "results": self.serialize_results(self.results),
-            "outputs": serialize(self.outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "logs": serialize(self.logs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "message": serialize(self.message, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "artifacts": serialize(self.artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
-            "timedelta": self.timedelta,
-            "duration": self.duration,
-            "used_frozen_result": self.used_frozen_result,
+        self._serialized_cache.update(
+            {
+                "timedelta": self.timedelta,
+                "duration": self.duration,
+                "used_frozen_result": self.used_frozen_result,
+            }
+        )
+        return self._serialized_cache
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        self._serialized_cache = {
+            "results": self._serialize_field(self.results),
+            "outputs": self._serialize_field(self.outputs),
+            "logs": self._serialize_field(self.logs),
+            "message": self._serialize_field(self.message),
+            "artifacts": self._serialize_field(self.artifacts),
         }
+
+    def _serialize_field(self, field_value: Any) -> Any:
+        return serialize(field_value, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
 
 class VertexBuildResponse(BaseModel):
