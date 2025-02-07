@@ -122,6 +122,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Environment",
             info="The environment for the Astra DB API Endpoint.",
             advanced=True,
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="api_endpoint",
@@ -131,6 +132,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             refresh_button=True,
             real_time_refresh=True,
             combobox=True,
+        ),
+        StrInput(
+            name="d_api_endpoint",
+            display_name="Database API Endpoint",
+            info="The API Endpoint for the Astra DB instance. Supercedes database selection.",
+            advanced=True,
         ),
         DropdownInput(
             name="collection_name",
@@ -193,6 +200,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             display_name="Search Metadata Filter",
             info="Optional dictionary of filters to apply to the search query.",
             advanced=True,
+        ),
+        BoolInput(
+            name="autodetect_collection",
+            display_name="Autodetect Collection",
+            info="Boolean flag to determine whether to autodetect the collection.",
+            advanced=True,
+            value=True,
         ),
         StrInput(
             name="content_field",
@@ -302,11 +316,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the list of databases
         db_list = list(admin_client.list_databases())
 
+        # Set the environment properly
+        env_string = ""
+        if environment and environment != "prod":
+            env_string = f"-{environment}"
+
         # Generate the api endpoint for each database
         db_info_dict = {}
         for db in db_list:
             try:
-                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra.datastax.com"
+                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
                 db_info_dict[db.info.name] = {
                     "api_endpoint": api_endpoint,
                     "collections": len(
@@ -330,8 +349,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         cls,
         token: str,
         environment: str | None = None,
+        api_endpoint: str | None = None,
         database_name: str | None = None,
     ):
+        # If the api_endpoint is set, return it
+        if api_endpoint:
+            return api_endpoint
+
         # Check if the database_name is like a url
         if database_name and database_name.startswith("https://"):
             return database_name
@@ -343,10 +367,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Otherwise, get the URL from the database list
         return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
 
-    def get_api_endpoint(self):
+    def get_api_endpoint(self, *, api_endpoint: str | None = None):
         return self.get_api_endpoint_static(
             token=self.token,
             environment=self.environment,
+            api_endpoint=api_endpoint or self.d_api_endpoint,
             database_name=self.api_endpoint,
         )
 
@@ -358,34 +383,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return None
 
-    def get_database_object(self):
+    def get_database_object(self, api_endpoint: str | None = None):
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
 
             return client.get_database(
-                api_endpoint=self.get_api_endpoint(),
+                api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error getting database: {e}")
-
-            return None
-
-    def collection_exists(self):
-        try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-            database = client.get_database(
-                api_endpoint=self.get_api_endpoint(),
-                token=self.token,
-                keyspace=self.get_keyspace(),
-            )
-
-            return self.collection_name in list(database.list_collection_names(keyspace=self.get_keyspace()))
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error getting collection status: {e}")
-
-            return False
+        except Exception as e:
+            msg = f"Error fetching database object: {e}"
+            raise ValueError(msg) from e
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
@@ -436,81 +445,97 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def _initialize_database_options(self):
         try:
             return [
-                {"name": name, "collections": info["collections"]} for name, info in self.get_database_list().items()
-            ]
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error fetching databases: {e}")
-
-            return []
-
-    def _initialize_collection_options(self):
-        database = self.get_database_object()
-        if database is None:
-            return []
-
-        try:
-            collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
-
-            return [
                 {
-                    "name": col.name,
-                    "records": self.collection_data(collection_name=col.name, database=database),
-                    "provider": (
-                        col.options.vector.service.provider
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
-                    "icon": "",
-                    "model": (
-                        col.options.vector.service.model_name
-                        if col.options.vector and col.options.vector.service
-                        else None
-                    ),
+                    "name": name,
+                    "collections": info["collections"],
+                    "api_endpoint": info["api_endpoint"],
                 }
-                for col in collection_list
+                for name, info in self.get_database_list().items()
             ]
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error fetching collections: {e}")
+        except Exception as e:
+            msg = f"Error fetching database options: {e}"
+            raise ValueError(msg) from e
 
-            return []
+    def _initialize_collection_options(self, api_endpoint: str | None = None):
+        # Retrieve the database object
+        database = self.get_database_object(api_endpoint=api_endpoint)
+
+        # Get the list of collections
+        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+
+        # Return the list of collections and metadata associated
+        return [
+            {
+                "name": col.name,
+                "records": self.collection_data(collection_name=col.name, database=database),
+                "provider": (
+                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
+                ),
+                "icon": "",
+                "model": (
+                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
+                ),
+            }
+            for col in collection_list
+        ]
+
+    def reset_collection_list(self, build_config: dict):
+        # Get the list of options we have based on the token provided
+        collection_options = self._initialize_collection_options()
+
+        # If we retrieved options based on the token, show the dropdown
+        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
+        build_config["collection_name"]["options_metadata"] = [
+            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+        ]
+
+        # Reset the selected collection
+        build_config["collection_name"]["value"] = ""
+
+        return build_config
+
+    def reset_database_list(self, build_config: dict):
+        # Get the list of options we have based on the token provided
+        database_options = self._initialize_database_options()
+
+        # If we retrieved options based on the token, show the dropdown
+        build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
+        build_config["api_endpoint"]["options_metadata"] = [
+            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+        ]
+
+        # Reset the selected database
+        build_config["api_endpoint"]["value"] = ""
+
+        return build_config
+
+    def reset_build_config(self, build_config: dict):
+        # Reset the list of databases we have based on the token provided
+        build_config["api_endpoint"]["options"] = []
+        build_config["api_endpoint"]["options_metadata"] = []
+        build_config["api_endpoint"]["value"] = ""
+        build_config["api_endpoint"]["name"] = "Database"
+
+        # Reset the list of collections and metadata associated
+        build_config["collection_name"]["options"] = []
+        build_config["collection_name"]["options_metadata"] = []
+        build_config["collection_name"]["value"] = ""
+
+        return build_config
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        # Define variables for common database conditions a user may experience
-        is_hosted = os.getenv("LANGFLOW_HOST") is not None
-        no_databases = "options" not in build_config["api_endpoint"] or not build_config["api_endpoint"]["options"]
-        no_api_endpoint = not build_config["api_endpoint"]["value"]
+        # When the component first executes, this is the update refresh call
+        first_run = field_name == "collection_name" and not field_value and not build_config["api_endpoint"]["options"]
 
-        # Refresh the database name options
-        if not is_hosted and (field_name in ["token", "environment"] or (no_databases and no_api_endpoint)):
-            # Get the list of options we have based on the token provided
-            database_options = self._initialize_database_options()
+        # If the token has not been provided, simply return
+        if not self.token:
+            return self.reset_build_config(build_config)
 
-            # Reset the collection values selected
-            build_config["collection_name"]["options"] = []
-            build_config["collection_name"]["options_metadata"] = []
-            build_config["collection_name"]["value"] = ""
-
-            # Scenario #1: We have database options from the provided token
-            if database_options:
-                # Reset the selected database
-                build_config["api_endpoint"]["name"] = "Database"
-                build_config["api_endpoint"]["display_name"] = "Database"
-
-                # If we retrieved options based on the token, show the dropdown
-                build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
-                build_config["api_endpoint"]["options_metadata"] = [
-                    {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-                ]
-            # Scenario #2: We have no options from the provided token
-            else:
-                # Fallback to an API Endpoint if we couldn't retrieve options
-                build_config["api_endpoint"]["value"] = ""
-                build_config["api_endpoint"]["name"] = "API Endpoint"
-                build_config["api_endpoint"]["display_name"] = "Astra DB API Endpoint"
-
-                # If we didn't retrieve options based on the token, show the text input
-                if "options" in build_config["api_endpoint"]:
-                    del build_config["api_endpoint"]["options"]
+        # If this is the first execution of the component, reset and build database list
+        if first_run or field_name in ["token", "environment"]:
+            # Reset the build config to ensure we are starting fresh
+            build_config = self.reset_build_config(build_config)
+            build_config = self.reset_database_list(build_config)
 
             # Get list of regions for a given cloud provider
             """
@@ -525,28 +550,43 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ] = self.map_cloud_providers()[cloud_provider]["regions"]
             """
 
+            return build_config
+
         # Refresh the collection name options
         if field_name == "api_endpoint":
-            # Reset the selected collection
-            build_config["collection_name"]["value"] = ""
+            # If missing, refresh the database options
+            if not build_config["api_endpoint"]["options"] or not field_value:
+                return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
-            # Reload the list of collections and metadata associated
-            collection_options = self._initialize_collection_options()
-            build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-            build_config["collection_name"]["options_metadata"] = [
-                {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-            ]
+            # Set the underlying api endpoint value of the database
+            if field_value in build_config["api_endpoint"]["options"]:
+                index_of_name = build_config["api_endpoint"]["options"].index(field_value)
+                build_config["d_api_endpoint"]["value"] = build_config["api_endpoint"]["options_metadata"][
+                    index_of_name
+                ]["api_endpoint"]
+            else:
+                build_config["d_api_endpoint"]["value"] = ""
+
+            # Reset the list of collections we have based on the token provided
+            return self.reset_collection_list(build_config)
 
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
+            # Assume we will be autodetecting the collection:
+            build_config["autodetect_collection"]["value"] = True
+
             # Set the options for collection name to be the field value if its a new collection
-            if not is_hosted and field_value not in build_config["collection_name"]["options"]:
+            if field_value not in build_config["collection_name"]["options"]:
+                # Add the new collection to the list of options
                 build_config["collection_name"]["options"].append(field_value)
                 build_config["collection_name"]["options_metadata"].append(
                     {"records": 0, "provider": None, "icon": "", "model": None}
                 )
 
-            # Find location of the name in the options list
+                # Ensure that autodetect collection is set to False, since its a new collection
+                build_config["autodetect_collection"]["value"] = False
+
+            # Find the position of the selected collection to align with metadata
             index_of_name = build_config["collection_name"]["options"].index(field_value)
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
 
@@ -608,23 +648,29 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else {}
         )
 
+        # Get the additional parameters
         additional_params = self.astradb_vectorstore_kwargs or {}
 
         # Get Langflow version and platform information
         __version__ = get_version_info()["version"]
         langflow_prefix = ""
-        if os.getenv("LANGFLOW_HOST") is not None:
+        if os.getenv("AWS_EXECUTION_ENV") == "AWS_ECS_FARGATE":  # TODO: More precise way of detecting
             langflow_prefix = "ds-"
+
+        # Get the database object
+        database = self.get_database_object(api_endpoint=self.d_api_endpoint)
+        autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection
 
         # Bundle up the auto-detect parameters
         autodetect_params = {
-            "autodetect_collection": self.collection_exists(),  # TODO: May want to expose this option
+            "autodetect_collection": autodetect,
             "content_field": (
                 self.content_field
                 if self.content_field and embedding_params
                 else (
                     "page_content"
-                    if embedding_params and self.collection_data(collection_name=self.collection_name) == 0
+                    if embedding_params
+                    and self.collection_data(collection_name=self.collection_name, database=database) == 0
                     else None
                 )
             ),
@@ -636,8 +682,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             vector_store = AstraDBVectorStore(
                 # Astra DB Authentication Parameters
                 token=self.token,
-                api_endpoint=self.get_api_endpoint(),
-                namespace=self.get_keyspace(),
+                api_endpoint=database.api_endpoint,
+                namespace=database.keyspace,
                 collection_name=self.collection_name,
                 environment=self.environment,
                 # Astra DB Usage Tracking Parameters
@@ -651,6 +697,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Error initializing AstraDBVectorStore: {e}"
             raise ValueError(msg) from e
 
+        # Add documents to the vector store
         self._add_documents_to_vector_store(vector_store)
 
         return vector_store
@@ -667,8 +714,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if documents and self.deletion_field:
             self.log(f"Deleting documents where {self.deletion_field}")
             try:
-                database = self.get_database_object()
-                collection = database.get_collection(self.collection_name, keyspace=self.get_keyspace())
+                database = self.get_database_object(api_endpoint=self.d_api_endpoint)
+                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)
                 delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
                 self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
                 collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
