@@ -1,10 +1,8 @@
-import LoadingComponent from "@/components/common/loadingComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import CustomLoader from "@/customization/components/custom-loader";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -92,11 +90,7 @@ export default function CollectionPage(): JSX.Element {
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            {ENABLE_DATASTAX_LANGFLOW ? (
-              <CustomLoader />
-            ) : (
-              <LoadingComponent remSize={30} />
-            )}
+            <CustomLoader />
           </div>
         )}
       </main>

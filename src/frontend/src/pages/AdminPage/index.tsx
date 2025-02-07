@@ -6,11 +6,9 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import CustomLoader from "@/customization/components/custom-loader";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { cloneDeep } from "lodash";
 import { useContext, useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
-import LoadingComponent from "../../components/common/loadingComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
 import { CheckBoxDiv } from "../../components/ui/checkbox";
@@ -305,11 +303,7 @@ export default function AdminPage() {
           </div>
           {isPending || isIdle ? (
             <div className="flex h-full w-full items-center justify-center">
-              {ENABLE_DATASTAX_LANGFLOW ? (
-                <CustomLoader />
-              ) : (
-                <LoadingComponent remSize={12} />
-              )}
+              <CustomLoader />
             </div>
           ) : userList.current.length === 0 && !isIdle ? (
             <>

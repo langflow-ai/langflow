@@ -2,7 +2,6 @@ import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import LoadingComponent from "@/components/common/loadingComponent";
 import CanvasControls, {
   CustomControlButton,
 } from "@/components/core/canvasControlsComponent";
@@ -15,7 +14,6 @@ import {
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import CustomLoader from "@/customization/components/custom-loader";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -640,11 +638,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          {ENABLE_DATASTAX_LANGFLOW ? (
-            <CustomLoader />
-          ) : (
-            <LoadingComponent remSize={30} />
-          )}
+          <CustomLoader />
         </div>
       )}
     </div>
