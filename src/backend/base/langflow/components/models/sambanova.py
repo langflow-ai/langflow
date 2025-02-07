@@ -1,4 +1,4 @@
-from langchain_community.chat_models.sambanova import ChatSambaNovaCloud
+from langchain_sambanova import ChatSambaNovaCloud
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
@@ -18,7 +18,7 @@ class SambaNovaComponent(LCModelComponent):
     inputs = [
         *LCModelComponent._base_inputs,
         StrInput(
-            name="sambanova_url",
+            name="base_url",
             display_name="SambaNova Cloud Base Url",
             advanced=True,
             info="The base URL of the Sambanova Cloud API. "
@@ -33,7 +33,7 @@ class SambaNovaComponent(LCModelComponent):
             value=SAMBANOVA_MODEL_NAMES[0],
         ),
         SecretStrInput(
-            name="sambanova_api_key",
+            name="api_key",
             display_name="Sambanova API Key",
             info="The Sambanova API Key to use for the Sambanova model.",
             advanced=False,
@@ -44,8 +44,16 @@ class SambaNovaComponent(LCModelComponent):
             name="max_tokens",
             display_name="Max Tokens",
             advanced=True,
-            value=4096,
-            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+            value=2048,
+            info="The maximum number of tokens to generate.",
+        ),
+        SliderInput(
+            name="top_p",
+            display_name="top_p",
+            advanced=True,
+            value=1.0,
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            info="Model top_p",
         ),
         SliderInput(
             name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)
@@ -53,10 +61,11 @@ class SambaNovaComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
-        sambanova_url = self.sambanova_url
-        sambanova_api_key = self.sambanova_api_key
+        sambanova_url = self.base_url
+        sambanova_api_key = self.api_key
         model_name = self.model_name
         max_tokens = self.max_tokens
+        top_p = self.top_p
         temperature = self.temperature
 
         api_key = SecretStr(sambanova_api_key).get_secret_value() if sambanova_api_key else None
@@ -65,6 +74,7 @@ class SambaNovaComponent(LCModelComponent):
             model=model_name,
             max_tokens=max_tokens or 1024,
             temperature=temperature or 0.07,
+            top_p=top_p,
             sambanova_url=sambanova_url,
             sambanova_api_key=api_key,
         )

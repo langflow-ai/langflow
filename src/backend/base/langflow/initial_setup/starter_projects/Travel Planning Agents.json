@@ -823,6 +823,7 @@
                   "Groq",
                   "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -1379,6 +1380,7 @@
                   "Groq",
                   "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -1935,6 +1937,7 @@
                   "Groq",
                   "NVIDIA",
                   "OpenAI",
+                  "SambaNova",
                   "Custom"
                 ],
                 "placeholder": "",
