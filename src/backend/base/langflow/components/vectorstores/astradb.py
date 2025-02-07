@@ -376,43 +376,34 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        return self.keyspace.strip() if self.keyspace else None
 
     def get_database_object(self, api_endpoint: str | None = None):
-        try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
+        if self._database is not None:
+            return self._database
 
-            return client.get_database(
+        self.initialize_client()
+
+        try:
+            self._database = self.client.get_database(
                 api_endpoint=self.get_api_endpoint(api_endpoint=api_endpoint),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
+            return self._database
         except Exception as e:
             msg = f"Error fetching database object: {e}"
             raise ValueError(msg) from e
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
-            if not database:
-                client = DataAPIClient(token=self.token, environment=self.environment)
-
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
+            if database is None:
+                database = self.get_database_object()
 
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
-
             return collection.estimated_document_count()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.log(f"Error checking collection data: {e}")
-
             return None
 
     def get_vectorize_providers(self):
@@ -457,27 +448,25 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
-        # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
+        keyspace = self.get_keyspace()
+        collection_list = database.list_collections(keyspace=keyspace)
 
-        # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+        results = []
+        for col in collection_list:
+            records_count = self.collection_data(collection_name=col.name, database=database)
+            vector_service = col.options.vector.service if col.options.vector else None
+            results.append(
+                {
+                    "name": col.name,
+                    "records": records_count,
+                    "provider": vector_service.provider if vector_service else None,
+                    "icon": "",
+                    "model": vector_service.model_name if vector_service else None,
+                }
+            )
 
-        # Return the list of collections and metadata associated
-        return [
-            {
-                "name": col.name,
-                "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
-                "icon": "",
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
-            }
-            for col in collection_list
-        ]
+        return results
 
     def reset_collection_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
@@ -806,3 +795,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.client = None
+        self._database = None
+
+    def initialize_client(self):
+        if self.client is None:
+            self.client = DataAPIClient(token=self.token, environment=self.environment)
