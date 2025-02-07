@@ -113,7 +113,6 @@ export default function IOModal({
 
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const setLockChat = useFlowStore((state) => state.setLockChat);
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const messages = useMessagesStore((state) => state.messages);
@@ -155,23 +154,12 @@ export default function IOModal({
           files: files,
           silent: true,
           session: sessionId,
-          setLockChat,
         }).catch((err) => {
           console.error(err);
-          setLockChat(false);
         });
       }
-      setLockChat(false);
     },
-    [
-      isBuilding,
-      setIsBuilding,
-      setLockChat,
-      chatValue,
-      chatInput?.id,
-      sessionId,
-      buildFlow,
-    ],
+    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow],
   );
 
   useEffect(() => {

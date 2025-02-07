@@ -32,9 +32,6 @@ export default function ChatMessage({
   updateChat,
   closeChat,
 }: chatMessagePropsType): JSX.Element {
-  const setLockChat = useFlowStore((state) => state.setLockChat);
-  const lockChat = useFlowStore((state) => state.lockChat);
-
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
@@ -51,14 +48,14 @@ export default function ChatMessage({
   const chatMessageRef = useRef(chatMessage);
   const [editMessage, setEditMessage] = useState(false);
   const [showError, setShowError] = useState(false);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const [lockChat, setLockChat] = useState(false);
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
     chatMessageRef.current = chatMessage;
-  }, [chat, setLockChat]);
-
-  console.log(lockChat);
+  }, [chat, isBuilding]);
 
   const playgroundScrollBehaves = useUtilityStore(
     (state) => state.playgroundScrollBehaves,
@@ -118,7 +115,6 @@ export default function ChatMessage({
         });
     }
   }, [streamUrl, chatMessage]);
-
   useEffect(() => {
     return () => {
       eventSource.current?.close();
@@ -235,6 +231,8 @@ export default function ChatMessage({
     );
   }
 
+  const shouldLockChat = isBuilding || lockChat;
+
   return (
     <>
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
@@ -321,7 +319,7 @@ export default function ChatMessage({
                 contentBlocks={chat.content_blocks}
                 isLoading={
                   chatMessage === "" &&
-                  lockChat &&
+                  shouldLockChat &&
                   chat.properties?.state === "partial"
                 }
                 state={chat.properties?.state}
@@ -361,7 +359,7 @@ export default function ChatMessage({
                         }
                         className="flex w-full flex-col"
                       >
-                        {chatMessage === "" && lockChat && lastMessage ? (
+                        {chatMessage === "" && shouldLockChat && lastMessage ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"
