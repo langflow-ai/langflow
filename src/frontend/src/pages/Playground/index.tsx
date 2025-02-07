@@ -62,7 +62,10 @@ export default function PlaygroundPage() {
       const { inputs, outputs } = getInputsAndOutputs(
         currentSavedFlow?.data?.nodes || [],
       );
-      if ((inputs.length === 0 && outputs.length === 0) || currentSavedFlow?.access_type !== "public") {
+      if (
+        (inputs.length === 0 && outputs.length === 0) ||
+        currentSavedFlow?.access_type !== "public"
+      ) {
         // redirect to the home page
         navigate("/");
       }
