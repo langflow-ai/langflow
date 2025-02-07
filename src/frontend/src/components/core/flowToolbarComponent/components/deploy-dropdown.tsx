@@ -16,28 +16,29 @@ import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useEffect, useState } from "react";
+
 export default function PublishDropdown() {
   const domain = window.location.origin;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
-  const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
-  const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const flowId = currentFlow?.id;
+  const flowName = currentFlow?.name;
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { mutate } = usePatchUpdateFlow();
+  const { mutateAsync } = usePatchUpdateFlow();
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
-  const isPublished = useFlowsManagerStore(
-    (state) => state.currentFlow?.access_type === "public",
-  );
+  const isPublished = currentFlow?.access_type === "public";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
 
   useEffect(() => {
+    console.log(currentFlow, "currentFlow");
     console.log(isPublished, "isPublished");
   }, [isPublished]);
 
-  const handlePublishedSwitch = (checked: boolean) => {
-    mutate(
+  const handlePublishedSwitch = async (checked: boolean) => {
+    mutateAsync(
       {
         id: flowId ?? "",
         access_type: checked ? "private" : "public",
@@ -113,7 +114,9 @@ export default function PublishDropdown() {
                     if (isPublished) {
                       window.open(`${domain}/playground/${flowId}`, "_blank");
                     } else {
-                      handlePublishedSwitch(isPublished);
+                      handlePublishedSwitch(isPublished).then(() => {
+                        window.open(`${domain}/playground/${flowId}`, "_blank");
+                      });
                     }
                   }
                 }}
