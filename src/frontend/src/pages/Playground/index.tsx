@@ -38,7 +38,6 @@ export default function PlaygroundPage() {
     const initializeFlow = async () => {
       setIsLoading(true);
       if (currentFlowId === "") {
-        debugger;
         const flow = await getFlowData();
         if (flow) {
           setCurrentFlow(flow);
