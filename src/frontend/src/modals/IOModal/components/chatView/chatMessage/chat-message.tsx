@@ -49,6 +49,7 @@ export default function ChatMessage({
   const chatMessageRef = useRef(chatMessage);
   const [editMessage, setEditMessage] = useState(false);
   const [showError, setShowError] = useState(false);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
@@ -321,7 +322,9 @@ export default function ChatMessage({
                 isLoading={
                   chatMessage === "" &&
                   lockChat &&
-                  chat.properties?.state === "partial"
+                  chat.properties?.state === "partial" &&
+                  isBuilding &&
+                  lastMessage
                 }
                 state={chat.properties?.state}
                 chatId={chat.id}
