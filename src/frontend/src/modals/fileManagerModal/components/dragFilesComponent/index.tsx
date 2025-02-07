@@ -1,6 +1,7 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import useAlertStore from "@/stores/alertStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useState } from "react";
 
 export default function DragFilesComponent({
@@ -18,6 +19,7 @@ export default function DragFilesComponent({
     types,
     multiple: isList,
   });
+  const maxFileSizeUpload = useUtilityStore((state) => state.maxFileSizeUpload);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
@@ -105,7 +107,9 @@ export default function DragFilesComponent({
               </span>
             </ShadTooltip>
           )}
-          <span className="font-semibold">150 MB</span>
+          <span className="font-semibold">
+            {maxFileSizeUpload / 1024 / 1024} MB
+          </span>
           <span>max</span>
         </p>
         <div
