@@ -232,6 +232,7 @@ class FlowHeader(BaseModel):
     endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
     description: str | None = Field(None, description="A description of the flow")
     data: dict | None = Field(None, description="The data of the component, if is_component is True")
+    access_type: AccessTypeEnum | None = Field(None, description="The access type of the flow")
 
     @field_validator("data", mode="before")
     @classmethod
