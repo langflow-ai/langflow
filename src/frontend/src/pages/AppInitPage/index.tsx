@@ -40,7 +40,6 @@ export function AppInitPage() {
     }
   }, [isFetched]);
 
-
   return (
     //need parent component with width and height
     <>
