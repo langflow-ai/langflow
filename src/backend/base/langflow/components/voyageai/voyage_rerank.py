@@ -10,7 +10,6 @@ class VoyageAIRerankComponent(LCCompressorComponent):
     name = "VoyageAIRerank"
 
     inputs = [
-        *LCCompressorComponent.inputs,
         DropdownInput(
             name="model",
             display_name="Model",
@@ -23,13 +22,13 @@ class VoyageAIRerankComponent(LCCompressorComponent):
         Output(
             display_name="Reranked Documents",
             name="reranked_documents",
-            method="rerank_documents",
+            method="compress_documents"
         ),
     ]
 
-    def build_compressor(self) -> BaseDocumentCompressor:
+    def build_compressor(self) -> BaseDocumentCompressor:  # type: ignore[type-var]
         try:
-            from langchain_voyageai import VoyageAIRerank # type: ignore
+            from langchain_voyageai import VoyageAIRerank
         except ImportError as e:
             msg = "Please install langchain-voyageai to use the Voyage AI model."
             raise ImportError(msg) from e
