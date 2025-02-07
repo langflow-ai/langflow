@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { FileType } from "@/types/file_management";
-import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
 import { useEffect, useState } from "react";
@@ -44,12 +43,18 @@ export default function FileRendererComponent({
         "flex items-center justify-between rounded-lg py-2",
         handleFileSelect ? "cursor-pointer px-3 hover:bg-accent" : "",
       )}
-      onClick={() => handleFileSelect?.(file.path)}
+      onClick={() => {
+        if (!file.progress) handleFileSelect?.(file.path);
+      }}
     >
       <div className="flex items-center gap-4">
         {handleFileSelect && (
           <div
-            className={cn("flex", file.progress && "opacity-0")}
+            className={cn(
+              "flex",
+              file.progress !== undefined &&
+                "pointer-events-none cursor-not-allowed",
+            )}
             onClick={(e) => e.stopPropagation()}
           >
             <Checkbox
@@ -59,8 +64,8 @@ export default function FileRendererComponent({
           </div>
         )}
         <div className="flex items-center gap-2">
-          {file.progress ? (
-            <div className="text-xs font-semibold text-muted-foreground">
+          {file.progress !== undefined && file.progress !== -1 ? (
+            <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
               {Math.round(file.progress * 100)}%
             </div>
           ) : (
@@ -68,7 +73,9 @@ export default function FileRendererComponent({
               name={FILE_ICONS[type]?.icon ?? "File"}
               className={cn(
                 "h-6 w-6 shrink-0",
-                FILE_ICONS[type]?.color ?? undefined,
+                file.progress !== undefined
+                  ? "text-placeholder-foreground"
+                  : (FILE_ICONS[type]?.color ?? undefined),
               )}
             />
           )}
@@ -95,19 +102,36 @@ export default function FileRendererComponent({
             </div>
           ) : (
             <span
-              className="cursor-text text-sm font-medium"
+              className={cn(
+                "cursor-text text-sm font-medium",
+                file.progress !== undefined &&
+                  file.progress === -1 &&
+                  "pointer-events-none text-placeholder-foreground",
+              )}
               onDoubleClick={(e) => {
                 e.stopPropagation();
-                setOpenRename(true);
+                if (!file.progress) {
+                  setOpenRename(true);
+                }
               }}
             >
               {file.name}
             </span>
           )}
-          {!handleRemove && (
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {formatFileSize(file.size)}
+          {file.progress !== undefined && file.progress === -1 ? (
+            <span className="text-[13px] text-primary">
+              Upload failed,{" "}
+              <span
+                className="cursor-pointer text-accent-pink-foreground underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                try again?
+              </span>
             </span>
+          ) : (
+            <></>
           )}
         </div>
       </div>
@@ -126,7 +150,7 @@ export default function FileRendererComponent({
             className="h-5 w-5 shrink-0 text-muted-foreground"
           />
         </Button>
-      ) : (
+      ) : file.progress === undefined ? (
         <FilesContextMenuComponent
           handleRename={handleOpenRename}
           file={file}
@@ -146,6 +170,8 @@ export default function FileRendererComponent({
             />
           </Button>
         </FilesContextMenuComponent>
+      ) : (
+        <></>
       )}
     </div>
   );

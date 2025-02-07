@@ -85,8 +85,8 @@ export default function RecentFilesComponent({
             files={searchResults
               .toSorted((a, b) => {
                 const selectedOrder = sortByBoolean(
-                  selectedFiles.includes(a.path) || !!a.progress,
-                  selectedFiles.includes(b.path) || !!b.progress,
+                  selectedFiles.includes(a.path) || a.progress !== undefined,
+                  selectedFiles.includes(b.path) || b.progress !== undefined,
                 );
                 return selectedOrder === 0
                   ? sortByDate(

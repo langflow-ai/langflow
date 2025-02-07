@@ -1,4 +1,5 @@
 import { useMutationFunctionType } from "@/types/api";
+import { FileType } from "@/types/file_management";
 import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -28,30 +29,41 @@ export const usePostUploadFileV2: useMutationFunctionType<
       created_at: data,
       progress: 0,
     };
-    queryClient.setQueryData(["useGetFilesV2"], (old: any) => {
-      return [...old, newFile];
+    queryClient.setQueryData(["useGetFilesV2"], (old: FileType[]) => {
+      return [...old.filter((file) => file.id !== "temp"), newFile];
     });
 
-    const response = await api.post<any>(
-      `${getURL("FILE_MANAGEMENT", {}, true)}/`,
-      formData,
-      {
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.progress) {
-            queryClient.setQueryData(["useGetFilesV2"], (old: any) => {
-              return old.map((file: any) => {
-                if (file?.id === "temp") {
-                  return { ...file, progress: progressEvent.progress };
-                }
-                return file;
+    try {
+      const response = await api.post<any>(
+        `${getURL("FILE_MANAGEMENT", {}, true)}/`,
+        formData,
+        {
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.progress) {
+              queryClient.setQueryData(["useGetFilesV2"], (old: any) => {
+                return old.map((file: any) => {
+                  if (file?.id === "temp") {
+                    return { ...file, progress: progressEvent.progress };
+                  }
+                  return file;
+                });
               });
-            });
-          }
+            }
+          },
         },
-      },
-    );
-
-    return response.data;
+      );
+      return response.data;
+    } catch (e) {
+      queryClient.setQueryData(["useGetFilesV2"], (old: FileType[]) => {
+        return old.map((file: any) => {
+          if (file?.id === "temp") {
+            return { ...file, progress: -1 };
+          }
+          return file;
+        });
+      });
+      throw e;
+    }
   };
 
   const mutation: UseMutationResult<IPostUploadFile, any, IPostUploadFile> =
@@ -63,9 +75,17 @@ export const usePostUploadFileV2: useMutationFunctionType<
       },
       {
         onSettled: (data, error, variables, context) => {
-          queryClient.invalidateQueries({
-            queryKey: ["useGetFilesV2"],
-          });
+          if (!error) {
+            queryClient.invalidateQueries({
+              queryKey: ["useGetFilesV2"],
+            });
+          } else {
+            setTimeout(() => {
+              queryClient.invalidateQueries({
+                queryKey: ["useGetFilesV2"],
+              });
+            }, 5000);
+          }
           options?.onSettled?.(data, error, variables, context);
         },
         ...options,

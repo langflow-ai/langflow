@@ -117,14 +117,16 @@ export const FilesPage = () => {
       cellRenderer: (params) => {
         return (
           <div className="flex h-full cursor-default items-center justify-center">
-            <FilesContextMenuComponent
-              file={params.data}
-              handleRename={handleOpenRename}
-            >
-              <Button variant="ghost" size="iconMd">
-                <ForwardedIconComponent name="EllipsisVertical" />
-              </Button>
-            </FilesContextMenuComponent>
+            {!params.data.progress && (
+              <FilesContextMenuComponent
+                file={params.data}
+                handleRename={handleOpenRename}
+              >
+                <Button variant="ghost" size="iconMd">
+                  <ForwardedIconComponent name="EllipsisVertical" />
+                </Button>
+              </FilesContextMenuComponent>
+            )}
           </div>
         );
       },
