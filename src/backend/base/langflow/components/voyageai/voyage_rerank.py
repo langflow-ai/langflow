@@ -10,6 +10,7 @@ class VoyageAIRerankComponent(LCCompressorComponent):
     name = "VoyageAIRerank"
 
     inputs = [
+        *LCCompressorComponent.inputs,
         DropdownInput(
             name="model",
             display_name="Model",
