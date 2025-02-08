@@ -288,4 +288,11 @@ input[type="search"]::-webkit-search-cancel-button {
 .jse-button.jse-transform {
   display: none !important;
 }
+.jse-search-box-background{
+  display: none !important;
+}
 
+.jse-search-box-container {
+  position: absolute !important;
+  right: 0 !important;
+}
