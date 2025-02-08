@@ -1,11 +1,11 @@
 from langchain_community.embeddings.cloudflare_workersai import CloudflareWorkersAIEmbeddings
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 
-class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
+class CloudflareWorkersAIEmbeddingsComponent(LCEmbeddingsModel):
     display_name: str = "Cloudflare Workers AI Embeddings"
     description: str = "Generate embeddings using Cloudflare Workers AI models."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/cloudflare_workersai/"

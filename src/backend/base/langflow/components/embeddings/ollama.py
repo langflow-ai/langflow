@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 import httpx
 from langchain_ollama import OllamaEmbeddings
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, URL_LIST
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, MessageTextInput, Output
@@ -12,7 +12,7 @@ from langflow.io import DropdownInput, MessageTextInput, Output
 HTTP_STATUS_OK = 200
 
 
-class OllamaEmbeddingsComponent(LCModelComponent):
+class OllamaEmbeddingsComponent(LCEmbeddingsModel):
     display_name: str = "Ollama Embeddings"
     description: str = "Generate embeddings using Ollama models."
     documentation = "https://python.langchain.com/docs/integrations/text_embedding/ollama"

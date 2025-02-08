@@ -1,12 +1,12 @@
 from langchain_mistralai.embeddings import MistralAIEmbeddings
 from pydantic.v1 import SecretStr
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 
-class MistralAIEmbeddingsComponent(LCModelComponent):
+class MistralAIEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "MistralAI Embeddings"
     description = "Generate embeddings using MistralAI models."
     icon = "MistralAI"

@@ -3,14 +3,14 @@ from typing import Any
 import cohere
 from langchain_cohere import CohereEmbeddings
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput
 
 HTTP_STATUS_OK = 200
 
 
-class CohereEmbeddingsComponent(LCModelComponent):
+class CohereEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "Cohere Embeddings"
     description = "Generate embeddings using Cohere models."
     icon = "Cohere"

@@ -1,9 +1,9 @@
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
 from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageTextInput, Output
 
 
-class VertexAIEmbeddingsComponent(LCModelComponent):
+class VertexAIEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "VertexAI Embeddings"
     description = "Generate embeddings using Google Cloud VertexAI models."
     icon = "VertexAI"
