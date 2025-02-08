@@ -171,6 +171,11 @@ class Input(BaseModel):
         return v
 
 
+class OutputOptions(BaseModel):
+    filter: str | None = None
+    """Filter to be applied to the output data."""
+
+
 class Output(BaseModel):
     types: list[str] = Field(default=[])
     """List of output types for the field."""
@@ -201,7 +206,7 @@ class Output(BaseModel):
     allows_loop: bool = Field(default=False)
     """Specifies if the output allows looping."""
 
-    options: BaseModel | dict | None = Field(default=None) 
+    options: OutputOptions | None = Field(default=None)
     """Options for the output."""
 
     def to_dict(self):
@@ -221,7 +226,6 @@ class Output(BaseModel):
         result = handler(self)
         if self.value == UNDEFINED:
             result["value"] = UNDEFINED.value
-
         return result
 
     @model_validator(mode="after")
@@ -233,11 +237,14 @@ class Output(BaseModel):
             raise ValueError(msg)
         if self.display_name is None:
             self.display_name = self.name
+        # Convert dict options to OutputOptions model
+        if isinstance(self.options, dict):
+            self.options = OutputOptions(**self.options)
         return self
 
     def apply_options(self, result):
         if not self.options:
             return result
-        if self.options.get("filter") and isinstance(result, Data):
-            return result.filter_data(self.options["filter"])
+        if self.options.filter and isinstance(result, Data):
+            return result.filter_data(self.options.filter)
         return result
