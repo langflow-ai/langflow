@@ -1,9 +1,9 @@
-from .nvidia_rerank import NvidiaRerankComponent
 from .cohere_rerank import CohereRerankComponent
+from .nvidia_rerank import NvidiaRerankComponent
 from .voyage_rerank import VoyageAIRerankComponent
 
 __all__ = [
-    "NvidiaRerankComponent",
     "CohereRerankComponent",
+    "NvidiaRerankComponent",
     "VoyageAIRerankComponent",
 ]
