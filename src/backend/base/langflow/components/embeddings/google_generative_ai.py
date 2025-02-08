@@ -32,9 +32,6 @@ class GoogleGenerativeAIEmbeddingsComponent(LCEmbeddingsModel):
         MessageTextInput(name="model_name", display_name="Model Name", value="models/text-embedding-004"),
     ]
 
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
-    ]
 
     def build_embeddings(self) -> Embeddings:
         if not self.api_key:

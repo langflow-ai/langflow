@@ -62,9 +62,6 @@ class AzureOpenAIEmbeddingsComponent(LCEmbeddingsModel):
         ),
     ]
 
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
-    ]
 
     def build_embeddings(self) -> Embeddings:
         try:

@@ -38,9 +38,6 @@ class CohereEmbeddingsComponent(LCEmbeddingsModel):
         FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
     ]
 
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
-    ]
 
     def build_embeddings(self) -> Embeddings:
         data = None

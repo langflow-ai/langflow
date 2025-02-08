@@ -40,9 +40,6 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
         ),
     ]
 
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
-    ]
 
     def validate_inference_endpoint(self, inference_endpoint: str) -> bool:
         parsed_url = urlparse(inference_endpoint)

@@ -37,9 +37,6 @@ class MistralAIEmbeddingsComponent(LCEmbeddingsModel):
         ),
     ]
 
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
-    ]
 
     def build_embeddings(self) -> Embeddings:
         if not self.mistral_api_key:

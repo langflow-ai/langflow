@@ -32,9 +32,6 @@ class VertexAIEmbeddingsComponent(LCEmbeddingsModel):
         FloatInput(name="top_p", display_name="Top P", value=0.95, advanced=True),
     ]
 
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
-    ]
 
     def build_embeddings(self) -> Embeddings:
         try:
