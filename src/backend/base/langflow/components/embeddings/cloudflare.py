@@ -2,7 +2,7 @@ from langchain_community.embeddings.cloudflare_workersai import CloudflareWorker
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import BoolInput, DictInput, IntInput, MessageTextInput, SecretStrInput
 
 
 class CloudflareWorkersAIEmbeddingsComponent(LCEmbeddingsModel):
@@ -58,7 +58,6 @@ class CloudflareWorkersAIEmbeddingsComponent(LCEmbeddingsModel):
             advanced=True,
         ),
     ]
-
 
     def build_embeddings(self) -> Embeddings:
         try:

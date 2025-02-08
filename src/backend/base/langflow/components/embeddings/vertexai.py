@@ -1,6 +1,6 @@
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageTextInput, Output
+from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageTextInput
 
 
 class VertexAIEmbeddingsComponent(LCEmbeddingsModel):
@@ -31,7 +31,6 @@ class VertexAIEmbeddingsComponent(LCEmbeddingsModel):
         IntInput(name="top_k", display_name="Top K", advanced=True),
         FloatInput(name="top_p", display_name="Top P", value=0.95, advanced=True),
     ]
-
 
     def build_embeddings(self) -> Embeddings:
         try:

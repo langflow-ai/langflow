@@ -7,7 +7,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import MessageTextInput, Output, SecretStrInput
+from langflow.io import MessageTextInput, SecretStrInput
 
 
 class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
@@ -39,7 +39,6 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             required=True,
         ),
     ]
-
 
     def validate_inference_endpoint(self, inference_endpoint: str) -> bool:
         parsed_url = urlparse(inference_endpoint)

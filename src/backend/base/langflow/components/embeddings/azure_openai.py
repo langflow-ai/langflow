@@ -3,7 +3,7 @@ from langchain_openai import AzureOpenAIEmbeddings
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import DropdownInput, IntInput, MessageTextInput, SecretStrInput
 
 
 class AzureOpenAIEmbeddingsComponent(LCEmbeddingsModel):
@@ -61,7 +61,6 @@ class AzureOpenAIEmbeddingsComponent(LCEmbeddingsModel):
             advanced=True,
         ),
     ]
-
 
     def build_embeddings(self) -> Embeddings:
         try:

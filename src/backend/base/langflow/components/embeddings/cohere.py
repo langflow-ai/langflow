@@ -5,7 +5,7 @@ from langchain_cohere import CohereEmbeddings
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 HTTP_STATUS_OK = 200
 
@@ -37,7 +37,6 @@ class CohereEmbeddingsComponent(LCEmbeddingsModel):
         MessageTextInput(name="user_agent", display_name="User Agent", advanced=True, value="langchain"),
         FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
     ]
-
 
     def build_embeddings(self) -> Embeddings:
         data = None

@@ -2,7 +2,7 @@ from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.aws_constants import AWS_EMBEDDING_MODEL_IDS, AWS_REGIONS
 from langflow.field_typing import Embeddings
 from langflow.inputs import SecretStrInput
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.io import DropdownInput, MessageTextInput
 
 
 class AmazonBedrockEmbeddingsComponent(LCEmbeddingsModel):
@@ -66,7 +66,6 @@ class AmazonBedrockEmbeddingsComponent(LCEmbeddingsModel):
             info="The URL of the AWS Bedrock endpoint to use.",
         ),
     ]
-
 
     def build_embeddings(self) -> Embeddings:
         try:

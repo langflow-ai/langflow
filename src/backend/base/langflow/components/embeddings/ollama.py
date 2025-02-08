@@ -7,7 +7,7 @@ from langchain_ollama import OllamaEmbeddings
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.ollama_constants import OLLAMA_EMBEDDING_MODELS, URL_LIST
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.io import DropdownInput, MessageTextInput
 
 HTTP_STATUS_OK = 200
 
@@ -37,7 +37,6 @@ class OllamaEmbeddingsComponent(LCEmbeddingsModel):
             required=True,
         ),
     ]
-
 
     def build_embeddings(self) -> Embeddings:
         try:

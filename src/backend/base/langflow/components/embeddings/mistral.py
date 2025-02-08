@@ -3,7 +3,7 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import DropdownInput, IntInput, MessageTextInput, SecretStrInput
 
 
 class MistralAIEmbeddingsComponent(LCEmbeddingsModel):
@@ -36,7 +36,6 @@ class MistralAIEmbeddingsComponent(LCEmbeddingsModel):
             value="https://api.mistral.ai/v1/",
         ),
     ]
-
 
     def build_embeddings(self) -> Embeddings:
         if not self.mistral_api_key:
