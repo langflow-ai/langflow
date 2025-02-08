@@ -307,6 +307,7 @@ import { Streamlit } from "../icons/Streamlit";
 import { UpstashSvgIcon } from "../icons/Upstash";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
+import { VoyageAIIcon } from "../icons/VoyageAI";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
@@ -500,6 +501,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
+  { display_name: "Rerankers", name: "rerankers", icon: "ChevronsUpDown"},
   { display_name: "Chains", name: "chains", icon: "Link" },
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
   { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
@@ -695,6 +697,7 @@ export const nodeIconsLucide: iconsType = {
   SupabaseVectorStore: SupabaseIcon,
   Supabase: SupabaseIcon,
   VertexAI: VertexAIIcon,
+  VoyageAI: VoyageAIIcon,
   ChatVertexAI: VertexAIIcon,
   VertexAIEmbeddings: VertexAIIcon,
   Share3: ShareIcon,

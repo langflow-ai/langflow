@@ -8,6 +8,7 @@ class VoyageAIRerankComponent(LCCompressorComponent):
     display_name = "Voyage AI Rerank"
     description = "Rerank documents using the Voyage AI API."
     name = "VoyageAIRerank"
+    icon = "VoyageAI"
 
     inputs = [
         *LCCompressorComponent.inputs,
