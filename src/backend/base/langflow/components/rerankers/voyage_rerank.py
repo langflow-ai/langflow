@@ -21,11 +21,7 @@ class VoyageAIRerankComponent(LCCompressorComponent):
     ]
 
     outputs = [
-        Output(
-            display_name="Reranked Documents",
-            name="reranked_documents",
-            method="compress_documents"
-        ),
+        Output(display_name="Reranked Documents", name="reranked_documents", method="compress_documents"),
     ]
 
     def build_compressor(self) -> BaseDocumentCompressor:  # type: ignore[type-var]
@@ -34,8 +30,4 @@ class VoyageAIRerankComponent(LCCompressorComponent):
         except ImportError as e:
             msg = "Please install langchain-voyageai to use the Voyage AI model."
             raise ImportError(msg) from e
-        return VoyageAIRerank(
-            voyageai_api_key=self.api_key,
-            model=self.model,
-            top_k=self.top_n
-        )
+        return VoyageAIRerank(voyageai_api_key=self.api_key, model=self.model, top_k=self.top_n)
