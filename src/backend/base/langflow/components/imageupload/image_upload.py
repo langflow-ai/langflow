@@ -30,13 +30,14 @@ class ImageUploadComponent(Component):
     def encode_image(self) -> Data:
         """Reads the uploaded image and encodes it as Base64."""
         if not self.image_path:
-            raise ValueError("No image uploaded. Please upload an image.")
-
+            error_message = "No image uploaded. Please upload an image."
+            raise ValueError(error_message)
+            
         image_path = Path(self.resolve_path(self.image_path))
 
         try:
             # Open the image and convert to Base64
-            with open(image_path, "rb") as img_file:
+            with image_path.open("rb") as img_file:
                 base64_encoded = base64.b64encode(img_file.read()).decode("utf-8")
 
             self.log(f"Successfully encoded image: {image_path.name}")
