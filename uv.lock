@@ -1099,7 +1099,7 @@ wheels = [
 
 [[package]]
 name = "composio-core"
-version = "0.6.16"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1113,20 +1113,21 @@ dependencies = [
     { name = "pydantic" },
     { name = "pyperclip" },
     { name = "pysher" },
+    { name = "pyyaml" },
     { name = "requests" },
     { name = "rich" },
     { name = "semver" },
     { name = "sentry-sdk" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ee/ed/a68fc6df0d13e7d79cb729109181e06668faf5773ad833094a1e11aa3acd/composio_core-0.6.16.tar.gz", hash = "sha256:dee0f72fa7d58e660325940308c46365e28d6a068ba777d1eb7f6c545b6fa8b7", size = 305113 }
+sdist = { url = "https://files.pythonhosted.org/packages/bb/0c/c852ed97a6bd4c615447d49c56687949ee711a868e6ef992cd655a399ee6/composio_core-0.7.1.tar.gz", hash = "sha256:f51d13154df9baad6768a61b40bcab74d057da63e502ece0503b3b61666b43f0", size = 314490 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/9d/a0f8ac2eb2cfd64bda3018fe1eedae0e3eaad37d5f4c2732e63da6491df2/composio_core-0.6.16-py3-none-any.whl", hash = "sha256:1b43fa77a7260c065e9e7b0222d42935b54a25e926a4a61fe2084d7d9d373d4b", size = 467752 },
+    { url = "https://files.pythonhosted.org/packages/11/03/33bbe17cca76d3ad0bb239424d5a02d7d52dc4831768cf6a5bef5cab6ac7/composio_core-0.7.1-py3-none-any.whl", hash = "sha256:cbe85a6b2e5b5326c8e067e4b88c201d076d7e46b1a35e0b803852cb001fca61", size = 477780 },
 ]
 
 [[package]]
 name = "composio-langchain"
-version = "0.6.16"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "composio-core" },
@@ -1135,9 +1136,9 @@ dependencies = [
     { name = "langchainhub" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/eb/219224c2dad00009687364e814a436d1314a56715874792d3bc3f4e6c813/composio_langchain-0.6.16.tar.gz", hash = "sha256:e8dd1c1de4e717d3fc502d13590b65527b2d33a9e72f77615c230b441d1963ef", size = 4418 }
+sdist = { url = "https://files.pythonhosted.org/packages/9d/53/dec4238dd7467f3a033eeb85aefb70002464b11a5fe59659e0b90c62841a/composio_langchain-0.7.1.tar.gz", hash = "sha256:8ffd75c8a0165cc178268ad5f3bdff965886f21dc3ee580816c38c647595ed80", size = 4417 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/6f/9e3a0f54fa25fb770221834e867ded2f177fff7362a6405254d875373390/composio_langchain-0.6.16-py3-none-any.whl", hash = "sha256:1d595224897dffda64bb255fdf6fa82ce56df08c80fc82083af8e2456ea63c26", size = 4842 },
+    { url = "https://files.pythonhosted.org/packages/38/ce/52b0e7c72a0274e0a349f7adf931026ef248f7f5482bcf69f83f8c6cc298/composio_langchain-0.7.1-py3-none-any.whl", hash = "sha256:27ec56e6248e6ce2cde1190831323d83935f4ad62d650cbd71afb4aaf2171671", size = 4844 },
 ]
 
 [[package]]
@@ -3731,6 +3732,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-sambanova"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "sseclient-py" },
+    { name = "types-requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/dd/88a2aa89b24b2f1e245bf39989a6cd8fe3b21f09171326e1f77696e853d9/langchain_sambanova-0.1.0.tar.gz", hash = "sha256:70ead669b4d440b50fd02e11d5e7e3249b61cf7bb73a79173e40da410b006c0f", size = 23297 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2c/5a/5a1a3671f70de77d6d8b06c170ba562776c6d88ffbb74cbdb12dc4fbef80/langchain_sambanova-0.1.0-py3-none-any.whl", hash = "sha256:b740011b136414e1ee503bca551bcd869731418457e27510de3a323476d09797", size = 23987 },
+]
+
+[[package]]
 name = "langchain-tests"
 version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -3803,7 +3818,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.1.4"
+version = "1.1.4.post1"
 source = { editable = "." }
 dependencies = [
     { name = "ag2" },
@@ -3852,6 +3867,7 @@ dependencies = [
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-pinecone" },
+    { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
     { name = "langchain-voyageai" },
     { name = "langflow-base" },
@@ -3919,7 +3935,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dev-dependencies]
+[package.dependency-groups]
 dev = [
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
@@ -3976,8 +3992,8 @@ requires-dist = [
     { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
     { name = "chromadb", specifier = "==0.5.23" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-core", specifier = "==0.6.16" },
-    { name = "composio-langchain", specifier = "==0.6.16" },
+    { name = "composio-core", specifier = "==0.7.1" },
+    { name = "composio-langchain", specifier = "==0.7.1" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "~=0.86.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
@@ -4015,6 +4031,7 @@ requires-dist = [
     { name = "langchain-ollama", specifier = "==0.2.1" },
     { name = "langchain-openai", specifier = "==0.2.12" },
     { name = "langchain-pinecone", specifier = "==0.2.2" },
+    { name = "langchain-sambanova", specifier = "==0.1.0" },
     { name = "langchain-unstructured", specifier = "==0.1.5" },
     { name = "langchain-voyageai", specifier = "==0.1.4" },
     { name = "langflow-base", editable = "src/backend/base" },
@@ -4064,7 +4081,7 @@ requires-dist = [
     { name = "zep-python", specifier = "==2.0.2" },
 ]
 
-[package.metadata.requires-dev]
+[package.metadata.dependency-groups]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.8,<1.6" },
@@ -4107,7 +4124,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.1.4"
+version = "0.1.4.post1"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -4229,7 +4246,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dev-dependencies]
+[package.dependency-groups]
 dev = [
     { name = "asgi-lifespan" },
     { name = "pytest-codspeed" },
@@ -4348,7 +4365,7 @@ requires-dist = [
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
 
-[package.metadata.requires-dev]
+[package.metadata.dependency-groups]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "pytest-codspeed", specifier = ">=3.0.0" },
