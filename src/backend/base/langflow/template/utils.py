@@ -125,17 +125,8 @@ def apply_json_filter(result, filter_) -> Data:
     try:
         from jsonquerylang import jsonquery
 
-        # Convert result to string if it's a dict
-        if isinstance(result, dict):
-            import json
-
-            result_str = json.dumps(result)
-        else:
-            result_str = str(result)
-
         # If query doesn't start with '.', add it to match jsonquery syntax
-        query = filter_ if filter_.startswith(".") else f".{filter_}"
-        return jsonquery(result_str, query)
+        return Data(data=jsonquery(result, filter_))
 
     except (ImportError, ValueError, TypeError):
         # Fallback to basic path-based filtering
