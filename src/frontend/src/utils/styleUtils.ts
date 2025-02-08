@@ -501,7 +501,7 @@ export const SIDEBAR_CATEGORIES = [
   { display_name: "Vector Stores", name: "vectorstores", icon: "Layers" },
   { display_name: "Embeddings", name: "embeddings", icon: "Binary" },
   { display_name: "Agents", name: "agents", icon: "Bot" },
-  { display_name: "Rerankers", name: "rerankers", icon: "ChevronsUpDown"},
+  { display_name: "Rerankers", name: "rerankers", icon: "ChevronsUpDown" },
   { display_name: "Chains", name: "chains", icon: "Link" },
   { display_name: "Loaders", name: "documentloaders", icon: "Paperclip" },
   { display_name: "Link Extractors", name: "link_extractors", icon: "Link2" },
