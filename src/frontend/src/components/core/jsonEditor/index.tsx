@@ -9,6 +9,7 @@ import useAlertStore from "../../../stores/alertStore";
 import { cn } from "../../../utils/utils";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
+import { Check } from "lucide-react";
 
 interface JsonEditorProps {
   data?: Content;
@@ -39,16 +40,18 @@ const JsonEditor = ({
 }: JsonEditorProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const newRef = jsonRef ?? jsonEditorRef;
   const [transformQuery, setTransformQuery] = useState(initialFilter ?? "");
   const [originalData, setOriginalData] = useState(data);
-  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [isFiltered, setIsFiltered] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Apply initial filter when component mounts
   useEffect(() => {
     if (initialFilter && newRef.current) {
       setTransformQuery(initialFilter);
-      handleTransform();
+      handleTransform(true);
     }
   }, [initialFilter, newRef.current]);
 
@@ -61,7 +64,22 @@ const JsonEditor = ({
     );
   };
 
-  const handleTransform = () => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTransformQuery(e.target.value);
+    setIsFiltered(false);
+    setShowSuccess(false);
+  };
+
+  const applyFilter = (filtered: {json:any},query:string) => {
+    onChange?.(filtered);
+    setFilter?.(query.trim());
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 5000);
+  };
+
+  const handleTransform = (isInitial = false) => {
     if (!newRef.current) return;
 
     // If query is empty, act as reset
@@ -85,9 +103,15 @@ const JsonEditor = ({
           if (isValidResult(result)) {
             try {
               JSON.stringify(result); // Still check JSON serializability
-              newRef.current.set({ json: result });
-              onChange?.({ json: result });
-              setFilter?.(transformQuery.trim());
+              const filteredContent = { json: result };
+              newRef.current.set(filteredContent);
+              if (isFiltered && !isInitial) {
+                // Apply the filter
+                applyFilter(filteredContent, transformQuery.trim());
+              } else {
+                // Just preview the filter
+                setIsFiltered(true);
+              }
               return;
             } catch (jsonError) {
               setErrorData({
@@ -176,9 +200,17 @@ const JsonEditor = ({
         if (isValidResult(result)) {
           try {
             JSON.stringify(result); // Still check JSON serializability
-            newRef.current.set({ json: result });
-            onChange?.({ json: result });
-            setFilter?.(transformQuery.trim());
+            const filteredContent = { json: result };
+            newRef.current.set(filteredContent);
+
+            if (isFiltered && !isInitial) {
+              // Apply the filter
+              applyFilter(filteredContent, transformQuery.trim());
+            } else {
+              // Just preview the filter
+              setIsFiltered(true);
+            }
+            return;
           } catch (jsonError) {
             setErrorData({
               title: "Invalid Result",
@@ -216,6 +248,8 @@ const JsonEditor = ({
     onChange?.(originalData);
     setTransformQuery("");
     setFilter?.("");
+    setIsFiltered(false);
+    setShowSuccess(false);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -225,40 +259,74 @@ const JsonEditor = ({
     }
   };
 
+  const getFilteredContent = (sourceJson: any, query: string): { json: any } | undefined => {
+    // Try JSONQuery first
+    try {
+      const result = jsonquery(sourceJson, query);
+      if (result !== undefined && isValidResult(result)) {
+        try {
+          JSON.stringify(result); // Check serializability
+          return { json: result };
+        } catch {
+          return undefined;
+        }
+      }
+    } catch (jsonQueryError) {
+      console.debug(
+        "JSONQuery parsing failed, falling back to path-based method:",
+        jsonQueryError,
+      );
+    }
+
+    // Fallback to path-based method
+    try {
+      const normalizedQuery = query.replace(/\[/g, ".[");
+      const path = normalizedQuery.trim().split(".").filter(Boolean);
+      let result = sourceJson;
+
+      for (const key of path) {
+        if (result === undefined || result === null) return undefined;
+        if (Array.isArray(result)) {
+          const indexMatch = key.match(/\[(\d+)\]/);
+          if (indexMatch) {
+            const index = parseInt(indexMatch[1]);
+            if (index >= result.length) return undefined;
+            result = result[index];
+            continue;
+          }
+          result = result
+            .map((item) => (key in item ? item[key] : undefined))
+            .filter((item) => item !== undefined);
+        } else {
+          if (!(key in result)) return undefined;
+          result = result[key];
+        }
+      }
+
+      if (result !== undefined && isValidResult(result)) {
+        try {
+          JSON.stringify(result);
+          return { json: result };
+        } catch {
+          return undefined;
+        }
+      }
+    } catch {
+      return undefined;
+    }
+    return undefined;
+  };
+
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // If we have an initial filter, apply it to the data before creating the editor
     let initialContent = data;
-    if (initialFilter) {
+    if (initialFilter?.trim()) {
       try {
         const json = "json" in data ? data.json : JSON.parse(data.text!);
-        const path = initialFilter.trim().split(".").filter(Boolean);
-        let result = json;
-
-        for (const key of path) {
-          if (result === undefined || result === null) break;
-          if (Array.isArray(result)) {
-            const indexMatch = key.match(/\[(\d+)\]/);
-            if (indexMatch) {
-              const index = parseInt(indexMatch[1]);
-              if (index < result.length) {
-                result = result[index];
-              }
-              continue;
-            }
-            result = result
-              .map((item) => item[key])
-              .filter((item) => item !== undefined);
-          } else {
-            if (key in result) {
-              result = result[key];
-            }
-          }
-        }
-
-        if (result !== undefined) {
-          initialContent = { json: result };
+        const filtered = getFilteredContent(json, initialFilter);
+        if (filtered) {
+          initialContent = filtered;
         }
       } catch (error) {
         console.error("Error applying initial filter:", error);
@@ -298,17 +366,26 @@ const JsonEditor = ({
           <Input
             placeholder="Enter path (e.g. users[0].name) or JSONQuery (e.g. .users | filter(.age > 25))"
             value={transformQuery}
-            onChange={(e) => setTransformQuery(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             className="font-mono text-sm"
           />
           <Button
-            onClick={handleTransform}
+            onClick={() => handleTransform()}
             variant="primary"
             size="sm"
-            className="whitespace-nowrap"
+            className={cn(
+              "whitespace-nowrap min-w-[60px]",
+              showSuccess && "!bg-green-500 hover:!bg-green-600"
+            )}
           >
-            Filter
+            {showSuccess ? (
+              <Check className="h-4 w-4" />
+            ) : isFiltered ? (
+              "Apply"
+            ) : (
+              "Filter"
+            )}
           </Button>
           <Button
             onClick={handleReset}
@@ -316,7 +393,7 @@ const JsonEditor = ({
             size="sm"
             className="whitespace-nowrap"
           >
-            Reset
+            Clear
           </Button>
         </div>
       )}
