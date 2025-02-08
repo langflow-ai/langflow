@@ -1,7 +1,5 @@
 import base64
 from pathlib import Path
-from io import BytesIO
-from PIL import Image
 
 from langflow.custom import Component
 from langflow.io import FileInput, Output
