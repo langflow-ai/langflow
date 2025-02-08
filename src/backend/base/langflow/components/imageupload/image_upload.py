@@ -32,7 +32,7 @@ class ImageUploadComponent(Component):
         if not self.image_path:
             error_message = "No image uploaded. Please upload an image."
             raise ValueError(error_message)
-            
+
         image_path = Path(self.resolve_path(self.image_path))
 
         try:
