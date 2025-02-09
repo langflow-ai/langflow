@@ -27,8 +27,13 @@ jobs:
           enable-cache: true
           python-version: "3.12"
       - run: uv sync --extra dev
+      - name: Debug Secrets
+        run: echo "CODEFLASH_API_KEY is set"
+        if: env.CODEFLASH_API_KEY != ''
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
-        run: uv run codeflash
+        run: |
+          export CODEFLASH_API_KEY=${{ secrets.CODEFLASH_API_KEY }}
+          uv run codeflash
       - name: Minimize uv cache
         run: uv cache prune --ci
