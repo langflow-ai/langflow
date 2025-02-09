@@ -19,21 +19,37 @@ jobs:
       CODEFLASH_API_KEY: ${{ secrets.CODEFLASH_API_KEY }}
       CODEFLASH_PR_NUMBER: ${{ github.event.number }}
     steps:
-      - uses: actions/checkout@v4
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v5
+
+      - name: 🛠️ Set Up Python & UV
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           python-version: "3.12"
-      - run: uv sync --extra dev
-      - name: Debug Secrets
-        run: echo "CODEFLASH_API_KEY is set"
-        if: env.CODEFLASH_API_KEY != ''
-      - name: Run Codeflash Optimizer
+
+      - name: 📦 Install Dependencies
+        run: uv sync --extra dev
+
+      - name: 🐞 Debug Secrets
+        run: |
+          echo "🔍 Checking if CODEFLASH_API_KEY is set..."
+          if [[ -z "${CODEFLASH_API_KEY}" ]]; then
+            echo "❌ CODEFLASH_API_KEY is NOT set! Exiting..."
+            exit 1
+          else
+            echo "✅ CODEFLASH_API_KEY is set successfully!"
+          fi
+
+      - name: 🚀 Run Codeflash Optimizer
         working-directory: ./src/backend/base
         run: |
-          export CODEFLASH_API_KEY=${{ secrets.CODEFLASH_API_KEY }}
+          echo "🔑 Setting API Key..."
+          export CODEFLASH_API_KEY="${{ secrets.CODEFLASH_API_KEY }}"
+          echo "✅ CODEFLASH_API_KEY has been set."
           uv run codeflash
-      - name: Minimize uv cache
+
+      - name: 🗑️ Minimize UV Cache
         run: uv cache prune --ci
