@@ -64,21 +64,21 @@ export default function APITabsComponent({
       icon: "BWPython",
       language: "python",
       code: getNewPythonApiCode(codeOptions),
-      copyCode: "print('Hello, world!')",
+      copyCode: getNewPythonApiCode(codeOptions),
     },
     {
       title: "JavaScript",
       icon: "javascript",
       language: "javascript",
       code: getNewJsApiCode(codeOptions),
-      copyCode: "console.log('Hello, world!');",
+      copyCode: getNewJsApiCode(codeOptions),
     },
     {
       title: "cURL",
       icon: "TerminalSquare",
       language: "shell",
       code: getNewCurlCode(codeOptions),
-      copyCode: "curl -X GET 'https://api.example.com/endpoint'",
+      copyCode: getNewCurlCode(codeOptions),
     },
   ];
   const [activeTab, setActiveTab] = useState<number>(0);
