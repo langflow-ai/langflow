@@ -197,6 +197,7 @@ const TableComponent = forwardRef<
             minWidth: 100,
           }}
           animateRows={false}
+          gridOptions={{ colResizeDefault: "shift", ...props.gridOptions }}
           columnDefs={colDef}
           ref={(node) => {
             if (!node) return;
