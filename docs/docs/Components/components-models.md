@@ -320,7 +320,7 @@ For more information, see [documentation](https://modelscope.cn/docs/model-servi
 
 | Name  | Type          | Description                                                      |
 |-------|---------------|------------------------------------------------------------------|
-| model | LanguageModel | An instance of Novita AI model configured with the specified parameters. |
+| model | LanguageModel | An instance of ModelScope model configured with the specified parameters. |
 
 ## Novita AI
 
