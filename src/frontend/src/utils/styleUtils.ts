@@ -232,6 +232,8 @@ import {
   Zap,
   ZoomIn,
   ZoomOut,
+  DollarSign,
+  BookOpenText,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -959,4 +961,6 @@ export const nodeIconsLucide: iconsType = {
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
+  DollarSign,
+  BookOpenText
 };
