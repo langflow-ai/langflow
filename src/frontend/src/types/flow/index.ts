@@ -64,6 +64,7 @@ export type NodeDataType = {
   output_types?: string[];
   selected_output_type?: string;
   buildStatus?: BuildStatus;
+  openModal?: boolean;
 };
 
 export type EdgeType = Edge<EdgeDataType, "default">;
