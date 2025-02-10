@@ -153,7 +153,7 @@ export default function InputFileComponent({
           ? [file_path]
           : []
       : Array.isArray(file_path)
-        ? (file_path ?? "")
+        ? (file_path ?? [])
         : [file_path ?? ""]
   ).filter((value) => value !== "");
 
@@ -191,6 +191,7 @@ export default function InputFileComponent({
           : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
       });
     }
+    console.log(files, selectedFiles, file_path);
   }, [files, value, file_path]);
 
   return (
