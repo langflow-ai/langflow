@@ -374,7 +374,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             token=self.token,
             environment=self.environment,
             api_endpoint=self.api_endpoint,
-            database_name=self.database_name
+            database_name=self.database_name,
         )
 
     def get_keyspace(self):
@@ -626,7 +626,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ]["options"]
             if not model_options:
                 embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"][
-                    "template"]["embedding_generation_provider"]["value"]
+                    "template"
+                ]["embedding_generation_provider"]["value"]
 
                 build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
                     "embedding_generation_model"
