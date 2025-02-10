@@ -55,6 +55,10 @@ This component concatenates two text sources into a single text chunk using a sp
 
 ## Create data
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+:::
+
 This component dynamically creates a [Data](/concepts-objects#data-object) object with a specified number of fields.
 
 ### Inputs
@@ -70,6 +74,27 @@ This component dynamically creates a [Data](/concepts-objects#data-object) objec
 |------|--------------|------|
 | data | Data | A [Data](/concepts-objects#data-object) object created with the specified fields and text key. |
 
+## Data combiner
+
+:::important
+Prior to Langflow version 1.1.3, this component was named **Merge Data**.
+:::
+
+This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
+
+The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | A list of data objects to be merged. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
 
 ## DataFrame operations
 
@@ -109,7 +134,35 @@ This component performs the following operations on Pandas [DataFrame](https://p
 |------|--------------|------|
 | output | DataFrame | The resulting DataFrame after the operation. |
 
+
+## Data to message
+
+:::important
+Prior to Langflow version 1.1.3, this component was named **Parse Data**.
+:::
+
+The ParseData component converts data objects into plain text using a specified template.
+This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The data to convert to text. |
+| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}`, or any other key in the data. |
+| sep | Separator | The separator to use between multiple data items. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| text | Text | The resulting formatted text string as a [Message](/concepts-objects#message-object) object. |
+
 ## Filter data
+
+:::important
+This component is in **Beta** as of Langflow version 1.1.3, and is not yet fully supported.
+:::
 
 This component filters a [Data](/concepts-objects#data-objects) object based on a list of keys.
 
@@ -127,6 +180,10 @@ This component filters a [Data](/concepts-objects#data-objects) object based on 
 | filtered_data | Filtered Data | A new [Data](/concepts-objects#data-object) object containing only the key-value pairs that match the filter criteria. |
 
 ## Filter values
+
+:::important
+This component is in **Beta** as of Langflow version 1.1.3, and is not yet fully supported.
+:::
 
 The Filter values component filters a list of data items based on a specified key, filter value, and comparison operator.
 
@@ -183,24 +240,6 @@ This component routes requests to the most appropriate LLM based on OpenRouter m
 | output | Output | The response from the selected model |
 | selected_model | Selected Model | Name of the chosen model |
 
-## Merge data (Data combiner)
-
-This component combines multiple data sources into a single unified [Data](/concepts-objects#data-object) object.
-
-The component iterates through the input list of data objects, merging them into a single data object. If the input list is empty, it returns an empty data object. If there's only one input data object, it returns that object unchanged. The merging process uses the addition operator to combine data objects.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | A list of data objects to be merged. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| merged_data | Merged Data | A single [Data](/concepts-objects#data-object) object containing the combined information from all input data objects. |
-
 
 ## Message to data
 
@@ -217,25 +256,6 @@ This component converts [Message](/concepts-objects#message-object) objects to [
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | The converted [Data](/concepts-objects#data-object) object. |
-
-## Parse Data (Data to message)
-
-The ParseData component converts data objects into plain text using a specified template.
-This component transforms structured data into human-readable text formats, allowing for customizable output through the use of templates.
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | The data to convert to text. |
-| template | Template | The template to use for formatting the data. It can contain the keys `{text}`, `{data}`, or any other key in the data. |
-| sep | Separator | The separator to use between multiple data items. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| text | Text | The resulting formatted text string as a [Message](/concepts-objects#message-object) object. |
 
 
 ## Parse DataFrame
@@ -257,6 +277,10 @@ This component converts DataFrames into plain text using templates.
 | text | Text | All rows combined into single text |
 
 ## Parse JSON
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+:::
 
 This component converts and extracts JSON fields using JQ queries.
 
