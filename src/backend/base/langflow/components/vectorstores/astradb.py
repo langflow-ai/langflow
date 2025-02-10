@@ -53,6 +53,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 info="Cloud provider for the new database.",
                                 options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
                                 required=True,
+                                real_time_refresh=True,
                             ),
                             "region": DropdownInput(
                                 name="region",
@@ -93,14 +94,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="embedding_generation_provider",
                                 display_name="Embedding Generation Provider",
                                 info="Provider to use for generating embeddings.",
-                                options=[],
+                                real_time_refresh=True,
                                 required=True,
                             ),
                             "embedding_generation_model": DropdownInput(
                                 name="embedding_generation_model",
                                 display_name="Embedding Generation Model",
                                 info="Model to use for generating embeddings.",
-                                options=[],
                                 required=True,
                             ),
                         },
