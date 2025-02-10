@@ -119,6 +119,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       false,
     );
     set({ isBuilding: false });
+    get().revertBuiltStatusFromBuilding();
+    get().setLockChat(false);
+    useAlertStore.getState().setErrorData({
+      title: "Build stopped",
+    });
   },
   isPending: true,
   setHasIO: (hasIO) => {
@@ -757,14 +762,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         get().setLockChat(false);
       },
       onBuildUpdate: handleBuildUpdate,
-      onBuildStopped: () => {
-        get().setIsBuilding(false);
-        setErrorData({
-          title: "Build stopped",
-        });
-        get().revertBuiltStatusFromBuilding();
-        get().setLockChat(false);
-      },
       onBuildError: (title: string, list: string[], elementList) => {
         const idList =
           (elementList
@@ -783,6 +780,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         setErrorData({ list, title });
         get().setIsBuilding(false);
         get().setLockChat(false);
+        get().buildController.abort();
       },
       onBuildStart: (elementList) => {
         const idList = elementList
