@@ -152,29 +152,42 @@ export function getNewPythonApiCode({
 
   return `import requests
 
-url = "${apiUrl}"
+# API Configuration
+url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
+# Stream configuration
 querystring = {
-    "stream": "${streaming}"
+    "stream": "${streaming}"  # Enable/disable streaming responses
 }
 
+# Request payload configuration
 payload = {
-    "input_value": "${input_value}",
-    "output_type": "${output_type}",
-    "input_type": "${input_type}"${
+    "input_value": "${input_value}",  # The input value to be processed by the flow
+    "output_type": "${output_type}",  # Specifies the expected output format
+    "input_type": "${input_type}"  # Specifies the input format${
       activeTweaks && tweaksObject
         ? `,
-    "tweaks": ${tweaksString}`
+    "tweaks": ${tweaksString}  # Custom tweaks to modify flow behavior`
         : ""
     }
 }
 
+# Request headers
 headers = {
-    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": "YOUR-API-KEY"' : ""}
+    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": "YOUR-API-KEY"  # Authentication key for secure access' : ""}
 }
 
-response = requests.request("POST", url, json=payload, headers=headers, params=querystring)
+try:
+    # Send API request
+    response = requests.request("POST", url, json=payload, headers=headers, params=querystring)
+    response.raise_for_status()  # Raise exception for bad status codes
 
-print(response.text)
+    # Print response
+    print(response.text)
+
+except requests.exceptions.RequestException as e:
+    print(f"Error making API request: {e}")
+except ValueError as e:
+    print(f"Error parsing response: {e}")
     `;
 }
