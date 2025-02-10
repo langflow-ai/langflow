@@ -9,44 +9,45 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
-import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useFlowStore from "@/stores/flowStore";
 import { InputFieldType } from "@/types/api";
-import { cloneDeep } from "lodash";
 
 export const NodeDialog = ({
   open,
   onClose,
   dialogInputs,
   nodeId,
+  name,
 }: {
   open: boolean;
   onClose: () => void;
   dialogInputs: any;
   nodeId: string;
+  name: string;
 }) => {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
 
-  const handleNewValue = (value: string, key: string) => {
-    let rawValue = value;
+  interface ValueObject {
+    value: string;
+  }
 
-    if (typeof value === "object" && value) {
-      rawValue = (value as { value: string }).value;
+  const handleNewValue = (value: string | ValueObject, key: string) => {
+    const rawValue =
+      typeof value === "object" && value ? (value as ValueObject).value : value;
+
+    const targetKey = name;
+
+    const targetNode = nodes.find((node) => node.id === nodeId);
+    if (!targetNode) return;
+
+    if (targetKey) {
+      const nodeTemplate = targetNode.data.node.template;
+      nodeTemplate[targetKey].dialog_inputs.fields.data.node.template[
+        key
+      ].value = rawValue;
+      setNode(nodeId, targetNode);
     }
-
-    const template = cloneDeep(dialogInputs?.fields?.data?.node?.template);
-    template[key].value = value;
-
-    const newNode = cloneDeep(nodes.find((node) => node.id === nodeId));
-    if (newNode) {
-      const template = newNode.data.node.template;
-      const databaseFields = template.database_name.dialog_inputs.fields;
-      const nodeTemplate = databaseFields.data.node.template;
-
-      nodeTemplate[key].value = rawValue;
-    }
-    setNode(nodeId, newNode!);
   };
 
   return (
@@ -103,10 +104,10 @@ export const NodeDialog = ({
         </div>
 
         <DialogFooter className="px-5 pt-3">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button>{dialogInputs.functionality}</Button>
+          <Button variant="default">{dialogInputs.functionality}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

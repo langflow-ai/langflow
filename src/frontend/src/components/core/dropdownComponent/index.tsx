@@ -225,6 +225,7 @@ export default function Dropdown({
         dialogInputs={dialogInputs}
         onClose={() => setOpenDialog(false)}
         nodeId={nodeId!}
+        name={name!}
       />
     </CommandGroup>
   );
