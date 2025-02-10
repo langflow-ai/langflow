@@ -204,8 +204,9 @@ An agent can use flows that are saved in your workspace as tools with the [Run f
 1. To add a **Run flow** component, click and drag a **Run flow** component to your workspace.
 2. Select the flow you want the agent to use as a tool.
 3. Enable **Tool Mode** in the component.
-3. Connect the tool output to the agent's tools input.
-4. Ask the agent, `What tools are you using to answer my questions?`
-Your flow should be visible in the response.
+4. Connect the tool output to the agent's tools input.
+5. To enable tool mode, click **Tool Mode** in the **Run flow** component.
+6. Ask the agent, `What tools are you using to answer my questions?`
+Your flow should be visible in the response as a tool.
 
 

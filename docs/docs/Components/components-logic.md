@@ -179,7 +179,7 @@ This component forwards the input message, unchanged.
 
 This component allows you to run any flow stored in your Langflow database without opening the flow editor.
 
-The Run Flow component can also be used as a tool when connected to an [Agent](/components-agents). The `name`, `description`, and `inputs` metadata that the Agent uses to register the tool are created automatically.
+The Run Flow component can also be used as a tool when connected to an [Agent](/components-agents). The `name` and `description` metadata that the Agent uses to register the tool are created automatically.
 
 When you select a flow, the component fetches the flow's graph structure and uses it to generate the inputs and outputs for the Run Flow component.
 
@@ -205,7 +205,7 @@ Your flow should now look like this:
 
 | Name         | Type        | Description                                                   |
 |--------------|-------------|---------------------------------------------------------------|
-| run_outputs  | List[Data]  | All outputs generated from running the flow                   |
+| run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs generated from running the flow                   |
 
 ## Sub flow
 
