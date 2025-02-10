@@ -457,7 +457,7 @@ def layered_topological_sort(
     predecessor_map: dict[str, list[str]],
     start_id: str | None = None,
     cycle_vertices: set[str] | None = None,
-    is_input_vertex: Callable[[str], bool] | None = None,
+    is_input_vertex: Callable[[str], bool] | None = None,  # noqa: ARG001
     *,
     is_cyclic: bool = False,
 ) -> list[list[str]]:
@@ -503,7 +503,9 @@ def layered_topological_sort(
         queue = deque(
             vertex_id
             for vertex_id in vertices_ids
-            if in_degree_map[vertex_id] == 0 or (is_input_vertex and is_input_vertex(vertex_id))
+            if in_degree_map[vertex_id] == 0
+            # We checked if it is input but that caused the TextInput to be at the start
+            # or (is_input_vertex and is_input_vertex(vertex_id))
         )
 
     layers: list[list[str]] = []

@@ -349,8 +349,23 @@ export async function buildFlowVertices({
     throw error;
   }
 }
-
-// Move the event handling logic to a separate function for clarity
+/**
+ * Handles various build events and calls corresponding callbacks.
+ *
+ * @param {string} type - The event type.
+ * @param {any} data - The event data.
+ * @param {boolean[]} buildResults - Array tracking build results.
+ * @param {Map<string, number>} verticesStartTimeMs - Map tracking start times for vertices.
+ * @param {Object} callbacks - Object containing callback functions.
+ * @param {(idList: VertexLayerElementType[]) => void} [callbacks.onBuildStart] - Callback when vertices start building.
+ * @param {(data: any, status: BuildStatus, buildId: string) => void} [callbacks.onBuildUpdate] - Callback for build updates.
+ * @param {(allNodesValid: boolean) => void} [callbacks.onBuildComplete] - Callback when build completes.
+ * @param {(title: string, list: string[], idList?: VertexLayerElementType[]) => void} [callbacks.onBuildError] - Callback on build errors.
+ * @param {() => void} [callbacks.onGetOrderSuccess] - Callback for successful ordering.
+ * @param {(nodes: string[]) => void} [callbacks.onValidateNodes] - Callback to validate nodes.
+ * @param {(lock: boolean) => void} [callbacks.setLockChat] - Callback to lock/unlock chat.
+ * @returns {Promise<boolean>} Promise that resolves to true if the event was handled successfully.
+ */
 async function onEvent(
   type: string,
   data: any,
@@ -380,10 +395,12 @@ async function onEvent(
     setLockChat,
   } = callbacks;
 
+  // Helper to update status and register start times for an array of vertex IDs.
   const onStartVertices = (ids: Array<string>) => {
     useFlowStore.getState().updateBuildStatus(ids, BuildStatus.TO_BUILD);
-    if (onBuildStart)
+    if (onBuildStart) {
       onBuildStart(ids.map((id) => ({ id: id, reference: id })));
+    }
     ids.forEach((id) => verticesStartTimeMs.set(id, Date.now()));
   };
 
@@ -394,10 +411,8 @@ async function onEvent(
 
       onStartVertices(verticesIds);
 
-      let verticesLayers: Array<Array<VertexLayerElementType>> =
-        verticesIds.map((id: string) => {
-          return [{ id: id, reference: id }];
-        });
+      const verticesLayers: Array<Array<VertexLayerElementType>> =
+        verticesIds.map((id: string) => [{ id: id, reference: id }]);
 
       useFlowStore.getState().updateVerticesBuild({
         verticesLayers,
@@ -424,7 +439,7 @@ async function onEvent(
       if (startTimeMs) {
         const delta = Date.now() - startTimeMs;
         if (delta < MIN_VISUAL_BUILD_TIME_MS) {
-          // this is a visual trick to make the build process look more natural
+          // Ensure a minimum visual build time for a smoother UI experience.
           await new Promise((resolve) =>
             setTimeout(resolve, MIN_VISUAL_BUILD_TIME_MS - delta),
           );
@@ -433,8 +448,7 @@ async function onEvent(
 
       if (onBuildUpdate) {
         if (!buildData.valid) {
-          // lots is a dictionary with the key the output field name and the value the log object
-          // logs: { [key: string]: { message: any; type: string }[] };
+          // Aggregate error messages from the build outputs.
           const errorMessages = Object.keys(buildData.data.outputs).flatMap(
             (key) => {
               const outputs = buildData.data.outputs[key];
@@ -449,9 +463,10 @@ async function onEvent(
               return [outputs.message.errorMessage];
             },
           );
-          onBuildError!("Error Building Component", errorMessages, [
-            { id: buildData.id },
-          ]);
+          onBuildError &&
+            onBuildError("Error Building Component", errorMessages, [
+              { id: buildData.id },
+            ]);
           onBuildUpdate(buildData, BuildStatus.ERROR, "");
           buildResults.push(false);
           return false;
@@ -467,25 +482,22 @@ async function onEvent(
         if (isStringArray(buildData.next_vertices_ids)) {
           useFlowStore
             .getState()
-            .setCurrentBuildingNodeId(buildData?.next_vertices_ids ?? []);
+            .setCurrentBuildingNodeId(buildData.next_vertices_ids ?? []);
           useFlowStore
             .getState()
-            .updateEdgesRunningByNodes(
-              buildData?.next_vertices_ids ?? [],
-              true,
-            );
+            .updateEdgesRunningByNodes(buildData.next_vertices_ids ?? [], true);
         }
         onStartVertices(buildData.next_vertices_ids);
       }
       return true;
     }
     case "add_message": {
-      //adds a message to the messsage table
+      // Add a message to the messages store.
       useMessagesStore.getState().addMessage(data);
       return true;
     }
     case "token": {
-      // flushSync and timeout is needed to avoid react batched updates
+      // Use flushSync with a timeout to avoid React batching issues.
       setTimeout(() => {
         flushSync(() => {
           useMessagesStore.getState().updateMessageText(data.id, data.chunk);
@@ -499,15 +511,16 @@ async function onEvent(
     }
     case "end": {
       const allNodesValid = buildResults.every((result) => result);
-      onBuildComplete!(allNodesValid);
+      onBuildComplete && onBuildComplete(allNodesValid);
       useFlowStore.getState().setIsBuilding(false);
       return true;
     }
     case "error": {
       if (data?.category === "error") {
         useMessagesStore.getState().addMessage(data);
-        if (data?.properties?.source?.id === null) {
-          onBuildError!("Error Building Flow", [data.text]);
+        // Use a falsy check to correctly determine if the source ID is missing.
+        if (!data?.properties?.source?.id) {
+          onBuildError && onBuildError("Error Building Flow", [data.text]);
         }
       }
       buildResults.push(false);
