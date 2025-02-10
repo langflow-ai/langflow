@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import traceback
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import anyio
 
 from langflow.services.task.backends.base import TaskBackend
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from types import TracebackType
 
 
 class AnyIOTaskResult:
@@ -12,7 +17,7 @@ class AnyIOTaskResult:
         self._status = "PENDING"
         self._result = None
         self._exception: Exception | None = None
-        self._traceback = None
+        self._traceback: TracebackType | None = None
         self.cancel_scope: anyio.CancelScope | None = None
 
     @property
