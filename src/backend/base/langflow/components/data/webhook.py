@@ -7,16 +7,24 @@ from langflow.schema import Data
 
 class WebhookComponent(Component):
     display_name = "Webhook"
-    description = "Defines a webhook input for the flow."
     name = "Webhook"
     icon = "webhook"
-
+    
     inputs = [
         MultilineInput(
             name="data",
             display_name="Payload",
             info="Receives a payload from external systems via HTTP POST.",
-        )
+            advanced=True,
+        ),
+        MultilineInput(
+            name="endpoint",
+            display_name="Endpoint",
+            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            advanced=False,
+            copy_field=True,
+            input_types=[],
+        ),
     ]
     outputs = [
         Output(display_name="Data", name="output_data", method="build_data"),

@@ -1,4 +1,5 @@
 import { InputProps, StrRenderComponentType } from "../../types";
+import CopyFieldAreaComponent from "../copyFieldAreaComponent";
 import DropdownComponent from "../dropdownComponent";
 import InputGlobalComponent from "../inputGlobalComponent";
 import TextAreaComponent from "../textAreaComponent";
@@ -12,23 +13,35 @@ export function StrRenderComponent({
 }: InputProps<string, StrRenderComponentType>) {
   const { handleOnNewValue, id, isToolMode } = baseInputProps;
 
-  if (!templateData.options) {
-    return templateData.multiline ? (
-      <TextAreaComponent
-        {...baseInputProps}
-        // password={templateData.password}
-        updateVisibility={() => {
-          if (templateData.password !== undefined) {
-            handleOnNewValue(
-              { password: !templateData.password },
-              { skipSnapshot: true },
-            );
-          }
-        }}
-        id={`textarea_${id}`}
-        isToolMode={isToolMode}
-      />
-    ) : (
+  const noOptions = !templateData.options;
+  const isMultiline = templateData.multiline;
+  const copyField = templateData.copy_field;
+  const hasOptions = !!templateData.options;
+
+  if (noOptions) {
+    if (isMultiline) {
+      if (copyField) {
+        return <CopyFieldAreaComponent {...baseInputProps} />;
+      }
+
+      return (
+        <TextAreaComponent
+          {...baseInputProps}
+          updateVisibility={() => {
+            if (templateData.password !== undefined) {
+              handleOnNewValue(
+                { password: !templateData.password },
+                { skipSnapshot: true },
+              );
+            }
+          }}
+          id={`textarea_${id}`}
+          isToolMode={isToolMode}
+        />
+      );
+    }
+
+    return (
       <InputGlobalComponent
         {...baseInputProps}
         password={templateData.password}
@@ -41,7 +54,7 @@ export function StrRenderComponent({
     );
   }
 
-  if (!!templateData.options) {
+  if (hasOptions) {
     return (
       <DropdownComponent
         {...baseInputProps}
