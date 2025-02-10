@@ -64,6 +64,7 @@ export default function IOModal({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
   setPlaygroundPage(!!playgroundPage);
+  console.log(currentFlow?.icon, "currentFlow?.icon");
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
@@ -310,7 +311,7 @@ export default function IOModal({
                   <div className="flex items-center gap-2">
                   <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
                     <IconComponent
-                      name={currentFlow?.icon ?? "graph"}
+                      name={currentFlow?.icon ?? "Workflow"}
                       className="h-3.5 w-3.5"
                     />
                   </div>
