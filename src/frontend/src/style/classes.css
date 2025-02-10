@@ -284,3 +284,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .react-flow__background pattern circle {
   fill: hsl(var(--canvas-dot)) !important;
 }
+
+.linenumber {
+  font-style: normal !important;
+}
