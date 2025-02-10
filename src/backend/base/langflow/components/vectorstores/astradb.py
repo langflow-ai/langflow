@@ -374,7 +374,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             token=self.token,
             environment=self.environment,
             api_endpoint=self.api_endpoint,
-            database_name=self.database_name
+            database_name=self.database_name,
         )
 
     def get_keyspace(self):
@@ -461,39 +461,40 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
+        keyspace = self.get_keyspace()
+        collection_data_func = self.collection_data  # Cache the function reference
 
-        # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
-
-        # Return the list of collections and metadata associated
+        # Get the list of collections and return required metadata in one pass
         return [
             {
                 "name": col.name,
-                "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
+                "records": collection_data_func(collection_name=col.name, database=database),
+                "provider": getattr(col.options.vector.service, "provider", None) if col.options.vector else None,
                 "icon": "",
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
+                "model": getattr(col.options.vector.service, "model_name", None) if col.options.vector else None,
             }
-            for col in collection_list
+            for col in database.list_collections(keyspace=keyspace)
         ]
 
     def reset_collection_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
-        collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
+        api_endpoint = build_config["api_endpoint"]["value"]
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-        ]
+        # Get the list of options based on the token and API endpoint provided
+        collection_options = self._initialize_collection_options(api_endpoint=api_endpoint)
 
-        # Reset the selected collection
-        if build_config["collection_name"]["value"] not in build_config["collection_name"]["options"]:
-            build_config["collection_name"]["value"] = ""
+        collection_names = [col["name"] for col in collection_options]
+        collection_metadata = [{k: v for k, v in col.items() if k != "name"} for col in collection_options]
+
+        # Update build_config with new collection options and metadata
+        build_config["collection_name"].update(
+            {
+                "options": collection_names,
+                "options_metadata": collection_metadata,
+                "value": build_config["collection_name"]["value"]
+                if build_config["collection_name"]["value"] in collection_names
+                else "",
+            }
+        )
 
         return build_config
 
@@ -626,7 +627,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ]["options"]
             if not model_options:
                 embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"][
-                    "template"]["embedding_generation_provider"]["value"]
+                    "template"
+                ]["embedding_generation_provider"]["value"]
 
                 build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
                     "embedding_generation_model"
