@@ -17,12 +17,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AuthContext } from "@/contexts/authContext";
 import { usePostTask } from "@/controllers/API/queries/tasks";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -49,12 +50,22 @@ export default function AddNewTaskButton({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [attachmentInput, setAttachmentInput] = useState("");
-
+  const { userData } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { mutate: mutateAddTask, isPending } = usePostTask();
   const flows = useFlowsManagerStore((state) => state.flows);
+  const examples = useFlowsManagerStore((state) => state.examples);
 
+  // Filter out the flows that are examples
+  const flowsWithoutExamples = flows?.filter(
+    (flow) => !examples?.some((example) => example.id === flow.id),
+  );
+  // Add User to the flowsWithoutExamples by appending a new user object
+  const flowsWithUser = [
+    ...(flowsWithoutExamples || []),
+    { name: "User", id: userData?.id },
+  ];
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -227,11 +238,14 @@ export default function AddNewTaskButton({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {flows?.map((flow) => (
-                              <SelectItem key={flow.id} value={flow.id}>
-                                {flow.name}
-                              </SelectItem>
-                            ))}
+                            {flowsWithUser?.map(
+                              (flow) =>
+                                flow.id && (
+                                  <SelectItem key={flow.id} value={flow.id}>
+                                    {flow.name}
+                                  </SelectItem>
+                                ),
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -254,11 +268,14 @@ export default function AddNewTaskButton({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {flows?.map((flow) => (
-                              <SelectItem key={flow.id} value={flow.id}>
-                                {flow.name}
-                              </SelectItem>
-                            ))}
+                            {flowsWithUser?.map(
+                              (flow) =>
+                                flow.id && (
+                                  <SelectItem key={flow.id} value={flow.id}>
+                                    {flow.name}
+                                  </SelectItem>
+                                ),
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
