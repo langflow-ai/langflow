@@ -300,6 +300,28 @@ For more information, see [Mistral AI documentation](https://docs.mistral.ai/).
 |--------|---------------|-----------------------------------------------------|
 | model  | LanguageModel | An instance of ChatMistralAI configured with the specified parameters. |
 
+## ModelScope API
+
+This component generates text using ModelScope inference API.
+
+For more information, see [documentation](https://modelscope.cn/docs/model-service/API-Inference/intro).
+
+### Inputs
+
+| Name                | Type          | Description                                                      |
+|---------------------|---------------|------------------------------------------------------------------|
+| api_key             | SecretString   | Your ModelScope SDK token.                                             |
+| api_base            | String         | The base URL of the ModelScope API. Default: `https://api-inference.modelscope.cn/v1`. |
+| model_name               | String         | The name of the model to use.  |
+| temperature         | Float          | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.1. |
+
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of Novita AI model configured with the specified parameters. |
+
 ## Novita AI
 
 This component generates text using Novita AI's language models.
