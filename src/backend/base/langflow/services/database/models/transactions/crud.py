@@ -26,7 +26,7 @@ async def get_transactions_by_flow_id(
     return list(transactions)
 
 
-async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable:
+async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> TransactionTable | None:
     """Log a transaction and maintain a maximum number of transactions in the database.
 
     This function logs a new transaction into the database and ensures that the number of transactions
