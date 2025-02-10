@@ -4755,7 +4755,7 @@
       "zoom": 0.30712548660882766
     }
   },
-  "description": "Finacial assitant chatbot that uses specialized agents to research for financial information",
+  "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
   "gradient": null,
   "icon": "landmark",
