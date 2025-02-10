@@ -625,9 +625,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "embedding_generation_model"
             ]["options"]
             if not model_options:
-                embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                    "embedding_generation_provider"
-                ]["value"]
+                embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"][
+                    "template"]["embedding_generation_provider"]["value"]
 
                 build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
                     "embedding_generation_model"
