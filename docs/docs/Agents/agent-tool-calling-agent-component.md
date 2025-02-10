@@ -93,7 +93,7 @@ The problem-solving agent will now use this agent as a tool, with its unique LLM
 
 7. The new agent's metadata can be edited to help the problem-solving agent understand how to use it.
 Click **Edit Tools** to modify the new agent's `name` or `description` metadata so its usage is clear to the problem-solving agent.
-8. For example, the default tool name is `Agent`. Edit the name to `Agent-gpt-4o`, and edit the description to `Use the gpt-4o model for complex problem solving`. The problem-solving agent will understand that this is the `gpt-4o` agent, and will use it for tasks requiring a larger context window.
+For example, the default tool name is `Agent`. Edit the name to `Agent-gpt-4o`, and edit the description to `Use the gpt-4o model for complex problem solving`. The problem-solving agent will understand that this is the `gpt-4o` agent, and will use it for tasks requiring a larger context window.
 
 ## Add custom components as tools {#components-as-tools}
 
@@ -205,7 +205,7 @@ An agent can use flows that are saved in your workspace as tools with the [Run f
 2. Select the flow you want the agent to use as a tool.
 3. Enable **Tool Mode** in the component.
 4. Connect the tool output to the agent's tools input.
-5. To enable tool mode, click **Tool Mode** in the **Run flow** component.
+5. To enable tool mode, in the **Run flow** component, click **Tool Mode**.
 6. Ask the agent, `What tools are you using to answer my questions?`
 Your flow should be visible in the response as a tool.
 

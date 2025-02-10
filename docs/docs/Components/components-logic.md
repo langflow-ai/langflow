@@ -197,15 +197,15 @@ Your flow should now look like this:
 
 | Name              | Type     | Description                                                    |
 |-------------------|----------|----------------------------------------------------------------|
-| flow_name_selected| Dropdown | The name of the flow to run                                    |
-| flow_tweak_data   | Dict     | Dictionary of tweaks to customize the flow's behavior         |
-| dynamic inputs  | Various  | Additional inputs are generated based on the selected flow     |
+| flow_name_selected| Dropdown | The name of the flow to run.                                    |
+| flow_tweak_data   | Dict     | Dictionary of tweaks to customize the flow's behavior.         |
+| dynamic inputs  | Various  | Additional inputs that are generated based on the selected flow.     |
 
 ### Outputs
 
 | Name         | Type        | Description                                                   |
 |--------------|-------------|---------------------------------------------------------------|
-| run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs generated from running the flow                   |
+| run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs are generated from running the flow.                   |
 
 ## Sub flow
 
