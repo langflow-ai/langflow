@@ -261,15 +261,13 @@ async def read_public_flow(
     session: DbSession,
     flow_id: UUID,
 ):
-    """Read a flow."""
+    """Read a public flow."""
     access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
     if access_type is not AccessTypeEnum.PUBLIC:
         raise HTTPException(status_code=403, detail="Flow is not public")
 
     current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    if user_flow := await _read_flow(session, flow_id, current_user.id, get_settings_service()):
-        return user_flow
-    raise HTTPException(status_code=404, detail="Flow not found")
+    return (await read_flow(session=session, flow_id=flow_id, current_user=current_user))
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
