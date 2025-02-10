@@ -12,77 +12,95 @@ import { useTweaksStore } from "../../stores/tweaksStore";
 import { FlowType } from "../../types/flow/index";
 import BaseModal from "../baseModal";
 import APITabsComponent from "./codeTabs/code-tabs";
+import { TweaksComponent } from "@/components/core/codeTabsComponent/components/tweaksComponent";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import useFlowStore from "@/stores/flowStore";
 
 export default function ApiModal({
-  flow,
   children,
   open: myOpen,
   setOpen: mySetOpen,
 }: {
-  flow: FlowType;
   children: ReactNode;
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
 }) {
   const autoLogin = useAuthStore((state) => state.autoLogin);
+  const nodes = useFlowStore((state) => state.nodes);
+  const [openTweaks, setOpenTweaks] = useState(false);
+  const tweaks = useTweaksStore((state) => state.tweaks);
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
       : useState(false);
-  const [activeTab, setActiveTab] = useState("0");
-  const activeTweaks = useTweaksStore((state) => state.activeTweaks);
-  const setActiveTweaks = useTweaksStore((state) => state.setActiveTweaks);
-  const tabs = useTweaksStore((state) => state.tabs);
-  const initialSetup = useTweaksStore((state) => state.initialSetup);
-
-  const getCodes = useCustomAPICode();
+  const newInitialSetup = useTweaksStore((state) => state.newInitialSetup);
 
   useEffect(() => {
-    if (open) initialSetup(autoLogin ?? false, flow, getCodes);
-    setActiveTab("0");
+    if (open) newInitialSetup(nodes);
   }, [open]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="medium">
-      <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-      <BaseModal.Header
-        description={
-          autoLogin ? undefined : (
+    <>
+      <BaseModal open={open} setOpen={setOpen} size="medium" className="pt-3 pb-3">
+        <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
+        <BaseModal.Header
+          description={
+            autoLogin ? undefined : (
+              <>
+                <span className="pr-2">
+                  API access requires an API key. You can{" "}
+                  <a
+                    href="/settings/api-keys"
+                    className="text-accent-pink-foreground"
+                  >
+                    {" "}
+                    create an API key
+                  </a>{" "}
+                  in settings.
+                </span>
+              </>
+            )
+          }
+        >
+          <IconComponent
+            name="Code2"
+            className="h-6 w-6 text-gray-800 dark:text-white"
+            aria-hidden="true"
+          />
+          <span className="pl-2">API access</span>
+          <div className="absolute right-12 flex items-center text-[13px] leading-[16px] font-medium border-r-1" >
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setOpenTweaks(true)}
+            >
+              <IconComponent name="SlidersHorizontal" className="h-3.5 w-3.5" />
+              <span>Temporary overrides ({Object.keys(tweaks).length}) </span>
+            </Button>
+            <Separator orientation="vertical"  className="h-5 ml-2"/>
+            <div>
+            </div>
+          </div>
+        </BaseModal.Header>
+        <BaseModal.Content overflowHidden>
+          {open && (
             <>
-              <span className="pr-2">
-                API access requires an API key. You can{" "}
-                <a
-                  href="/settings/api-keys"
-                  className="text-accent-pink-foreground"
-                >
-                  {" "}
-                  create an API key
-                </a>{" "}
-                in settings.
-              </span>
+              <CustomAPIGenerator isOpen={open} />
+              <APITabsComponent
+              />
             </>
-          )
-        }
-      >
-        <IconComponent
-          name="Code2"
-          className="h-6 w-6 text-gray-800 dark:text-white"
-          aria-hidden="true"
-        />
-        <span className="pl-2">API access</span>
-      </BaseModal.Header>
-      <BaseModal.Content overflowHidden>
-        {open && (
-          <>
-            <CustomAPIGenerator isOpen={open} />
-            <APITabsComponent
-              open={open}
-              activeTweaks={activeTweaks}
-              setActiveTweaks={setActiveTweaks}
-            />
-          </>
-        )}
-      </BaseModal.Content>
-    </BaseModal>
+          )}
+        </BaseModal.Content>
+      </BaseModal>
+
+      <BaseModal open={openTweaks} setOpen={setOpenTweaks} size="medium" className="p-0">
+        <BaseModal.Content overflowHidden>
+        <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll pt-10">
+          <TweaksComponent open={openTweaks} />
+        </div>
+        </BaseModal.Content>
+      </BaseModal>
+    </>
   );
 }
