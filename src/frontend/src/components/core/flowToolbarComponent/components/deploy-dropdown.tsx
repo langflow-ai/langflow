@@ -137,7 +137,6 @@ export default function PublishDropdown() {
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal
-        flow={currentFlow!}
         open={openApiModal}
         setOpen={setOpenApiModal}
       >
