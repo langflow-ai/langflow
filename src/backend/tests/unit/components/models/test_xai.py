@@ -156,7 +156,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         component.api_base = "https://api.x.ai/v1"
         component.seed = 1
 
-        mock_chat_openai = mocker.patch(
+        mocker.patch(
             "langflow.components.models.xai.ChatOpenAI",
             side_effect=BadRequestError(
                 message="Invalid API key",
