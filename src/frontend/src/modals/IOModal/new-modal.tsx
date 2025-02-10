@@ -9,6 +9,7 @@ import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
@@ -23,7 +24,6 @@ import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
-import { swatchColors } from "@/utils/styleUtils";
 export default function IOModal({
   children,
   open,
@@ -306,19 +306,24 @@ export default function IOModal({
                   playgroundPage ? "pt-[15px]" : "pt-3.5",
                 )}
               >
-                <div className="flex items-center align-middle gap-2 pb-8 justify-between">
+                <div className="flex items-center justify-between gap-2 pb-8 align-middle">
                   <div className="flex items-center gap-2">
-                  <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
-                    <IconComponent
-                      name={currentFlow?.icon ?? "graph"}
-                      className="h-3.5 w-3.5"
-                    />
-                  </div>
-                  {sidebarOpen && (
-                    <div className="truncate font-semibold">
-                      {PlaygroundTitle}
+                    <div
+                      className={cn(
+                        `flex rounded p-1`,
+                        swatchColors[swatchIndex],
+                      )}
+                    >
+                      <IconComponent
+                        name={currentFlow?.icon ?? "graph"}
+                        className="h-3.5 w-3.5"
+                      />
                     </div>
-                  )}
+                    {sidebarOpen && (
+                      <div className="truncate font-semibold">
+                        {PlaygroundTitle}
+                      </div>
+                    )}
                   </div>
 
                   <ShadTooltip
