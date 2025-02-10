@@ -1,13 +1,7 @@
 import uuid
 
 from langflow.custom import Component
-from langflow.io import (
-    DataInput,
-    IntInput,
-    Output,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.io import DataInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
@@ -27,7 +21,7 @@ class FirecrawlCrawlApi(Component):
             password=True,
             info="The API key to use Firecrawl API.",
         ),
-        StrInput(
+        MultilineInput(
             name="url",
             display_name="URL",
             required=True,
