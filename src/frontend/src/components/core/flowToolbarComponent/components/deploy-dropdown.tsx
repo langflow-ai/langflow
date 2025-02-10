@@ -167,7 +167,7 @@ export default function PublishDropdown() {
               </div>
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem className="deploy-dropdown-item group">
+          {/* <DropdownMenuItem className="deploy-dropdown-item group">
             <div className="group-hover:bg-accent">
               <IconComponent
                 name="FileCode2"
@@ -179,7 +179,7 @@ export default function PublishDropdown() {
                 className={`icon-size ml-auto mr-3 ${externalUrlStyle} text-foreground`}
               />
             </div>
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
         </DropdownMenuContent>
       </DropdownMenu>
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
