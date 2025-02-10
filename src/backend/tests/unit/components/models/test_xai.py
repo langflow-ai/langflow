@@ -1,6 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langflow.components.models import XAIModelComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
@@ -33,11 +33,11 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             "api_base": "https://api.x.ai/v1",
             "seed": 42,
         }
-    
+
     @pytest.fixture
     def file_names_mapping(self):
         return []
-    
+
     def test_initialization(self, component_class):
         component = component_class()
         assert component.display_name == "xAI"
@@ -51,11 +51,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         frontend_node, _ = build_custom_component_template(comp)
         assert isinstance(frontend_node, dict)
         assert "template" in frontend_node
-        input_names = [
-            inp["name"]
-            for inp in frontend_node["template"].values()
-            if isinstance(inp, dict)
-        ]
+        input_names = [inp["name"] for inp in frontend_node["template"].values() if isinstance(inp, dict)]
         expected_inputs = [
             "max_tokens",
             "model_kwargs",
@@ -83,9 +79,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             "seed": IntInput,
         }
         for name, input_type in expected_inputs.items():
-            matching_inputs = [
-                inp for inp in inputs if isinstance(inp, input_type) and inp.name == name
-            ]
+            matching_inputs = [inp for inp in inputs if isinstance(inp, input_type) and inp.name == name]
             assert matching_inputs, f"Missing or incorrect input: {name}"
             if name == "model_name":
                 input_field = matching_inputs[0]
@@ -107,9 +101,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         component.api_base = "https://api.x.ai/v1"
         component.seed = 1
 
-        mock_chat_openai = mocker.patch(
-            "langflow.components.models.xai.ChatOpenAI", return_value=MagicMock()
-        )
+        mock_chat_openai = mocker.patch("langflow.components.models.xai.ChatOpenAI", return_value=MagicMock())
         model = component.build_model()
         mock_chat_openai.assert_called_once_with(
             max_tokens=100,
