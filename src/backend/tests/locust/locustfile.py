@@ -42,7 +42,7 @@ class FlowRunUser(FastHttpUser):
     host = os.getenv("LANGFLOW_HOST", "http://localhost:7860")
 
     # Flow ID from environment variable or default example UUID
-    flow_id = os.getenv("FLOW_ID", "62c21279-f7ca-43e2-b5e3-326ac573db04")
+    flow_id = os.getenv("FLOW_ID")
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -80,6 +80,9 @@ class FlowRunUser(FastHttpUser):
 
         Includes basic error handling.
         """
+        if not self.flow_id:
+            msg = "FLOW_ID environment variable is required for load testing"
+            raise ValueError(msg)
         endpoint = f"/api/v1/run/{self.flow_id}?stream=false"
 
         # Realistic payload that exercises the system
