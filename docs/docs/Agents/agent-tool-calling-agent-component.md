@@ -64,9 +64,9 @@ For example, the [URL](/components-data#url) component has three tools available
 
 | Tool Name | Description |
 |-----------|-------------|
-| `URL-fetch_content` | Use this tool to fetch and retrieve raw content from a URL, including HTML and other structured data. Returns the full response content. |
-| `URL-fetch_content_text` | Use this tool to fetch and extract clean, readable text content from a webpage. Returns plain text content only. |
-| `URL-as_dataframe` | Use this tool to fetch structured data from a URL and convert it into a tabular format. Returns data in a structured DataFrame table format. |
+| `URL-fetch_content` | Use this tool to fetch and retrieve raw content from a URL, including HTML and other structured data. The full response content is returned. |
+| `URL-fetch_content_text` | Use this tool to fetch and extract clean, readable text content from a webpage. Only plain text content is returned. |
+| `URL-as_dataframe` | Use this tool to fetch structured data from a URL and convert it into a tabular format. Data is returned in a structured DataFrame table format. |
 
 The agent will have a clear idea of each tool's capabilities based on the `name` and `description` metadata. If you think the agent is using a tool incorrectly, edit the tool's metadata to help it understand the tool better.
 
