@@ -479,8 +479,9 @@ locust_flow_id ?= your-flow-id
 locust_file ?= src/backend/tests/locust/locustfile.py
 locust_min_wait ?= 2000
 locust_max_wait ?= 5000
+locust_request_timeout ?= 30.0
 
-locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 locust_host=http://localhost:7860 locust_headless=true locust_time=300s locust_api_key=your-api-key locust_flow_id=your-flow-id locust_file=src/backend/tests/locust/locustfile.py locust_min_wait=2000 locust_max_wait=5000)
+locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 locust_host=http://localhost:7860 locust_headless=true locust_time=300s locust_api_key=your-api-key locust_flow_id=your-flow-id locust_file=src/backend/tests/locust/locustfile.py locust_min_wait=2000 locust_max_wait=5000 locust_request_timeout=30.0)
 	@if [ ! -f "$(locust_file)" ]; then \
 		echo "$(RED)Error: Locustfile not found at $(locust_file)$(NC)"; \
 		exit 1; \
@@ -493,6 +494,7 @@ locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 l
 	export LANGFLOW_HOST=$(locust_host) && \
 	export MIN_WAIT=$(locust_min_wait) && \
 	export MAX_WAIT=$(locust_max_wait) && \
+	export REQUEST_TIMEOUT=$(locust_request_timeout) && \
 	cd $$(dirname "$(locust_file)") && \
 	if [ "$(locust_headless)" = "true" ]; then \
 		uv run locust \

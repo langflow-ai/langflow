@@ -25,11 +25,12 @@ class FlowRunUser(FastHttpUser):
       - API_KEY: API key for authentication, sent as header 'x-api-key' (Required)
       - MIN_WAIT: Minimum wait time between requests in ms (default: 2000)
       - MAX_WAIT: Maximum wait time between requests in ms (default: 5000)
+      - REQUEST_TIMEOUT: Timeout for each request in seconds (default: 30.0)
     """
 
     abstract = False  # This user class can be instantiated
-    connection_timeout = 30.0  # Increase timeout for larger payloads
-    network_timeout = 30.0
+    connection_timeout = float(os.getenv("REQUEST_TIMEOUT", "30.0"))  # Configurable timeout
+    network_timeout = float(os.getenv("REQUEST_TIMEOUT", "30.0"))
 
     # Dynamic wait time based on environment variables or defaults
     # Increased default minimum wait to reduce database pressure
@@ -104,13 +105,12 @@ class FlowRunUser(FastHttpUser):
         start_time = time.time()
         try:
             with self.client.post(
-                endpoint, json=payload, headers=headers, catch_response=True, timeout=30.0
+                endpoint, json=payload, headers=headers, catch_response=True, timeout=self.connection_timeout
             ) as response:
                 response_time = (time.time() - start_time) * 1000
                 if response.status_code == HTTPStatus.OK:
                     try:
                         self._last_response = response.json()
-                        response.success()
                     except ValueError as e:
                         response.failure("Invalid JSON response")
                         self.log_error(endpoint, e, response_time)
@@ -122,3 +122,4 @@ class FlowRunUser(FastHttpUser):
         except Exception as e:  # noqa: BLE001
             response_time = (time.time() - start_time) * 1000
             self.log_error(endpoint, e, response_time)
+            response.failure(f"Error: {e}")
