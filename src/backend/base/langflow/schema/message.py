@@ -388,16 +388,14 @@ class ErrorMessage(Message):
     def _format_plain_reason(exception: BaseException) -> str:
         """Format the error reason without markdown."""
         if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
-            reason = f"{exception.body.get('message')}\n"
-        elif hasattr(exception, "code"):
-            reason = f"Code: {exception.code}\n"
-        elif hasattr(exception, "args") and exception.args:
-            reason = f"{exception.args[0]}\n"
-        elif isinstance(exception, ValidationError):
-            reason = f"{exception!s}\n"
-        else:
-            reason = "An unknown error occurred.\n"
-        return reason
+            return f"{exception.body.get('message')}\n"
+        if hasattr(exception, "code"):
+            return f"Code: {exception.code}\n"
+        if hasattr(exception, "args") and exception.args:
+            return f"{exception.args[0]}\n"
+        if isinstance(exception, ValidationError):
+            return f"{exception!s}\n"
+        return "An unknown error occurred.\n"
 
     def __init__(
         self,
@@ -452,3 +450,17 @@ class ErrorMessage(Message):
             ],
             flow_id=flow_id,
         )
+
+    @staticmethod
+    def _format_markdown_reason(exception: BaseException) -> str:
+        """Format the markdown reason for the exception."""
+        # Implementation similar to _format_plain_reason but returns markdown formatted string
+        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
+            return f"**{exception.body.get('message')}**\n"
+        if hasattr(exception, "code"):
+            return f"**Code**: `{exception.code}`\n"
+        if hasattr(exception, "args") and exception.args:
+            return f"**Reason**: `{exception.args[0]}`\n"
+        if isinstance(exception, ValidationError):
+            return f"**ValidationError**: `{exception!s}`\n"
+        return "**An unknown error occurred.**\n"
