@@ -143,9 +143,10 @@ class DatabaseService(Service):
                 "check_same_thread": False,
                 "timeout": self.settings_service.settings.db_connect_timeout,
             }
-        elif self.settings_service.settings.disable_prepared_statements:
-            # If using a proxy with a transaction pool mode, we need to disable prepared statements
-            connect_args = {"prepare_threshold": None}
+        elif self.settings_service.settings.db_driver_connection_settings is not None:
+            # for non-sqlite databases, we can use the db_driver_connection_settings
+            # for example, postgres uses psycopg as the sqlalchemy driver. 
+            connect_args = self.settings_service.settings.db_driver_connection_settings
         else:
             connect_args = {}
         return connect_args

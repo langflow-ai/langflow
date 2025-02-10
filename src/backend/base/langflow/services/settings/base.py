@@ -85,13 +85,13 @@ class Settings(BaseSettings):
     db_connect_timeout: int = 30
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
-    disable_prepared_statements: bool = False
-    """If set to True, prepared sql statements will be disabled.
-    This is useful when using a proxy with a transaction pool mode."""
 
     # sqlite configuration
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
+
+    db_driver_connection_settings: dict | None = None
+    """Database driver connection settings."""
 
     db_connection_settings: dict | None = {
         "pool_size": 20,  # Match the pool_size above
