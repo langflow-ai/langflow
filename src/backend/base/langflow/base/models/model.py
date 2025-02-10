@@ -200,7 +200,7 @@ class LCModelComponent(Component):
         inputs: list | dict = messages or {}
         try:
             # apply input guardrails if present
-            if (self.guardrails.text):
+            if self.guardrails and self.guardrails.text:
                 config = RailsConfig.from_content(yaml_content=self.guardrails.text)
                 guardrails = RunnableRails(config)
                 runnable = prompt | (guardrails | runnable)
