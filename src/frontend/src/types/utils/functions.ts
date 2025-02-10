@@ -1,5 +1,3 @@
-import { FieldParserType, FieldValidatorType } from "../api";
-
 export type getCodesObjProps = {
   runCurlCode: string;
   webhookCurlCode: string;

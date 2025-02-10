@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
-import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useFlowStore from "@/stores/flowStore";
 import { InputFieldType } from "@/types/api";
 import { cloneDeep } from "lodash";

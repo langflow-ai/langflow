@@ -1,4 +1,3 @@
-import { Separator } from "@/components/ui/separator";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
@@ -16,7 +15,6 @@ import { IOModalPropsType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
-import ChatView from "./components/chatView/chat-view";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
 
