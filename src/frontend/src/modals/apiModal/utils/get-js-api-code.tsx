@@ -18,7 +18,9 @@ export default function getJsApiCode({
 }: GetCodeType): string {
   let tweaksString = "{}";
   if (tweaksBuildedObject)
-    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2).replace(/^ {2}/gm, "    ").replace(/}$/, "  }");
+    tweaksString = JSON.stringify(tweaksBuildedObject, null, 2)
+      .replace(/^ {2}/gm, "    ")
+      .replace(/}$/, "  }");
   const inputs = useFlowStore.getState().inputs;
   const outputs = useFlowStore.getState().outputs;
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
