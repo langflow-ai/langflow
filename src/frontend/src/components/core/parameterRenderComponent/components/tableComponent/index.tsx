@@ -57,6 +57,14 @@ const TableComponent = forwardRef<
       let newCol = {
         ...col,
       };
+
+      if (index !== props.columnDefs.length - 1) {
+        newCol = {
+          ...newCol,
+          suppressSizeToFit: true,
+        };
+      }
+
       if (props.rowSelection && props.onSelectionChanged && index === 0) {
         newCol = {
           ...newCol,
@@ -150,6 +158,29 @@ const TableComponent = forwardRef<
       params.api.setGridOption("columnDefs", updatedColumnDefs);
       if (props.onColumnMoved) props.onColumnMoved(params);
     };
+    const onColumnResized = (params) => {
+      if (!realRef.current?.api) return;
+
+      const gridApi = realRef.current.api;
+      const containerElement = document.querySelector(".ag-theme-shadcn");
+      if (!containerElement) return;
+
+      const containerWidth = containerElement.clientWidth;
+
+      // Get all columns
+      const columns = gridApi.getColumns();
+      if (!columns) return;
+
+      const totalWidth = columns.reduce(
+        (sum, col) => sum + col.getActualWidth(),
+        0,
+      );
+
+      // If total width is less than container width, reset column sizes
+      if (totalWidth < containerWidth) {
+        params.api.sizeColumnsToFit();
+      }
+    };
     if (props.rowData.length === 0 && displayEmptyAlert) {
       return (
         <div className="flex h-full w-full items-center justify-center rounded-md border">
@@ -198,6 +229,7 @@ const TableComponent = forwardRef<
           }}
           animateRows={false}
           gridOptions={{ colResizeDefault: "shift", ...props.gridOptions }}
+          onColumnResized={onColumnResized}
           columnDefs={colDef}
           ref={(node) => {
             if (!node) return;
