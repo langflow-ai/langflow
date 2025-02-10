@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeCommentsComponent",
-            "id": "YouTubeCommentsComponent-oaetP",
+            "id": "YouTubeCommentsComponent-gLXya",
             "name": "comments",
             "output_types": [
               "DataFrame"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "BatchRunComponent-xTAwP",
+            "id": "BatchRunComponent-ax4ys",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__YouTubeCommentsComponent-oaetP{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-oaetPœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-xTAwP{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-xTAwPœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeCommentsComponent-gLXya{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-gLXyaœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-ax4ys{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-ax4ysœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeCommentsComponent-oaetP",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-oaetPœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "BatchRunComponent-xTAwP",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-xTAwPœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "YouTubeCommentsComponent-gLXya",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-gLXyaœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "BatchRunComponent-ax4ys",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-ax4ysœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-xY45D",
+            "id": "OpenAIModel-Jl4kw",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "model",
-            "id": "BatchRunComponent-xTAwP",
+            "id": "BatchRunComponent-ax4ys",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIModel-xY45D{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-xY45Dœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-xTAwP{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-xTAwPœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-Jl4kw{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Jl4kwœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-ax4ys{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-ax4ysœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-xY45D",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-xY45Dœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "BatchRunComponent-xTAwP",
-        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-xTAwPœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-Jl4kw",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-Jl4kwœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "BatchRunComponent-ax4ys",
+        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-ax4ysœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "BatchRunComponent",
-            "id": "BatchRunComponent-xTAwP",
+            "id": "BatchRunComponent-ax4ys",
             "name": "batch_results",
             "output_types": [
               "DataFrame"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "ParseDataFrame-WIdXS",
+            "id": "ParseDataFrame-u3fez",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__BatchRunComponent-xTAwP{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-xTAwPœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParseDataFrame-WIdXS{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-WIdXSœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-BatchRunComponent-ax4ys{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-ax4ysœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParseDataFrame-u3fez{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-u3fezœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "BatchRunComponent-xTAwP",
-        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-xTAwPœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParseDataFrame-WIdXS",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-WIdXSœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "BatchRunComponent-ax4ys",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-ax4ysœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ParseDataFrame-u3fez",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-u3fezœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseDataFrame",
-            "id": "ParseDataFrame-WIdXS",
+            "id": "ParseDataFrame-u3fez",
             "name": "text",
             "output_types": [
               "Message"
@@ -99,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "analysis",
-            "id": "Prompt-runNC",
+            "id": "Prompt-bPDsD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ParseDataFrame-WIdXS{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-WIdXSœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-runNC{œfieldNameœ:œanalysisœ,œidœ:œPrompt-runNCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseDataFrame-u3fez{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-u3fezœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-bPDsD{œfieldNameœ:œanalysisœ,œidœ:œPrompt-bPDsDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParseDataFrame-WIdXS",
-        "sourceHandle": "{œdataTypeœ: œParseDataFrameœ, œidœ: œParseDataFrame-WIdXSœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-runNC",
-        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-runNCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParseDataFrame-u3fez",
+        "sourceHandle": "{œdataTypeœ: œParseDataFrameœ, œidœ: œParseDataFrame-u3fezœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-bPDsD",
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-bPDsDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-runNC",
+            "id": "Prompt-bPDsD",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -127,19 +127,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-IZOSp",
+            "id": "Agent-k6oTS",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-runNC{œdataTypeœ:œPromptœ,œidœ:œPrompt-runNCœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-IZOSp{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IZOSpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-bPDsD{œdataTypeœ:œPromptœ,œidœ:œPrompt-bPDsDœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-k6oTS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-k6oTSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-runNC",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-runNCœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-IZOSp",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-IZOSpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-bPDsD",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-bPDsDœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-k6oTS",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-k6oTSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -147,7 +147,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-IZOSp",
+            "id": "Agent-k6oTS",
             "name": "response",
             "output_types": [
               "Message"
@@ -155,19 +155,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-JqTPj",
+            "id": "ChatOutput-rsqGR",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-IZOSp{œdataTypeœ:œAgentœ,œidœ:œAgent-IZOSpœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JqTPj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JqTPjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-k6oTS{œdataTypeœ:œAgentœ,œidœ:œAgent-k6oTSœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-rsqGR{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rsqGRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-IZOSp",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-IZOSpœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-JqTPj",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JqTPjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-k6oTS",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-k6oTSœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-rsqGR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-rsqGRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -175,7 +175,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeTranscripts",
-            "id": "YouTubeTranscripts-kULTi",
+            "id": "YouTubeTranscripts-u8gYy",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -183,19 +183,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-IZOSp",
+            "id": "Agent-k6oTS",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__YouTubeTranscripts-kULTi{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-kULTiœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IZOSp{œfieldNameœ:œtoolsœ,œidœ:œAgent-IZOSpœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeTranscripts-u8gYy{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-u8gYyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-k6oTS{œfieldNameœ:œtoolsœ,œidœ:œAgent-k6oTSœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeTranscripts-kULTi",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-kULTiœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-IZOSp",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-IZOSpœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YouTubeTranscripts-u8gYy",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-u8gYyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-k6oTS",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-k6oTSœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -203,7 +203,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-ktpfs",
+            "id": "ChatInput-x76fS",
             "name": "message",
             "output_types": [
               "Message"
@@ -211,19 +211,19 @@
           },
           "targetHandle": {
             "fieldName": "video_url",
-            "id": "YouTubeCommentsComponent-oaetP",
+            "id": "YouTubeCommentsComponent-gLXya",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-ktpfs{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ktpfsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-oaetP{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-oaetPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-x76fS{œdataTypeœ:œChatInputœ,œidœ:œChatInput-x76fSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-gLXya{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-gLXyaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-ktpfs",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ktpfsœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "YouTubeCommentsComponent-oaetP",
-        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-oaetPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-x76fS",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-x76fSœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "YouTubeCommentsComponent-gLXya",
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-gLXyaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -231,7 +231,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-ktpfs",
+            "id": "ChatInput-x76fS",
             "name": "message",
             "output_types": [
               "Message"
@@ -239,25 +239,25 @@
           },
           "targetHandle": {
             "fieldName": "url",
-            "id": "Prompt-runNC",
+            "id": "Prompt-bPDsD",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-ktpfs{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ktpfsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-runNC{œfieldNameœ:œurlœ,œidœ:œPrompt-runNCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-x76fS{œdataTypeœ:œChatInputœ,œidœ:œChatInput-x76fSœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-bPDsD{œfieldNameœ:œurlœ,œidœ:œPrompt-bPDsDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-ktpfs",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ktpfsœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-runNC",
-        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-runNCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-x76fS",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-x76fSœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-bPDsD",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-bPDsDœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "BatchRunComponent-xTAwP",
+          "id": "BatchRunComponent-ax4ys",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -276,7 +276,7 @@
               "df",
               "column_name"
             ],
-            "frozen": true,
+            "frozen": false,
             "icon": "List",
             "key": "BatchRunComponent",
             "legacy": false,
@@ -413,21 +413,21 @@
           "type": "BatchRunComponent"
         },
         "dragging": false,
-        "id": "BatchRunComponent-xTAwP",
+        "id": "BatchRunComponent-ax4ys",
         "measured": {
-          "height": 477,
+          "height": 480,
           "width": 320
         },
         "position": {
-          "x": 667.8832563115712,
-          "y": 5673.161127896749
+          "x": 635.0665302273813,
+          "y": 5950.62139498088
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "YouTubeCommentsComponent-oaetP",
+          "id": "YouTubeCommentsComponent-gLXya",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -448,7 +448,7 @@
               "include_replies",
               "include_metrics"
             ],
-            "frozen": true,
+            "frozen": false,
             "icon": "YouTube",
             "key": "YouTubeCommentsComponent",
             "legacy": false,
@@ -619,21 +619,21 @@
           "type": "YouTubeCommentsComponent"
         },
         "dragging": false,
-        "id": "YouTubeCommentsComponent-oaetP",
+        "id": "YouTubeCommentsComponent-gLXya",
         "measured": {
-          "height": 493,
+          "height": 496,
           "width": 320
         },
         "position": {
-          "x": 308.5815464907559,
-          "y": 5668.347403659848
+          "x": 191.60600144515274,
+          "y": 6042.239455161904
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "OpenAIModel-xY45D",
+          "id": "OpenAIModel-Jl4kw",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -660,7 +660,7 @@
               "temperature",
               "seed"
             ],
-            "frozen": true,
+            "frozen": false,
             "icon": "OpenAI",
             "key": "OpenAIModel",
             "legacy": false,
@@ -966,21 +966,21 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-xY45D",
+        "id": "OpenAIModel-Jl4kw",
         "measured": {
-          "height": 603,
+          "height": 654,
           "width": 320
         },
         "position": {
-          "x": 308.5447826229462,
-          "y": 5045.932492564903
+          "x": 186.8681919150797,
+          "y": 5335.46060847541
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ParseDataFrame-WIdXS",
+          "id": "ParseDataFrame-u3fez",
           "node": {
             "base_classes": [
               "Message"
@@ -998,7 +998,7 @@
               "template",
               "sep"
             ],
-            "frozen": true,
+            "frozen": false,
             "icon": "braces",
             "key": "ParseDataFrame",
             "legacy": false,
@@ -1115,21 +1115,21 @@
           "type": "ParseDataFrame"
         },
         "dragging": false,
-        "id": "ParseDataFrame-WIdXS",
+        "id": "ParseDataFrame-u3fez",
         "measured": {
-          "height": 331,
+          "height": 333,
           "width": 320
         },
         "position": {
-          "x": 1028.542090209836,
-          "y": 5837.010191632653
+          "x": 993.5819211529395,
+          "y": 6076.201261805775
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-IZOSp",
+          "id": "Agent-k6oTS",
           "node": {
             "base_classes": [
               "Message"
@@ -1742,21 +1742,21 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-IZOSp",
+        "id": "Agent-k6oTS",
         "measured": {
-          "height": 618,
+          "height": 622,
           "width": 320
         },
         "position": {
-          "x": 1919.1942782158535,
-          "y": 5856.567481911443
+          "x": 1982.1085644220088,
+          "y": 6262.507022218113
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Prompt-runNC",
+          "id": "Prompt-bPDsD",
           "node": {
             "base_classes": [
               "Message"
@@ -1918,21 +1918,21 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-runNC",
+        "id": "Prompt-bPDsD",
         "measured": {
-          "height": 417,
+          "height": 420,
           "width": 320
         },
         "position": {
-          "x": 1515.522097449129,
-          "y": 6038.930700270811
+          "x": 1575.3649919098807,
+          "y": 6461.250996552967
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-JqTPj",
+          "id": "ChatOutput-rsqGR",
           "node": {
             "base_classes": [
               "Message"
@@ -2210,21 +2210,21 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-JqTPj",
+        "id": "ChatOutput-rsqGR",
         "measured": {
-          "height": 228,
+          "height": 229,
           "width": 320
         },
         "position": {
-          "x": 2300.567727440429,
-          "y": 6251.81558231622
+          "x": 2365.8487393880428,
+          "y": 6653.021671139973
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "YouTubeTranscripts-kULTi",
+          "id": "YouTubeTranscripts-u8gYy",
           "node": {
             "base_classes": [
               "DataFrame",
@@ -2261,6 +2261,7 @@
                 "name": "component_as_tool",
                 "required_inputs": null,
                 "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
@@ -2464,21 +2465,21 @@
           "type": "YouTubeTranscripts"
         },
         "dragging": false,
-        "id": "YouTubeTranscripts-kULTi",
+        "id": "YouTubeTranscripts-u8gYy",
         "measured": {
-          "height": 413,
+          "height": 416,
           "width": 320
         },
         "position": {
-          "x": 1498.9222784090562,
-          "y": 5546.948327111076
+          "x": 1577.7800211610804,
+          "y": 5995.403751540062
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-ktpfs",
+          "id": "ChatInput-x76fS",
           "node": {
             "base_classes": [
               "Message"
@@ -2502,7 +2503,7 @@
               "chat_icon",
               "text_color"
             ],
-            "frozen": true,
+            "frozen": false,
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
@@ -2775,21 +2776,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-ktpfs",
+        "id": "ChatInput-x76fS",
         "measured": {
-          "height": 227,
+          "height": 229,
           "width": 320
         },
         "position": {
-          "x": -421.7245933312346,
-          "y": 6259.439627751226
+          "x": -365.6744914255854,
+          "y": 6593.690312335909
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "note-JdUSM",
+          "id": "note-uYAHB",
           "node": {
             "description": "# Batch Run\n## Overview\nThis component processes a DataFrame by running each row through a Language Model (LLM). Perfect for batch analysis, sentiment scoring, or content generation at scale.\n\n## How It Works\n1. Accepts a DataFrame with text data\n2. Routes each row through your chosen LLM\n3. Returns new DataFrame with original text + model responses\n\n## Quick Start\n1. Connect an LLM component\n2. Input your DataFrame\n3. Specify the text column name (defaults to 'text')\n4. Optional: Add system instructions for consistent processing\n\n## Output\nReturns DataFrame with two columns:\n- `text_input`: Original text\n- `model_response`: Generated LLM response\n\n",
             "display_name": "",
@@ -2801,50 +2802,24 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-JdUSM",
+        "height": 522,
+        "id": "note-uYAHB",
         "measured": {
-          "height": 324,
+          "height": 522,
           "width": 324
         },
         "position": {
-          "x": 668.6058430783049,
-          "y": 5313.753372583536
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-I6qKh",
-          "node": {
-            "description": "### Select number of comments to analyze →",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-I6qKh",
-        "measured": {
-          "height": 324,
-          "width": 324
-        },
-        "position": {
-          "x": -30.40607666518352,
-          "y": 5977.7310211152035
+          "x": 631.7137680312561,
+          "y": 5413.536732789538
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 601
+        "width": 324
       },
       {
         "data": {
-          "id": "note-dCaY2",
+          "id": "note-f9RSW",
           "node": {
             "description": "## Setting Up YouTube API\n1. Go to [Google Cloud Console](https://console.cloud.google.com)\n2. Create a new project or select existing one\n3. Enable YouTube Data API v3:\n   - Navigate to APIs & Services > Library\n   - Search \"YouTube Data API v3\"\n   - Click Enable\n4. Create credentials:\n   - Go to APIs & Services > Credentials\n   - Click Create Credentials > API Key\n5. Copy your new API key for use in the component\n\n⚠️ Remember to:\n- Restrict the API key to YouTube Data API v3 only\n- Set appropriate quotas and restrictions\n",
             "display_name": "",
@@ -2857,23 +2832,23 @@
         },
         "dragging": false,
         "height": 486,
-        "id": "note-dCaY2",
+        "id": "note-f9RSW",
         "measured": {
           "height": 486,
-          "width": 324
+          "width": 325
         },
         "position": {
-          "x": 1474.3212276898635,
-          "y": 5044.263866797226
+          "x": 1579.119903578572,
+          "y": 5472.458002453355
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 355
+        "width": 324
       },
       {
         "data": {
-          "id": "note-694KZ",
+          "id": "note-QaXwi",
           "node": {
             "description": "# 🎥 YouTube Video Analysis Flow\nThis flow performs comprehensive analysis of YouTube videos by:\n1.  Extracting video comments and transcripts\n2.  Running sentiment analysis on comments using LLM \n3.  Combining transcript content and comment sentiment for comprehensive video analysis\n\n## ⚡ Components Flow\n- **Input**:  Video URL\n- **Data Collection**: \n -  YouTube Comments extraction with sentiment batch processing\n -  Transcript extraction via YouTube API\n- **Analysis**:  GPT-powered agent analyzes content & reception patterns\n- **Output**:  Detailed report with content summary, audience reception analysis, and actionable insights\n\n## ⚙️ Setup Required\n-  OpenAI API Key\n-  YouTube Data API v3 key\n\n## 💡 Key Features\n-  Parallel processing of multiple comments\n-  Configurable comment sample size\n-  Combined transcript + sentiment analysis\n-  Structured output format for clear insights",
             "display_name": "",
@@ -2885,32 +2860,37 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 949,
-        "id": "note-694KZ",
+        "height": 927,
+        "id": "note-QaXwi",
         "measured": {
-          "height": 949,
-          "width": 324
+          "height": 927,
+          "width": 452
         },
         "position": {
-          "x": -970.5339716662412,
-          "y": 5039.796390664099
+          "x": -450.7257515024278,
+          "y": 5404.9536224532385
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 574
+        "width": 451
       }
     ],
     "viewport": {
-      "x": 291.1461700680053,
-      "y": -1157.3123878634347,
-      "zoom": 0.25315097851922613
+      "x": 546.0446453942541,
+      "y": -4373.121887910917,
+      "zoom": 0.82779468225066
     }
   },
-  "description": "Smart Chains, Smarter Conversations.",
+  "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
   "endpoint_name": null,
+  "icon": "Youtube",
   "id": "3b0d43c2-dc2c-4906-8a3e-850702b534c4",
   "is_component": false,
   "last_tested_version": "1.1.3",
-  "name": "youtube analysis "
+  "name": "Youtube Analysis ",
+  "tags": [
+    "agents",
+    "assistants"
+  ]
 }
