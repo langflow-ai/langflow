@@ -25,8 +25,6 @@ class FlowRunUser(FastHttpUser):
       - API_KEY: API key for authentication, sent as header 'x-api-key' (Required)
       - MIN_WAIT: Minimum wait time between requests in ms (default: 2000)
       - MAX_WAIT: Maximum wait time between requests in ms (default: 5000)
-      - RETRY_DELAY: Time to wait between retries in ms (default: 1000)
-      - MAX_RETRIES: Maximum number of retries per request (default: 3)
     """
 
     abstract = False  # This user class can be instantiated
@@ -39,10 +37,6 @@ class FlowRunUser(FastHttpUser):
         float(os.getenv("MIN_WAIT", "2000")) / 1000,
         float(os.getenv("MAX_WAIT", "5000")) / 1000,
     )
-
-    # Retry configuration
-    retry_delay = float(os.getenv("RETRY_DELAY", "1000")) / 1000  # Convert ms to seconds
-    max_retries = int(os.getenv("MAX_RETRIES", "3"))
 
     # Use the host provided by environment variable or default
     host = os.getenv("LANGFLOW_HOST", "http://localhost:7860")
