@@ -6,6 +6,6 @@ export const BWPythonIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  const isdark = useDarkStore((state) => state.dark);
+  const isdark = useDarkStore((state) => state.dark.toString());
   return <BWSvgPython ref={ref} {...props} isdark={isdark} />;
 });
