@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException
+from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlmodel import select
 
@@ -19,7 +20,12 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
-from langflow.api.v1.schemas import FlowDataRequest, InputValueRequest, ResultDataResponse, VertexBuildResponse
+from langflow.api.v1.schemas import (
+    FlowDataRequest,
+    InputValueRequest,
+    ResultDataResponse,
+    VertexBuildResponse,
+)
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
@@ -28,7 +34,83 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
+from langflow.services.queue.service import QueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
+
+
+async def start_flow_build(
+    *,
+    flow_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    inputs: InputValueRequest | None,
+    data: FlowDataRequest | None,
+    files: list[str] | None,
+    stop_component_id: str | None,
+    start_component_id: str | None,
+    log_builds: bool,
+    current_user: CurrentActiveUser,
+    queue_service: QueueService,
+) -> str:
+    """Start the flow build process by setting up the queue and starting the build task.
+
+    Returns the job_id.
+    """
+    job_id = str(uuid.uuid4())
+    try:
+        _, event_manager = queue_service.create_queue(job_id)
+        task_coro = generate_flow_events(
+            flow_id=flow_id,
+            background_tasks=background_tasks,
+            event_manager=event_manager,
+            inputs=inputs,
+            data=data,
+            files=files,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            log_builds=log_builds,
+            current_user=current_user,
+        )
+        queue_service.start_job(job_id, task_coro)
+    except Exception as e:
+        logger.exception("Failed to create queue and start task")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return job_id
+
+
+async def get_flow_events_response(
+    *,
+    job_id: str,
+    queue_service: QueueService,
+    stream: bool = True,
+):
+    """Get events for a specific build job, either as a stream or single event."""
+    try:
+        main_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
+        if stream:
+            if event_task is None:
+                raise HTTPException(status_code=404, detail="No event task found for job")
+            return await create_flow_response(
+                queue=main_queue,
+                event_manager=event_manager,
+                event_task=event_task,
+            )
+
+        # Polling mode - get exactly one event
+        try:
+            event_id, value, put_time = await main_queue.get()
+            if value is None:
+                # End of stream, trigger end event
+                if event_task is not None:
+                    event_task.cancel()
+                event_manager.on_end(data={})
+
+            return JSONResponse({"event": value.decode("utf-8") if value else None})
+
+        except asyncio.QueueEmpty:
+            return JSONResponse({"event": None})
+
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 async def create_flow_response(

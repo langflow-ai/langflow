@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-import asyncio
 import time
 import traceback
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from loguru import logger
 
-from langflow.api.build import create_flow_response, generate_flow_events
+from langflow.api.build import (
+    get_flow_events_response,
+    start_flow_build,
+)
 from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
@@ -144,33 +146,18 @@ async def build_flow(
         if not flow:
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
 
-    job_id = str(uuid.uuid4())
-
-    try:
-        # Create the queue and event manager
-        _, event_manager = queue_service.create_queue(job_id)
-
-        # Create the task coroutine with all required arguments
-        task_coro = generate_flow_events(
-            flow_id=flow_id,
-            background_tasks=background_tasks,
-            event_manager=event_manager,
-            inputs=inputs,
-            data=data,
-            files=files,
-            stop_component_id=stop_component_id,
-            start_component_id=start_component_id,
-            log_builds=log_builds,
-            current_user=current_user,
-        )
-
-        # Start the task
-        queue_service.start_job(job_id, task_coro)
-
-    except Exception as e:
-        logger.exception("Failed to create queue and start task")
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
+    job_id = await start_flow_build(
+        flow_id=flow_id,
+        background_tasks=background_tasks,
+        inputs=inputs,
+        data=data,
+        files=files,
+        stop_component_id=stop_component_id,
+        start_component_id=start_component_id,
+        log_builds=log_builds,
+        current_user=current_user,
+        queue_service=queue_service,
+    )
     return {"job_id": job_id}
 
 
@@ -182,36 +169,11 @@ async def get_build_events(
     stream: bool = True,
 ):
     """Get events for a specific build job."""
-    try:
-        main_queue, event_manager, event_task = queue_service.get_queue_data(job_id)
-
-        if stream:
-            # Original streaming behavior
-            if event_task is None:
-                msg = "No event task found for job"
-                raise ValueError(msg)
-            return await create_flow_response(
-                queue=main_queue,
-                event_manager=event_manager,
-                event_task=event_task,
-            )
-
-        # Polling mode - get exactly one event
-        try:
-            event_id, value, put_time = await main_queue.get()
-            if value is None:
-                # End of stream, trigger end event
-                if event_task is not None:
-                    event_task.cancel()
-                event_manager.on_end(data={})
-
-            return JSONResponse({"event": value.decode("utf-8") if value else None})
-
-        except asyncio.QueueEmpty:
-            return JSONResponse({"event": None})
-
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return await get_flow_events_response(
+        job_id=job_id,
+        queue_service=queue_service,
+        stream=stream,
+    )
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
