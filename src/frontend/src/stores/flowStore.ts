@@ -54,6 +54,10 @@ import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  playgroundPage: false,
+  setPlaygroundPage: (playgroundPage) => {
+    set({ playgroundPage });
+  },
   positionDictionary: {},
   setPositionDictionary: (positionDictionary) => {
     set({ positionDictionary });
@@ -606,6 +610,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     setLockChat?: (lock: boolean) => void;
     session?: string;
   }) => {
+    const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
     get().setLockChat(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -805,6 +810,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: get().nodes || undefined,
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
+      playgroundPage,
     });
     get().setIsBuilding(false);
     get().setLockChat(false);

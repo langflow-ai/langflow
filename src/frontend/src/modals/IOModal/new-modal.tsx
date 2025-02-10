@@ -18,12 +18,12 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useMessagesStore } from "../../stores/messagesStore";
 import { IOModalPropsType } from "../../types/components";
-import { cn } from "../../utils/utils";
+import { cn, getNumberFromString } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
-import ChatView from "./components/chatView/chat-view";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
+import { swatchColors } from "@/utils/styleUtils";
 export default function IOModal({
   children,
   open,
@@ -60,7 +60,10 @@ export default function IOModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
+  setPlaygroundPage(!!playgroundPage);
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(
@@ -262,6 +265,18 @@ export default function IOModal({
     window.open(LangflowButtonRedirectTarget(), "_blank");
   };
 
+  useEffect(() => {
+    if (playgroundPage && messages.length > 0) {
+      window.localStorage.setItem(currentFlowId, JSON.stringify(messages));
+    }
+  }, [playgroundPage, messages]);
+
+  const swatchIndex =
+    (currentFlow?.gradient && !isNaN(parseInt(currentFlow?.gradient))
+      ? parseInt(currentFlow?.gradient)
+      : getNumberFromString(currentFlow?.gradient ?? currentFlow?.id ?? "")) %
+    swatchColors.length;
+
   return (
     <BaseModal
       open={open}
@@ -291,7 +306,21 @@ export default function IOModal({
                   playgroundPage ? "pt-[15px]" : "pt-3.5",
                 )}
               >
-                <div className="flex items-center gap-2 pb-8">
+                <div className="flex items-center align-middle gap-2 pb-8 justify-between">
+                  <div className="flex items-center gap-2">
+                  <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
+                    <IconComponent
+                      name={currentFlow?.icon ?? "graph"}
+                      className="h-3.5 w-3.5"
+                    />
+                  </div>
+                  {sidebarOpen && (
+                    <div className="truncate font-semibold">
+                      {PlaygroundTitle}
+                    </div>
+                  )}
+                  </div>
+
                   <ShadTooltip
                     styleClasses="z-50"
                     side="right"
@@ -308,11 +337,6 @@ export default function IOModal({
                       />
                     </Button>
                   </ShadTooltip>
-                  {sidebarOpen && (
-                    <div className="truncate font-semibold">
-                      {PlaygroundTitle}
-                    </div>
-                  )}
                 </div>
                 {sidebarOpen && (
                   <SidebarOpenView

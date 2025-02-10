@@ -8,26 +8,66 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { ENABLE_WIDGET } from "@/customization/feature-flags";
 import ApiModal from "@/modals/apiModal/new-api-modal";
-import getWidgetCode from "@/modals/apiModal/utils/get-widget-code";
 import EmbedModal from "@/modals/EmbedModal/embed-modal";
+import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 export default function PublishDropdown() {
   const domain = window.location.origin;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
-  const [openApiModal, setOpenApiModal] = useState(false);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const flowId = useFlowsManagerStore((state) => state.currentFlow?.id);
-  const flowName = useFlowsManagerStore((state) => state.currentFlow?.name);
-  const isPublished = useFlowsManagerStore(
-    (state) => state.currentFlow?.public,
-  );
+  const flowId = currentFlow?.id;
+  const flowName = currentFlow?.name;
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { mutateAsync } = usePatchUpdateFlow();
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const setFlows = useFlowsManagerStore((state) => state.setFlows);
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const isPublished = currentFlow?.access_type === "public";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
+  const [openApiModal, setOpenApiModal] = useState(false);
+
+  const handlePublishedSwitch = async (checked: boolean) => {
+    mutateAsync(
+      {
+        id: flowId ?? "",
+        access_type: checked ? "private" : "public",
+      },
+      {
+        onSuccess: (updatedFlow) => {
+          if (flows) {
+            setFlows(
+              flows.map((flow) => {
+                if (flow.id === updatedFlow.id) {
+                  return updatedFlow;
+                }
+                return flow;
+              }),
+            );
+            setCurrentFlow(updatedFlow);
+          } else {
+            setErrorData({
+              title: "Failed to save flow",
+              list: ["Flows variable undefined"],
+            });
+          }
+        },
+        onError: (e) => {
+          setErrorData({
+            title: "Failed to save flow",
+            list: [e.message],
+          });
+        },
+      },
+    );
+  };
 
   // using js const instead of applies.css because of group tag
   const groupStyle = "text-muted-foreground group-hover:text-foreground";
@@ -68,7 +108,13 @@ export default function PublishDropdown() {
                 className="deploy-dropdown-item group"
                 onClick={() => {
                   if (hasIO) {
-                    window.open(`${domain}/playground/${flowId}`, "_blank");
+                    if (isPublished) {
+                      window.open(`${domain}/playground/${flowId}`, "_blank");
+                    } else {
+                      handlePublishedSwitch(isPublished).then(() => {
+                        window.open(`${domain}/playground/${flowId}`, "_blank");
+                      });
+                    }
                   }
                 }}
               >
@@ -78,16 +124,16 @@ export default function PublishDropdown() {
                     className={`${groupStyle} icon-size mr-2`}
                   />
                   <span>Standalone app</span>
-                  <div className={`icon-size ml-auto pr-8 text-foreground`}>
+                  <div
+                    className={`icon-size ml-auto pb-6 pr-10 text-foreground`}
+                  >
                     <Switch
-                      className="h-5 w-9"
+                      className="scale-[85%]"
                       checked={isPublished}
-                      onCheckedChange={(checked) => {
-                        console.log(checked);
-                      }}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        handlePublishedSwitch(isPublished);
                       }}
                     />
                   </div>

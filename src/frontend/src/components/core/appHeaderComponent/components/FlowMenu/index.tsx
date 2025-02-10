@@ -30,10 +30,11 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import { cn } from "@/utils/utils";
+import { cn, getNumberFromString } from "@/utils/utils";
 import { useQueryClient } from "@tanstack/react-query";
+import { swatchColors } from "@/utils/styleUtils";
 
-export const MenuBar = ({}: {}): JSX.Element => {
+export const MenuBar = ({ }: {}): JSX.Element => {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const addFlow = useAddFlow();
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -228,6 +229,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
     }
   }, [flowName]);
 
+  const swatchIndex =
+  (currentFlow?.gradient && !isNaN(parseInt(currentFlow?.gradient))
+    ? parseInt(currentFlow?.gradient)
+    : getNumberFromString(currentFlow?.gradient ?? currentFlow?.id ?? "")) %
+  swatchColors.length;
+
   return currentFlow && onFlowPage ? (
     <div
       className="flex items-center justify-center gap-2 truncate"
@@ -260,6 +267,12 @@ export const MenuBar = ({}: {}): JSX.Element => {
         data-testid="menu_bar_separator"
       >
         /
+      </div>
+      <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
+      <IconComponent
+        name={currentFlow?.icon ?? "graph"}
+        className="h-3.5 w-3.5"
+      />
       </div>
 
       <div
@@ -305,6 +318,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 aria-hidden="true"
                 data-testid="flow_name"
               >
+
                 {flowName}
               </span>
             </div>
@@ -490,9 +504,9 @@ export const MenuBar = ({}: {}): JSX.Element => {
               SAVED_HOVER +
               (updatedAt
                 ? new Date(updatedAt).toLocaleString("en-US", {
-                    hour: "numeric",
-                    minute: "numeric",
-                  })
+                  hour: "numeric",
+                  minute: "numeric",
+                })
                 : "Never")
             ) : (
               <div className="flex w-48 flex-col gap-1 py-1">

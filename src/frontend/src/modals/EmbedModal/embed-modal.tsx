@@ -79,7 +79,7 @@ export default function EmbedModal({
             ) : (
               <IconComponent
                 name="Copy"
-                className="!h-5 !w-5 text-muted group-hover:text-muted-foreground"
+                className="!h-6 !w-6 text-muted group-hover:text-muted-foreground"
               />
             )}
           </Button>
