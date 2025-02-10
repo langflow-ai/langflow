@@ -78,7 +78,9 @@ export function getNewJsApiCode({
   return `const payload = {
     "input_value": "${input_value}",
     "output_type": "${output_type}",
-    "input_type": "${input_type}"${
+    "input_type": "${input_type}",
+    // Optional: Use session tracking if needed
+    "session_id": "user_1"${
       activeTweaks && tweaksObject
         ? `,
     "tweaks": ${tweaksString}`
