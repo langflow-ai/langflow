@@ -19,17 +19,7 @@ import { getNewCurlCode } from "../utils/get-curl-code";
 import { getNewJsApiCode } from "../utils/get-js-api-code";
 import { getNewPythonApiCode } from "../utils/get-python-api-code";
 
-type APITabsPropsType = {
-  open?: boolean;
-  tweaksNodes?: AllNodeType[];
-  activeTweaks?: boolean;
-  setActiveTweaks?: (value: boolean) => void;
-};
-
-export default function APITabsComponent({
-  setActiveTweaks,
-  activeTweaks,
-}: APITabsPropsType) {
+export default function APITabsComponent() {
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
@@ -48,6 +38,8 @@ export default function APITabsComponent({
     }
   }
   const streaming = hasStreaming(nodes);
+  const tweaks = useTweaksStore((state) => state.tweaks);
+  console.log("tweaks", tweaks);
   const codeOptions = {
     streaming: streaming,
     flowId: flowId || "",
@@ -55,8 +47,8 @@ export default function APITabsComponent({
     input_value: input_value,
     input_type: hasChatInput ? "chat" : "text",
     output_type: hasChatOutput ? "chat" : "text",
-    tweaksObject: {},
-    activeTweaks: false,
+    tweaksObject: tweaks,
+    activeTweaks: Object.values(tweaks).some((tweak) => Object.keys(tweak).length > 0),
   };
   const tabsList: tabsArrayType = [
     {
