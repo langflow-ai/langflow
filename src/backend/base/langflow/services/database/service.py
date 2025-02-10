@@ -136,20 +136,18 @@ class DatabaseService(Service):
         return self._create_engine()
 
     def _get_connect_args(self):
-        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
-            "sqlite"
-        ):
-            connect_args = {
+        settings = self.settings_service.settings
+        
+        if settings.db_driver_connection_settings is not None:
+            return settings.db_driver_connection_settings
+            
+        if settings.database_url and settings.database_url.startswith("sqlite"):
+            return {
                 "check_same_thread": False,
-                "timeout": self.settings_service.settings.db_connect_timeout,
+                "timeout": settings.db_connect_timeout,
             }
-        elif self.settings_service.settings.db_driver_connection_settings is not None:
-            # for non-sqlite databases, we can use the db_driver_connection_settings
-            # for example, postgres uses psycopg as the sqlalchemy driver. 
-            connect_args = self.settings_service.settings.db_driver_connection_settings
-        else:
-            connect_args = {}
-        return connect_args
+            
+        return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
