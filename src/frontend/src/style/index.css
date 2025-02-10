@@ -167,6 +167,8 @@
     --tool-mode-gradient-2: #ff3276;
 
     --slider-input-border: #d4d4d8;
+
+    --zinc-foreground: 240 5.9% 90%;
   }
 
   .dark {
@@ -323,5 +325,7 @@
     --node-ring: 240 6% 90%;
 
     --slider-input-border: #d4d4d8;
+
+    --zinc-foreground: 240 5.2% 33.9%;
   }
 }

@@ -244,7 +244,7 @@ export default function NodeStatus({
             onClick={handleClickRun}
           >
             {showNode && (
-              <Button unstyled className="group">
+              <Button unstyled className="nodrag group">
                 <div data-testid={`button_run_` + display_name.toLowerCase()}>
                   <IconComponent
                     name={iconName}
