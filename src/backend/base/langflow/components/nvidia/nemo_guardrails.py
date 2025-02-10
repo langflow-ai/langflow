@@ -9,11 +9,10 @@ from langflow.schema import Data
 
 
 class NVIDIANeMoGuardrailsComponent(Component):
-    display_name = "NVIDIA NeMo Guardrails"
-    description = (
-        "Apply guardrails to LLM interactions. Load guardrail definitions from a YAML file, "
-        "or provide directly as multiline text"
-    )
+    display_name = "Guardrails"
+    description = """NVIDIA NeMo Guardrails is a framework for enforcing constraints and safety measures in \
+conversational AI applications, enabling developers to define rules that guide interactions, prevent undesired outputs, \
+and enhance model reliability."""
     icon = "NVIDIA"
     name = "NVIDIANemoGuardrails"
     beta = True

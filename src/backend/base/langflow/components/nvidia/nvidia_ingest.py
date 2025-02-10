@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class NVIDIAIngestComponent(Component):
-    display_name = "NV-Ingest"
-    description = "Ingest documents"
+    display_name = "Ingest"
+    description = """NVIDIA Ingest (nv-ingest) is a data ingestion framework designed for efficiently processing, \
+transforming, and storing large-scale datasets, enabling seamless integration with AI and machine learning workflows."""
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
     name = "NVIDIAIngest"

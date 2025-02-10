@@ -3,8 +3,8 @@ name: Store pytest durations
 on:
   workflow_dispatch:
   schedule:
-    # Run job at 6:30 UTC, 10.30pm PST, or 11.30pm PDT
-    - cron: "30 6 * * *"
+    # Run job at 6:30 UTC every Monday (10.30pm PST/11.30pm PDT Sunday night)
+    - cron: "30 6 * * 1"
 
 env:
   PYTEST_RUN_PATH: "src/backend/tests"
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"

@@ -21,8 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 class NVIDIANeMoEvaluatorComponent(Component):
-    display_name = "NVIDIA NeMo Evaluator"
-    description = "Evaluate models with flexible evaluation configurations."
+    display_name = "Evaluator"
+    description = """NVIDIA NeMo Evaluator is a framework for evaluating language models using standardized \
+benchmarks, custom datasets, or predefined evaluation harnesses, providing insights into model performance through \
+automated assessments."""
     icon = "NVIDIA"
     name = "NVIDIANeMoEvaluator"
     beta = True
