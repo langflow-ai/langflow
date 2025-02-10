@@ -540,6 +540,9 @@ async def get_build_events(
 
         if stream:
             # Original streaming behavior
+            if event_task is None:
+                msg = "No event task found for job"
+                raise ValueError(msg)
             return await create_flow_response(
                 queue=main_queue,
                 event_manager=event_manager,
@@ -551,7 +554,8 @@ async def get_build_events(
             event_id, value, put_time = await main_queue.get()
             if value is None:
                 # End of stream, trigger end event
-                event_task.cancel()
+                if event_task is not None:
+                    event_task.cancel()
                 event_manager.on_end(data={})
 
             return JSONResponse({"event": value.decode("utf-8") if value else None})
