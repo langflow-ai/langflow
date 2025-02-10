@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 class NVIDIANeMoCustomizerComponent(Component):
     display_name = "Customizer"
-    description = "Train models"
+    description = """NVIDIA NeMo Customizer is a tool for fine-tuning large language models with domain-specific \
+data using methods like LoRA, p-tuning, and full fine-tuning to enhance model performance for specialized tasks."""
     icon = "NVIDIA"
     name = "NVIDIANeMoCustomizer"
     beta = True

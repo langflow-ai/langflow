@@ -12,10 +12,13 @@ from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageInput
-from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
+from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput, DataInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
+# for guardrails processing
+from nemoguardrails import RailsConfig
+from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
 class LCModelComponent(Component):
     display_name: str = "Model Name"
@@ -34,6 +37,12 @@ class LCModelComponent(Component):
             advanced=False,
         ),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=False),
+        DataInput(
+            name="guardrails",
+            display_name="Guardrails",
+            info="Rules to apply to model interactions using NVIDIA NeMo Guardrails",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -180,7 +189,7 @@ class LCModelComponent(Component):
                                 *prompt.messages,  # type: ignore[has-type]
                             ]
                             system_message_added = True
-                        runnable = prompt | runnable
+                        # runnable = prompt | runnable
                     else:
                         messages.append(input_value.to_lc_message())
             else:
@@ -190,10 +199,16 @@ class LCModelComponent(Component):
             messages.insert(0, SystemMessage(content=system_message))
         inputs: list | dict = messages or {}
         try:
+            # apply input guardrails if present
+            if (self.guardrails.text):
+                config = RailsConfig.from_content(yaml_content=self.guardrails.text)
+                guardrails = RunnableRails(config)
+                runnable = prompt | (guardrails | runnable)
+            else:
+                runnable = prompt | runnable
             # TODO: Depreciated Feature to be removed in upcoming release
             if hasattr(self, "output_parser") and self.output_parser is not None:
                 runnable |= self.output_parser
-
             runnable = runnable.with_config(
                 {
                     "run_name": self.display_name,
