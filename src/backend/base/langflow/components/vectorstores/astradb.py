@@ -370,33 +370,38 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
 
     def get_api_endpoint(self):
-        return self.get_api_endpoint_static(
+        if hasattr(self, "_api_endpoint") and self._api_endpoint:
+            return self._api_endpoint
+
+        self._api_endpoint = self.get_api_endpoint_static(
             token=self.token,
             environment=self.environment,
             api_endpoint=self.api_endpoint,
             database_name=self.database_name,
         )
+        return self._api_endpoint
 
     def get_keyspace(self):
-        keyspace = self.keyspace
+        if hasattr(self, "_keyspace") and self._keyspace:
+            return self._keyspace
 
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        if self.keyspace:
+            self._keyspace = self.keyspace.strip()
+        else:
+            self._keyspace = None
+        return self._keyspace
 
     def get_database_object(self, api_endpoint: str | None = None):
-        try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
+        client = DataAPIClient(token=self.token, environment=self.environment)
 
+        try:
             return client.get_database(
                 api_endpoint=api_endpoint or self.get_api_endpoint(),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
         except Exception as e:
-            msg = f"Error fetching database object: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error fetching database object: {e}") from e
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
