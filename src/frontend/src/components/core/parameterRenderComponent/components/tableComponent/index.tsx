@@ -57,6 +57,10 @@ const TableComponent = forwardRef<
       let newCol = {
         ...col,
       };
+      // Filter out hidden columns
+      if (col.hidden) {
+        return null;
+      }
       if (props.rowSelection && props.onSelectionChanged && index === 0) {
         newCol = {
           ...newCol,
@@ -107,7 +111,7 @@ const TableComponent = forwardRef<
         }
       }
       return newCol;
-    });
+    }).filter(Boolean); // Filter out null values from hidden columns
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
