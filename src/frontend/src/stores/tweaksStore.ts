@@ -148,7 +148,7 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
         Object.keys(nodeTemplate).forEach((name) => {
           if (
             customStringify(nodeTemplate[name]) !==
-              customStringify(originalNodeTemplate[name])
+            customStringify(originalNodeTemplate[name])
           ) {
             currentTweak[name] = getChangesType(
               nodeTemplate[name].value,

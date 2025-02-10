@@ -1,6 +1,10 @@
+import { TweaksComponent } from "@/components/core/codeTabsComponent/components/tweaksComponent";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
 import { useCustomAPICode } from "@/customization/hooks/use-custom-api-code";
 import useAuthStore from "@/stores/authStore";
+import useFlowStore from "@/stores/flowStore";
 import "ace-builds/src-noconflict/ext-language_tools";
 import "ace-builds/src-noconflict/mode-python";
 import "ace-builds/src-noconflict/theme-github";
@@ -12,10 +16,6 @@ import { useTweaksStore } from "../../stores/tweaksStore";
 import { FlowType } from "../../types/flow/index";
 import BaseModal from "../baseModal";
 import APITabsComponent from "./codeTabs/code-tabs";
-import { TweaksComponent } from "@/components/core/codeTabsComponent/components/tweaksComponent";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import useFlowStore from "@/stores/flowStore";
 
 export default function ApiModal({
   children,
@@ -42,7 +42,12 @@ export default function ApiModal({
 
   return (
     <>
-      <BaseModal open={open} setOpen={setOpen} size="medium" className="pt-3 pb-3">
+      <BaseModal
+        open={open}
+        setOpen={setOpen}
+        size="medium"
+        className="pb-3 pt-3"
+      >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
           description={
@@ -69,7 +74,7 @@ export default function ApiModal({
             aria-hidden="true"
           />
           <span className="pl-2">API access</span>
-          <div className="absolute right-12 flex items-center text-[13px] leading-[16px] font-medium border-r-1" >
+          <div className="border-r-1 absolute right-12 flex items-center text-[13px] font-medium leading-[16px]">
             <Button
               variant="ghost"
               size="icon"
@@ -78,27 +83,30 @@ export default function ApiModal({
               <IconComponent name="SlidersHorizontal" className="h-3.5 w-3.5" />
               <span>Temporary overrides ({Object.keys(tweaks).length}) </span>
             </Button>
-            <Separator orientation="vertical"  className="h-5 ml-2"/>
-            <div>
-            </div>
+            <Separator orientation="vertical" className="ml-2 h-5" />
+            <div></div>
           </div>
         </BaseModal.Header>
         <BaseModal.Content overflowHidden>
           {open && (
             <>
               <CustomAPIGenerator isOpen={open} />
-              <APITabsComponent
-              />
+              <APITabsComponent />
             </>
           )}
         </BaseModal.Content>
       </BaseModal>
 
-      <BaseModal open={openTweaks} setOpen={setOpenTweaks} size="medium" className="p-0">
+      <BaseModal
+        open={openTweaks}
+        setOpen={setOpenTweaks}
+        size="medium"
+        className="p-0"
+      >
         <BaseModal.Content overflowHidden>
-        <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll pt-10">
-          <TweaksComponent open={openTweaks} />
-        </div>
+          <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted pt-10 custom-scroll">
+            <TweaksComponent open={openTweaks} />
+          </div>
         </BaseModal.Content>
       </BaseModal>
     </>

@@ -48,7 +48,9 @@ export default function APITabsComponent() {
     input_type: hasChatInput ? "chat" : "text",
     output_type: hasChatOutput ? "chat" : "text",
     tweaksObject: tweaks,
-    activeTweaks: Object.values(tweaks).some((tweak) => Object.keys(tweak).length > 0),
+    activeTweaks: Object.values(tweaks).some(
+      (tweak) => Object.keys(tweak).length > 0,
+    ),
   };
   const tabsList: tabsArrayType = [
     {

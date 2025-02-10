@@ -22,9 +22,7 @@ export type TweaksStoreType = {
     flow: FlowType,
     getCodes: GetCodesType,
   ) => void;
-  newInitialSetup: (
-    nodes: AllNodeType[],
-  ) => void;
+  newInitialSetup: (nodes: AllNodeType[]) => void;
   refreshTabs: () => void;
   autoLogin: boolean;
   flow: FlowType | null;
