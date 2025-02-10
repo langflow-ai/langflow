@@ -8,7 +8,7 @@ import { useTweaksStore } from "@/stores/tweaksStore";
 import { AllNodeType } from "@/types/flow";
 import { tabsArrayType } from "@/types/tabs";
 import { hasStreaming } from "@/utils/reactflowUtils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
@@ -91,6 +91,10 @@ export default function APITabsComponent() {
     });
   };
 
+  useEffect(() => {
+    setIsCopied(false);
+  }, [activeTab]);
+
   return (
     <Tabs
       value={activeTab.toString()}
@@ -130,17 +134,17 @@ export default function APITabsComponent() {
               size="icon"
               onClick={copyToClipboard}
               data-testid="btn-copy-code"
-              className="!hover:bg-foreground group absolute right-2 top-2 bg-muted-foreground"
+              className="!hover:bg-foreground group absolute right-2 top-2"
             >
               {isCopied ? (
                 <IconComponent
                   name="Check"
-                  className="h-5 w-5 text-muted group-hover:text-muted-foreground"
+                  className="h-5 w-5 text-muted-foreground"
                 />
               ) : (
                 <IconComponent
                   name="Copy"
-                  className="!h-5 !w-5 text-muted group-hover:text-muted-foreground"
+                  className="!h-5 !w-5 text-muted-foreground"
                 />
               )}
             </Button>
