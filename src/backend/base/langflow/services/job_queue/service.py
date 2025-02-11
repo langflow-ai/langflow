@@ -199,8 +199,11 @@ class JobQueueService(Service):
         if task and not task.done():
             logger.debug(f"Cancelling active task for job_id {job_id}")
             task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
+            await asyncio.wait([task])
+            if not task.cancelled():
+                exc = task.exception()
+                if exc is not None:
+                    raise exc
             logger.debug(f"Task cancellation complete for job_id {job_id}")
 
         # If there is no active task or the task has completed, proceed with clearing the queue.
