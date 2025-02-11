@@ -33,7 +33,6 @@ from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
-    
 class DatabaseService(Service):
     name = "database_service"
 
@@ -136,16 +135,16 @@ class DatabaseService(Service):
 
     def _get_connect_args(self):
         settings = self.settings_service.settings
-        
+
         if settings.db_driver_connection_settings is not None:
             return settings.db_driver_connection_settings
-            
+
         if settings.database_url and settings.database_url.startswith("sqlite"):
             return {
                 "check_same_thread": False,
                 "timeout": settings.db_connect_timeout,
             }
-            
+
         return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
