@@ -40,19 +40,19 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
         BoolInput(
             name="extract_text",
             display_name="Extract text?",
-            info="Extract text or not",
+            info="Extract text from document",
             value=True,
         ),
         BoolInput(
             name="extract_charts",
             display_name="Extract charts?",
-            info="Extract charts or not",
+            info="Extract text from charts",
             value=False,
         ),
         BoolInput(
             name="extract_tables",
             display_name="Extract tables?",
-            info="Extract tables or not",
+            info="Extract text from tables",
             value=True,
         ),
         DropdownInput(
