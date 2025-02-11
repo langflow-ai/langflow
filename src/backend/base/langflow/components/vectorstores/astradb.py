@@ -446,17 +446,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_database_options(self):
         try:
+            database_list = self.get_database_list()
             return [
                 {
                     "name": name,
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in database_list.items()
             ]
         except Exception as e:
-            msg = f"Error fetching database options: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error fetching database options: {e}") from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Retrieve the database object
@@ -502,13 +502,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         database_options = self._initialize_database_options()
 
         # If we retrieved options based on the token, show the dropdown
-        build_config["database_name"]["options"] = [db["name"] for db in database_options]
-        build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        options = []
+        options_metadata = []
+
+        for db in database_options:
+            options.append(db["name"])
+            options_metadata.append({k: db[k] for k in ("collections", "api_endpoint")})
+
+        build_config["database_name"]["options"] = options
+        build_config["database_name"]["options_metadata"] = options_metadata
 
         # Reset the selected database
-        if build_config["database_name"]["value"] not in build_config["database_name"]["options"]:
+        if build_config["database_name"]["value"] not in options:
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
 
