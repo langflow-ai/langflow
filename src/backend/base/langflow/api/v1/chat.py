@@ -769,16 +769,14 @@ async def build_public_tmp(
         raise HTTPException(status_code=403, detail="Flow is not public")
 
     current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    return (
-        await build_flow(
-            background_tasks=background_tasks,
-            flow_id=flow_id,
-            inputs=inputs,
-            data=data,
-            files=files,
-            stop_component_id=stop_component_id,
-            start_component_id=start_component_id,
-            log_builds=log_builds,
-            current_user=current_user,
-        )
+    return await build_flow(
+        background_tasks=background_tasks,
+        flow_id=flow_id,
+        inputs=inputs,
+        data=data,
+        files=files,
+        stop_component_id=stop_component_id,
+        start_component_id=start_component_id,
+        log_builds=log_builds,
+        current_user=current_user,
     )

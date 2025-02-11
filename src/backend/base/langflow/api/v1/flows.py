@@ -267,7 +267,7 @@ async def read_public_flow(
         raise HTTPException(status_code=403, detail="Flow is not public")
 
     current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    return (await read_flow(session=session, flow_id=flow_id, current_user=current_user))
+    return await read_flow(session=session, flow_id=flow_id, current_user=current_user)
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
