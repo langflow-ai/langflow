@@ -66,15 +66,16 @@ class JobQueueService(Service):
         logger.debug("JobQueueService started: periodic cleanup task initiated.")
 
     async def stop(self) -> None:
-        """Stop the JobQueueService and clean up all associated resources.
+        """Gracefully stop the JobQueueService by terminating background operations and cleaning up all resources.
 
-        The shutdown process involves:
-          - Setting the service state to closed.
-          - Cancelling the background periodic cleanup task and awaiting its termination.
-          - Iterating over all registered job queues to clean up their resources (cancelling tasks and clearing queues).
+        This coroutine performs the following steps:
+            1. Marks the service as closed, preventing further job queue creation.
+            2. Cancels the background periodic cleanup task and awaits its termination.
+            3. Iterates over all registered job queues to clean up their resources—cancelling active tasks and
+            clearing queued items.
 
         Raises:
-            Exception: Propagates any exceptions encountered during the cleanup process.
+            Exception: Propagates any exceptions encountered during the cancellation or termination of the cleanup task.
         """
         self._closed = True
         if self._cleanup_task:
@@ -85,7 +86,7 @@ class JobQueueService(Service):
                 if exc is not None:
                     raise exc
 
-        # Iterate through all job queues and perform cleanup.
+        # Clean up each registered job queue.
         for job_id in list(self._queues.keys()):
             await self.cleanup_job(job_id)
         logger.info("JobQueueService stopped: all job queues have been cleaned up.")
