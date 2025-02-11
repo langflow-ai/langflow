@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 
 from loguru import logger
 
@@ -57,9 +56,6 @@ class JobQueueService(Service):
 
         This method marks the service as active and launches a background task that
         periodically checks and cleans up job queues whose tasks have been completed or cancelled.
-
-        Raises:
-            asyncio.CancelledError: If the background cleanup task is cancelled.
         """
         self._closed = False
         self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
@@ -75,7 +71,8 @@ class JobQueueService(Service):
             clearing queued items.
 
         Raises:
-            Exception: Propagates any exceptions encountered during the cancellation or termination of the cleanup task.
+            Exception: If the cleanup task encounters an unhandled exception during termination.
+            asyncio.CancelledError: If the cleanup task is cancelled during termination.
         """
         self._closed = True
         if self._cleanup_task:
@@ -139,11 +136,17 @@ class JobQueueService(Service):
 
         Raises:
             ValueError: If no queue exists for the specified job_id.
+            RuntimeError: If the service is closed.
         """
         if job_id not in self._queues:
             msg = f"No queue found for job_id {job_id}"
             logger.error(msg)
             raise ValueError(msg)
+
+        if self._closed:
+            msg = "Queue service is closed"
+            logger.error(msg)
+            raise RuntimeError(msg)
 
         main_queue, event_manager, existing_task = self._queues[job_id]
 
@@ -168,11 +171,17 @@ class JobQueueService(Service):
 
         Raises:
             ValueError: If no queue is registered for the given job_id.
+            RuntimeError: If the service is closed.
         """
         if job_id not in self._queues:
             msg = f"No queue found for job_id {job_id}"
             logger.error(msg)
             raise ValueError(msg)
+
+        if self._closed:
+            msg = "Queue service is closed"
+            logger.error(msg)
+            raise RuntimeError(msg)
 
         return self._queues[job_id]
 
@@ -187,6 +196,10 @@ class JobQueueService(Service):
 
         Args:
             job_id (str): Unique identifier for the job to be cleaned up.
+
+        Raises:
+            asyncio.CancelledError: If the task cancellation is interrupted.
+            asyncio.QueueEmpty: If attempting to clear an already empty queue.
         """
         if job_id not in self._queues:
             logger.debug(f"No queue found for job_id {job_id} during cleanup.")
@@ -232,6 +245,10 @@ class JobQueueService(Service):
           - Monitors and logs any exceptions during the cleanup cycle.
 
         The loop terminates when the service is marked as closed.
+
+        Raises:
+            asyncio.CancelledError: If the periodic cleanup task is cancelled.
+            Exception: For any unhandled exceptions during cleanup.
         """
         while not self._closed:
             try:
@@ -249,6 +266,10 @@ class JobQueueService(Service):
         For each job:
           - Check whether the associated task is either complete or cancelled.
           - If so, execute the cleanup_job method to release the job's resources.
+
+        Raises:
+            asyncio.CancelledError: If cleanup is interrupted by cancellation.
+            Exception: For any unhandled exceptions during queue cleanup.
         """
         for job_id in list(self._queues.keys()):
             _, _, task = self._queues[job_id]
