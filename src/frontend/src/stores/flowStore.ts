@@ -49,7 +49,6 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
-import { useMessagesStore } from "./messagesStore";
 import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -101,11 +100,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
-  lockChat: false,
-  setLockChat: (lockChat) => {
-    useMessagesStore.setState({ displayLoadingMessage: lockChat });
-    set({ lockChat });
-  },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
@@ -120,7 +114,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
-    get().setLockChat(false);
     useAlertStore.getState().setErrorData({
       title: "Build stopped",
     });
@@ -595,7 +588,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value,
     files,
     silent,
-    setLockChat,
     session,
     stream = true,
   }: {
@@ -604,12 +596,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value?: string;
     files?: string[];
     silent?: boolean;
-    setLockChat?: (lock: boolean) => void;
     session?: string;
     stream?: boolean;
   }) => {
     get().setIsBuilding(true);
-    get().setLockChat(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -629,7 +619,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     if (error) {
       get().setIsBuilding(false);
-      get().setLockChat(false);
       throw new Error("Invalid components");
     }
 
@@ -736,7 +725,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      setLockChat,
       onGetOrderSuccess: () => {
         if (!silent) {
           setNoticeData({ title: "Running components" });
@@ -761,7 +749,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setIsBuilding(false);
-        get().setLockChat(false);
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title: string, list: string[], elementList) => {
@@ -781,7 +768,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         );
         setErrorData({ list, title });
         get().setIsBuilding(false);
-        get().setLockChat(false);
         get().buildController.abort();
       },
       onBuildStart: (elementList) => {
@@ -810,7 +796,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       stream,
     });
     get().setIsBuilding(false);
-    get().setLockChat(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {

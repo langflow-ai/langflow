@@ -112,8 +112,7 @@ export default function IOModal({
 
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const lockChat = useFlowStore((state) => state.lockChat);
-  const setLockChat = useFlowStore((state) => state.setLockChat);
+
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const messages = useMessagesStore((state) => state.messages);
   const [sessions, setSessions] = useState<string[]>(
@@ -151,8 +150,6 @@ export default function IOModal({
       files?: string[];
     }): Promise<void> => {
       if (isBuilding) return;
-      setIsBuilding(true);
-      setLockChat(true);
       setChatValue("");
       for (let i = 0; i < repeat; i++) {
         await buildFlow({
@@ -161,25 +158,13 @@ export default function IOModal({
           files: files,
           silent: true,
           session: sessionId,
-          setLockChat,
           stream: shouldStreamEvents(),
         }).catch((err) => {
           console.error(err);
-          setLockChat(false);
         });
       }
-      // refetch();
-      setLockChat(false);
     },
-    [
-      isBuilding,
-      setIsBuilding,
-      setLockChat,
-      chatValue,
-      chatInput?.id,
-      sessionId,
-      buildFlow,
-    ],
+    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow],
   );
 
   useEffect(() => {
@@ -336,8 +321,6 @@ export default function IOModal({
                 messagesFetched={messagesFetched}
                 sessionId={sessionId}
                 sendMessage={sendMessage}
-                lockChat={lockChat}
-                setLockChat={setLockChat}
                 canvasOpen={canvasOpen}
                 setOpen={setOpen}
               />
