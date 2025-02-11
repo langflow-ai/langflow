@@ -408,7 +408,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If the database is not set, nothing we can do.
         if not database_name:
             return None
-        
+
         # Grab the database object
         db = cls.get_database_list_static(token=token, environment=environment).get(database_name)
         if not db:
