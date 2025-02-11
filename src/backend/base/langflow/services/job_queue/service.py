@@ -4,7 +4,7 @@ import asyncio
 
 from loguru import logger
 
-from langflow.events.event_manager import EventManager, create_default_event_manager
+from langflow.events.event_manager import EventManager
 from langflow.services.base import Service
 
 
@@ -95,22 +95,18 @@ class JobQueueService(Service):
                 - The asyncio.Queue instance for handling the job's tasks or messages.
                 - The EventManager instance for event handling tied to the queue.
         """
-        if job_id in self._queues:
-            msg = f"Queue for job_id {job_id} already exists"
-            logger.error(msg)
-            raise ValueError(msg)
-
         if self._closed:
-            msg = "Queue service is closed"
-            logger.error(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError("Queue service is closed")
 
-        main_queue: asyncio.Queue = asyncio.Queue()
-        event_manager = create_default_event_manager(main_queue)
+        existing_queue = self._queues.get(job_id)
+        if existing_queue:
+            raise ValueError(f"Queue for job_id {job_id} already exists")
+
+        main_queue = asyncio.Queue()
+        event_manager = self._create_default_event_manager(main_queue)
 
         # Register the queue without an active task.
         self._queues[job_id] = (main_queue, event_manager, None)
-        logger.debug(f"Queue and event manager successfully created for job_id {job_id}")
         return main_queue, event_manager
 
     def start_job(self, job_id: str, task_coro) -> None:
@@ -246,3 +242,29 @@ class JobQueueService(Service):
             if task and (task.done() or task.cancelled()):
                 logger.debug(f"Job queue for job_id {job_id} marked for cleanup.")
                 await self.cleanup_job(job_id)
+
+    def _create_default_event_manager(self, queue: asyncio.Queue) -> EventManager:
+        """Creates the default event manager with predefined events.
+
+        Args:
+            queue (asyncio.Queue): The queue to be associated with the event manager.
+
+        Returns:
+            EventManager: The configured EventManager instance.
+        """
+        manager = EventManager(queue)
+        # Registering predefined events
+        event_names_types = [
+            ("on_token", "token"),
+            ("on_vertices_sorted", "vertices_sorted"),
+            ("on_error", "error"),
+            ("on_end", "end"),
+            ("on_message", "add_message"),
+            ("on_remove_message", "remove_message"),
+            ("on_end_vertex", "end_vertex"),
+            ("on_build_start", "build_start"),
+            ("on_build_end", "build_end"),
+        ]
+        for name, event_type in event_names_types:
+            manager.register_event(name, event_type)
+        return manager
