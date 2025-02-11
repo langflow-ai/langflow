@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
+from functools import cache
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -417,6 +418,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Otherwise, get the URL from the database list
         return db.get("api_endpoint")
 
+    @cache
     def get_api_endpoint(self):
         return self.get_api_endpoint_static(
             token=self.token,
@@ -426,17 +428,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
+        if hasattr(self, "_cached_keyspace"):
+            return self._cached_keyspace
         keyspace = self.keyspace
-
         if keyspace:
-            return keyspace.strip()
+            self._cached_keyspace = keyspace.strip()
+        else:
+            self._cached_keyspace = None
+        return self._cached_keyspace
 
-        return None
-
+    @cache
     def get_database_object(self, api_endpoint: str | None = None):
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
-
             return client.get_database(
                 api_endpoint=api_endpoint or self.get_api_endpoint(),
                 token=self.token,
