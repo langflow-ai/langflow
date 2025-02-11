@@ -34,15 +34,6 @@ from langflow.services.utils import teardown_superuser
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
     
-pool_class_mapping = {
-    "AsyncAdaptedQueuePool": AsyncAdaptedQueuePool,
-    "NullPool": NullPool,
-    "SingletonThreadPool": SingletonThreadPool,
-    "StaticPool": StaticPool,
-    "AssertionPool": AssertionPool,
-    "FallbackAsyncAdaptedQueuePool": FallbackAsyncAdaptedQueuePool,
-}
-
 class DatabaseService(Service):
     name = "database_service"
 
