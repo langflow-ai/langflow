@@ -2,7 +2,7 @@ import base64
 from io import BytesIO
 
 import pytesseract
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from langflow.custom import Component
 from langflow.io import DataInput, Output
@@ -47,7 +47,12 @@ class ImageDataExtractor(Component):
             self.log(f"OCR Extracted Text: {extracted_text[:100]}...")  # Log first 100 characters
             return Message(value=extracted_text.strip())
 
-        except Exception as e:
-            error_message = f"Error extracting text: {e}"
-            self.log(error_message)
-            raise RuntimeError(error_message)
+        except (base64.binascii.Error, UnidentifiedImageError) as e:
+            error_message = f"Invalid image data: {e}"
+            self.log(f"OCR Extraction Failed: {error_message}")
+            raise ValueError(error_message) from e  # 🔹 Fixes B904
+
+        except pytesseract.TesseractError as e:
+            error_message = f"OCR processing error: {e}"
+            self.log(f"OCR Extraction Failed: {error_message}")
+            raise RuntimeError(error_message) from e  # 🔹 Fixes B904
