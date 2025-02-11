@@ -54,13 +54,13 @@ Point **API Request** to an online rules document, tell your agent `You are a fu
 * You need to learn a new software language quickly.
 Point **API Request** to some docs, tell your agent `You are a knowledgeable software developer who uses the tools at your disposal`, and start learning.
 
-See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [simple agent starter project](/starter-projects-simple-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
+See what problems you can solve with this flow. As your problem becomes more specialized, add a tool. For example, the [math agent tutorial project](/tutorials-math-agent) adds a Python REPL component to solve math problems that are too challenging for the calculator.
 
 ### Edit a tool's metadata
 
-If your agent is not working as expected, click the **Edit Tools** button in the attached tools to modify a connected tool's `name` or `description` metadata. These fields help the agent understand how to use the tool, without having to modify the agent's prompt instructions.
+To edit a tool's metadata, click the **Edit Tools** button in the tool to modify its `name` or `description` metadata. These fields help connected agents understand how to use the tool, without having to modify the agent's prompt instructions.
 
-For example, the [URL](/components-data#url) component has three tools available when **Tool Mode** is enabled. 
+For example, the [URL](/components-data#url) component has three tools available when **Tool Mode** is enabled.
 
 | Tool Name | Description |
 |-----------|-------------|
@@ -68,7 +68,7 @@ For example, the [URL](/components-data#url) component has three tools available
 | `URL-fetch_content_text` | Use this tool to fetch and extract clean, readable text content from a webpage. Only plain text content is returned. |
 | `URL-as_dataframe` | Use this tool to fetch structured data from a URL and convert it into a tabular format. Data is returned in a structured DataFrame table format. |
 
-The agent will have a clear idea of each tool's capabilities based on the `name` and `description` metadata. If you think the agent is using a tool incorrectly, edit the tool's metadata to help it understand the tool better.
+A connected agent will have a clear idea of each tool's capabilities based on the `name` and `description` metadata. If you think the agent is using a tool incorrectly, edit a tool's metadata to help it understand the tool better.
 
 Tool names and descriptions can be edited, but the default tool identifiers cannot be changed. If you want to change the tool identifier, create a custom component.
 
@@ -205,7 +205,7 @@ An agent can use flows that are saved in your workspace as tools with the [Run f
 2. Select the flow you want the agent to use as a tool.
 3. Enable **Tool Mode** in the component.
 4. Connect the tool output to the agent's tools input.
-5. To enable tool mode, in the **Run flow** component, click **Tool Mode**.
+5. To enable tool mode, select a **Flow** in the **Run flow** component, and then click **Tool Mode**.
 6. Ask the agent, `What tools are you using to answer my questions?`
 Your flow should be visible in the response as a tool.
 
