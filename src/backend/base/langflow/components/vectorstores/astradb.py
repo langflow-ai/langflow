@@ -289,23 +289,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         client = DataAPIClient(token=token)
 
         # Get the database object
-        database = client.get_database(api_endpoint=api_endpoint, token=token)
+        database = client.get_database(api_endpoint=api_endpoint)
 
-        # Build vectorize options, if needed
-        vectorize_options = None
-        if not dimension:
+        # If dimension is not provided, build vectorize options
+        if dimension is None:
             vectorize_options = CollectionVectorServiceOptions(
                 provider=embedding_generation_provider,
                 model_name=embedding_generation_model,
-                authentication=None,
-                parameters=None,
+            )
+            return database.create_collection(
+                name=new_collection_name,
+                service=vectorize_options,
             )
 
-        # Create the collection
+        # Create the collection with dimension
         return database.create_collection(
             name=new_collection_name,
             dimension=dimension,
-            service=vectorize_options,
         )
 
     @classmethod
