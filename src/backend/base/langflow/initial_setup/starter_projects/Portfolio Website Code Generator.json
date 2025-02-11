@@ -2483,7 +2483,7 @@
       "zoom": 0.3535361080667538
     }
   },
-  "description": "The Portfolio Website Generator is an Langflow-powered flow that automatically transforms resumes (PDF, TXT, or other document formats) into structured portfolio websites. This system extracts relevant information from a resume, formats it into a structured JSON format, and then generates a fully responsive and aesthetically pleasing HTML + CSS portfolio website using prompt-driven code generation.\n",
+  "description": "This template transforms PDF or TXT resume documents into structured JSON, generating a portfolio website HTML code from the structured data.",
   "endpoint_name": "portfolio_website",
   "gradient": "3",
   "icon": "file-user",
