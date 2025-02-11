@@ -370,16 +370,26 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         db_info_dict = {}
         for db in db_list:
             try:
-                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
-                db_info_dict[db.info.name] = {
-                    "api_endpoint": api_endpoint,
-                    "collections": len(
+                # Get the API endpoint for the database
+                api_endpoint =f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
+
+                # Get the number of collections
+                try:
+                    num_collections = len(
                         list(
                             client.get_database(
                                 api_endpoint=api_endpoint, token=token, keyspace=db.info.keyspace
                             ).list_collection_names(keyspace=db.info.keyspace)
                         )
-                    ),
+                    )
+                except Exception:  # noqa: BLE001
+                    num_collections = 0
+
+                # Add the database to the dictionary
+                db_info_dict[db.info.name] = {
+                    "api_endpoint": api_endpoint,
+                    "collections": num_collections,
+                    "status": db.status,
                 }
             except Exception:  # noqa: BLE001, S110
                 pass
@@ -470,6 +480,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return [
                 {
                     "name": name,
+                    "status": info["status"],
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                 }
@@ -480,6 +491,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
+        # Nothing to generate if we don't have an API endpoint yet
+        if not api_endpoint or not self.api_endpoint:
+            return []
+
         # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
 
@@ -572,7 +587,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 field_value["new_database_name"]
             ]
             build_config["database_name"]["options_metadata"] = build_config["database_name"]["options_metadata"] + [
-                {"status": "initializing"}
+                {"status": "PENDING"}
             ]
             build_config["api_endpoint"]["value"] = None
 
@@ -650,16 +665,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Refresh the collection name options
         if field_name == "database_name":
             # If missing, refresh the database options
-            if not build_config["database_name"]["options"] or not field_value:
-                return self.update_build_config(build_config, field_value=self.token, field_name="token")
+            build_config = await self.update_build_config(build_config, field_value=self.token, field_name="token")
 
             # Set the underlying api endpoint value of the database
             if field_value in build_config["database_name"]["options"]:
                 index_of_name = build_config["database_name"]["options"].index(field_value)
 
                 # Initializing database condition
-                initializing = "status" in build_config["database_name"]["options_metadata"][index_of_name]
-                if initializing:
+                pending = build_config["database_name"]["options_metadata"][index_of_name]["status"] == "PENDING"
+                if pending:
                     return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
                 # Update the API endpoint if we can find it
