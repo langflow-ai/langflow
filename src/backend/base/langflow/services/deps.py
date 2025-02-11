@@ -246,4 +246,4 @@ def get_queue_service() -> JobQueueService:
     """Retrieves the QueueService instance from the service manager."""
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
-    return get_service(ServiceType.JOBQUEUE_SERVICE, JobQueueServiceFactory())
+    return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
