@@ -8,9 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { InputFieldType } from "@/types/api";
+import { APIClassType, InputFieldType } from "@/types/api";
 import { useState } from "react";
 
 interface NodeDialogProps {
@@ -19,9 +22,9 @@ interface NodeDialogProps {
   dialogInputs: any;
   nodeId: string;
   name: string;
+  nodeClass: APIClassType;
 }
 
-// Add back the ValueObject interface
 interface ValueObject {
   value: string;
 }
@@ -32,11 +35,11 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   dialogInputs,
   nodeId,
   name,
+  nodeClass,
 }) => {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
 
-  // Destructure to avoid deep optional chaining
   const { fields, functionality } = dialogInputs || {};
   const nodeData = fields?.data?.node;
   const template = nodeData?.template || {};
@@ -44,6 +47,13 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   const [payloadValues, setPayloadValues] = useState<Record<string, string>>(
     {},
   );
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const postTemplateValue = usePostTemplateValue({
+    parameterId: name,
+    nodeId: nodeId,
+    node: nodeClass,
+  });
 
   /**
    * Updates the value for a given field in the node template.
@@ -53,7 +63,6 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     const targetNode = nodes.find((node) => node.id === nodeId);
     if (!targetNode || !name) return;
 
-    // Update the value in the node's template
     targetNode.data.node.template[name].dialog_inputs.fields.data.node.template[
       fieldKey
     ].value = newValue;
@@ -78,13 +87,28 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     onClose();
   };
 
+  const setNodeClass = (newNode: APIClassType) => {
+    const targetNode = nodes.find((node) => node.id === nodeId);
+    if (!targetNode) return;
+
+    targetNode.data.node = newNode;
+    setNode(nodeId, targetNode);
+  };
+
   /**
    * Handles sending the payload state using mutateTemplate.
    */
   const handleSendPayload = () => {
-    console.log(payloadValues);
-
-    handleCloseDialog();
+    mutateTemplate(
+      payloadValues,
+      nodeClass,
+      setNodeClass,
+      postTemplateValue,
+      setErrorData,
+      name,
+      handleCloseDialog,
+      nodeClass.tool_mode,
+    );
   };
 
   return (

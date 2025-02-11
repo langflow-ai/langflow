@@ -42,8 +42,6 @@ export default function Dropdown({
   dialogInputs,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
-  const nodeId = baseInputProps?.nodeId;
-
   const placeholderName = name
     ? formatPlaceholderName(name)
     : "Choose an option...";
@@ -71,11 +69,11 @@ export default function Dropdown({
     setCustomValue(value);
   };
 
-  const { nodeClass, handleNodeClass } = baseInputProps;
+  const { nodeClass, nodeId, handleNodeClass } = baseInputProps;
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: name || "",
-    nodeId: id,
+    nodeId: nodeId || "",
     node: nodeClass!,
   });
 
@@ -226,6 +224,7 @@ export default function Dropdown({
         onClose={() => setOpenDialog(false)}
         nodeId={nodeId!}
         name={name!}
+        nodeClass={nodeClass!}
       />
     </CommandGroup>
   );
