@@ -67,7 +67,7 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         db.add(table)
         await db.exec(delete_older)
         await db.commit()
-        logger.debug(f"Logged transaction: {table.id}")
+
     except Exception:
         await db.rollback()
         raise

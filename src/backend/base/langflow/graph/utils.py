@@ -135,7 +135,9 @@ async def log_transaction(
             flow_id=flow_id if isinstance(flow_id, UUID) else UUID(flow_id),
         )
         async with session_getter(get_db_service()) as session:
-            await crud_log_transaction(session, transaction)
+            table = await crud_log_transaction(session, transaction)
+            if table:
+                logger.debug(f"Logged transaction: {table.id}")
 
     except Exception:  # noqa: BLE001
         logger.exception("Error logging transaction")
