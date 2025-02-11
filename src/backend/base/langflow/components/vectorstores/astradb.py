@@ -418,25 +418,24 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return db.get("api_endpoint")
 
     def get_api_endpoint(self):
-        return self.get_api_endpoint_static(
-            token=self.token,
-            environment=self.environment,
-            api_endpoint=self.api_endpoint,
-            database_name=self.database_name,
-        )
+        if self._api_endpoint is None:
+            self._api_endpoint = self.get_api_endpoint_static(
+                token=self.token,
+                environment=self.environment,
+                api_endpoint=self.api_endpoint,
+                database_name=self.database_name,
+            )
+        return self._api_endpoint
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        if self._keyspace is None:
+            keyspace = self.keyspace
+            self._keyspace = keyspace.strip() if keyspace else None
+        return self._keyspace
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
-
             return client.get_database(
                 api_endpoint=api_endpoint or self.get_api_endpoint(),
                 token=self.token,
