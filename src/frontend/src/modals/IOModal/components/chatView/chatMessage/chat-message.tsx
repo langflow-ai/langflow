@@ -313,8 +313,10 @@ export default function ChatMessage({
                 contentBlocks={chat.content_blocks}
                 isLoading={
                   chatMessage === "" &&
+                  lockChat &&
+                  chat.properties?.state === "partial" &&
                   isBuilding &&
-                  chat.properties?.state === "partial"
+                  lastMessage
                 }
                 state={chat.properties?.state}
                 chatId={chat.id}
