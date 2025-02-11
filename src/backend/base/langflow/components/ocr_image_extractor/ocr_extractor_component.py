@@ -6,6 +6,7 @@ from PIL import Image
 
 from langflow.custom import Component
 from langflow.io import DataInput, Output
+from langflow.schema.message import Message
 
 
 class ImageDataExtractor(Component):
