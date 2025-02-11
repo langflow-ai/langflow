@@ -81,6 +81,7 @@ dependencies = [
     "mcp>=1.1.2",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
+    "langchain-voyageai==0.1.4",
 ]
 
 
