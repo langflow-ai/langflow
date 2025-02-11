@@ -129,6 +129,8 @@ def get_text():
 
 
 async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
+    if not flow_id:
+        return
     stmt = select(TransactionTable).where(TransactionTable.flow_id == flow_id)
     transactions = await db.exec(stmt)
     for transaction in transactions:
@@ -141,8 +143,14 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
     for flow_id in flow_ids:
         if not flow_id:
             continue
-        await delete_vertex_builds_by_flow_id(session, flow_id)
-        await delete_transactions_by_flow_id(session, flow_id)
+        try:
+            await delete_vertex_builds_by_flow_id(session, flow_id)
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error deleting vertex builds for flow {flow_id}: {e}")
+        try:
+            await delete_transactions_by_flow_id(session, flow_id)
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error deleting transactions for flow {flow_id}: {e}")
 
 
 @pytest.fixture
