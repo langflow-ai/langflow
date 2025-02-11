@@ -44,12 +44,6 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
             value=True,
         ),
         BoolInput(
-            name="extract_images",
-            display_name="Extract images?",
-            info="Extract images or not",
-            value=False,
-        ),
-        BoolInput(
             name="extract_charts",
             display_name="Extract charts?",
             info="Extract charts or not",
@@ -140,7 +134,7 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
                 extract_text=self.extract_text,
                 extract_tables=self.extract_tables,
                 extract_charts=self.extract_charts,
-                extract_images=self.extract_images,
+                extract_images=False,
                 text_depth=self.text_depth,
             )
         )
@@ -174,6 +168,7 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
                             description=element["metadata"]["content_metadata"]["description"],
                         )
                     )
+                # both charts and tables are returned as "structured" document type, with extracted text in "table_content"
                 elif element["document_type"] == "structured":
                     data.append(
                         Data(
@@ -183,7 +178,6 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
                             description=element["metadata"]["content_metadata"]["description"],
                         )
                     )
-                # TODO: handle images
 
         self.status = data if data else "No data"
         return data or Data()
