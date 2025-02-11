@@ -384,6 +384,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     )
                 except Exception:  # noqa: BLE001
                     num_collections = 0
+                    if db.status != "PENDING":
+                        continue
 
                 # Add the database to the dictionary
                 db_info_dict[db.info.name] = {
@@ -492,7 +494,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Nothing to generate if we don't have an API endpoint yet
-        if not api_endpoint or not self.api_endpoint:
+        api_endpoint = api_endpoint or self.get_api_endpoint()
+        if not api_endpoint:
             return []
 
         # Retrieve the database object
@@ -665,10 +668,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Refresh the collection name options
         if field_name == "database_name":
             # If missing, refresh the database options
-            build_config = await self.update_build_config(build_config, field_value=self.token, field_name="token")
-
-            # Set the underlying api endpoint value of the database
-            if field_value in build_config["database_name"]["options"]:
+            if field_value not in build_config["database_name"]["options"]:
+                build_config = await self.update_build_config(build_config, field_value=self.token, field_name="token")
+                build_config["database_name"]["value"] = ""
+            else:
+                # Find the position of the selected database to align with metadata
                 index_of_name = build_config["database_name"]["options"].index(field_value)
 
                 # Initializing database condition
@@ -676,13 +680,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 if pending:
                     return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
-                # Update the API endpoint if we can find it
-                if "api_endpoint" in build_config["database_name"]["options_metadata"][index_of_name]:
-                    build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][
-                        index_of_name
-                    ]["api_endpoint"]
-            else:
-                build_config["database_name"]["value"] = ""
+                # Set the API endpoint based on the selected database
+                build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][
+                    index_of_name
+                ]["api_endpoint"]
 
             # Reset the list of collections we have based on the token provided
             return self.reset_collection_list(build_config)
