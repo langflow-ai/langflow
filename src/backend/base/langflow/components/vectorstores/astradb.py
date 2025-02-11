@@ -95,12 +95,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 info="Provider to use for generating embeddings.",
                                 real_time_refresh=True,
                                 required=True,
+                                options=["Bring your own", "Nvidia"],
                             ),
                             "embedding_generation_model": DropdownInput(
                                 name="embedding_generation_model",
                                 display_name="Embedding Generation Model",
                                 info="Model to use for generating embeddings.",
                                 required=True,
+                                options=["Bring your own", "NV-Embed-QA"],
+                            ),
+                            "dimension": IntInput(
+                                name="dimension",
+                                display_name="Dimension (Required for Bring your own)",
+                                info="Dimension of the embeddings to generate.",
+                                required=False,
+                                value=1024,
                             ),
                         },
                     },
@@ -256,15 +265,41 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         }
 
     @classmethod
+    def get_vectorize_providers(cls, token: str, environment: str | None = None, api_endpoint: str | None = None):
+        try:
+            # Get the admin object
+            admin = AstraDBAdmin(token=token, environment=environment)
+            db_admin = admin.get_database_admin(api_endpoint=api_endpoint)
+
+            # Get the list of embedding providers
+            embedding_providers = db_admin.find_embedding_providers().as_dict()
+
+            vectorize_providers_mapping = {}
+            # Map the provider display name to the provider key and models
+            for provider_key, provider_data in embedding_providers["embeddingProviders"].items():
+                display_name = provider_data["displayName"]
+                models = [model["name"] for model in provider_data["models"]]
+
+                # Ref: https://astra.datastax.com/api/v2/graphql
+                vectorize_providers_mapping[display_name] = [provider_key, models]
+
+            # Sort the resulting dictionary
+            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))
+        except Exception as e:
+            msg = f"Error fetching vectorize providers: {e}"
+            raise ValueError(msg) from e
+
+    @classmethod
     async def create_database_api(
         cls,
-        token: str,
-        keyspace: str,
         new_database_name: str,
-        cloud_provider: str,
-        region: str,
+        token: str,
+        environment: str | None = None,
+        keyspace: str | None = None,
+        cloud_provider: str | None = None,
+        region: str | None = None,
     ):
-        client = DataAPIClient(token=token)
+        client = DataAPIClient(token=token, environment=environment)
 
         # Get the admin object
         admin_client = client.get_admin(token=token)
@@ -281,10 +316,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     @classmethod
     def create_collection_api(
         cls,
-        token: str,
-        keyspace: str,
-        api_endpoint: str,
         new_collection_name: str,
+        token: str,
+        api_endpoint: str,
+        environment: str | None = None,
+        keyspace: str | None = None,
         dimension: int | None = None,
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
@@ -299,7 +335,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         vectorize_options = None
         if not dimension:
             vectorize_options = CollectionVectorServiceOptions(
-                provider=embedding_generation_provider,
+                provider=cls.get_vectorize_providers(
+                    token=token, environment=environment, api_endpoint=api_endpoint
+                ).get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
                 authentication=None,
                 parameters=None,
@@ -427,33 +465,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return None
 
-    def get_vectorize_providers(self):
-        try:
-            self.log("Dynamically updating list of Vectorize providers.")
-
-            # Get the admin object
-            admin = AstraDBAdmin(token=self.token)
-            db_admin = admin.get_database_admin(api_endpoint=self.get_api_endpoint())
-
-            # Get the list of embedding providers
-            embedding_providers = db_admin.find_embedding_providers().as_dict()
-
-            vectorize_providers_mapping = {}
-            # Map the provider display name to the provider key and models
-            for provider_key, provider_data in embedding_providers["embeddingProviders"].items():
-                display_name = provider_data["displayName"]
-                models = [model["name"] for model in provider_data["models"]]
-
-                # Ref: https://astra.datastax.com/api/v2/graphql
-                vectorize_providers_mapping[display_name] = [provider_key, models]
-
-            # Sort the resulting dictionary
-            return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))
-        except Exception as e:  # noqa: BLE001
-            self.log(f"Error fetching Vectorize providers: {e}")
-
-            return {}
-
     def _initialize_database_options(self):
         try:
             return [
@@ -544,9 +555,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if field_name == "database_name" and isinstance(field_value, dict):
             try:
                 await self.create_database_api(
+                    new_database_name=field_value["new_database_name"],
                     token=self.token,
                     keyspace=self.get_keyspace(),
-                    new_database_name=field_value["new_database_name"],
+                    environment=self.environment,
                     cloud_provider=field_value["cloud_provider"],
                     region=field_value["region"],
                 )
@@ -568,19 +580,47 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return build_config
 
         # Callback for the creation of collections
-        if field_name == "create_collection":
+        if field_name == "collection_name" and isinstance(field_value, dict):
             try:
+                # Get the dimension if its a BYO provider
+                dimension = (
+                    field_value["dimension"]
+                    if field_value["embedding_generation_provider"] == "Bring your own"
+                    else None
+                )
+
+                # Create the collection
                 self.create_collection_api(
+                    new_collection_name=field_value["new_collection_name"],
                     token=self.token,
-                    keyspace=self.get_keyspace(),
                     api_endpoint=build_config["api_endpoint"]["value"],
-                    new_collection_name=build_config["new_collection_name"]["value"],
-                    embedding_generation_provider=build_config["embedding_generation_provider"]["value"],
-                    embedding_generation_model=build_config["embedding_generation_model"]["value"],
+                    environment=self.environment,
+                    keyspace=self.get_keyspace(),
+                    dimension=dimension,
+                    embedding_generation_provider=field_value["embedding_generation_provider"],
+                    embedding_generation_model=field_value["embedding_generation_model"],
                 )
             except Exception as e:
                 msg = f"Error creating collection: {e}"
                 raise ValueError(msg) from e
+
+            # Add the new collection to the list of options
+            build_config["collection_name"]["value"] = build_config["new_collection_name"]["value"]
+            build_config["collection_name"]["options"] = (
+                build_config["collection_name"]["options"] + [build_config["new_collection_name"]["value"]]
+            )
+
+            # Get the provider and model for the new collection
+            generation_provider = build_config["embedding_generation_provider"]["value"]
+            provider = generation_provider if generation_provider != "Bring your own" else None
+            generation_model = build_config["embedding_generation_model"]["value"]
+            model = generation_model if generation_model else None
+
+            # Add the new collection to the list of options
+            build_config["collection_name"]["options_metadata"] = (
+                build_config["collection_name"]["options_metadata"]
+                + [{"records": 0, "provider": provider, "icon": "", "model": model}]
+            )
 
             return self.reset_collection_list(build_config)
 
@@ -639,7 +679,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
             # For the final step, get the list of vectorize providers
-            vectorize_providers = self.get_vectorize_providers()
+            vectorize_providers = self.get_vectorize_providers(
+                token=self.token,
+                environment=self.environment,
+                api_endpoint=build_config["api_endpoint"]["value"],
+            )
             if not vectorize_providers:
                 return build_config
 
