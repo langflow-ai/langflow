@@ -34,7 +34,7 @@ from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.database.models.flow import Flow
 from langflow.services.deps import get_chat_service, get_telemetry_service, session_scope
-from langflow.services.queue.service import QueueService
+from langflow.services.job_queue.service import JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 
@@ -49,7 +49,7 @@ async def start_flow_build(
     start_component_id: str | None,
     log_builds: bool,
     current_user: CurrentActiveUser,
-    queue_service: QueueService,
+    queue_service: JobQueueService,
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
@@ -80,7 +80,7 @@ async def start_flow_build(
 async def get_flow_events_response(
     *,
     job_id: str,
-    queue_service: QueueService,
+    queue_service: JobQueueService,
     stream: bool = True,
 ):
     """Get events for a specific build job, either as a stream or single event."""

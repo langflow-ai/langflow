@@ -45,7 +45,7 @@ from langflow.services.deps import (
     get_telemetry_service,
     session_scope,
 )
-from langflow.services.queue.service import QueueService
+from langflow.services.job_queue.service import JobQueueService
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -137,7 +137,7 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool = True,
     current_user: CurrentActiveUser,
-    queue_service: Annotated[QueueService, Depends(get_queue_service)],
+    queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
 ):
     """Build and process a flow, returning a job ID for event polling."""
     # First verify the flow exists
@@ -164,7 +164,7 @@ async def build_flow(
 @router.get("/build/{job_id}/events")
 async def get_build_events(
     job_id: str,
-    queue_service: Annotated[QueueService, Depends(get_queue_service)],
+    queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     *,
     stream: bool = True,
 ):

@@ -9,8 +9,17 @@ from langflow.events.event_manager import EventManager, create_default_event_man
 from langflow.services.base import Service
 
 
-class QueueService(Service):
-    name = "queue_service"
+class JobQueueService(Service):
+    """JobQueueService is an asynchronous service for managing job-specific queues.
+
+    This service allows you to create dedicated queues for individual jobs,
+    associate each queue with an event manager, and run asynchronous tasks
+    associated with those jobs. It provides functionality to start tasks,
+    retrieve queue data, and perform both manual and periodic cleanup of queues
+    by cancelling ongoing tasks and clearing finished or cancelled jobs.
+    """
+
+    name = "job_queue_service"
 
     def __init__(self) -> None:
         self._queues: dict[str, tuple[asyncio.Queue, EventManager, asyncio.Task | None]] = {}

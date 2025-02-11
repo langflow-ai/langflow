@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
-    from langflow.services.queue.service import QueueService
+    from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
@@ -242,8 +242,8 @@ def get_store_service() -> StoreService:
     return get_service(ServiceType.STORE_SERVICE)
 
 
-def get_queue_service() -> QueueService:
+def get_queue_service() -> JobQueueService:
     """Retrieves the QueueService instance from the service manager."""
-    from langflow.services.queue.factory import QueueServiceFactory
+    from langflow.services.job_queue.factory import JobQueueServiceFactory
 
-    return get_service(ServiceType.QUEUE_SERVICE, QueueServiceFactory())
+    return get_service(ServiceType.JOBQUEUE_SERVICE, JobQueueServiceFactory())
