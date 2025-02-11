@@ -30,7 +30,8 @@ class ImageDataExtractor(Component):
     def extract_text(self) -> Message:
         """Decodes Base64 image and extracts text using OCR (Tesseract)."""
         if not self.base64_input:
-            raise ValueError("No Base64 input provided.")
+            error_message = "No Base64 input provided. Please provide a valid Base64-encoded image."
+            raise ValueError(error_message)
 
         try:
             # Extract the actual Base64 string from Data object
@@ -47,5 +48,6 @@ class ImageDataExtractor(Component):
             return Message(value=extracted_text.strip())
 
         except Exception as e:
-            self.log(f"Error extracting text: {e}")
-            raise
+            error_message = f"Error extracting text: {e}"
+            self.log(error_message)
+            raise RuntimeError(error_message)
