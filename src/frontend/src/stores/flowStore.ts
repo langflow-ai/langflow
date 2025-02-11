@@ -597,6 +597,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent,
     setLockChat,
     session,
+    stream = true,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -605,6 +606,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     silent?: boolean;
     setLockChat?: (lock: boolean) => void;
     session?: string;
+    stream?: boolean;
   }) => {
     get().setIsBuilding(true);
     get().setLockChat(true);
@@ -805,6 +807,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: get().nodes || undefined,
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
+      stream,
     });
     get().setIsBuilding(false);
     get().setLockChat(false);

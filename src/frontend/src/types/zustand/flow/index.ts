@@ -147,6 +147,7 @@ export type FlowStoreType = {
     silent,
     setLockChat,
     session,
+    stream,
   }: {
     setLockChat?: (lock: boolean) => void;
     startNodeId?: string;
@@ -155,6 +156,7 @@ export type FlowStoreType = {
     files?: string[];
     silent?: boolean;
     session?: string;
+    stream?: boolean;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (

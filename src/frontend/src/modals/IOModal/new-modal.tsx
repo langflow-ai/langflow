@@ -1,4 +1,4 @@
-import { Separator } from "@/components/ui/separator";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
@@ -16,7 +16,6 @@ import { IOModalPropsType } from "../../types/components";
 import { cn } from "../../utils/utils";
 import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
-import ChatView from "./components/chatView/chat-view";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
 
@@ -137,6 +136,11 @@ export default function IOModal({
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
+  const eventDelivery = useGetConfig((state) => state.data?.event_delivery);
+
+  function shouldStreamEvents() {
+    return eventDelivery === "streaming";
+  }
 
   const sendMessage = useCallback(
     async ({
@@ -158,6 +162,7 @@ export default function IOModal({
           silent: true,
           session: sessionId,
           setLockChat,
+          stream: shouldStreamEvents(),
         }).catch((err) => {
           console.error(err);
           setLockChat(false);

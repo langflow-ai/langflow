@@ -1,6 +1,5 @@
 import { BASE_URL_API } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
-import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { Edge, Node } from "@xyflow/react";
 import { AxiosError } from "axios";
@@ -125,17 +124,12 @@ export async function updateVerticesOrder(
   });
 }
 
-const shouldUsePolling = () => {
-  // Get from useGetConfig store
-  return useGetConfig().data?.event_delivery === "polling";
-};
-
 export async function buildFlowVerticesWithFallback(
   params: BuildVerticesParams,
 ) {
   try {
     // Use shouldUsePolling() to determine stream mode
-    return await buildFlowVertices({ ...params, stream: !shouldUsePolling() });
+    return await buildFlowVertices({ ...params });
   } catch (e: any) {
     if (
       e.message === "Endpoint not available" ||
@@ -182,7 +176,6 @@ async function pollBuildEvents(
     }
 
     const data = await response.json();
-    console.log("Polling build events", data);
     if (!data.event) {
       // No event in this request, try again
       await new Promise((resolve) => setTimeout(resolve, 100));
