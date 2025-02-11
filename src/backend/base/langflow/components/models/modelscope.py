@@ -1,5 +1,6 @@
 import operator
 from functools import reduce
+from typing import Any
 
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
@@ -21,6 +22,7 @@ MODELSCOPE_MODEL_NAMES = [
     "Qwen/Qwen2.5-72B-Instruct",
     "Qwen/Qwen2.5-14B-Instruct",
     "Qwen/Qwen2.5-7B-Instruct",
+    "custom",
 ]
 
 
@@ -66,6 +68,15 @@ class ModelScopeModelComponent(LCModelComponent):
             options=MODELSCOPE_MODEL_NAMES,
             value=MODELSCOPE_MODEL_NAMES[0],
             required=True,
+            real_time_refresh=True,
+        ),
+        StrInput(
+            name="custom_model",
+            display_name="Custom Model Name",
+            info="Enter a custom model name from ModelScope",
+            value="",
+            show=False,
+            required=True,
         ),
         StrInput(
             name="openai_api_base",
@@ -108,7 +119,7 @@ class ModelScopeModelComponent(LCModelComponent):
         output_schema_dict: dict[str, str] = reduce(operator.ior, self.output_schema or {}, {})
         openai_api_key = self.api_key
         temperature = self.temperature
-        model_name: str = self.model_name
+        model_name: str = self.custom_model if self.model_name == "custom" else self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
         openai_api_base = self.openai_api_base or "https://api-inference.modelscope.cn/v1"
@@ -149,3 +160,19 @@ class ModelScopeModelComponent(LCModelComponent):
             if message:
                 return message
         return None
+
+    async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        """Update build configuration based on field updates."""
+        try:
+            if field_name is None or field_name == "model_name":
+                # If model_name is custom, show custom model field
+                if field_value == "custom":
+                    build_config["custom_model"]["show"] = True
+                    build_config["custom_model"]["required"] = True
+                else:
+                    build_config["custom_model"]["show"] = False
+                    build_config["custom_model"]["value"] = ""
+
+        except (KeyError, AttributeError) as e:
+            self.log(f"Error updating build config: {e!s}")
+        return build_config
