@@ -3818,7 +3818,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.1.4.post1"
+version = "1.1.5"
 source = { editable = "." }
 dependencies = [
     { name = "ag2" },
@@ -3935,7 +3935,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
@@ -4081,7 +4081,7 @@ requires-dist = [
     { name = "zep-python", specifier = "==2.0.2" },
 ]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.8,<1.6" },
@@ -4124,7 +4124,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.1.4.post1"
+version = "0.1.5"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -4246,7 +4246,7 @@ local = [
     { name = "sentence-transformers" },
 ]
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
     { name = "pytest-codspeed" },
@@ -4365,7 +4365,7 @@ requires-dist = [
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
 ]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "pytest-codspeed", specifier = ">=3.0.0" },
