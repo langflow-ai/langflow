@@ -1,12 +1,11 @@
 import base64
 from io import BytesIO
-from PIL import Image
+
 import pytesseract
-from pathlib import Path
+from PIL import Image
 
 from langflow.custom import Component
 from langflow.io import DataInput, Output
-from langflow.schema import Data
 
 
 class ImageDataExtractor(Component):
@@ -25,9 +24,7 @@ class ImageDataExtractor(Component):
         )
     ]
 
-    outputs = [
-        Output(display_name="Extracted Text", name="extracted_text", method="extract_text")
-    ]
+    outputs = [Output(display_name="Extracted Text", name="extracted_text", method="extract_text")]
 
     def extract_text(self) -> Message:
         """Decodes Base64 image and extracts text using OCR (Tesseract)."""
