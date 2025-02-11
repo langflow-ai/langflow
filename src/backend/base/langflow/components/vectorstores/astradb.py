@@ -293,11 +293,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     async def create_database_api(
         cls,
         new_database_name: str,
+        cloud_provider: str,
+        region: str,
         token: str,
         environment: str | None = None,
         keyspace: str | None = None,
-        cloud_provider: str | None = None,
-        region: str | None = None,
     ):
         client = DataAPIClient(token=token, environment=environment)
 
