@@ -256,7 +256,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         }
 
     @classmethod
-    def create_database_api(
+    async def create_database_api(
         cls,
         token: str,
         keyspace: str,
@@ -270,9 +270,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         admin_client = client.get_admin(token=token)
 
         # Call the create database function
-        return admin_client.async_create_database(
+        return await admin_client.async_create_database(
             name=new_database_name,
-            cloud_provider=cloud_provider,
+            cloud_provider=cls.map_cloud_providers()[cloud_provider]["id"],
             region=region,
             keyspace=keyspace,
             wait_until_active=False,
@@ -370,9 +370,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If the database is not set, nothing we can do.
         if not database_name:
             return None
+        
+        # Grab the database object
+        db = cls.get_database_list_static(token=token, environment=environment).get(database_name)
+        if not db:
+            return None
 
         # Otherwise, get the URL from the database list
-        return cls.get_database_list_static(token=token, environment=environment).get(database_name).get("api_endpoint")
+        return db.get("api_endpoint")
 
     def get_api_endpoint(self):
         return self.get_api_endpoint_static(
@@ -533,22 +538,34 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return build_config
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # TODO: For initializing databases, show status as metadata
-        if field_name == "create_database":
+        # This implies it came from the create dialog
+        if field_name == "database_name" and isinstance(field_value, dict):
             try:
-                self.create_database_api(
+                await self.create_database_api(
                     token=self.token,
                     keyspace=self.get_keyspace(),
-                    new_database_name=build_config["new_database_name"]["value"],
-                    cloud_provider=build_config["cloud_provider"]["value"],
-                    region=build_config["region"]["value"],
+                    new_database_name=field_value["new_database_name"],
+                    cloud_provider=field_value["cloud_provider"],
+                    region=field_value["region"],
                 )
             except Exception as e:
                 msg = f"Error creating database: {e}"
                 raise ValueError(msg) from e
 
-            return self.reset_build_config(build_config)
+            # Add the new database to the list of options
+            build_config["database_name"]["value"] = field_value["new_database_name"]
+            build_config["database_name"]["options"] = (
+                build_config["database_name"]["options"] + [field_value["new_database_name"]]
+            )
+            build_config["database_name"]["options_metadata"] = (
+                build_config["database_name"]["options_metadata"]
+                + [{"status": "initializing"}]
+            )
+            build_config["api_endpoint"]["value"] = None
+
+            return build_config
 
         # Callback for the creation of collections
         if field_name == "create_collection":
@@ -594,16 +611,25 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Refresh the collection name options
         if field_name == "database_name":
+            # Find the index of this database name
+            index_of_name = build_config["database_name"]["options"].index(field_value)
+
+            # Initializing database condition
+            initializing = "status" in build_config["database_name"]["options_metadata"][index_of_name]
+
             # If missing, refresh the database options
-            if not build_config["database_name"]["options"] or not field_value:
+            if not build_config["database_name"]["options"] or not field_value or initializing:
                 return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
             # Set the underlying api endpoint value of the database
             if field_value in build_config["database_name"]["options"]:
                 index_of_name = build_config["database_name"]["options"].index(field_value)
-                build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][
-                    index_of_name
-                ]["api_endpoint"]
+
+                # Update the API endpoint if we can find it
+                if "api_endpoint" in build_config["database_name"]["options_metadata"][index_of_name]:
+                    build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][
+                        index_of_name
+                    ]["api_endpoint"]
             else:
                 build_config["database_name"]["value"] = ""
 
