@@ -92,7 +92,7 @@ jobs:
           if [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
             echo "Release build detected - setting suites to: $SUITES"
-            # grep pattern for release is the @release tag - run all tests
+            # Grep pattern for release is the @release tag - run all tests
             TEST_GREP="--grep=\"@release\""
           else
             # If input suites were not provided, determine based on changes
@@ -154,7 +154,7 @@ jobs:
               if [ ${#TAGS[@]} -gt 0 ]; then
                 # Join tags with | for OR logic
                 REGEX_PATTERN=$(IFS='|'; echo "${TAGS[*]}")
-                TEST_GREP="--grep \"${REGEX_PATTERN}\""
+                TEST_GREP="--grep=\"${REGEX_PATTERN}\""
               fi
             fi
           fi
@@ -185,16 +185,16 @@ jobs:
         run: |
           cd src/frontend
 
-          # Get the test count using playwright's built-in grep
+          # Get the test count using Playwright's built-in grep option
           if [ -n "${{ steps.set-matrix.outputs.test_grep }}" ]; then
-            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} ${{ steps.set-matrix.outputs.test_grep }} --list | wc -l)
+            TEST_COUNT=$(npx playwright test "${{ inputs.tests_folder }}" ${{ steps.set-matrix.outputs.test_grep }} --list | wc -l)
           else
-            TEST_COUNT=$(npx playwright test ${{ inputs.tests_folder }} --list | wc -l)
+            TEST_COUNT=$(npx playwright test "${{ inputs.tests_folder }}" --list | wc -l)
           fi
 
           echo "Total tests to run: $TEST_COUNT"
 
-          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 10
+          # Calculate optimal shard count - 1 shard per 5 tests, minimum 1, maximum 10
           SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
           if [ $SHARD_COUNT -lt 1 ]; then
             SHARD_COUNT=1
