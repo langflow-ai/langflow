@@ -371,7 +371,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for db in db_list:
             try:
                 # Get the API endpoint for the database
-                api_endpoint =f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
+                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
 
                 # Get the number of collections
                 try:
