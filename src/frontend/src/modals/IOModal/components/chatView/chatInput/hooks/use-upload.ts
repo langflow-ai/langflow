@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import { AxiosResponse } from "axios";
 import { useEffect } from "react";
 import ShortUniqueId from "short-unique-id";
@@ -16,12 +17,12 @@ const useUpload = (
   ) => Promise<AxiosResponse<UploadFileTypeAPI>>,
   currentFlowId: string,
   setFiles: any,
-  lockChat: boolean,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent): void => {
-      if (lockChat) {
+      if (isBuilding) {
         return;
       }
       const items = event.clipboardData?.items;
@@ -57,7 +58,7 @@ const useUpload = (
     return () => {
       document.removeEventListener("paste", handlePaste);
     };
-  }, [uploadFile, currentFlowId, lockChat]);
+  }, [uploadFile, currentFlowId, isBuilding]);
 
   return null;
 };

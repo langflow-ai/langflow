@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 
 const useFocusOnUnlock = (
-  lockChat: boolean,
+  isBuilding: boolean,
   inputRef: React.RefObject<HTMLInputElement>,
 ) => {
   useEffect(() => {
-    if (!lockChat && inputRef.current) {
+    if (!isBuilding && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [lockChat, inputRef]);
+  }, [isBuilding, inputRef]);
 
   return inputRef;
 };
