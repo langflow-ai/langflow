@@ -233,7 +233,7 @@ export const FilesPage = () => {
               )}
 
               <div className="flex h-full flex-col py-4">
-                {!files ? (
+                {!files || !Array.isArray(files) ? (
                   <div className="flex h-full w-full items-center justify-center">
                     <Loading />
                   </div>
