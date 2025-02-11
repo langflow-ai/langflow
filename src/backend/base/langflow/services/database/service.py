@@ -7,7 +7,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import anyio
 import sqlalchemy as sa
@@ -46,7 +46,7 @@ class DatabaseService(Service):
             raise ValueError(msg)
         self.database_url: str = settings_service.settings.database_url
         self._sanitize_database_url()
-        self.database_driver_async: str = settings_service.settings.database_driver_async
+        self.database_driver_async: Optional[str] = settings_service.settings.database_driver_async
 
         # This file is in langflow.services.database.manager.py
         # the ini is in langflow
