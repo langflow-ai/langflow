@@ -135,7 +135,6 @@ async def delete_transactions_by_flow_id(db: AsyncSession, flow_id: UUID):
     transactions = await db.exec(stmt)
     for transaction in transactions:
         await db.delete(transaction)
-    await db.commit()
 
 
 async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
@@ -435,12 +434,21 @@ async def active_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_session() as session:
-        user = await session.get(User, user.id, options=[selectinload(User.flows)])
-        await _delete_transactions_and_vertex_builds(session, user.flows)
-        await session.delete(user)
+    try:
+        async with db_manager.with_session() as session:
+            user = await session.get(User, user.id, options=[selectinload(User.flows)])
+            await _delete_transactions_and_vertex_builds(session, user.flows)
+            await session.commit()
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Error deleting transactions and vertex builds for user: {e}")
 
-        await session.commit()
+    try:
+        async with db_manager.with_session() as session:
+            user = await session.get(User, user.id)
+            await session.delete(user)
+            await session.commit()
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Error deleting user: {e}")
 
 
 @pytest.fixture
