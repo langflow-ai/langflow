@@ -53,7 +53,8 @@ async def start_flow_build(
 ) -> str:
     """Start the flow build process by setting up the queue and starting the build task.
 
-    Returns the job_id.
+    Returns:
+        the job_id.
     """
     job_id = str(uuid.uuid4())
     try:
