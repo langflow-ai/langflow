@@ -30,6 +30,7 @@ class Column(BaseModel):
     default: str | None = None
     disable_edit: bool = Field(default=False)
     edit_mode: EditMode | None = Field(default=EditMode.MODAL)
+    hidden: bool = Field(default=False)
 
     @model_validator(mode="after")
     def set_display_name(self):
