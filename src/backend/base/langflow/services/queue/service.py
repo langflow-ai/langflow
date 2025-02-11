@@ -27,8 +27,11 @@ class QueueService(Service):
         self._closed = True
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._cleanup_task
+            await asyncio.wait([self._cleanup_task])
+            if not self._cleanup_task.cancelled():
+                exc = self._cleanup_task.exception()
+                if exc is not None:
+                    raise exc
 
         # Cleanup all queues
         for job_id in list(self._queues.keys()):
