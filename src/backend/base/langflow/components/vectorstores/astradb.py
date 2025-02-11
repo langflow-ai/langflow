@@ -648,9 +648,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return build_config
 
         # Refresh the collection name options
-        if field_name == "database_name" and field_value:
+        if field_name == "database_name":
             # If missing, refresh the database options
-            if not build_config["database_name"]["options"]:
+            if not build_config["database_name"]["options"] or not field_value:
                 return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
             # Set the underlying api endpoint value of the database
