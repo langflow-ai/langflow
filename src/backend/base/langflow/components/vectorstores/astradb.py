@@ -35,7 +35,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             default_factory=lambda: {
                 "data": {
                     "node": {
-                        "name": "create_database",  # TODO: This should be the name of the function
+                        "name": "create_database",
                         "description": "Create a new database in Astra DB.",
                         "display_name": "Create New Database",
                         "field_order": ["new_database_name", "cloud_provider", "region"],
@@ -74,7 +74,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             default_factory=lambda: {
                 "data": {
                     "node": {
-                        "name": "create_collection",  # TODO: This should be the name of the function
+                        "name": "create_collection",
                         "description": "Create a new collection in Astra DB.",
                         "display_name": "Create New Collection",
                         "field_order": [
@@ -259,6 +259,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def create_database_api(
         cls,
         token: str,
+        keyspace: str,
         new_database_name: str,
         cloud_provider: str,
         region: str,
@@ -269,16 +270,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         admin_client = client.get_admin(token=token)
 
         # Call the create database function
-        return admin_client.create_database(
+        return admin_client.async_create_database(
             name=new_database_name,
             cloud_provider=cloud_provider,
             region=region,
+            keyspace=keyspace,
+            wait_until_active=False,
         )
 
     @classmethod
     def create_collection_api(
         cls,
         token: str,
+        keyspace: str,
         api_endpoint: str,
         new_collection_name: str,
         dimension: int | None = None,
@@ -304,6 +308,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Create the collection
         return database.create_collection(
             name=new_collection_name,
+            keyspace=keyspace,
             dimension=dimension,
             service=vectorize_options,
         )
@@ -434,7 +439,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 display_name = provider_data["displayName"]
                 models = [model["name"] for model in provider_data["models"]]
 
-                # TODO: https://astra.datastax.com/api/v2/graphql
+                # Ref: https://astra.datastax.com/api/v2/graphql
                 vectorize_providers_mapping[display_name] = [provider_key, models]
 
             # Sort the resulting dictionary
@@ -529,11 +534,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        # TODO: Callbacks for the creation of databases and collections
+        # TODO: For initializing databases, show status as metadata
         if field_name == "create_database":
             try:
                 self.create_database_api(
                     token=self.token,
+                    keyspace=self.get_keyspace(),
                     new_database_name=build_config["new_database_name"]["value"],
                     cloud_provider=build_config["cloud_provider"]["value"],
                     region=build_config["region"]["value"],
@@ -549,6 +555,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             try:
                 self.create_collection_api(
                     token=self.token,
+                    keyspace=self.get_keyspace(),
                     api_endpoint=build_config["api_endpoint"]["value"],
                     new_collection_name=build_config["new_collection_name"]["value"],
                     embedding_generation_provider=build_config["embedding_generation_provider"]["value"],
