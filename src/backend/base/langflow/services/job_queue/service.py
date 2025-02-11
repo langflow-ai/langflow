@@ -213,8 +213,6 @@ class JobQueueService(Service):
             # Delete the job entry from the registry.
             del self._queues[job_id]
             logger.info(f"Cleanup successful for job_id {job_id}: resources have been released.")
-        else:
-            logger.warning(f"Cleanup for job_id {job_id} deferred: task still running. Will retry in the next cycle.")
 
     async def _periodic_cleanup(self) -> None:
         """Execute a periodic task that cleans up completed or cancelled job queues.
@@ -234,7 +232,7 @@ class JobQueueService(Service):
                 logger.debug("Periodic cleanup task received cancellation signal.")
                 raise
             except Exception as exc:  # noqa: BLE001
-                logger.exception(f"Exception encountered during periodic cleanup: {exc}")
+                logger.error(f"Exception encountered during periodic cleanup: {exc}")
 
     async def _cleanup_old_queues(self) -> None:
         """Scan all registered job queues and clean up those with inactive tasks.
