@@ -1,10 +1,15 @@
 import { GRADIENT_CLASS } from "@/constants/constants";
-import { useRef, useState } from "react";
+import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
+import useAuthStore from "@/stores/authStore";
+import useFlowStore from "@/stores/flowStore";
+import { useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
-import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputProps, TextAreaComponentType } from "../../types";
+
+const BACKEND_URL = "BACKEND_URL";
+const URL_WEBHOOK = `${window.location.protocol}//${window.location.host}/api/v1/webhook/`;
 
 const inputClasses = {
   base: ({ isFocused }: { isFocused: boolean }) =>
@@ -17,23 +22,23 @@ const inputClasses = {
 
 const externalLinkIconClasses = {
   gradient: ({
-    disabled,
     editNode,
+    disabled,
   }: {
-    disabled: boolean;
     editNode: boolean;
+    disabled: boolean;
   }) =>
     disabled
-      ? ""
+      ? "gradient-fade-input-edit-node"
       : editNode
         ? "gradient-fade-input-edit-node"
         : "gradient-fade-input",
   background: ({
-    disabled,
     editNode,
+    disabled,
   }: {
-    disabled: boolean;
     editNode: boolean;
+    disabled: boolean;
   }) =>
     disabled
       ? ""
@@ -48,21 +53,28 @@ const externalLinkIconClasses = {
 
 export default function CopyFieldAreaComponent({
   value,
-  disabled,
   handleOnNewValue,
   editNode = false,
   id = "",
-  placeholder,
+  nodeInformationMetadata,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
+  const isValueToReplace = value === BACKEND_URL;
+
+  const valueToRender = useMemo(() => {
+    if (isValueToReplace) {
+      return isValueToReplace ? URL_WEBHOOK : value;
+    }
+    return value;
+  }, [value]);
+
   const getInputClassName = () => {
     return cn(
       inputClasses.base({ isFocused }),
       editNode ? inputClasses.editNode : inputClasses.normal({ isFocused }),
-      disabled && inputClasses.disabled,
       isFocused && "pr-10",
     );
   };
@@ -74,18 +86,18 @@ export default function CopyFieldAreaComponent({
   const handleCopy = (event?: React.MouseEvent<HTMLDivElement>) => {
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
-    navigator.clipboard.writeText(value);
+    navigator.clipboard.writeText(valueToRender);
     event?.stopPropagation();
   };
 
   const renderIcon = () => (
-    <div onClick={handleCopy}>
-      {!disabled && (
+    <>
+      {!isFocused && (
         <div
           className={cn(
             externalLinkIconClasses.gradient({
-              disabled,
               editNode,
+              disabled: nodeInformationMetadata?.nodeType === "webhook",
             }),
             editNode
               ? externalLinkIconClasses.editNodeTop
@@ -93,48 +105,42 @@ export default function CopyFieldAreaComponent({
           )}
           style={{
             pointerEvents: "none",
-            background: isFocused
-              ? undefined
-              : disabled
-                ? "bg-background"
-                : GRADIENT_CLASS,
+            background: isFocused ? undefined : GRADIENT_CLASS,
           }}
           aria-hidden="true"
         />
       )}
-
-      <IconComponent
-        dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
-        name={isCopied ? "Check" : "Copy"}
-        className={cn(
-          "cursor-pointer bg-background",
-          externalLinkIconClasses.icon,
-          editNode
-            ? externalLinkIconClasses.editNodeTop
-            : externalLinkIconClasses.iconTop,
-          disabled
-            ? "bg-muted text-placeholder-foreground"
-            : "bg-background text-foreground",
-        )}
-      />
-    </div>
+      <div onClick={handleCopy}>
+        <IconComponent
+          dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
+          name={isCopied ? "Check" : "Copy"}
+          className={cn(
+            "cursor-pointer bg-background",
+            externalLinkIconClasses.icon,
+            editNode
+              ? externalLinkIconClasses.editNodeTop
+              : externalLinkIconClasses.iconTop,
+            "bg-background text-foreground",
+          )}
+        />
+      </div>
+    </>
   );
 
   return (
-    <div className={cn("w-full", disabled && "pointer-events-none")}>
+    <div className={cn("w-full")}>
       <Input
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         id={id}
         data-testid={id}
-        value={disabled ? "" : value}
+        value={valueToRender}
         onChange={handleInputChange}
-        disabled={disabled}
         className={getInputClassName()}
-        placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? value : undefined}
+        aria-label={valueToRender}
         ref={inputRef}
         type="text"
+        readOnly={nodeInformationMetadata?.nodeType === "webhook"}
       />
       <div className="relative w-full">{renderIcon()}</div>
     </div>

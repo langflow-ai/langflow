@@ -18,9 +18,16 @@ class WebhookComponent(Component):
             advanced=True,
         ),
         MultilineInput(
+            name="curl",
+            display_name="cURL",
+            value="CURL_WEBHOOK",
+            advanced=True,
+            input_types=[],
+        ),
+        MultilineInput(
             name="endpoint",
             display_name="Endpoint",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            value="BACKEND_URL",
             advanced=False,
             copy_field=True,
             input_types=[],

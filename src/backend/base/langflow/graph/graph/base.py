@@ -13,6 +13,7 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
+from langflow.graph.utils import log_vertex_build
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
@@ -1596,6 +1597,16 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
+                
+                await log_vertex_build(
+                    flow_id=self.flow_id,
+                    vertex_id=result.vertex.id,
+                    valid=result.valid,
+                    params=result.params,
+                    data=result.result_dict,
+                    artifacts=result.artifacts,
+                )
+                
                 vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"

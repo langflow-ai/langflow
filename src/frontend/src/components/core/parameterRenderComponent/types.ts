@@ -17,6 +17,7 @@ export type BaseInputProps<valueType = any> = {
   isToolMode?: boolean;
   metadata?: any;
   nodeId?: string;
+  nodeInformationMetadata?: NodeInfoType;
 };
 
 // Generic type for composing input props
@@ -99,4 +100,12 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
+};
+
+export type NodeInfoType = {
+  flowId: string;
+  nodeType: string;
+  flowName: string;
+  endpointName: string;
+  isAuth: boolean;
 };

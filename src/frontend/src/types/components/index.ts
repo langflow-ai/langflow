@@ -643,6 +643,7 @@ export type textModalPropsType = {
   changeVisibility?: () => void;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  onCloseModal?: () => void;
 };
 
 export type newFlowModalPropsType = {
