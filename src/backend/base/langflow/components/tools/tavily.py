@@ -98,9 +98,7 @@ class TavilySearchComponent(Component):
                 "time_range": self.time_range,
             }
 
-            with httpx.Client() as client:
-                response = client.post(url, json=payload, headers=headers)
-
+            response = self.client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             search_results = response.json()
 
@@ -125,6 +123,7 @@ class TavilySearchComponent(Component):
 
             if self.include_images and search_results.get("images"):
                 data_results.append(Data(text="Images found", data={"images": search_results["images"]}))
+
         except httpx.HTTPStatusError as exc:
             error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
             logger.error(error_message)
@@ -146,3 +145,10 @@ class TavilySearchComponent(Component):
         result_string = data_to_text("{text}", data)
         self.status = result_string
         return Message(text=result_string)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.client = httpx.Client()
+
+    def __del__(self):
+        self.client.close()
