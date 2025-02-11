@@ -16,7 +16,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
-from langflow.utils.version import get_version_info
+from langflow.utils.version import VERSION_INFO
 
 
 class AstraDBVectorStoreComponent(LCVectorStoreComponent):
@@ -434,35 +434,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return None
 
     def get_database_object(self, api_endpoint: str | None = None):
-        try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-
-            return client.get_database(
-                api_endpoint=api_endpoint or self.get_api_endpoint(),
-                token=self.token,
-                keyspace=self.get_keyspace(),
-            )
-        except Exception as e:
-            msg = f"Error fetching database object: {e}"
-            raise ValueError(msg) from e
+        client = DataAPIClient(token=self.token, environment=self.environment)
+        return client.get_database(
+            api_endpoint=api_endpoint or self.get_api_endpoint(),
+            token=self.token,
+            keyspace=self.get_keyspace(),
+        )
 
     def collection_data(self, collection_name: str, database: Database | None = None):
+        database = database or self.get_database_object()
+
         try:
-            if not database:
-                client = DataAPIClient(token=self.token, environment=self.environment)
-
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
-
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
-
             return collection.estimated_document_count()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.log(f"Error checking collection data: {e}")
-
             return None
 
     def _initialize_database_options(self):
@@ -742,103 +728,60 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         try:
             from langchain_astradb import AstraDBVectorStore
         except ImportError as e:
-            msg = (
+            raise ImportError(
                 "Could not import langchain Astra DB integration package. "
                 "Please install it with `pip install langchain-astradb`."
-            )
-            raise ImportError(msg) from e
+            ) from e
 
-        # Get the embedding model and additional params
         embedding_params = (
             {"embedding": self.embedding_model}
             if self.embedding_model and self.embedding_choice == "Embedding Model"
             else {}
         )
-
-        # Get the additional parameters
         additional_params = self.astradb_vectorstore_kwargs or {}
+        __version__ = VERSION_INFO["version"]
 
-        # Get Langflow version and platform information
-        __version__ = get_version_info()["version"]
-        langflow_prefix = ""
-        # if os.getenv("AWS_EXECUTION_ENV") == "AWS_ECS_FARGATE":  # TODO: More precise way of detecting
-        #     langflow_prefix = "ds-"
-
-        # Get the database object
         database = self.get_database_object()
         autodetect = self.collection_name in database.list_collection_names() and self.autodetect_collection
 
-        # Bundle up the auto-detect parameters
         autodetect_params = {
             "autodetect_collection": autodetect,
-            "content_field": (
-                self.content_field
-                if self.content_field and embedding_params
-                else (
-                    "page_content"
-                    if embedding_params
-                    and self.collection_data(collection_name=self.collection_name, database=database) == 0
-                    else None
-                )
-            ),
+            "content_field": self.content_field or "page_content" if embedding_params else None,
             "ignore_invalid_documents": self.ignore_invalid_documents,
         }
 
-        # Attempt to build the Vector Store object
         try:
             vector_store = AstraDBVectorStore(
-                # Astra DB Authentication Parameters
                 token=self.token,
                 api_endpoint=database.api_endpoint,
                 namespace=database.keyspace,
                 collection_name=self.collection_name,
                 environment=self.environment,
-                # Astra DB Usage Tracking Parameters
-                ext_callers=[(f"{langflow_prefix}langflow", __version__)],
-                # Astra DB Vector Store Parameters
+                ext_callers=[("langflow", __version__)],
                 **autodetect_params,
                 **embedding_params,
                 **additional_params,
             )
         except Exception as e:
-            msg = f"Error initializing AstraDBVectorStore: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error initializing AstraDBVectorStore: {e}") from e
 
-        # Add documents to the vector store
         self._add_documents_to_vector_store(vector_store)
-
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store) -> None:
-        documents = []
-        for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
-            else:
-                msg = "Vector Store Inputs must be Data objects."
-                raise TypeError(msg)
-
-        if documents and self.deletion_field:
-            self.log(f"Deleting documents where {self.deletion_field}")
-            try:
-                database = self.get_database_object()
-                collection = database.get_collection(self.collection_name, keyspace=database.keyspace)
-                delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
-                self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
-                collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
-            except Exception as e:
-                msg = f"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}"
-                raise ValueError(msg) from e
-
-        if documents:
-            self.log(f"Adding {len(documents)} documents to the Vector Store.")
-            try:
-                vector_store.add_documents(documents)
-            except Exception as e:
-                msg = f"Error adding documents to AstraDBVectorStore: {e}"
-                raise ValueError(msg) from e
-        else:
+        documents = [inp.to_lc_document() for inp in self.ingest_data or [] if isinstance(inp, Data)]
+        if not documents:
             self.log("No documents to add to the Vector Store.")
+            return
+
+        if self.deletion_field:
+            self._delete_pre_existing_documents(documents)
+
+        self.log(f"Adding {len(documents)} documents to the Vector Store.")
+        try:
+            vector_store.add_documents(documents)
+        except Exception as e:
+            raise ValueError(f"Error adding documents to AstraDBVectorStore: {e}") from e
 
     def _map_search_type(self) -> str:
         search_type_mapping = {
@@ -913,3 +856,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def _delete_pre_existing_documents(self, documents):
+        self.log(f"Deleting documents where {self.deletion_field}")
+
+        try:
+            database = self.get_database_object()
+            collection = database.get_collection(self.collection_name, keyspace=database.keyspace)
+            delete_values = list({doc.metadata[self.deletion_field] for doc in documents})
+
+            self.log(f"Deleting documents where {self.deletion_field} matches {delete_values}.")
+            collection.delete_many({f"metadata.{self.deletion_field}": {"$in": delete_values}})
+        except Exception as e:
+            raise ValueError(
+                f"Error deleting documents from AstraDBVectorStore based on '{self.deletion_field}': {e}"
+            ) from e
