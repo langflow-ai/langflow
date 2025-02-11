@@ -467,13 +467,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_database_options(self):
         try:
+            db_list = self.get_database_list()
             return [
                 {
                     "name": name,
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in db_list.items()
             ]
         except Exception as e:
             msg = f"Error fetching database options: {e}"
@@ -519,17 +520,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def reset_database_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
         database_options = self._initialize_database_options()
+        database_names = []
+        options_metadata = []
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["database_name"]["options"] = [db["name"] for db in database_options]
-        build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        for db in database_options:
+            database_names.append(db["name"])
+            options_metadata.append(
+                {
+                    "collections": db["collections"],
+                    "api_endpoint": db["api_endpoint"],
+                }
+            )
 
-        # Reset the selected database
-        if build_config["database_name"]["value"] not in build_config["database_name"]["options"]:
+        build_config["database_name"]["options"] = database_names
+        build_config["database_name"]["options_metadata"] = options_metadata
+
+        if build_config["database_name"]["value"] not in database_names:
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
 
