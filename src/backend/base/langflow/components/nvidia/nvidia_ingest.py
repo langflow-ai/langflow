@@ -3,13 +3,11 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-from nv_ingest_client.client import NvIngestClient
-from nv_ingest_client.primitives import JobSpec
-from nv_ingest_client.primitives.tasks import ExtractTask, SplitTask
-from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE, extract_file_content
+from nv_ingest_client.client import Ingestor
+from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
 
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, IntInput, MessageTextInput, Output, StrInput
+from langflow.io import BoolInput, FileInput, IntInput, MessageTextInput, Output, StrInput, DropdownInput
 from langflow.schema import Data
 
 logger = logging.getLogger(__name__)
@@ -52,10 +50,24 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
             value=False,
         ),
         BoolInput(
+            name="extract_charts",
+            display_name="Extract charts?",
+            info="Extract charts or not",
+            value=False,
+        ),
+        BoolInput(
             name="extract_tables",
             display_name="Extract tables?",
             info="Extract tables or not",
             value=True,
+        ),
+        DropdownInput(
+            name="text_depth",
+            display_name="Text depth",
+            info="Level at which text is extracted (applies before splitting). Support for 'block', 'line', 'span' varies by document type.",
+            options=["document", "page", "block", "line", "span"],
+            value="document",  # Default value
+            advanced=True,
         ),
         BoolInput(
             name="split_text",
@@ -63,25 +75,40 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
             info="Split text into smaller chunks?",
             value=True,
         ),
+        DropdownInput(
+            name="split_by",
+            display_name="Split by",
+            info="How to split into chunks ('size' splits by number of characters)",
+            options=["page", "sentence", "word", "size"],
+            value="word",  # Default value
+            advanced=True,
+        ),
         IntInput(
-            name="chunk_overlap",
-            display_name="Chunk Overlap",
-            info="Number of characters to overlap between chunks.",
+            name="split_length",
+            display_name="Split Length",
+            info="The size of each chunk based on the 'split_by' method",
             value=200,
             advanced=True,
         ),
         IntInput(
-            name="chunk_size",
-            display_name="Chunk Size",
-            info="The maximum number of characters in each chunk.",
+            name="split_overlap",
+            display_name="Split Overlap",
+            info="Number of segments (as determined by the 'split_by' method) to overlap from previous chunk",
+            value=20,
+            advanced=True,
+        ),
+        IntInput(
+            name="max_character_length",
+            display_name="Max Character Length",
+            info="Maximum number of characters in each chunk",
             value=1000,
             advanced=True,
         ),
-        MessageTextInput(
-            name="separator",
-            display_name="Separator",
-            info="The character to split on. Defaults to newline.",
-            value="\n",
+        IntInput(
+            name="sentence_window_size",
+            display_name="Sentence Window Size",
+            info="Number of sentences to include from previous and following chunk (when split_by='sentence')",
+            value=0,
             advanced=True,
         ),
     ]
@@ -102,71 +129,61 @@ transforming, and storing large-scale datasets, enabling seamless integration wi
             err_msg = f"Unsupported file type: {extension}"
             raise ValueError(err_msg)
 
-        file_content, file_type = extract_file_content(resolved_path)
+        parsed_url = urlparse(self.base_url)
+        message = f"creating Ingestor for host: {parsed_url.hostname}, port: {parsed_url.port}"
+        self.log(message, name="NVIDIAIngestComponent")
 
-        job_spec = JobSpec(
-            document_type=file_type,
-            payload=file_content,
-            source_id=self.path,
-            source_name=self.path,
-            extended_options={"tracing_options": {"trace": True, "ts_send": time.time_ns()}},
+        ingestor = (
+            Ingestor(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
+            .files(resolved_path)
+            .extract(
+                extract_text=self.extract_text,
+                extract_tables=self.extract_tables,
+                extract_charts=self.extract_charts,
+                extract_images=self.extract_images,
+                text_depth=self.text_depth,
+            )
         )
-
-        extract_task = ExtractTask(
-            document_type=file_type,
-            extract_text=self.extract_text,
-            extract_images=self.extract_images,
-            extract_tables=self.extract_tables,
-        )
-
-        job_spec.add_task(extract_task)
 
         if self.split_text:
-            split_task = SplitTask(
-                split_by="word",
-                split_length=self.chunk_size,
-                split_overlap=self.chunk_overlap,
-                max_character_length=self.chunk_size,
-                sentence_window_size=0,
+            ingestor = ingestor.split(
+                split_by=self.split_by,
+                split_length=self.split_length,
+                split_overlap=self.split_overlap,
+                max_character_length=self.max_character_length,
+                sentence_window_size=self.sentence_window_size,
             )
-            job_spec.add_task(split_task)
 
-        parsed_url = urlparse(self.base_url)
-        message = f"creating NvIngestClient for host: {parsed_url.hostname}, port: {parsed_url.port}"
-        self.log(message, name="NVIDIAIngestComponent")
-        client = NvIngestClient(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
-
-        job_id = client.add_job(job_spec)
-
-        client.submit_job(job_id, "morpheus_task_queue")
-
-        result = client.fetch_job_result(job_id, timeout=60)
+        result = ingestor.ingest()
         result_str = str(result)
         msg = f"results: {result_str}"
         self.log(msg, name="NVIDIAIngestComponent")
 
         data = []
 
-        for element in result[0]:
-            if element["document_type"] == "text":
-                data.append(
-                    Data(
-                        text=element["metadata"]["content"],
-                        file_path=element["metadata"]["source_metadata"]["source_name"],
-                        document_type=element["document_type"],
-                        description=element["metadata"]["content_metadata"]["description"],
+        # Result is a list of segments as determined by the text_depth option (if "document" then only one segment)
+        # each segment is a list of elements (text, structured, image)
+        for segment in result:
+            for element in segment:
+                if element["document_type"] == "text":
+                    data.append(
+                        Data(
+                            text=element["metadata"]["content"],
+                            file_path=element["metadata"]["source_metadata"]["source_name"],
+                            document_type=element["document_type"],
+                            description=element["metadata"]["content_metadata"]["description"],
+                        )
                     )
-                )
-            elif element["document_type"] == "structured":
-                data.append(
-                    Data(
-                        text=element["metadata"]["table_metadata"]["table_content"],
-                        file_path=element["metadata"]["source_metadata"]["source_name"],
-                        document_type=element["document_type"],
-                        description=element["metadata"]["content_metadata"]["description"],
+                elif element["document_type"] == "structured":
+                    data.append(
+                        Data(
+                            text=element["metadata"]["table_metadata"]["table_content"],
+                            file_path=element["metadata"]["source_metadata"]["source_name"],
+                            document_type=element["document_type"],
+                            description=element["metadata"]["content_metadata"]["description"],
+                        )
                     )
-                )
-            # TODO: handle images
+                # TODO: handle images
 
         self.status = data if data else "No data"
         return data or Data()
