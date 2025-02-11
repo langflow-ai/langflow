@@ -1911,7 +1911,7 @@
       "zoom": 0.21962836650867892
     }
   },
-  "description": "A template that iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
+  "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
   "endpoint_name": "search_loop",
   "gradient": "3",
   "icon": "Infinity",
