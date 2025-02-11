@@ -568,13 +568,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Add the new database to the list of options
             build_config["database_name"]["value"] = field_value["new_database_name"]
-            build_config["database_name"]["options"] = (
-                build_config["database_name"]["options"] + [field_value["new_database_name"]]
-            )
-            build_config["database_name"]["options_metadata"] = (
-                build_config["database_name"]["options_metadata"]
-                + [{"status": "initializing"}]
-            )
+            build_config["database_name"]["options"] = build_config["database_name"]["options"] + [
+                field_value["new_database_name"]
+            ]
+            build_config["database_name"]["options_metadata"] = build_config["database_name"]["options_metadata"] + [
+                {"status": "initializing"}
+            ]
             build_config["api_endpoint"]["value"] = None
 
             return build_config
@@ -606,9 +605,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Add the new collection to the list of options
             build_config["collection_name"]["value"] = build_config["new_collection_name"]["value"]
-            build_config["collection_name"]["options"] = (
-                build_config["collection_name"]["options"] + [build_config["new_collection_name"]["value"]]
-            )
+            build_config["collection_name"]["options"] = build_config["collection_name"]["options"] + [
+                build_config["new_collection_name"]["value"]
+            ]
 
             # Get the provider and model for the new collection
             generation_provider = build_config["embedding_generation_provider"]["value"]
@@ -617,10 +616,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             model = generation_model if generation_model else None
 
             # Add the new collection to the list of options
-            build_config["collection_name"]["options_metadata"] = (
-                build_config["collection_name"]["options_metadata"]
-                + [{"records": 0, "provider": provider, "icon": "", "model": model}]
-            )
+            build_config["collection_name"]["options_metadata"] = build_config["collection_name"][
+                "options_metadata"
+            ] + [{"records": 0, "provider": provider, "icon": "", "model": model}]
 
             return self.reset_collection_list(build_config)
 
