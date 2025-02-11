@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from loguru import logger
-from sqlalchemy import AsyncAdaptedQueuePool, event, exc, inspect
+from sqlalchemy import event, exc, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
@@ -81,12 +81,23 @@ class DatabaseService(Service):
             self.engine = self._create_engine()
 
     def _sanitize_database_url(self):
-        if self.database_url.startswith("postgres://"):
-            self.database_url = self.database_url.replace("postgres://", "postgresql://")
-            logger.warning(
-                "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
-                "To avoid this warning, update the database URL."
-            )
+        """Create the engine for the database."""
+        url_components = self.database_url.split("://", maxsplit=1)
+
+        driver = url_components[0]
+
+        if driver == "sqlite":
+            driver = "sqlite+aiosqlite"
+        elif driver in {"postgresql", "postgres"}:
+            if driver == "postgres":
+                logger.warning(
+                    "The postgres dialect in the database URL is deprecated. "
+                    "Use postgresql instead. "
+                    "To avoid this warning, update the database URL."
+                )
+            driver = "postgresql+psycopg"
+
+        self.database_url = f"{driver}://{url_components[1]}"
 
     def _build_connection_kwargs(self):
         """Build connection kwargs by merging deprecated settings with db_connection_settings.
@@ -109,28 +120,13 @@ class DatabaseService(Service):
         return connection_kwargs
 
     def _create_engine(self) -> AsyncEngine:
-        """Create the engine for the database."""
-        url_components = self.database_url.split("://", maxsplit=1)
-
         # Get connection settings from config, with defaults if not specified
         # if the user specifies an empty dict, we allow it.
         kwargs = self._build_connection_kwargs()
 
-        if url_components[0].startswith("sqlite"):
-            scheme = "sqlite+aiosqlite"
-            # Even though the docs say this is the default, it raises an error
-            # if we don't specify it.
-            # https://docs.sqlalchemy.org/en/20/errors.html#pool-class-cannot-be-used-with-asyncio-engine-or-vice-versa
-            pool = AsyncAdaptedQueuePool
-        else:
-            scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
-            pool = None
-
-        database_url = f"{scheme}://{url_components[1]}"
         return create_async_engine(
-            database_url,
+            self.database_url,
             connect_args=self._get_connect_args(),
-            poolclass=pool,
             **kwargs,
         )
 
