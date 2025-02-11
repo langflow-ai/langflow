@@ -459,41 +459,50 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
-        # Retrieve the database object
+        # Retrieve the database object once
         database = self.get_database_object(api_endpoint=api_endpoint)
+        keyspace = self.get_keyspace()
 
-        # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+        # Get the list of collections and preprocess collection data retrieval
+        collection_list = list(database.list_collections(keyspace=keyspace))
 
-        # Return the list of collections and metadata associated
-        return [
-            {
-                "name": col.name,
-                "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
-                "icon": "",
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
-            }
-            for col in collection_list
-        ]
+        collection_data_list = []
+        for col in collection_list:
+            col_options_vector_service = getattr(
+                col.options.vector.service if col.options.vector else None, "provider", None
+            )
+            collection_data_list.append(
+                {
+                    "name": col.name,
+                    "records": self.collection_data(collection_name=col.name, database=database),
+                    "provider": col_options_vector_service,
+                    "icon": "",
+                    "model": getattr(col.options.vector.service if col.options.vector else None, "model_name", None),
+                }
+            )
+
+        return collection_data_list
 
     def reset_collection_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
-        collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
+        # Get the list of collection options based on the provided token
+        api_endpoint = build_config["api_endpoint"]["value"]
+        collection_options = self._initialize_collection_options(api_endpoint=api_endpoint)
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-        ]
+        # Extract options and metadata efficiently
+        collection_names = []
+        options_metadata = []
+        for col in collection_options:
+            collection_names.append(col["name"])
+            options_metadata.append({k: v for k, v in col.items() if k != "name"})
 
-        # Reset the selected collection
-        if build_config["collection_name"]["value"] not in build_config["collection_name"]["options"]:
-            build_config["collection_name"]["value"] = ""
+        # Update the build_config dictionary directly
+        collection_name_config = build_config["collection_name"]
+        collection_name_config["options"] = collection_names
+        collection_name_config["options_metadata"] = options_metadata
+
+        # Reset the selected collection if necessary
+        if collection_name_config["value"] not in collection_names:
+            collection_name_config["value"] = ""
 
         return build_config
 
