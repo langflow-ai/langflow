@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
+from functools import lru_cache
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -449,15 +450,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             return {}
 
+    @lru_cache(maxsize=1)
     def _initialize_database_options(self):
         try:
+            database_list = self.get_database_list()
             return [
                 {
                     "name": name,
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in database_list.items()
             ]
         except Exception as e:
             msg = f"Error fetching database options: {e}"
@@ -503,16 +506,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def reset_database_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
+        # Get the cached list of options based on the token provided
         database_options = self._initialize_database_options()
 
-        # If we retrieved options based on the token, show the dropdown
+        # Update dropdown options and metadata in build config
         build_config["database_name"]["options"] = [db["name"] for db in database_options]
         build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            {"collections": db["collections"], "api_endpoint": db["api_endpoint"]} for db in database_options
         ]
 
-        # Reset the selected database
+        # Reset the selected database if needed
         if build_config["database_name"]["value"] not in build_config["database_name"]["options"]:
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
