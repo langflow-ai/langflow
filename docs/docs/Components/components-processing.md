@@ -299,6 +299,10 @@ This component converts and extracts JSON fields using JQ queries.
 
 ## Select data
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.
+:::
+
 This component selects a single [Data](/concepts-objects#data-object) item from a list.
 
 ### Inputs
