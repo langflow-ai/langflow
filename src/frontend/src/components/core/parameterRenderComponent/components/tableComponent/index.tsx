@@ -53,65 +53,67 @@ const TableComponent = forwardRef<
     },
     ref,
   ) => {
-    let colDef = props.columnDefs.map((col, index) => {
-      let newCol = {
-        ...col,
-      };
-      // Filter out hidden columns
-      if (col.hidden) {
-        return null;
-      }
-      if (props.rowSelection && props.onSelectionChanged && index === 0) {
-        newCol = {
-          ...newCol,
-          checkboxSelection: true,
-          headerCheckboxSelection: true,
-          headerCheckboxSelectionFilteredOnly: true,
+    let colDef = props.columnDefs
+      .map((col, index) => {
+        let newCol = {
+          ...col,
         };
-      }
-      if (
-        (typeof props.tableOptions?.block_hide === "boolean" &&
-          props.tableOptions?.block_hide) ||
-        (Array.isArray(props.tableOptions?.block_hide) &&
-          props.tableOptions?.block_hide.includes(newCol.field ?? ""))
-      ) {
-        newCol = {
-          ...newCol,
-          lockVisible: true,
-        };
-      }
-      if (
-        (typeof props.editable === "boolean" && props.editable) ||
-        (Array.isArray(props.editable) &&
-          props.editable.every((field) => typeof field === "string") &&
-          (props.editable as Array<string>).includes(newCol.field ?? ""))
-      ) {
-        newCol = {
-          ...newCol,
-          editable: true,
-        };
-      }
-      if (
-        Array.isArray(props.editable) &&
-        props.editable.every((field) => typeof field === "object")
-      ) {
-        const field = (
-          props.editable as Array<{
-            field: string;
-            onUpdate: (value: any) => void;
-            editableCell: boolean;
-          }>
-        ).find((field) => field.field === newCol.field);
-        if (field) {
+        // Filter out hidden columns
+        if (col.hidden) {
+          return null;
+        }
+        if (props.rowSelection && props.onSelectionChanged && index === 0) {
           newCol = {
             ...newCol,
-            editable: field.editableCell,
-            onCellValueChanged: (e) => field.onUpdate(e),
+            checkboxSelection: true,
+            headerCheckboxSelection: true,
+            headerCheckboxSelectionFilteredOnly: true,
           };
         }
-      }
-      return newCol;
-    }).filter(Boolean); // Filter out null values from hidden columns
+        if (
+          (typeof props.tableOptions?.block_hide === "boolean" &&
+            props.tableOptions?.block_hide) ||
+          (Array.isArray(props.tableOptions?.block_hide) &&
+            props.tableOptions?.block_hide.includes(newCol.field ?? ""))
+        ) {
+          newCol = {
+            ...newCol,
+            lockVisible: true,
+          };
+        }
+        if (
+          (typeof props.editable === "boolean" && props.editable) ||
+          (Array.isArray(props.editable) &&
+            props.editable.every((field) => typeof field === "string") &&
+            (props.editable as Array<string>).includes(newCol.field ?? ""))
+        ) {
+          newCol = {
+            ...newCol,
+            editable: true,
+          };
+        }
+        if (
+          Array.isArray(props.editable) &&
+          props.editable.every((field) => typeof field === "object")
+        ) {
+          const field = (
+            props.editable as Array<{
+              field: string;
+              onUpdate: (value: any) => void;
+              editableCell: boolean;
+            }>
+          ).find((field) => field.field === newCol.field);
+          if (field) {
+            newCol = {
+              ...newCol,
+              editable: field.editableCell,
+              onCellValueChanged: (e) => field.onUpdate(e),
+            };
+          }
+        }
+        return newCol;
+      })
+      .filter(Boolean); // Filter out null values from hidden columns
     // @ts-ignore
     const realRef: React.MutableRefObject<AgGridReact> =
       useRef<AgGridReact | null>(null);
