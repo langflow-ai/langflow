@@ -30,6 +30,7 @@ import {
   Binary,
   Blocks,
   BookMarked,
+  BookOpenText,
   BookmarkPlus,
   Bot,
   BotMessageSquare,
@@ -69,6 +70,7 @@ import {
   Database,
   DatabaseZap,
   Delete,
+  DollarSign,
   Dot,
   Download,
   DownloadCloud,
@@ -232,8 +234,6 @@ import {
   Zap,
   ZoomIn,
   ZoomOut,
-  DollarSign,
-  BookOpenText,
 } from "lucide-react";
 import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { AWSIcon } from "../icons/AWS";
@@ -962,5 +962,5 @@ export const nodeIconsLucide: iconsType = {
   ScrapeGraphSmartScraperApi: ScrapeGraph,
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
   DollarSign,
-  BookOpenText
+  BookOpenText,
 };
