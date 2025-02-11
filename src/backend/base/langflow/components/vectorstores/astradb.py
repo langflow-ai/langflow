@@ -576,7 +576,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             ]
             build_config["api_endpoint"]["value"] = None
 
-            return build_config
+            return self.reset_collection_list(build_config)
 
         # Callback for the creation of collections
         if field_name == "collection_name" and isinstance(field_value, dict):
@@ -648,20 +648,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return build_config
 
         # Refresh the collection name options
-        if field_name == "database_name":
-            # Find the index of this database name
-            index_of_name = build_config["database_name"]["options"].index(field_value)
-
-            # Initializing database condition
-            initializing = "status" in build_config["database_name"]["options_metadata"][index_of_name]
-
+        if field_name == "database_name" and field_value:
             # If missing, refresh the database options
-            if not build_config["database_name"]["options"] or not field_value or initializing:
+            if not build_config["database_name"]["options"]:
                 return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
             # Set the underlying api endpoint value of the database
             if field_value in build_config["database_name"]["options"]:
                 index_of_name = build_config["database_name"]["options"].index(field_value)
+
+                # Initializing database condition
+                initializing = "status" in build_config["database_name"]["options_metadata"][index_of_name]
+                if initializing:
+                    return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
                 # Update the API endpoint if we can find it
                 if "api_endpoint" in build_config["database_name"]["options_metadata"][index_of_name]:
