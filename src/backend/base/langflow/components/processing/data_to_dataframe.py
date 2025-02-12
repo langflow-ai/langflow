@@ -32,10 +32,12 @@ class DataToDataFrameComponent(Component):
     ]
 
     def build_dataframe(self) -> DataFrame:
-        """
+        """Builds a DataFrame from Data objects by combining their fields.
+
         For each Data object:
           - Merge item.data (dictionary) as columns
           - If item.text is present, add 'text' column
+
         Returns a DataFrame with one row per Data object.
         """
         data_input = self.data_list
@@ -64,4 +66,3 @@ class DataToDataFrameComponent(Component):
         df_result = DataFrame(rows)
         self.status = df_result  # store in self.status for logs
         return df_result
-
