@@ -1,3 +1,4 @@
+import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
@@ -13,7 +14,6 @@ import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandItem,
   CommandList,
@@ -47,6 +47,7 @@ export default function Dropdown({
   const [openDialog, setOpenDialog] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(options);
+  const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
 
   // Initialize utilities and constants
@@ -65,7 +66,6 @@ export default function Dropdown({
     nodeId: nodeId || "",
     node: nodeClass!,
   });
-  const { isPending } = postTemplateValue;
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   // Utility functions
@@ -87,14 +87,40 @@ export default function Dropdown({
     setCustomValue(value);
   };
 
-  const handleRefreshButtonPress = () => {
-    mutateTemplate(
+  const handleRefreshButtonPress = async () => {
+    setRefreshOptions(true);
+    setOpen(false);
+
+    await mutateTemplate(
       value,
       nodeClass!,
       handleNodeClass,
       postTemplateValue,
       setErrorData,
-    );
+    )?.then(() => {
+      setTimeout(() => {
+        setRefreshOptions(false);
+      }, 2000);
+    });
+  };
+
+  const formatTooltipContent = (option: string, index: number) => {
+    if (!optionsMetaData?.[index]) return option;
+
+    const metadata = optionsMetaData[index];
+    const metadataEntries = Object.entries(metadata)
+      .filter(([key, value]) => value !== null && key !== "icon")
+      .map(([key, value]) => {
+        const displayValue =
+          typeof value === "string" && value.length > 20
+            ? `${value.substring(0, 30)}...`
+            : String(value);
+        return `${key}: ${displayValue}`;
+      });
+
+    return metadataEntries.length > 0
+      ? `${firstWord}: ${option}\n${metadataEntries.join("\n")}`
+      : option;
   };
 
   // Effects
@@ -115,6 +141,17 @@ export default function Dropdown({
   }, [open]);
 
   // Render helper functions
+
+  const renderLoadingButton = () => (
+    <Button
+      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+      variant="primary"
+      size="xs"
+    >
+      <LoadingTextComponent text="Loading options" />
+    </Button>
+  );
+
   const renderTriggerButton = () => (
     <PopoverTrigger asChild>
       <Button
@@ -217,10 +254,7 @@ export default function Dropdown({
           <div className="flex items-center gap-2 pl-1">
             <ForwardedIconComponent
               name="RefreshCcw"
-              className={cn(
-                "h-3 w-3 text-primary",
-                isPending && "animate-spin",
-              )}
+              className={cn("refresh-icon h-3 w-3 text-primary")}
             />
             Refresh list
           </div>
@@ -229,7 +263,10 @@ export default function Dropdown({
       <NodeDialog
         open={openDialog}
         dialogInputs={dialogInputs}
-        onClose={() => setOpenDialog(false)}
+        onClose={() => {
+          setOpenDialog(false);
+          setOpen(false);
+        }}
         nodeId={nodeId!}
         name={name!}
         nodeClass={nodeClass!}
@@ -242,7 +279,12 @@ export default function Dropdown({
       <CommandGroup defaultChecked={false}>
         {filteredOptions?.length > 0 ? (
           filteredOptions?.map((option, index) => (
-            <ShadTooltip key={index} delayDuration={700} content={option}>
+            <ShadTooltip
+              key={index}
+              delayDuration={700}
+              styleClasses="whitespace-pre-wrap"
+              content={formatTooltipContent(option, index)}
+            >
               <div>
                 <CommandItem
                   value={option}
@@ -356,6 +398,8 @@ export default function Dropdown({
     <Popover open={open} onOpenChange={children ? () => {} : setOpen}>
       {children ? (
         <PopoverAnchor>{children}</PopoverAnchor>
+      ) : refreshOptions || isLoading ? (
+        renderLoadingButton()
       ) : (
         renderTriggerButton()
       )}

@@ -174,11 +174,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
           <Button variant="secondary" onClick={handleCloseDialog}>
             Cancel
           </Button>
-          <Button
-            variant="default"
-            loading={isLoading}
-            onClick={handleSendPayload}
-          >
+          <Button variant="default" onClick={handleSendPayload}>
             {functionality}
           </Button>
         </DialogFooter>
