@@ -78,6 +78,7 @@ export default function DragWrapComponent({
       onDragLeave={dragLeave}
       onDrop={onDrop}
       className={cn("relative h-full w-full transition-all")}
+      data-testid="drag-wrap-component"
     >
       <div
         className={cn(

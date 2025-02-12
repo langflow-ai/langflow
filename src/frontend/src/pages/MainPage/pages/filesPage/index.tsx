@@ -25,6 +25,7 @@ export const FilesPage = () => {
   const tableRef = useRef<AgGridReact<any>>(null);
   const { data: files } = useGetFilesV2();
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const { mutate: rename } = usePostRenameFileV2();
 
@@ -44,7 +45,23 @@ export const FilesPage = () => {
     }
   };
 
-  const uploadFile = useUploadFile({});
+  const uploadFile = useUploadFile({ multiple: true });
+
+  const handleUpload = async (files?: File[]) => {
+    try {
+      const filesIds = await uploadFile({
+        files: files,
+      });
+      setSuccessData({
+        title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+      });
+    } catch (error: any) {
+      setErrorData({
+        title: "Error uploading file",
+        list: [error.message || "An error occurred while uploading the file"],
+      });
+    }
+  };
 
   const colDefs: ColDef[] = [
     {
@@ -141,16 +158,7 @@ export const FilesPage = () => {
     e.stopPropagation();
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length > 0) {
-      try {
-        await uploadFile({
-          files: droppedFiles,
-        });
-      } catch (error: any) {
-        setErrorData({
-          title: "Error uploading file",
-          list: [error.message || "An error occurred while uploading the file"],
-        });
-      }
+      await handleUpload(droppedFiles);
     }
   };
 
@@ -161,10 +169,10 @@ export const FilesPage = () => {
           variant="outline"
           className="!px-3 md:!px-4 md:!pl-3.5"
           onClick={async () => {
-            await uploadFile({});
+            await handleUpload();
           }}
-          id="new-project-btn"
-          data-testid="new-project-btn"
+          id="upload-file-btn"
+          data-testid="upload-file-btn"
         >
           <ForwardedIconComponent
             name="Plus"
