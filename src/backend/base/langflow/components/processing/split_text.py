@@ -62,7 +62,7 @@ class SplitTextComponent(Component):
     def split_text(self):
         separator = unescape_string(self.separator)
         if isinstance(self.data_inputs, DataFrame):
-            if len(self.data_inputs) == 0:
+            if not len(self.data_inputs):
                 msg = "DataFrame is empty"
                 raise TypeError(msg)
 
@@ -78,13 +78,18 @@ class SplitTextComponent(Component):
                 raise TypeError(msg)
 
             documents = []
-            for _input in self.data_inputs:
-                if isinstance(_input, Data):
-                    _input.text_key = self.text_key
-                    documents.append(_input.to_lc_document())
-                else:
-                    msg = f"Unsupported input type: {type(_input)}"
-                    raise TypeError(msg)
+            if isinstance(self.data_inputs, Data):
+                self.data_inputs.text_key = self.text_key
+                documents = [self.data_inputs.to_lc_document()]
+            else:
+                try:
+                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
+                    if not documents:
+                        msg = f"No valid Data inputs found in {type(self.data_inputs)}"
+                        raise TypeError(msg)
+                except AttributeError as e:
+                    msg = f"Invalid input type in collection: {e}"
+                    raise TypeError(msg) from e
         try:
             splitter = CharacterTextSplitter(
                 chunk_overlap=self.chunk_overlap,
