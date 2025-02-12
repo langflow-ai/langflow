@@ -55,12 +55,42 @@ class MistralAIModelComponent(LCModelComponent):
             advanced=False,
             value=0.5,
         ),
-        IntInput(name="max_retries", display_name="Max Retries", advanced=True, value=5),
-        IntInput(name="timeout", display_name="Timeout", advanced=True, value=60),
-        IntInput(name="max_concurrent_requests", display_name="Max Concurrent Requests", advanced=True, value=3),
-        FloatInput(name="top_p", display_name="Top P", advanced=True, value=1),
-        IntInput(name="random_seed", display_name="Random Seed", value=1, advanced=True),
-        BoolInput(name="safe_mode", display_name="Safe Mode", advanced=True, value=False),
+        IntInput(
+            name="max_retries",
+            display_name="Max Retries",
+            advanced=True,
+            value=5,
+        ),
+        IntInput(
+            name="timeout",
+            display_name="Timeout",
+            advanced=True,
+            value=60,
+        ),
+        IntInput(
+            name="max_concurrent_requests",
+            display_name="Max Concurrent Requests",
+            advanced=True,
+            value=3,
+        ),
+        FloatInput(
+            name="top_p",
+            display_name="Top P",
+            advanced=True,
+            value=1,
+        ),
+        IntInput(
+            name="random_seed",
+            display_name="Random Seed",
+            value=1,
+            advanced=True,
+        ),
+        BoolInput(
+            name="safe_mode",
+            display_name="Safe Mode",
+            advanced=True,
+            value=False,
+        ),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
