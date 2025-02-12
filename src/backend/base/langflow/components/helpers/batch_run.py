@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from langflow.custom import Component
-from langflow.io import DataFrameInput, HandleInput, MultilineInput, Output, StrInput
+from langflow.io import DataFrameInput, HandleInput, MessageTextInput, MultilineInput, Output
 from langflow.schema import DataFrame
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ class BatchRunComponent(Component):
             display_name="DataFrame",
             info="The DataFrame whose column (specified by 'column_name') we'll treat as text messages.",
         ),
-        StrInput(
+        MessageTextInput(
             name="column_name",
             display_name="Column Name",
             info="The name of the DataFrame column to treat as text messages. Default='text'.",
@@ -87,14 +87,29 @@ class BatchRunComponent(Component):
             }
         )
 
-        responses = await model.abatch(conversations)
+        # Prepare the batch of conversations with indices
+        conversations_with_idx = list(enumerate(conversations))
+
+        # Run the batch processing and maintain indices
+        responses_with_idx = [
+            (idx, response)
+            for idx, response in zip(
+                range(len(conversations)), await model.abatch([conv for _, conv in conversations_with_idx]), strict=True
+            )
+        ]
+
+        # Sort by index to guarantee order
+        responses_with_idx.sort(key=lambda x: x[0])
 
         # Build the final data, each row has 'text_input' + 'model_response'
         rows = []
-        for original_text, response in zip(user_texts, responses, strict=False):
+        for idx, response in responses_with_idx:
             resp_text = response.content if hasattr(response, "content") else str(response)
-
-            row = {"text_input": original_text, "model_response": resp_text}
+            row = {
+                "text_input": user_texts[idx],
+                "model_response": resp_text,
+                "batch_index": idx,  # Optional: add index for verification
+            }
             rows.append(row)
 
         # Convert to a new DataFrame
