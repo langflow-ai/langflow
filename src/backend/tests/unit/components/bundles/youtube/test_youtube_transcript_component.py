@@ -25,8 +25,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         """Return the file names mapping for different versions."""
-        return [
-        ]
+        return []
 
     @pytest.fixture
     def mock_transcript_data(self):
