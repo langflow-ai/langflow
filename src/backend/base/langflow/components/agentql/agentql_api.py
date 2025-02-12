@@ -1,6 +1,7 @@
 import httpx
 from loguru import logger
 
+from langflow.components.agentql.utils import AGENTQL_QUERY_DOCUMENTATION, AGENTQL_REST_API_DOCUMENTATION, INVALID_API_KEY_MESSAGE
 from langflow.custom import Component
 from langflow.io import (
     DictInput,
@@ -16,7 +17,7 @@ from langflow.schema import Data
 class AgentQLQueryData(Component):
     display_name = "AgentQL Query Data"
     description = "Uses AgentQL API to extract structured data from a given URL."
-    documentation: str = "https://docs.agentql.com/rest-api/api-reference"
+    documentation: str = AGENTQL_REST_API_DOCUMENTATION
     icon = "AgentQL"
     name = "AgentQL Query Data"
 
@@ -39,7 +40,7 @@ class AgentQLQueryData(Component):
             name="query",
             display_name="AgentQL Query",
             required=True,
-            info="The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
+            info=(f"The AgentQL query to execute. Read more at {AGENTQL_QUERY_DOCUMENTATION}."),
             tool_mode=True,
         ),
         IntInput(
@@ -92,7 +93,7 @@ class AgentQLQueryData(Component):
         except httpx.HTTPStatusError as e:
             response = e.response
             if response.status_code in {401, 403}:
-                self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
+                self.status = INVALID_API_KEY_MESSAGE
             else:
                 try:
                     error_json = response.json()

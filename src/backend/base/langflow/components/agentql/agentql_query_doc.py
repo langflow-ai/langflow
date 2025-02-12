@@ -1,6 +1,7 @@
 import httpx
 from loguru import logger
-
+from pathlib import Path
+from langflow.components.agentql.utils import AGENTQL_QUERY_DOCUMENTATION, AGENTQL_REST_API_DOCUMENTATION, INVALID_API_KEY_MESSAGE
 from langflow.base.data import BaseFileComponent
 from langflow.io import (
     DictInput,
@@ -18,7 +19,7 @@ class AgentQLQueryDoc(BaseFileComponent):
     icon = "AgentQL"
     name = "AgentQL Query Doc"
 
-    VALID_EXTENSIONS = ["jpeg", "png", "pdf", "png"]
+    VALID_EXTENSIONS = ["jpeg", "png", "pdf", "jpg"]
 
     SUPPORTED_BUNDLE_EXTENSIONS = []
 
@@ -35,7 +36,7 @@ class AgentQLQueryDoc(BaseFileComponent):
             name="query",
             display_name="AgentQL Query",
             required=True,
-            info="The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
+            info=(f"The AgentQL query to execute. Read more at {AGENTQL_QUERY_DOCUMENTATION}."),
             tool_mode=True,
         ),
         IntInput(
@@ -48,7 +49,7 @@ class AgentQLQueryDoc(BaseFileComponent):
         DictInput(
             name="params",
             display_name="Additional Params",
-            info="The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
+            info="The additional params to send with the request. Only 'mode' is supported. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
             is_list=True,
             value={
                 "mode": "fast",
@@ -69,46 +70,49 @@ class AgentQLQueryDoc(BaseFileComponent):
         }
 
         if len(file_list) > 1:
-            raise ValueError("Only one file is supported for AgentQL Query Doc.")
+            self.status = "Only one file is supported for AgentQL Query Doc."
+            raise ValueError(self.status)
 
         logger.info(f"Processing file: {file_list[0].path}")
 
         file = file_list[0]
 
         if not str(file.path).endswith(tuple(self.VALID_EXTENSIONS)):
-            raise ValueError(f"File extension {file.path} is not supported for AgentQL Query Doc.")
-
-        files = {"file": open(file.path, "rb")}
-
+            self.status = f"File extension {file.path} is not supported."
+            raise ValueError(self.status)
+        
         data = {
             "query": self.query,
         }
 
-        try:
-            response = httpx.post(endpoint, data=data, headers=headers, files=files, timeout=self.timeout)
-            response.raise_for_status()
+        path = Path(file.path)
 
-            json = response.json()
-            data = Data(result=json["data"], metadata=json["metadata"])
+        with path.open("rb") as f:
+            files = {"file": f}
 
-        except httpx.HTTPStatusError as e:
-            response = e.response
-            if response.status_code in {401, 403}:
-                self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
+            try:
+                response = httpx.post(endpoint, data=data, headers=headers, files=files, timeout=self.timeout)
+                response.raise_for_status()
+
+                json = response.json()
+                data = Data(result=json["data"], metadata=json["metadata"])
+
+            except httpx.HTTPStatusError as e:
+                response = e.response
+                if response.status_code in {401, 403}:
+                    self.status = INVALID_API_KEY_MESSAGE
+                else:
+                    try:
+                        error_json = response.json()
+                        logger.error(
+                            f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
+                        )
+                        msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
+                    except (ValueError, TypeError):
+                        msg = f"HTTP {e}."
+                    self.status = msg
+                raise ValueError(self.status) from e
             else:
-                try:
-                    error_json = response.json()
-                    logger.error(
-                        f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
-                    )
-                    msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
-                except (ValueError, TypeError):
-                    msg = f"HTTP {e}."
-                self.status = msg
-            raise ValueError(self.status) from e
-        else:
-            self.status = data
-            file.data = data
-            return [file]
-        finally:
-            files["file"].close()
+                self.status = data
+                file.data = data
+                return [file]
