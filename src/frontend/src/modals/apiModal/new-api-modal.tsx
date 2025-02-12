@@ -74,18 +74,20 @@ export default function ApiModal({
             aria-hidden="true"
           />
           <span className="pl-2">API access</span>
-          <div className="border-r-1 absolute right-12 flex items-center text-[13px] font-medium leading-[16px]">
-            <Button
-              variant="ghost"
-              size="icon"
+          {nodes.length > 0 && (
+            <div className="border-r-1 absolute right-12 flex items-center  text-[13px] font-medium leading-[16px]">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8"
               onClick={() => setOpenTweaks(true)}
             >
               <IconComponent name="SlidersHorizontal" className="h-3.5 w-3.5" />
               <span>Temporary overrides ({Object.keys(tweaks).length}) </span>
             </Button>
-            <Separator orientation="vertical" className="ml-2 h-5" />
-            <div></div>
-          </div>
+            <Separator orientation="vertical" className="ml-2 h-8" />
+            </div>
+          )}
         </BaseModal.Header>
         <BaseModal.Content overflowHidden>
           {open && (
