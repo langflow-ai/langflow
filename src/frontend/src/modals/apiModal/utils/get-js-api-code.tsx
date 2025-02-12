@@ -26,10 +26,7 @@ export default function getJsApiCode({
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
   const hasChatOutput = outputs.some((output) => output.type === "ChatOutput");
 
-  return `# Install the Langflow client
-# npm install @datastax/langflow-client
-
-import { LangflowClient } from "@datastax/langflow-client";
+  return `import { LangflowClient } from "@datastax/langflow-client"; // Make sure to \`npm install @datastax/langflow-client\`
 
 const client = new LangflowClient({
   baseUrl: "${window.location.protocol}//${window.location.host}"${isAuth ? ",\n  apiKey: <your api key>" : ""}
