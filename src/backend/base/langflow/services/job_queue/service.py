@@ -50,6 +50,7 @@ class JobQueueService(Service):
         self._queues: dict[str, tuple[asyncio.Queue, EventManager, asyncio.Task | None]] = {}
         self._cleanup_task: asyncio.Task | None = None
         self._closed = False
+        self.ready = False
 
     def is_started(self) -> bool:
         """Check if the JobQueueService has started.
@@ -58,6 +59,11 @@ class JobQueueService(Service):
             bool: True if the service has started, False otherwise.
         """
         return self._cleanup_task is not None
+
+    def set_ready(self) -> None:
+        if not self.is_started():
+            self.start()
+        super().set_ready()
 
     def start(self) -> None:
         """Start the JobQueueService and begin the periodic cleanup routine.
@@ -91,6 +97,9 @@ class JobQueueService(Service):
         for job_id in list(self._queues.keys()):
             await self.cleanup_job(job_id)
         logger.info("JobQueueService stopped: all job queues have been cleaned up.")
+
+    async def teardown(self) -> None:
+        await self.stop()
 
     def create_queue(self, job_id: str) -> tuple[asyncio.Queue, EventManager]:
         """Create and register a new queue along with its corresponding event manager for a job.
