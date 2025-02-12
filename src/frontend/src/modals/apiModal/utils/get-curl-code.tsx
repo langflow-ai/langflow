@@ -112,7 +112,7 @@ fi
   --header 'Content-Type: application/json' \\${
     isAuthenticated
       ? `
-  --header "x-api-key: $API_KEY" \\`
+  --header "x-api-key: $LANGFLOW_API_KEY" \\`
       : ""
   }
   --data '${JSON.stringify(payload, null, 2)}'`;

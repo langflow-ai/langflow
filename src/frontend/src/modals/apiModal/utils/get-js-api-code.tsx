@@ -99,7 +99,7 @@ if (!process.env.LANGFLOW_API_KEY) {
 const options = {
     method: 'POST',
     headers: {
-        'Content-Type': 'application/json'${isAuthenticated ? ',\n        "x-api-key": process.env.API_KEY' : ""}
+        'Content-Type': 'application/json'${isAuthenticated ? ',\n        "x-api-key": process.env.LANGFLOW_API_KEY' : ""}
     },
     body: JSON.stringify(payload)
 };
