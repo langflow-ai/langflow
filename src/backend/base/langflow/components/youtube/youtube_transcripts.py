@@ -103,9 +103,11 @@ class YouTubeTranscriptsComponent(Component):
                 result = transcripts[0].page_content
                 return Data(data={"transcript": result, "video_url": self.url})
             error_message = "No transcripts found."
-        except (youtube_transcript_api.TranscriptsDisabled,
-                youtube_transcript_api.NoTranscriptFound,
-                youtube_transcript_api.CouldNotRetrieveTranscript) as exc:
+        except (
+            youtube_transcript_api.TranscriptsDisabled,
+            youtube_transcript_api.NoTranscriptFound,
+            youtube_transcript_api.CouldNotRetrieveTranscript,
+        ) as exc:
             error_message = str(exc)
 
         return Data(data={"transcript": "", "video_url": self.url, "error": error_message})
