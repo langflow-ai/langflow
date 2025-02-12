@@ -20,7 +20,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             "./test_output.xlsx",
             "./test_output.json",
             "./test_output.md",
-            "./test_output.txt"
+            "./test_output.txt",
         ]
         # Teardown
         yield
@@ -66,7 +66,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             "df": {"show": False},
             "data": {"show": False},
             "message": {"show": False},
-            "file_format": {"options": []}
+            "file_format": {"options": []},
         }
 
         updated_config = component.update_build_config(build_config, "DataFrame", "input_type")
@@ -81,7 +81,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         test_cases = [
             ("txt", "Test message"),
             ("json", json.dumps({"message": "Test message"}, indent=2)),
-            ("markdown", "**Message:**\n\nTest message")
+            ("markdown", "**Message:**\n\nTest message"),
         ]
 
         for fmt, expected_content in test_cases:
