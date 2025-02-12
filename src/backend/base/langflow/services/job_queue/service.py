@@ -51,6 +51,14 @@ class JobQueueService(Service):
         self._cleanup_task: asyncio.Task | None = None
         self._closed = False
 
+    def is_started(self) -> bool:
+        """Check if the JobQueueService has started.
+
+        Returns:
+            bool: True if the service has started, False otherwise.
+        """
+        return self._cleanup_task is not None
+
     async def start(self) -> None:
         """Start the JobQueueService and begin the periodic cleanup routine.
 
