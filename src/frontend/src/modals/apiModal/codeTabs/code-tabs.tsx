@@ -24,7 +24,7 @@ export default function APITabsComponent() {
   const dark = useDarkStore((state) => state.dark);
   const nodes = useFlowStore((state) => state.nodes);
   const flowId = useFlowStore((state) => state.currentFlow?.id);
-  const isAuthenticated = useAuthStore((state) => state.autoLogin);
+  const autologin = useAuthStore((state) => state.autoLogin);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
   const hasChatInput = inputs.some((input) => input.type === "ChatInput");
@@ -42,7 +42,7 @@ export default function APITabsComponent() {
   const codeOptions = {
     streaming: streaming,
     flowId: flowId || "",
-    isAuthenticated: isAuthenticated || false,
+    isAuthenticated: !autologin || false,
     input_value: input_value,
     input_type: hasChatInput ? "chat" : "text",
     output_type: hasChatOutput ? "chat" : "text",
