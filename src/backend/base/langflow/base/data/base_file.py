@@ -493,7 +493,7 @@ class BaseFileComponent(Component, ABC):
                 self.log(f"Not a file: {file.path.name}")
                 continue
 
-            if file.path.suffix[1:] not in self.valid_extensions:
+            if file.path.suffix[1:].lower() not in self.valid_extensions:
                 if self.ignore_unsupported_extensions:
                     ignored_files.append(file.path.name)
                     continue
