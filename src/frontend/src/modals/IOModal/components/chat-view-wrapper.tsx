@@ -36,9 +36,7 @@ export const ChatViewWrapper = ({
       <div
         className={cn(
           "mb-4 flex h-[5%] items-center text-[16px] font-semibold",
-          playgroundPage
-            ? "justify-between"
-            : "lg:justify-start",
+          playgroundPage ? "justify-between" : "lg:justify-start",
         )}
       >
         <div className={cn(sidebarOpen ? "lg:hidden" : "left-4")}>
