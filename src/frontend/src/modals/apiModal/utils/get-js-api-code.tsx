@@ -46,7 +46,6 @@ export default function getJsApiCode({
 }
 
 export function getNewJsApiCode({
-  streaming,
   flowId,
   isAuthenticated,
   input_value,
@@ -55,7 +54,6 @@ export function getNewJsApiCode({
   tweaksObject,
   activeTweaks,
 }: {
-  streaming: boolean;
   flowId: string;
   isAuthenticated: boolean;
   input_value: string;
@@ -104,7 +102,7 @@ const options = {
     body: JSON.stringify(payload)
 };
 
-fetch('${apiUrl}?stream=${streaming}')
+fetch('${apiUrl}')
     .then(response => response.json())
     .then(response => console.log(response))
     .catch(err => console.error(err));

@@ -116,7 +116,6 @@ if __name__ == "__main__":
 }
 
 export function getNewPythonApiCode({
-  streaming,
   flowId,
   isAuthenticated,
   input_value,
@@ -125,7 +124,6 @@ export function getNewPythonApiCode({
   tweaksObject,
   activeTweaks,
 }: {
-  streaming: boolean;
   flowId: string;
   isAuthenticated: boolean;
   input_value: string;
@@ -162,11 +160,6 @@ except KeyError:
     : ""
 }url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
-# Stream configuration
-querystring = {
-    "stream": "${streaming}"  # Enable/disable streaming responses
-}
-
 # Request payload configuration
 payload = {
     "input_value": "${input_value}",  # The input value to be processed by the flow
@@ -186,7 +179,7 @@ headers = {
 
 try:
     # Send API request
-    response = requests.request("POST", url, json=payload, headers=headers, params=querystring)
+    response = requests.request("POST", url, json=payload, headers=headers)
     response.raise_for_status()  # Raise exception for bad status codes
 
     # Print response
