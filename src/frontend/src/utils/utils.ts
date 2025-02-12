@@ -460,39 +460,42 @@ export const logHasMessage = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.message);
-  } else {
-    return outputs?.message;
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.message);
   }
+  return outputs?.message;
 };
 
 export const logTypeIsUnknown = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
-    return outputs.some((outputLog) => outputLog.type === "unknown");
-  } else {
-    return outputs?.type === "unknown";
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
+    return outputs.some((outputLog) => outputLog?.type === "unknown");
   }
+  return outputs?.type === "unknown";
 };
 
 export const logTypeIsError = (
   data: VertexDataTypeAPI,
   outputName: string | undefined,
 ) => {
-  if (!outputName) return;
-  const outputs = data?.outputs[outputName];
-  if (Array.isArray(outputs) && outputs.length > 1) {
+  if (!outputName || !data?.outputs) return false;
+  const outputs = data.outputs[outputName];
+  if (!outputs) return false;
+
+  if (Array.isArray(outputs) && outputs.length > 0) {
     return outputs.some((log) => isErrorLog(log));
-  } else {
-    return isErrorLog(outputs);
   }
+  return isErrorLog(outputs);
 };
 
 export function isEndpointNameValid(name: string, maxLength: number): boolean {
@@ -521,7 +524,7 @@ export function brokenEdgeMessage({
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
-  const colDefs = columns.map((col, index) => {
+  const colDefs = columns.map((col) => {
     let newCol: ColDef = {
       headerName: col.display_name,
       field: col.name,
@@ -529,6 +532,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       filter: col.filterable,
       context: col.description ? { info: col.description } : {},
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
+      hide: col.hidden,
       valueParser: (params: ValueParserParams) => {
         const { context, newValue, colDef, oldValue } = params;
         if (
@@ -562,8 +566,8 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
         if (col.edit_mode === "popover") {
-          newCol.wrapText = true;
-          newCol.autoHeight = true;
+          newCol.wrapText = false;
+          newCol.autoHeight = false;
           newCol.cellEditor = "agLargeTextCellEditor";
           newCol.cellEditorPopup = true;
           newCol.cellEditorParams = {
@@ -592,6 +596,7 @@ export function generateBackendColumnsFromValue(
       sortable: !tableOptions?.block_sort,
       filterable: !tableOptions?.block_filter,
       default: null, // Initialize default to null or appropriate value
+      hidden: false,
     };
 
     // Attempt to infer the default value from the data, if possible
@@ -726,6 +731,19 @@ export const formatPlaceholderName = (name) => {
   const prefix = /^[aeiou]/i.test(firstWord) ? "an" : "a";
 
   return `Select ${prefix} ${formattedName}`;
+};
+
+export const formatName = (name) => {
+  const formattedName = name
+    .split("_")
+    .map((word: string) => word.toLowerCase())
+    .join(" ");
+
+  const firstWord =
+    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].slice(1);
+
+  return { formattedName, firstWord };
 };
 
 export const isStringArray = (value: unknown): value is string[] => {

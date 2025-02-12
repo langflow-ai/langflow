@@ -9,6 +9,7 @@ RUN apt-get update \
     build-essential \
     curl \
     npm \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

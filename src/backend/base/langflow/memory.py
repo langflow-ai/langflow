@@ -254,7 +254,10 @@ async def astore_message(
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
-        msg = "All of session_id, sender, and sender_name must be provided."
+        msg = (
+            f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"
+            f" Sender: {message.sender}, Sender Name: {message.sender_name}"
+        )
         raise ValueError(msg)
     if hasattr(message, "id") and message.id:
         # if message has an id and exist in the database, update it

@@ -13,7 +13,8 @@ from langflow.custom.utils import build_custom_component_template
 
 @pytest.fixture
 def code_component_with_multiple_outputs():
-    code = Path("src/backend/tests/data/component_multiple_outputs.py").read_text(encoding="utf-8")
+    path = Path(__file__).parent.parent / "data" / "component_multiple_outputs.py"
+    code = path.read_text(encoding="utf-8")
     return Component(_code=code)
 
 
