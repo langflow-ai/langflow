@@ -75,7 +75,11 @@ export function getNewJsApiCode({
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
 
-  return `const payload = {
+  return `${isAuthenticated ? `// Get API key from environment variable
+if (!process.env.API_KEY) {
+    throw new Error('API_KEY environment variable not found. Please set your API key in the environment variables.');
+}
+` : ""}const payload = {
     "input_value": "${input_value}",
     "output_type": "${output_type}",
     "input_type": "${input_type}",
@@ -87,13 +91,15 @@ export function getNewJsApiCode({
         : ""
     }
 };
+
 const options = {
     method: 'POST',
     headers: {
-        'Content-Type': 'application/json'${isAuthenticated ? ',\n        "x-api-key": "YOUR-API-KEY"' : ""}
+        'Content-Type': 'application/json'${isAuthenticated ? ',\n        "x-api-key": process.env.API_KEY' : ""}
     },
     body: JSON.stringify(payload)
 };
+
 fetch('${apiUrl}?stream=${streaming}')
     .then(response => response.json())
     .then(response => console.log(response))

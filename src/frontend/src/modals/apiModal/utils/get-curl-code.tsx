@@ -99,12 +99,16 @@ export function getNewCurlCode({
       : {}),
   };
 
-  return `curl --request POST \\
+  return `${isAuthenticated ? `# Get API key from environment variable
+if [ -z "$API_KEY" ]; then
+  echo "Error: API_KEY environment variable not found. Please set your API key in the environment variables."
+fi
+` : ""}curl --request POST \\
   --url '${apiUrl}?stream=false' \\
   --header 'Content-Type: application/json' \\${
     isAuthenticated
       ? `
-  --header 'x-api-key: YOUR-API-KEY' \\`
+  --header "x-api-key: $API_KEY" \\`
       : ""
   }
   --data '${JSON.stringify(payload, null, 2)}'`;

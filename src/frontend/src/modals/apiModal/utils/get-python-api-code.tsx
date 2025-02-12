@@ -151,9 +151,12 @@ export function getNewPythonApiCode({
       : "{}";
 
   return `import requests
-
+${isAuthenticated ? `import os
 # API Configuration
-url = "${apiUrl}"  # The complete API endpoint URL for this flow
+try:
+    api_key = os.environ["API_KEY"]
+except KeyError:
+    raise ValueError("API_KEY environment variable not found. Please set your API key in the environment variables.")\n` : ""}url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
 # Stream configuration
 querystring = {
@@ -174,7 +177,7 @@ payload = {
 
 # Request headers
 headers = {
-    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": "YOUR-API-KEY"  # Authentication key for secure access' : ""}
+    "Content-Type": "application/json"${isAuthenticated ? ',\n    "x-api-key": api_key  # Authentication key from environment variable' : ""}
 }
 
 try:
