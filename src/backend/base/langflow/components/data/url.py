@@ -12,7 +12,10 @@ from langflow.schema.message import Message
 
 class URLComponent(Component):
     display_name = "URL"
-    description = "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs."
+    description = (
+        "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, "
+        "or JSON, with options for cleaning and separating multiple outputs."
+    )
     icon = "layout-template"
     name = "URL"
 
@@ -28,7 +31,10 @@ class URLComponent(Component):
         DropdownInput(
             name="format",
             display_name="Output Format",
-            info="Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
+            info=(
+                "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML "
+                "content, or 'JSON' to extract JSON from the HTML."
+            ),
             options=["Text", "Raw HTML", "JSON"],
             value="Text",
             real_time_refresh=True,
@@ -38,7 +44,10 @@ class URLComponent(Component):
             display_name="Separator",
             value="\n\n",
             show=True,
-            info="Specify the separator to use between multiple outputs. Default for Text is '\\n\\n'. Default for Raw HTML is '\\n<!-- Separator -->\\n'.",
+            info=(
+                "Specify the separator to use between multiple outputs. Default for Text is '\\n\\n'. "
+                "Default for Raw HTML is '\\n<!-- Separator -->\\n'."
+            ),
         ),
         BoolInput(
             name="clean_extra_whitespace",
@@ -69,6 +78,7 @@ class URLComponent(Component):
         """Ensures the given string is a valid URL."""
         if not string.startswith(("http://", "https://")):
             string = "http://" + string
+
         url_regex = re.compile(
             r"^(https?:\/\/)?"
             r"(www\.)?"
@@ -78,17 +88,24 @@ class URLComponent(Component):
             r"(\/[^\s]*)?$",
             re.IGNORECASE,
         )
+
+        error_msg = f"Invalid URL: {string}"
         if not url_regex.match(string):
-            raise ValueError(f"Invalid URL: {string}")
+            raise ValueError(error_msg)
+
+        json_error_msg = f"Invalid JSON URL: {string}"
         if self.format == "JSON" and ".json" not in string:
-            raise ValueError(f"Invalid JSON URL: {string}")
+            raise ValueError(json_error_msg)
+
         return string
 
     def fetch_content(self) -> list[Data]:
         """Fetch content based on selected format."""
         urls = list({self.ensure_url(url.strip()) for url in self.urls if url.strip()})
+
+        no_urls_msg = "No valid URLs provided."
         if not urls:
-            raise ValueError("No valid URLs provided.")
+            raise ValueError(no_urls_msg)
 
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
@@ -105,7 +122,8 @@ class URLComponent(Component):
                     data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
                     data.append(Data(**data_dict))
                 except json.JSONDecodeError as err:
-                    raise ValueError(f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}") from err
+                    invalid_json_msg = f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
+                    raise ValueError(invalid_json_msg) from err
             return data
 
         return [Data(text=doc.page_content, **doc.metadata) for doc in docs]
