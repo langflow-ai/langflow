@@ -1295,11 +1295,11 @@
 }
 
 .deploy-dropdown-item {
-  @apply px-2.5 py-2 hover:bg-background cursor-pointer font-normal text-[14px] !important;
+  @apply px-2.5 py-1 hover:bg-background cursor-pointer h-11 font-normal text-[14px] !important;
 }
 
 .deploy-dropdown-item > :first-child {
-  @apply flex items-center w-full px-2 py-1.5 rounded-md !important;
+  @apply flex items-center w-full px-2 h-8 py-1 rounded-md !important;
 }
 
 :root {
