@@ -180,7 +180,7 @@ async def generate_flow_events(
             graph.validate_stream()
             first_layer = sort_vertices(graph)
 
-            if inputs is not None and hasattr(inputs, "session") and inputs.session is not None:
+            if inputs is not None and getattr(inputs, "session", None) is not None:
                 graph.session_id = inputs.session
 
             for vertex_id in first_layer:
