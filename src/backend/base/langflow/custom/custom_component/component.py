@@ -987,8 +987,10 @@ class Component(CustomComponent):
     def extract_data(self, result):
         """Extract the data from the result. this is where the self.status is set."""
         if isinstance(result, Message):
-            self.status = result.text
-            return result.text
+            self.status = getattr(result, result.text_key, None)  # Gracefully handle missing .text attribute
+            return (
+                self.status if self.status is not None else "No text available"
+            )  # Provide a default message if .text is missing
         if hasattr(result, "data"):
             return result.data
         if hasattr(result, "model_dump"):
