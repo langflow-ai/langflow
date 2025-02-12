@@ -46,7 +46,7 @@ export default function ApiModal({
         open={open}
         setOpen={setOpen}
         size="medium"
-        className="pb-3 pt-3"
+        className=""
       >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header

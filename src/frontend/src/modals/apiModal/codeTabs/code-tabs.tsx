@@ -42,7 +42,7 @@ export default function APITabsComponent() {
   const codeOptions = {
     streaming: streaming,
     flowId: flowId || "",
-    isAuthenticated: !isAuthenticated || false,
+    isAuthenticated: isAuthenticated || false,
     input_value: input_value,
     input_type: hasChatInput ? "chat" : "text",
     output_type: hasChatOutput ? "chat" : "text",
