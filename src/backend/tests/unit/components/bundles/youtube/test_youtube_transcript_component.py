@@ -1,13 +1,10 @@
-import pytest
 from unittest.mock import Mock, patch
-from youtube_transcript_api import (
-    TranscriptsDisabled,
-    NoTranscriptFound,
-    CouldNotRetrieveTranscript
-)
+
+import pytest
 from langflow.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
 from langflow.schema import Data, DataFrame, Message
 from tests.base import ComponentTestBaseWithoutClient
+from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
 
 
 class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
@@ -35,14 +32,8 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     def mock_transcript_data(self):
         """Return mock transcript data for testing."""
         return [
-            Mock(
-                page_content="First part of the transcript",
-                metadata={"start_seconds": 0}
-            ),
-            Mock(
-                page_content="Second part of the transcript",
-                metadata={"start_seconds": 60}
-            ),
+            Mock(page_content="First part of the transcript", metadata={"start_seconds": 0}),
+            Mock(page_content="Second part of the transcript", metadata={"start_seconds": 60}),
         ]
 
     def test_basic_setup(self, component_class, default_kwargs):
@@ -57,11 +48,11 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     def test_get_dataframe_output_success(self, mock_loader, component_class, default_kwargs, mock_transcript_data):
         """Test successful DataFrame output generation."""
         mock_loader.from_youtube_url.return_value.load.return_value = mock_transcript_data
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
         result = component.get_dataframe_output()
-        
+
         assert isinstance(result, DataFrame)
         df = result
         assert len(df) == 2
@@ -74,11 +65,11 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     def test_get_message_output_success(self, mock_loader, component_class, default_kwargs, mock_transcript_data):
         """Test successful Message output generation."""
         mock_loader.from_youtube_url.return_value.load.return_value = mock_transcript_data
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
         result = component.get_message_output()
-        
+
         assert isinstance(result, Message)
         assert result.text == "First part of the transcript"
 
@@ -86,11 +77,11 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     def test_get_data_output_success(self, mock_loader, component_class, default_kwargs, mock_transcript_data):
         """Test successful Data output generation."""
         mock_loader.from_youtube_url.return_value.load.return_value = mock_transcript_data
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
         result = component.get_data_output()
-        
+
         assert isinstance(result, Data)
         assert result.data["video_url"] == default_kwargs["url"]
         assert result.data["transcript"] == "First part of the transcript Second part of the transcript"
@@ -99,27 +90,28 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_transcript_disabled_error(self, mock_loader, component_class, default_kwargs):
         """Test handling of TranscriptsDisabled error."""
+
         # Mock the load method to raise TranscriptsDisabled
         def raise_error(*args, **kwargs):
             raise TranscriptsDisabled("test123")
-        
+
         mock_loader.from_youtube_url.return_value.load.side_effect = raise_error
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
-        
+
         # Test DataFrame output
         df_result = component.get_dataframe_output()
         assert isinstance(df_result, DataFrame)
         assert len(df_result) == 1  # One row for error message
         assert "error" in df_result.columns
         assert "Failed to get YouTube transcripts" in df_result["error"][0]
-        
+
         # Test Message output
         msg_result = component.get_message_output()
         assert isinstance(msg_result, Message)
         assert "Failed to get YouTube transcripts" in msg_result.text
-        
+
         # Test Data output
         data_result = component.get_data_output()
         assert isinstance(data_result, Data)
@@ -132,16 +124,16 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         video_id = "test123"
         requested_langs = ["en"]
         transcript_data = {"en": {"translationLanguages": []}}
-        
+
         # Mock the load method to raise NoTranscriptFound
         def raise_error(*args, **kwargs):
             raise NoTranscriptFound(video_id, requested_langs, transcript_data)
-        
+
         mock_loader.from_youtube_url.return_value.load.side_effect = raise_error
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
-        
+
         data_result = component.get_data_output()
         assert isinstance(data_result, Data)
         assert "error" in data_result.data
@@ -151,7 +143,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         """Test setting different translation languages."""
         component = component_class()
         test_cases = ["en", "es", "fr", ""]
-        
+
         for lang in test_cases:
             component.set_attributes({"url": "https://youtube.com/watch?v=test", "translation": lang})
             assert component.translation == lang
@@ -160,15 +152,15 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     def test_empty_transcript_handling(self, mock_loader, component_class, default_kwargs):
         """Test handling of empty transcript response."""
         mock_loader.from_youtube_url.return_value.load.return_value = []
-        
+
         component = component_class()
         component.set_attributes(default_kwargs)
-        
+
         # Test Data output with empty transcript
         data_result = component.get_data_output()
         assert data_result.data["error"] == "No transcripts found."
         assert data_result.data["transcript"] == ""
-        
+
         # Test DataFrame output with empty transcript
         df_result = component.get_dataframe_output()
         assert len(df_result) == 0
