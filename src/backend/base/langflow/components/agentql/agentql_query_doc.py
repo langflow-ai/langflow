@@ -1,8 +1,14 @@
+from pathlib import Path
+
 import httpx
 from loguru import logger
-from pathlib import Path
-from langflow.components.agentql.utils import AGENTQL_QUERY_DOCUMENTATION, AGENTQL_REST_API_DOCUMENTATION, INVALID_API_KEY_MESSAGE
+
 from langflow.base.data import BaseFileComponent
+from langflow.components.agentql.utils import (
+    AGENTQL_QUERY_DOCUMENTATION,
+    AGENTQL_REST_API_DOCUMENTATION,
+    INVALID_API_KEY_MESSAGE,
+)
 from langflow.io import (
     DictInput,
     IntInput,
@@ -15,7 +21,7 @@ from langflow.schema import Data
 class AgentQLQueryDoc(BaseFileComponent):
     display_name = "AgentQL Query Doc"
     description = "Uses AgentQL API to extract structured data from a given document."
-    documentation: str = "https://docs.agentql.com/rest-api/api-reference"
+    documentation: str = AGENTQL_REST_API_DOCUMENTATION
     icon = "AgentQL"
     name = "AgentQL Query Doc"
 
@@ -80,7 +86,7 @@ class AgentQLQueryDoc(BaseFileComponent):
         if not str(file.path).endswith(tuple(self.VALID_EXTENSIONS)):
             self.status = f"File extension {file.path} is not supported."
             raise ValueError(self.status)
-        
+
         data = {
             "query": self.query,
         }
@@ -105,7 +111,8 @@ class AgentQLQueryDoc(BaseFileComponent):
                     try:
                         error_json = response.json()
                         logger.error(
-                            f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
+                            f"Failure response: '{response.status_code} {response.reason_phrase}' "
+                            f"with body: {error_json}"
                         )
                         msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
                     except (ValueError, TypeError):
