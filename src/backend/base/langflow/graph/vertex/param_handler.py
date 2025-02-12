@@ -126,8 +126,18 @@ class ParameterHandler:
         """Process file type fields."""
         if file_path := field.get("file_path"):
             try:
-                flow_id, file_name = os.path.split(file_path)
-                full_path = self.storage_service.build_full_path(flow_id, file_name)
+                full_path: str | list[str] = ""
+                if field.get("list"):
+                    full_path = []
+                    if isinstance(file_path, str):
+                        file_path = [file_path]
+                    for p in file_path:
+                        flow_id, file_name = os.path.split(p)
+                        path = self.storage_service.build_full_path(flow_id, file_name)
+                        full_path.append(path)
+                else:
+                    flow_id, file_name = os.path.split(file_path)
+                    full_path = self.storage_service.build_full_path(flow_id, file_name)
             except ValueError as e:
                 if "too many values to unpack" in str(e):
                     full_path = file_path
