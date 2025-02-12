@@ -1,5 +1,5 @@
-from langflow.components.processing.parse_data import ParseDataComponent
 import pytest
+from langflow.components.processing.parse_data import ParseDataComponent
 from langflow.schema import Data, Message
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
@@ -124,11 +124,7 @@ class TestParseDataComponent(ComponentTestBaseWithoutClient):
             Data(text="Test2", data={"nested": {"field": "value2"}}),
         ]
         component = component_class()
-        component.set_attributes({
-            "data": nested_data,
-            "template": "{text} - {data[nested][field]}",
-            "sep": "\n"
-        })
+        component.set_attributes({"data": nested_data, "template": "{text} - {data[nested][field]}", "sep": "\n"})
         result = component.parse_data()
         assert isinstance(result, Message)
         assert result.text == "Test1 - value1\nTest2 - value2"
@@ -138,7 +134,7 @@ class TestParseDataComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         result = component.parse_data()
         assert isinstance(result, Message)
-        assert result.text == "" 
+        assert result.text == ""
 
     def test_invalid_template_fields(self, component_class, default_kwargs):
         """Test behavior with invalid template fields."""
@@ -156,9 +152,9 @@ class TestParseDataComponent(ComponentTestBaseWithoutClient):
         component.set_attributes(default_kwargs)
         original_data = default_kwargs["data"].copy()
         result = component.parse_data_as_list()
-        
+
         # Check original data wasn't modified
         assert len(original_data) == len(default_kwargs["data"])
-        for orig, curr in zip(original_data, default_kwargs["data"]):
+        for orig, curr in zip(original_data, default_kwargs["data"], strict=False):
             assert orig.text == curr.text
             assert orig.data == curr.data
