@@ -1,6 +1,8 @@
+import asyncio
 import json
 import re
 
+import aiohttp
 from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
 
 from langflow.custom import Component
@@ -18,6 +20,7 @@ class URLComponent(Component):
     )
     icon = "layout-template"
     name = "URL"
+
 
     inputs = [
         MessageTextInput(
@@ -64,6 +67,25 @@ class URLComponent(Component):
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
+    async def validate_json_content(self, url: str) -> bool:
+        """Validates if the URL content is actually JSON."""
+        try:
+            async with aiohttp.ClientSession() as session, session.get(url) as response:
+                http_ok = 200
+                if response.status != http_ok:
+                    return False
+
+                content = await response.text()
+                try:
+                    json.loads(content)
+                except json.JSONDecodeError:
+                    return False
+                else:
+                    return True
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            # Log specific error for debugging if needed
+            return False
+
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Dynamically update fields based on selected format."""
         if field_name == "format":
@@ -89,13 +111,9 @@ class URLComponent(Component):
             re.IGNORECASE,
         )
 
-        error_msg = f"Invalid URL: {string}"
+        error_msg = "Invalid URL - " + string
         if not url_regex.match(string):
             raise ValueError(error_msg)
-
-        json_error_msg = f"Invalid JSON URL: {string}"
-        if self.format == "JSON" and ".json" not in string:
-            raise ValueError(json_error_msg)
 
         return string
 
@@ -106,6 +124,14 @@ class URLComponent(Component):
         no_urls_msg = "No valid URLs provided."
         if not urls:
             raise ValueError(no_urls_msg)
+
+        # If JSON format is selected, validate JSON content first
+        if self.format == "JSON":
+            for url in urls:
+                is_json = asyncio.run(self.validate_json_content(url))
+                if not is_json:
+                    error_msg = "Invalid JSON content from URL - " + url
+                    raise ValueError(error_msg)
 
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
@@ -122,8 +148,9 @@ class URLComponent(Component):
                     data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
                     data.append(Data(**data_dict))
                 except json.JSONDecodeError as err:
-                    invalid_json_msg = f"Invalid JSON content from {doc.metadata.get('source', 'unknown URL')}"
-                    raise ValueError(invalid_json_msg) from err
+                    source = doc.metadata.get("source", "unknown URL")
+                    error_msg = "Invalid JSON content from " + source
+                    raise ValueError(error_msg) from err
             return data
 
         return [Data(text=doc.page_content, **doc.metadata) for doc in docs]
