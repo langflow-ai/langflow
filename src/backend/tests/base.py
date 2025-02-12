@@ -114,6 +114,9 @@ class ComponentTestBase:
             pytest.skip("No file names mapping defined for this component.")
         version_mappings = {mapping["version"]: mapping for mapping in file_names_mapping}
 
+        if version not in version_mappings:
+            pytest.skip(f"Version {version} not found in file_names_mapping")
+            
         mapping = version_mappings[version]
         if mapping["file_name"] is DID_NOT_EXIST:
             pytest.skip(f"Skipping version {version} as it does not have a file name defined.")
