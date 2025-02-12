@@ -21,7 +21,6 @@ class URLComponent(Component):
     icon = "layout-template"
     name = "URL"
 
-
     inputs = [
         MessageTextInput(
             name="urls",
