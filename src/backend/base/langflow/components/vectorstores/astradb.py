@@ -143,7 +143,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             real_time_refresh=True,
             dialog_inputs=asdict(NewDatabaseInput()),
             combobox=True,
-            advanced=True,
         ),
         StrInput(
             name="api_endpoint",
@@ -552,7 +551,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Reset the selected database
         if build_config["database_name"]["value"] not in build_config["database_name"]["options"]:
             build_config["database_name"]["value"] = ""
-            build_config["database_name"]["advanced"] = False
             build_config["api_endpoint"]["value"] = ""
             build_config["collection_name"]["advanced"] = True
 
@@ -563,7 +561,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["database_name"]["options"] = []
         build_config["database_name"]["options_metadata"] = []
         build_config["database_name"]["value"] = ""
-        build_config["database_name"]["advanced"] = True
         build_config["api_endpoint"]["value"] = ""
 
         # Reset the list of collections and metadata associated
