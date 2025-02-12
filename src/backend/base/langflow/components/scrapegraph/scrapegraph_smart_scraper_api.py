@@ -63,7 +63,7 @@ class ScrapeGraphSmartScraperApi(Component):
             # SmartScraper request
             response = sgai_client.smartscraper(
                 website_url=self.url,
-                prompt=self.prompt,
+                user_prompt=self.prompt,
             )
 
             # Close the client
