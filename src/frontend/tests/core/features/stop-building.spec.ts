@@ -164,16 +164,6 @@ class CustomComponent(Component):
   `;
 
     await page.getByTestId("sidebar-custom-component-button").click();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-
-    await page.getByTestId("title-Custom Component").first().click();
-
-    await page.waitForSelector('[data-testid="code-button-modal"]', {
-      timeout: 3000,
-    });
-
-    await page.getByTestId("code-button-modal").click();
 
     await page.waitForSelector('[id="checkAndSaveBtn"]', {
       timeout: 3000,
@@ -184,6 +174,9 @@ class CustomComponent(Component):
     await page.locator("textarea").last().fill(timerCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
     await page.waitForTimeout(500);
+
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
 
     await page.getByTestId("button_run_custom component").click();
 

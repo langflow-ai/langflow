@@ -25,58 +25,60 @@ test(
       },
     );
 
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 500,
+    });
+
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-
-    await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("code-button-modal").click();
+    await page.waitForSelector('//*[@id="checkAndSaveBtn"]', {
+      timeout: 5000,
+    });
 
     const customCodeWithError = `
-# from langflow.field_typing import Data
-from langflow.custom import Component
-from langflow.io import TableInput, Output
-from langflow.schema import Data
-
-
-class CustomComponent(Component):
+    # from langflow.field_typing import Data
+    from langflow.custom import Component
+    from langflow.io import TableInput, Output
+    from langflow.schema import Data
+    
+    
+    class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
     documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
-
+    
     inputs = [
-        TableInput(
-    name="input_value",
-    display_name="Input Value",
-    value=[
-        {"alpha": "X1", "bravo": "Y2", "charlie": "Z3", "delta": "W4", "echo": "V5"},
-        {"alpha": "A6", "bravo": "B7", "charlie": "C8", "delta": "D9", "echo": "E0"},
-        {"alpha": "F1", "bravo": "G2", "charlie": "H3", "delta": "I4", "echo": "J5"},
-        {"alpha": "K6", "bravo": "L7", "charlie": "M8", "delta": "N9", "echo": "O0"},
-        {"alpha": "P1", "bravo": "Q2", "charlie": "R3", "delta": "S4", "echo": "T5"}
-    ],
-    table_schema=[
-        {"name": "alpha", "display_name": "Alpha"},
-        {"name": "bravo", "display_name": "Bravo"},
-        {"name": "charlie", "display_name": "Charlie"},
-        {"name": "delta", "display_name": "Delta"},
-        {"name": "echo", "display_name": "Echo"}
-    ]
-)
-    ]
-
-    outputs = [
-        Output(display_name="Output", name="output", method="build_output"),
-    ]
-
-    def build_output(self) -> Data:
-        data = Data(value=self.input_value)
-        self.status = data
-        return data
-  `;
+      TableInput(
+        name="input_value",
+        display_name="Input Value",
+        value=[
+          {"alpha": "X1", "bravo": "Y2", "charlie": "Z3", "delta": "W4", "echo": "V5"},
+          {"alpha": "A6", "bravo": "B7", "charlie": "C8", "delta": "D9", "echo": "E0"},
+          {"alpha": "F1", "bravo": "G2", "charlie": "H3", "delta": "I4", "echo": "J5"},
+          {"alpha": "K6", "bravo": "L7", "charlie": "M8", "delta": "N9", "echo": "O0"},
+          {"alpha": "P1", "bravo": "Q2", "charlie": "R3", "delta": "S4", "echo": "T5"}
+          ],
+          table_schema=[
+            {"name": "alpha", "display_name": "Alpha"},
+            {"name": "bravo", "display_name": "Bravo"},
+            {"name": "charlie", "display_name": "Charlie"},
+            {"name": "delta", "display_name": "Delta"},
+            {"name": "echo", "display_name": "Echo"}
+            ]
+            )
+            ]
+            
+            outputs = [
+              Output(display_name="Output", name="output", method="build_output"),
+              ]
+              
+              def build_output(self) -> Data:
+              data = Data(value=self.input_value)
+              self.status = data
+              return data
+              `;
 
     await page.locator("textarea").press(`ControlOrMeta+a`);
     await page.locator("textarea").fill(customCodeWithError);
@@ -86,6 +88,8 @@ class CustomComponent(Component):
     await page.waitForSelector('text="Open table"', {
       timeout: 3000,
     });
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
     await page.getByText("Open table").click();
 

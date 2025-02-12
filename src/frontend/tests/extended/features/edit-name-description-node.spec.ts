@@ -25,18 +25,17 @@ test(
     });
     await page.getByTestId("blank-flow").click();
 
-    await page.waitForSelector(
-      '[data-testid="sidebar-custom-component-button"]',
-      {
-        timeout: 30000,
-      },
-    );
-
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 500,
+    });
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await page.getByTestId("div-generic-node").click();
+    await page.waitForSelector('//*[@id="checkAndSaveBtn"]', {
+      timeout: 5000,
+    });
+
+    await page.locator('//*[@id="checkAndSaveBtn"]').click();
 
     await page.getByTestId("edit-name-description-button").click();
 

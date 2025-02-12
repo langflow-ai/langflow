@@ -22,6 +22,12 @@ test(
     });
 
     await page.getByTestId("sidebar-custom-component-button").click();
+    await page.waitForSelector('//*[@id="checkAndSaveBtn"]', {
+      timeout: 5000,
+    });
+
+    await page.locator('//*[@id="checkAndSaveBtn"]').click();
+
     await page.getByTitle("fit view").click();
     await page.getByTitle("zoom out").click();
     await page.getByTitle("zoom out").click();
