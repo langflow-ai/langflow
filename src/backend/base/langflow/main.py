@@ -129,8 +129,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             telemetry_service.start()
             await load_flows_from_directory()
             queue_service = get_queue_service()
-            if not queue_service._cleanup_task:  # Start if not already started
-                _tasks.append(asyncio.create_task(queue_service.start()))
+            if not queue_service.is_started():  # Start if not already started
+                queue_service.start()
             yield
 
         except Exception as exc:

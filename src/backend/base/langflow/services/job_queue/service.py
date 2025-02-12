@@ -59,7 +59,7 @@ class JobQueueService(Service):
         """
         return self._cleanup_task is not None
 
-    async def start(self) -> None:
+    def start(self) -> None:
         """Start the JobQueueService and begin the periodic cleanup routine.
 
         This method marks the service as active and launches a background task that
