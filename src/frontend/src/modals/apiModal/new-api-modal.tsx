@@ -74,7 +74,7 @@ export default function ApiModal({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8"
+                className="h-8 px-3"
                 onClick={() => setOpenTweaks(true)}
               >
                 <IconComponent
@@ -83,7 +83,7 @@ export default function ApiModal({
                 />
                 <span>Temporary overrides ({Object.keys(tweaks).length}) </span>
               </Button>
-              <Separator orientation="vertical" className="ml-2 h-8" />
+              <Separator orientation="vertical" className="ml-1 h-8" />
             </div>
           )}
         </BaseModal.Header>
