@@ -1,8 +1,8 @@
 from langflow.custom import Component
 from langflow.io import (
+    MessageTextInput,
     Output,
     SecretStrInput,
-    StrInput,
 )
 from langflow.schema import Data
 
@@ -14,8 +14,8 @@ class ScrapeGraphSearchApi(Component):
     More info at https://docs.scrapegraphai.com/services/searchscraper"""
     name = "ScrapeGraphSearchApi"
 
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.scrapegraphai.com/introduction"
+    icon = "ScrapeGraph"
 
     inputs = [
         SecretStrInput(
@@ -25,10 +25,11 @@ class ScrapeGraphSearchApi(Component):
             password=True,
             info="The API key to use ScrapeGraph API.",
         ),
-        StrInput(
+        MessageTextInput(
             name="user_prompt",
             display_name="Search Prompt",
             required=True,
+            tool_mode=True,
             info="The search prompt to use.",
         ),
     ]
