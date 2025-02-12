@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langchain_community.vectorstores import FAISS
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -44,16 +46,30 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    @staticmethod
+    def resolve_path(path: str) -> str:
+        """Resolve the path relative to the Langflow root.
+
+        Args:
+            path: The path to resolve
+        Returns:
+            str: The resolved path as a string
+        """
+        return str(Path(path).resolve())
+
+    def get_persist_directory(self) -> Path:
+        """Returns the resolved persist directory path or the current directory if not set."""
+        if self.persist_directory:
+            return Path(self.resolve_path(self.persist_directory))
+        return Path()
+
     @check_cached_vector_store
     def build_vector_store(self) -> FAISS:
         """Builds the FAISS object."""
-        if not self.persist_directory:
-            msg = "Folder path is required to save the FAISS index."
-            raise ValueError(msg)
-        path = self.resolve_path(self.persist_directory)
+        path = self.get_persist_directory()
+        path.mkdir(parents=True, exist_ok=True)
 
         documents = []
-
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
@@ -62,41 +78,31 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
         faiss = FAISS.from_documents(documents=documents, embedding=self.embedding)
         faiss.save_local(str(path), self.index_name)
-
         return faiss
 
     def search_documents(self) -> list[Data]:
         """Search for documents in the FAISS vector store."""
-        if not self.persist_directory:
-            msg = "Folder path is required to load the FAISS index."
-            raise ValueError(msg)
-        path = self.resolve_path(self.persist_directory)
+        path = self.get_persist_directory()
+        index_path = path / f"{self.index_name}.faiss"
 
-        vector_store = FAISS.load_local(
-            folder_path=path,
-            embeddings=self.embedding,
-            index_name=self.index_name,
-            allow_dangerous_deserialization=self.allow_dangerous_deserialization,
-        )
+        if not index_path.exists():
+            vector_store = self.build_vector_store()
+        else:
+            vector_store = FAISS.load_local(
+                folder_path=str(path),
+                embeddings=self.embedding,
+                index_name=self.index_name,
+                allow_dangerous_deserialization=self.allow_dangerous_deserialization,
+            )
 
         if not vector_store:
             msg = "Failed to load the FAISS index."
             raise ValueError(msg)
-
-        self.log(f"Search input: {self.search_query}")
-        self.log(f"Number of results: {self.number_of_results}")
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
                 query=self.search_query,
                 k=self.number_of_results,
             )
-
-            self.log(f"Retrieved documents: {len(docs)}")
-
-            data = docs_to_data(docs)
-            self.log(f"Converted documents to data: {len(data)}")
-            self.log(data)
-            return data  # Return the search results data
-        self.log("No search input provided. Skipping search.")
+            return docs_to_data(docs)
         return []
