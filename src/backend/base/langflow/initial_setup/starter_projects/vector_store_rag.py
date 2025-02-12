@@ -21,7 +21,7 @@ def ingestion_graph():
     vector_store = AstraDBVectorStoreComponent()
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
-        ingest_data=text_splitter.split_text,
+        ingest_data=text_splitter.as_data,
     )
 
     return Graph(file_component, vector_store)
