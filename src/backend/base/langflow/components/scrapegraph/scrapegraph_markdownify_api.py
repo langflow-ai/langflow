@@ -1,8 +1,8 @@
 from langflow.custom import Component
 from langflow.io import (
+    MessageTextInput,
     Output,
     SecretStrInput,
-    MessageTextInput,
 )
 from langflow.schema import Data
 

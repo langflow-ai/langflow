@@ -1,8 +1,8 @@
 from langflow.custom import Component
 from langflow.io import (
+    MessageTextInput,
     Output,
     SecretStrInput,
-    MessageTextInput,
 )
 from langflow.schema import Data
 
@@ -31,7 +31,7 @@ class ScrapeGraphSmartScraperApi(Component):
             tool_mode=True,
             info="The URL to scrape.",
         ),
-         MessageTextInput(
+        MessageTextInput(
             name="prompt",
             display_name="Prompt",
             tool_mode=True,
