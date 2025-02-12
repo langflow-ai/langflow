@@ -1,4 +1,5 @@
 import json
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import pandas as pd
@@ -146,7 +147,17 @@ class SaveToFileComponent(Component):
         return f"Data saved successfully as '{path}'"
 
     def _save_message(self, message: Message, path: Path, fmt: str) -> str:
-        content = message.text
+        if message.text is None:
+            content = ""
+        elif isinstance(message.text, AsyncIterator):
+            # AsyncIterator needs to be handled differently
+            error_msg = "AsyncIterator not supported"
+            raise ValueError(error_msg)
+        elif isinstance(message.text, Iterator):
+            # Convert iterator to string
+            content = " ".join(str(item) for item in message.text)
+        else:
+            content = str(message.text)
 
         if fmt == "txt":
             path.write_text(content, encoding="utf-8")

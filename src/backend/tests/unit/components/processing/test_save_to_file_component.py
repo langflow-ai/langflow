@@ -1,17 +1,19 @@
 import json
 from pathlib import Path
-from langflow.components.processing.save_to_file import SaveToFileComponent
-import pytest
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
-from unittest.mock import Mock, patch, MagicMock
-from langflow.schema import Data, DataFrame, Message
+import pytest
+
+from langflow.components.processing.save_to_file import SaveToFileComponent
+from langflow.schema import Data, Message
 from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture(autouse=True)
     def setup_and_teardown(self):
-        """Setup and teardown for each test"""
+        """Setup and teardown for each test."""
         # Setup
         test_files = [
             "./test_output.csv",
@@ -36,10 +38,10 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         """Return the default kwargs for the component."""
-        df = pd.DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
+        sample_df = pd.DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
         return {
             "input_type": "DataFrame",
-            "df": DataFrame(df),
+            "df": sample_df,
             "file_format": "csv",
             "file_path": "./test_output.csv"
         }
@@ -66,9 +68,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             "message": {"show": False},
             "file_format": {"options": []}
         }
-        
+
         updated_config = component.update_build_config(build_config, "DataFrame", "input_type")
-        
+
         assert updated_config["df"]["show"] is True
         assert updated_config["data"]["show"] is False
         assert updated_config["message"]["show"] is False
@@ -81,7 +83,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             ("json", json.dumps({"message": "Test message"}, indent=2)),
             ("markdown", "**Message:**\n\nTest message")
         ]
-        
+
         for fmt, expected_content in test_cases:
             mock_file = MagicMock()
             mock_parent = MagicMock()
@@ -90,9 +92,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             mock_file.expanduser.return_value = mock_file
 
             # Mock Path at the module level where it's imported
-            with patch('langflow.components.processing.save_to_file.Path') as MockPath:
-                MockPath.return_value = mock_file
-                
+            with patch("langflow.components.processing.save_to_file.Path") as mock_path:
+                mock_path.return_value = mock_file
+
                 component = component_class()
                 component.set_attributes({
                     "input_type": "Message",
@@ -100,25 +102,25 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                     "file_format": fmt,
                     "file_path": f"./test_output.{fmt}"
                 })
-                
+
                 result = component.save_to_file()
-                
+
                 mock_file.write_text.assert_called_once_with(expected_content, encoding="utf-8")
                 assert "saved successfully" in result
 
     def test_save_data(self, component_class):
         """Test saving Data object to JSON."""
         test_data = {"col1": ["value1"], "col2": ["value2"]}
-        
+
         mock_file = MagicMock()
         mock_parent = MagicMock()
         mock_parent.exists.return_value = True
         mock_file.parent = mock_parent
         mock_file.expanduser.return_value = mock_file
 
-        with patch('langflow.components.processing.save_to_file.Path') as MockPath:
-            MockPath.return_value = mock_file
-            
+        with patch("langflow.components.processing.save_to_file.Path") as mock_path:
+            mock_path.return_value = mock_file
+
             component = component_class()
             component.set_attributes({
                 "input_type": "Data",
@@ -126,9 +128,9 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 "file_format": "json",
                 "file_path": "./test_output.json"
             })
-            
+
             result = component.save_to_file()
-            
+
             expected_json = json.dumps(test_data, indent=2)
             mock_file.write_text.assert_called_once_with(expected_json, encoding="utf-8")
             assert "saved successfully" in result
@@ -141,24 +143,24 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         mock_file.parent = mock_parent
         mock_file.expanduser.return_value = mock_file
 
-        with patch('langflow.components.processing.save_to_file.Path') as MockPath:
-            MockPath.return_value = mock_file
-            with patch.object(pd.DataFrame, 'to_csv') as mock_to_csv:
+        with patch("langflow.components.processing.save_to_file.Path") as mock_path:
+            mock_path.return_value = mock_file
+            with patch.object(pd.DataFrame, "to_csv") as mock_to_csv:
                 component = component_class()
                 component.set_attributes(default_kwargs)
-                
+
                 result = component.save_to_file()
-                
+
                 mock_parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
                 assert mock_to_csv.called
                 assert "saved successfully" in result
 
-    def test_invalid_input_type(self, component_class, default_kwargs):
+    def test_invalid_input_type(self, default_kwargs):
         """Test handling of invalid input type."""
-        default_kwargs["input_type"] = "InvalidType"
-        component = component_class()
-        component.set_attributes(default_kwargs)
-        
-        with pytest.raises(ValueError) as exc_info:
+        component = SaveToFileComponent()
+        invalid_kwargs = default_kwargs.copy()  # Create a copy to modify
+        invalid_kwargs["input_type"] = "InvalidType"
+        component.set_attributes(invalid_kwargs)
+
+        with pytest.raises(ValueError, match="Unsupported input type"):
             component.save_to_file()
-        assert "Unsupported input type" in str(exc_info.value)
