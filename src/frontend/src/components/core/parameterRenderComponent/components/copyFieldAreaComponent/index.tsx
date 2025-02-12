@@ -97,7 +97,7 @@ export default function CopyFieldAreaComponent({
           className={cn(
             externalLinkIconClasses.gradient({
               editNode,
-              disabled: nodeInformationMetadata?.nodeType === "webhook",
+              disabled: false,
             }),
             editNode
               ? externalLinkIconClasses.editNodeTop
@@ -140,7 +140,7 @@ export default function CopyFieldAreaComponent({
         aria-label={valueToRender}
         ref={inputRef}
         type="text"
-        readOnly={nodeInformationMetadata?.nodeType === "webhook"}
+        readOnly
       />
       <div className="relative w-full">{renderIcon()}</div>
     </div>
