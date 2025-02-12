@@ -96,9 +96,7 @@ class ParseComponent(Component):
             return self.df, [], self.template_to_parse, self.sep
 
         # Convert single Data object or None to list
-        data_list = [] if self.data is None else (
-            self.data if isinstance(self.data, list) else [self.data]
-        )
+        data_list = [] if self.data is None else (self.data if isinstance(self.data, list) else [self.data])
 
         # Filter out None values and validate types
         data_list = [d for d in data_list if d is not None]

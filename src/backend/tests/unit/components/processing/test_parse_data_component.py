@@ -1,7 +1,7 @@
 import pytest
-
 from langflow.components.processing.parse_data import ParseDataComponent
 from langflow.schema import Data, Message
+
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 
