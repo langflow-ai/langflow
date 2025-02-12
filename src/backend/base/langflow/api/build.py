@@ -97,18 +97,14 @@ async def get_flow_events_response(
             )
 
         # Polling mode - get exactly one event
-        try:
-            event_id, value, put_time = await main_queue.get()
-            if value is None:
-                # End of stream, trigger end event
-                if event_task is not None:
-                    event_task.cancel()
-                event_manager.on_end(data={})
+        _, value, _ = await main_queue.get()
+        if value is None:
+            # End of stream, trigger end event
+            if event_task is not None:
+                event_task.cancel()
+            event_manager.on_end(data={})
 
-            return JSONResponse({"event": value.decode("utf-8") if value else None})
-
-        except asyncio.QueueEmpty:
-            return JSONResponse({"event": None})
+        return JSONResponse({"event": value.decode("utf-8") if value else None})
 
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
