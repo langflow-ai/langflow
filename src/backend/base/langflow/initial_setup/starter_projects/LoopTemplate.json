@@ -1881,7 +1881,7 @@
         "data": {
           "id": "note-e6tLL",
           "node": {
-            "description": "# **Langflow Loop Component Template - ArXiv search  result Translator**  \n\n## **🔹 Overview**  \nThe **Langflow Loop Component Template** is a  **automation workflow** designed to **search for research papers on ArXiv, translate them into Portuguese, and provide a consolidated summary**. Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, processes them through **Anthropic AI for translation**, and outputs an aggregated version of all translated papers.  \n\n## **🔹 Key Features**  \n✅ **Automated Research Paper Retrieval** – Searches for research papers on **ArXiv** based on a given query.  \n✅ **Loop-Based Processing** – Iterates through each retrieved paper, ensuring **individual translation**.  \n✅ **Anthropic AI-Powered Translation** – Converts research paper abstracts or summaries into **fluent Portuguese**.  \n✅ **Aggregated Output** – Combines all **translated papers into a structured final output**.  \n✅ **Seamless Integration with Langflow** – Fully **modular** and **scalable** within the Langflow ecosystem.  \n\n## **🔹 How It Works**  \n- **Input: Search Query**  \n  - User provides a **query related to a research topic** (e.g., “Quantum Computing Advancements”).  \n  - The system **fetches** a **list of research papers from ArXiv** matching the query.  \n- **Loop Execution**  \n  - Each **paper in the retrieved list** is **processed one by one** using a Langflow **Loop component**.  \n- **Translation via Anthropic AI**  \n  - The **abstract or summary of each paper** is **translated into Portuguese** using **Anthropic’s AI model**.  \n  - Ensures **high-quality, context-aware translation** while maintaining technical accuracy.  \n- **Aggregation of Translations**  \n  - Once all papers are translated, the system **aggregates** them into a **single structured output**.  \n  - This allows users to **view all translated abstracts in one place** instead of handling them separately.  \n\n## **🔹 Final Output**  \n🚀 A **fully automated, structured, and aggregated research translation pipeline** that efficiently **retrieves, processes, translates, and presents** ArXiv research papers **in Portuguese**.",
+            "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **Anthropic** model component, and outputs an aggregated version of all translated papers.  \n\n# # Quickstart \n 1. Add your Anthropic API key to the **Anthropic** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **Anthropic** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1889,11 +1889,11 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 1026,
+        "height": 647,
         "id": "note-e6tLL",
         "measured": {
-          "height": 1026,
-          "width": 631
+          "height": 647,
+          "width": 577
         },
         "position": {
           "x": -890.9006297459302,
@@ -1902,7 +1902,7 @@
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 630
+        "width": 576
       }
     ],
     "viewport": {
@@ -1918,7 +1918,7 @@
   "id": "a004bc07-f6ca-4a02-b8f8-7fb8ebaed7b0",
   "is_component": false,
   "last_tested_version": "1.1.5",
-  "name": "LoopTemplate",
+  "name": "Loop Template",
   "tags": [
     "chatbots",
     "content-generation"
