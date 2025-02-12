@@ -1952,7 +1952,8 @@ class Graph:
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
         is_active = self.get_vertex(vertex_id).is_active()
-        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active)
+        is_loop = self.get_vertex(vertex_id).is_loop
+        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     def build_run_map(self) -> None:
         """Builds the run map for the graph.
@@ -1984,7 +1985,8 @@ class Graph:
                 return
             visited.add(predecessor_id)
             is_active = self.get_vertex(predecessor_id).is_active()
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active):
+            is_loop = self.get_vertex(predecessor_id).is_loop
+            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active, is_loop=is_loop):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
@@ -2029,13 +2031,13 @@ class Graph:
         return in_degree
 
     @staticmethod
-    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
         """Returns the adjacency maps for the graph."""
-        predecessor_map: dict[str, list[str]] = defaultdict(list)
-        successor_map: dict[str, list[str]] = defaultdict(list)
+        predecessor_map: dict[str, set[str]] = defaultdict(set)
+        successor_map: dict[str, set[str]] = defaultdict(set)
         for edge in edges:
-            predecessor_map[edge.target_id].append(edge.source_id)
-            successor_map[edge.source_id].append(edge.target_id)
+            predecessor_map[edge.target_id].add(edge.source_id)
+            successor_map[edge.source_id].add(edge.target_id)
         return predecessor_map, successor_map
 
     def __to_dict(self) -> dict[str, dict[str, list[str]]]:
