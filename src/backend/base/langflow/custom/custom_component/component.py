@@ -981,17 +981,21 @@ class Component(CustomComponent):
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
-        if len(self.outputs) == 1:
-            return self.status or self.extract_data(result)
+        """Process the raw result of the component."""
         return self.extract_data(result)
 
     def extract_data(self, result):
+        """Extract the data from the result. this is where the self.status is set."""
+        if isinstance(result, Message):
+            self.status = result.text
+            return result.text
         if hasattr(result, "data"):
             return result.data
         if hasattr(result, "model_dump"):
             return result.model_dump()
         if isinstance(result, Data | dict | str):
             return result.data if isinstance(result, Data) else result
+
         if self.status:
             return self.status
         return result
