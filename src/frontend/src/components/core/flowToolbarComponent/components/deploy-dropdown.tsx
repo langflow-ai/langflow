@@ -124,7 +124,9 @@ export default function PublishDropdown() {
             side="left"
             content={
               hasIO
-                ? encodeURI(`${domain}/playground/${flowId}`)
+                ? isPublished
+                  ? encodeURI(`${domain}/playground/${flowId}`)
+                  : "Active to share a public version of this Playground"
                 : "Add a Chat Input or Chat Output to access your flow"
             }
           >
@@ -136,10 +138,6 @@ export default function PublishDropdown() {
                   if (hasIO) {
                     if (isPublished) {
                       window.open(`${domain}/playground/${flowId}`, "_blank");
-                    } else {
-                      handlePublishedSwitch(isPublished).then(() => {
-                        window.open(`${domain}/playground/${flowId}`, "_blank");
-                      });
                     }
                   }
                 }}
