@@ -47,8 +47,7 @@ class Query(Component):
         }
 
         payload = {
-            "message": self.message_content,
-            "node_ids": [],
+            "content": self.message_content,
         }
 
         try:
