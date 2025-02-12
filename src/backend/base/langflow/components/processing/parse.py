@@ -88,17 +88,24 @@ class ParseComponent(Component):
             build_config["data"]["show"] = field_value == "Data"
         return build_config
 
-    def _clean_args(self) -> tuple[DataFrame | None, list[Data] | None, str, str]:
+    def _clean_args(self) -> tuple[DataFrame | None, list[Data], str, str]:
         """Validate and clean input arguments."""
         if self.parse_input_type == "DataFrame":
             if not isinstance(self.df, DataFrame):
                 raise ValueError(DATAFRAME_ERROR)
-            return self.df, None, self.template_to_parse, self.sep
+            return self.df, [], self.template_to_parse, self.sep
 
-        data = self.data if isinstance(self.data, list) else [self.data]
-        if not all(isinstance(d, Data) for d in data if d is not None):
+        # Convert single Data object or None to list
+        data_list = [] if self.data is None else (
+            self.data if isinstance(self.data, list) else [self.data]
+        )
+
+        # Filter out None values and validate types
+        data_list = [d for d in data_list if d is not None]
+        if not all(isinstance(d, Data) for d in data_list):
             raise ValueError(DATA_ERROR)
-        return None, data, self.template_to_parse, self.sep
+
+        return None, data_list, self.template_to_parse, self.sep
 
     def _format_dataframe_row(self, row: dict[str, Any]) -> str:
         """Format a DataFrame row using the template or default to JSON."""
@@ -137,8 +144,9 @@ class ParseComponent(Component):
             lines = [self._format_dataframe_row(row.to_dict()) for _, row in df.iterrows()]
         else:
             if template_to_parse:
+                # data will never be None here due to _clean_args
                 return Message(text=data_to_text(template_to_parse, data, sep))
-            lines = [self._format_data_object(d) for d in data if d]
+            lines = [self._format_data_object(d) for d in data]
 
         result = sep.join(lines)
         self.status = result
@@ -152,9 +160,10 @@ class ParseComponent(Component):
             return [Data(text=self._format_dataframe_row(row.to_dict())) for _, row in df.iterrows()]
 
         if template_to_parse:
+            # data will never be None here due to _clean_args
             texts, items = data_to_text_list(template_to_parse, data)
             for item, text in zip(items, texts, strict=True):
                 item.set_text(text)
             return items
 
-        return [Data(text=self._format_data_object(d)) for d in data if d]
+        return [Data(text=self._format_data_object(d)) for d in data]

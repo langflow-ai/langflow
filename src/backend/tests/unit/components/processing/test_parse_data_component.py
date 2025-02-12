@@ -1,7 +1,7 @@
 import pytest
+
 from langflow.components.processing.parse_data import ParseDataComponent
 from langflow.schema import Data, Message
-
 from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 
@@ -152,7 +152,8 @@ class TestParseDataComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes(default_kwargs)
         original_data = default_kwargs["data"].copy()
-        result = component.parse_data_as_list()
+        # Run parse_data_as_list but don't store result since we don't use it
+        component.parse_data_as_list()
 
         # Check original data wasn't modified
         assert len(original_data) == len(default_kwargs["data"])
