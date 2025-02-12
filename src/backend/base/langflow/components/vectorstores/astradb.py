@@ -493,44 +493,53 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
-        # Nothing to generate if we don't have an API endpoint yet
         api_endpoint = api_endpoint or self.get_api_endpoint()
+
         if not api_endpoint:
             return []
 
-        # Retrieve the database object
+        # Retrieve the database object just once
         database = self.get_database_object(api_endpoint=api_endpoint)
+        keyspace = self.get_keyspace()
 
         # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+        try:
+            collection_list = database.list_collections(keyspace=keyspace)
+        except Exception as e:
+            self.log(f"Error listing collections: {e}")
+            return []
 
-        # Return the list of collections and metadata associated
+        def get_vector_service_options(col):
+            if col.options.vector and col.options.vector.service:
+                return col.options.vector.service.provider, col.options.vector.service.model_name
+            return None, None
+
         return [
             {
                 "name": col.name,
                 "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
+                "provider": (provider := get_vector_service_options(col))[0],
                 "icon": "",
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
+                "model": provider[1],
             }
             for col in collection_list
         ]
 
     def reset_collection_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
+        # Initialize collection options once
         collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-        ]
+        # Populate dropdown options and metadata simultaneously
+        build_config["collection_name"]["options"] = []
+        build_config["collection_name"]["options_metadata"] = []
 
-        # Reset the selected collection
+        for col in collection_options:
+            build_config["collection_name"]["options"].append(col["name"])
+            build_config["collection_name"]["options_metadata"].append(
+                {k: v for k, v in col.items() if k not in ["name"]}
+            )
+
+        # Reset the selected collection if it no longer exists
         if build_config["collection_name"]["value"] not in build_config["collection_name"]["options"]:
             build_config["collection_name"]["value"] = ""
 
