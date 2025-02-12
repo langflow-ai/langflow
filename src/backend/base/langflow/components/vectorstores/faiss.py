@@ -46,14 +46,21 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def resolve_path(self, path: str) -> Path:
-        """Resolve the path relative to the Langflow root."""
-        return Path(path).resolve()
+    @staticmethod
+    def resolve_path(path: str) -> str:
+        """Resolve the path relative to the Langflow root.
+
+        Args:
+            path: The path to resolve
+        Returns:
+            str: The resolved path as a string
+        """
+        return str(Path(path).resolve())
 
     def get_persist_directory(self) -> Path:
         """Returns the resolved persist directory path or the current directory if not set."""
         if self.persist_directory:
-            return self.resolve_path(self.persist_directory)
+            return Path(self.resolve_path(self.persist_directory))
         return Path()
 
     @check_cached_vector_store
