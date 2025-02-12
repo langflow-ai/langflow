@@ -48,8 +48,8 @@ class SplitTextComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Chunks", name="chunks", method="as_data"),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Data", name="data_chunks", method="as_data"),
+        Output(display_name="DataFrame", name="dataframe_chunks", method="as_dataframe"),
     ]
 
     def _docs_to_data(self, docs) -> list[Data]:
