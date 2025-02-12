@@ -1,8 +1,8 @@
 from langflow.custom import Component
 from langflow.io import (
+    MessageTextInput,
     Output,
     SecretStrInput,
-    StrInput,
 )
 from langflow.schema import Data
 
@@ -25,11 +25,17 @@ class ScrapeGraphSmartScraperApi(Component):
             password=True,
             info="The API key to use ScrapeGraph API.",
         ),
-        StrInput(
+        MessageTextInput(
             name="url",
             display_name="URL",
-            required=True,
+            tool_mode=True,
             info="The URL to scrape.",
+        ),
+        MessageTextInput(
+            name="prompt",
+            display_name="Prompt",
+            tool_mode=True,
+            info="The prompt to use for the smart scraper.",
         ),
     ]
 
@@ -55,6 +61,7 @@ class ScrapeGraphSmartScraperApi(Component):
             # SmartScraper request
             response = sgai_client.smartscraper(
                 website_url=self.url,
+                user_prompt=self.prompt,
             )
 
             # Close the client

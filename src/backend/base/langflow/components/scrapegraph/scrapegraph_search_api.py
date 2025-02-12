@@ -7,15 +7,15 @@ from langflow.io import (
 from langflow.schema import Data
 
 
-class ScrapeGraphMarkdownifyApi(Component):
-    display_name: str = "ScrapeGraphMarkdownifyApi"
-    description: str = """ScrapeGraph Markdownify API.
-    Given a URL, it will return the markdownified content of the website.
-    More info at https://docs.scrapegraphai.com/services/markdownify"""
-    name = "ScrapeGraphMarkdownifyApi"
+class ScrapeGraphSearchApi(Component):
+    display_name: str = "ScrapeGraphSearchApi"
+    description: str = """ScrapeGraph Search API.
+    Given a search prompt, it will return search results using ScrapeGraph's search functionality.
+    More info at https://docs.scrapegraphai.com/services/searchscraper"""
+    name = "ScrapeGraphSearchApi"
 
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.scrapegraphai.com/introduction"
+    icon = "ScrapeGraph"
 
     inputs = [
         SecretStrInput(
@@ -26,18 +26,18 @@ class ScrapeGraphMarkdownifyApi(Component):
             info="The API key to use ScrapeGraph API.",
         ),
         MessageTextInput(
-            name="url",
-            display_name="URL",
+            name="user_prompt",
+            display_name="Search Prompt",
             tool_mode=True,
-            info="The URL to markdownify.",
+            info="The search prompt to use.",
         ),
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="scrape"),
+        Output(display_name="Data", name="data", method="search"),
     ]
 
-    def scrape(self) -> list[Data]:
+    def search(self) -> list[Data]:
         try:
             from scrapegraph_py import Client
             from scrapegraph_py.logger import sgai_logger
@@ -52,9 +52,9 @@ class ScrapeGraphMarkdownifyApi(Component):
         sgai_client = Client(api_key=self.api_key)
 
         try:
-            # Markdownify request
-            response = sgai_client.markdownify(
-                website_url=self.url,
+            # SearchScraper request
+            response = sgai_client.searchscraper(
+                user_prompt=self.user_prompt,
             )
 
             # Close the client

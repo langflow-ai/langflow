@@ -109,7 +109,7 @@ dependencies = [
     "mcp>=0.9.1",
     "uv>=0.5.7",
     "ag2>=0.1.0",
-    "scrapegraph-py>=1.10.2",
+    "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
 ]
 
