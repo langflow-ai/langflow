@@ -56,9 +56,7 @@ class SplitTextComponent(Component):
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
     def _docs_to_dataframe(self, docs):
-        data_dicts = [
-            {self.text_key: doc.page_content, **doc.metadata} for doc in docs
-        ]
+        data_dicts = [{self.text_key: doc.page_content, **doc.metadata} for doc in docs]
         return DataFrame(data_dicts)
 
     def split_text(self):

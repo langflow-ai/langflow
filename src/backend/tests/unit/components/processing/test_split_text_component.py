@@ -1,6 +1,6 @@
 import pytest
-from langflow.components.processing import SplitTextComponent
 from langflow.components.data import URLComponent
+from langflow.components.processing import SplitTextComponent
 from langflow.schema import Data, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -271,5 +271,3 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         results = component.as_data()
         assert isinstance(results, list), "Expected list instance"
         assert len(results) > 2, f"Expected DataFrame with more than 2 rows, got {len(results)}"
-
-
