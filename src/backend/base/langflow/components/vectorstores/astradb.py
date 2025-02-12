@@ -36,19 +36,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "data": {
                     "node": {
                         "name": "create_database",
-                        "description": "Create a new database in Astra DB.",
-                        "display_name": "Create New Database",
+                        "description": "",
+                        "display_name": "Create new database",
                         "field_order": ["new_database_name", "cloud_provider", "region"],
                         "template": {
                             "new_database_name": StrInput(
                                 name="new_database_name",
-                                display_name="New Database Name",
+                                display_name="Name",
                                 info="Name of the new database to create in Astra DB.",
                                 required=True,
                             ),
                             "cloud_provider": DropdownInput(
                                 name="cloud_provider",
-                                display_name="Cloud Provider",
+                                display_name="Cloud provider",
                                 info="Cloud provider for the new database.",
                                 options=["Amazon Web Services", "Google Cloud Platform", "Microsoft Azure"],
                                 required=True,
@@ -75,8 +75,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "data": {
                     "node": {
                         "name": "create_collection",
-                        "description": "Create a new collection in Astra DB.",
-                        "display_name": "Create New Collection",
+                        "description": "",
+                        "display_name": "Create new collection",
                         "field_order": [
                             "new_collection_name",
                             "embedding_generation_provider",
@@ -85,13 +85,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         "template": {
                             "new_collection_name": StrInput(
                                 name="new_collection_name",
-                                display_name="New Collection Name",
+                                display_name="Name",
                                 info="Name of the new collection to create in Astra DB.",
                                 required=True,
                             ),
                             "embedding_generation_provider": DropdownInput(
                                 name="embedding_generation_provider",
-                                display_name="Embedding Generation Provider",
+                                display_name="Embedding generation method",
                                 info="Provider to use for generating embeddings.",
                                 real_time_refresh=True,
                                 required=True,
@@ -99,14 +99,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                             ),
                             "embedding_generation_model": DropdownInput(
                                 name="embedding_generation_model",
-                                display_name="Embedding Generation Model",
+                                display_name="Embedding model",
                                 info="Model to use for generating embeddings.",
                                 required=True,
                                 options=["Bring your own", "NV-Embed-QA"],
                             ),
                             "dimension": IntInput(
                                 name="dimension",
-                                display_name="Dimension (Required for Bring your own)",
+                                display_name="Dimensions",
                                 info="Dimension of the embeddings to generate.",
                                 required=False,
                                 value=1024,
@@ -602,7 +602,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["database_name"]["options_metadata"] = build_config["database_name"]["options_metadata"] + [
                 {"status": "PENDING"}
             ]
-            build_config["api_endpoint"]["value"] = None
+            build_config["api_endpoint"]["value"] = ""
 
             return self.reset_collection_list(build_config)
 
