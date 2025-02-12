@@ -3483,7 +3483,7 @@
               },
               "database_name": {
                 "_input_type": "DropdownInput",
-                "advanced": false,
+                "advanced": true,
                 "combobox": true,
                 "dialog_inputs": {
                   "fields": {
@@ -4169,7 +4169,7 @@
               },
               "database_name": {
                 "_input_type": "DropdownInput",
-                "advanced": false,
+                "advanced": true,
                 "combobox": true,
                 "dialog_inputs": {
                   "fields": {
