@@ -39,6 +39,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
 }) => {
   const nodes = useFlowStore((state) => state.nodes);
   const setNode = useFlowStore((state) => state.setNode);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { fields, functionality } = dialogInputs || {};
   const nodeData = fields?.data?.node;
@@ -84,6 +85,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
       });
       setNode(nodeId, targetNode);
     }
+    setIsLoading(false);
     onClose();
   };
 
@@ -98,8 +100,10 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   /**
    * Handles sending the payload state using mutateTemplate.
    */
-  const handleSendPayload = () => {
-    mutateTemplate(
+  const handleSendPayload = async () => {
+    setIsLoading(true);
+
+    await mutateTemplate(
       payloadValues,
       nodeClass,
       setNodeClass,
@@ -162,7 +166,11 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
           <Button variant="secondary" onClick={handleCloseDialog}>
             Cancel
           </Button>
-          <Button variant="default" onClick={handleSendPayload}>
+          <Button
+            variant="default"
+            loading={isLoading}
+            onClick={handleSendPayload}
+          >
             {functionality}
           </Button>
         </DialogFooter>
