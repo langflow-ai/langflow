@@ -438,17 +438,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
-        return None
+        # Directly return stripped keyspace if it exists, otherwise None
+        return self.keyspace.strip() if self.keyspace else None
 
     def get_database_object(self, api_endpoint: str | None = None):
         try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-
+            client = self._get_client()
             return client.get_database(
                 api_endpoint=api_endpoint or self.get_api_endpoint(),
                 token=self.token,
@@ -928,3 +923,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def _get_client(self):
+        """Gets the cached client or creates a new one if not exists."""
+        if self._client is None:
+            self._client = DataAPIClient(token=self.token, environment=self.environment)
+        return self._client
