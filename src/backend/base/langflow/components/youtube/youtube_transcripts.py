@@ -87,7 +87,10 @@ class YouTubeTranscriptsComponent(Component):
             return Message(text=error_msg)
 
     def get_data_output(self) -> Data:
-        """Returns a Data object containing:
+        """Creates a structured data object with transcript and metadata.
+
+        Returns a Data object containing transcript text, video URL, and any error
+        messages that occurred during processing. The object includes:
         - 'transcript': continuous text from the entire video
         - 'video_url': the input YouTube URL
         - 'error': error message if an exception occurs
@@ -100,7 +103,9 @@ class YouTubeTranscriptsComponent(Component):
                 result = transcripts[0].page_content
                 return Data(data={"transcript": result, "video_url": self.url})
             error_message = "No transcripts found."
-        except Exception as e:
-            error_message = str(e)
+        except (youtube_transcript_api.TranscriptsDisabled,
+                youtube_transcript_api.NoTranscriptFound,
+                youtube_transcript_api.CouldNotRetrieveTranscript) as exc:
+            error_message = str(exc)
 
         return Data(data={"transcript": "", "video_url": self.url, "error": error_message})
