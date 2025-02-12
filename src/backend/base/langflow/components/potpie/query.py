@@ -3,7 +3,7 @@ import httpx
 from langflow.custom import Component
 from langflow.inputs import MessageTextInput
 from langflow.io import SecretStrInput
-from langflow.schema import Data
+from langflow.schema import Message
 from langflow.template import Output
 
 
@@ -39,7 +39,7 @@ class Query(Component):
         Output(display_name="Agent Response", name="agent_response", method="run_query"),
     ]
 
-    def run_query(self) -> Data:
+    def run_query(self) -> Message:
         endpoint = f"https://production-api.potpie.ai/api/v2/project/{self.project_id}/message"
         headers = {
             "X-API-Key": self.potpie_api_key,
@@ -54,7 +54,7 @@ class Query(Component):
             response = httpx.post(endpoint, headers=headers, json=payload, timeout=10000)
             response.raise_for_status()
             res = response.json()
-            data = Data(response=res["message"])
+            data = Message(text=res["message"])
         except httpx.HTTPStatusError as e:
             raise ValueError(e.response.text) from e
 
