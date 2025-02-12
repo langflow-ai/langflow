@@ -18,7 +18,7 @@ class DataToDataFrameComponent(Component):
             name="data_list",
             display_name="Data or Data List",
             info="One or multiple Data objects to transform into a DataFrame.",
-            is_list=True
+            is_list=True,
         ),
     ]
 
