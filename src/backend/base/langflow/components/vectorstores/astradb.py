@@ -534,7 +534,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Reset the selected collection
         if build_config["collection_name"]["value"] not in build_config["collection_name"]["options"]:
             build_config["collection_name"]["value"] = ""
-        build_config["collection_name"]["advanced"] = False
+
+        # If we have a database, collection name should not be advanced
+        build_config["collection_name"]["advanced"] = not build_config["database_name"]["value"]
 
         return build_config
 
@@ -554,6 +556,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["api_endpoint"]["value"] = ""
             build_config["collection_name"]["advanced"] = True
 
+        # If we have a token, database name should not be advanced
+        build_config["database_name"]["advanced"] = not build_config["token"]["value"]
+
         return build_config
 
     def reset_build_config(self, build_config: dict):
@@ -561,6 +566,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["database_name"]["options"] = []
         build_config["database_name"]["options_metadata"] = []
         build_config["database_name"]["value"] = ""
+        build_config["database_name"]["advanced"] = True
         build_config["api_endpoint"]["value"] = ""
 
         # Reset the list of collections and metadata associated
