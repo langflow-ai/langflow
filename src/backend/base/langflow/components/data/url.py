@@ -79,23 +79,11 @@ class URLComponent(Component):
         if not string.startswith(("http://", "https://")):
             string = "http://" + string
 
-        url_regex = re.compile(
-            r"^(https?:\/\/)?"
-            r"(www\.)?"
-            r"([a-zA-Z0-9.-]+)"
-            r"(\.[a-zA-Z]{2,})?"
-            r"(:\d+)?"
-            r"(\/[^\s]*)?$",
-            re.IGNORECASE,
-        )
+        if not self.url_regex.match(string):
+            raise ValueError(f"Invalid URL: {string}")
 
-        error_msg = f"Invalid URL: {string}"
-        if not url_regex.match(string):
-            raise ValueError(error_msg)
-
-        json_error_msg = f"Invalid JSON URL: {string}"
         if self.format == "JSON" and ".json" not in string:
-            raise ValueError(json_error_msg)
+            raise ValueError(f"Invalid JSON URL: {string}")
 
         return string
 
@@ -147,3 +135,15 @@ class URLComponent(Component):
     def as_dataframe(self) -> DataFrame:
         """Return fetched content as a DataFrame."""
         return DataFrame(self.fetch_content())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.url_regex = re.compile(
+            r"^(https?:\/\/)?"
+            r"(www\.)?"
+            r"([a-zA-Z0-9.-]+)"
+            r"(\.[a-zA-Z]{2,})?"
+            r"(:\d+)?"
+            r"(\/[^\s]*)?$",
+            re.IGNORECASE,
+        )
