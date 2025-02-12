@@ -28,7 +28,6 @@ class ScrapeGraphSmartScraperApi(Component):
         MessageTextInput(
             name="url",
             display_name="URL",
-            required=True,
             tool_mode=True,
             info="The URL to scrape.",
         ),
