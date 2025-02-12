@@ -599,8 +599,8 @@ async def process() -> None:
     )
 
 
-@router.get("/task/{task_id}", deprecated=True)
-async def get_task_status(task_id: str) -> TaskStatusResponse:  # noqa: ARG001
+@router.get("/task/{_task_id}", deprecated=True)
+async def get_task_status(_task_id: str) -> TaskStatusResponse:
     """Get the status of a task by ID (Deprecated).
 
     This endpoint is deprecated and will be removed in a future version.
