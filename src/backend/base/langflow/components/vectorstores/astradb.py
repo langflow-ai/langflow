@@ -479,15 +479,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_database_options(self):
         try:
-            return [
-                {
-                    "name": name,
-                    "status": info["status"],
-                    "collections": info["collections"],
-                    "api_endpoint": info["api_endpoint"],
-                }
-                for name, info in self.get_database_list().items()
-            ]
+            return self._fetch_database_options(self.get_database_list())
         except Exception as e:
             msg = f"Error fetching database options: {e}"
             raise ValueError(msg) from e
@@ -928,3 +920,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def _fetch_database_options(self, db_list):
+        return [
+            {
+                "name": name,
+                "status": info["status"],
+                "collections": info["collections"],
+                "api_endpoint": info["api_endpoint"],
+            }
+            for name, info in db_list.items()
+        ]
