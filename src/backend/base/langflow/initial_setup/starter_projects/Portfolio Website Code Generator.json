@@ -2337,7 +2337,7 @@
         "data": {
           "id": "note-mhzvP",
           "node": {
-            "description": "# 📄 Upload Your Resume Here ⬇️\n\n\n\n",
+            "description": "### 💡 Upload your resume here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2354,8 +2354,8 @@
           "width": 345
         },
         "position": {
-          "x": -114.86317865085141,
-          "y": 397.6440518113504
+          "x": -112.62634602655955,
+          "y": 444.6175369214796
         },
         "resizing": false,
         "selected": false,
@@ -2366,7 +2366,7 @@
         "data": {
           "id": "note-WG04k",
           "node": {
-            "description": "## 📝 Guidelines for Uploading Your Resume:\n\n✅ **Accepted Formats:** PDF, or TXT  \n✅ **Ensure Readability:** Clear headings, bullet points, and proper formatting  \n## 📌 Required Resume Fields:\n1. 🏷 **Full Name** - Candidate's full name  \n2. 📧 **Email** - A valid email address  \n3. 📞 **Phone Number** - Contact number  \n4. 🔗 **LinkedIn** - LinkedIn profile URL  \n5. 🖥 **GitHub** - GitHub profile URL (if applicable)  \n6. 🌐 **Portfolio** - Personal website or portfolio URL  \n7. 🛂 **Visa Status** - Work authorization details (if applicable)  \n8. 📝 **Summary** - A brief professional summary or objective statement  \n9. 💼 **Experience** - Work experience details (in dictionary format)  \n10. 🎓 **Education** - Education details (in dictionary format)  \n11. 🛠 **Skills** - Skills mentioned in the resume (comma-separated)  \n12. 🚀 **Projects** - Titles, descriptions, and details of projects  \n\n\n\n🚀 Once uploaded, your resume will be parsed into a structured format for better insights!Upload your resume Here",
+            "description": "## 📝 Portfolio Website Code Generator\n\nYour uploaded resume is parsed into a structured format, and output as HTML/CSS code for your own resume website!\n\n✅ **Accepted Formats:** PDF or TXT  \n✅ To ensure readability, provide clear headings, bullet points, and proper formatting. \n### 📌 Structured output fields:\n1. 🏷 **Full Name** - Candidate's full name  \n2. 📧 **Email** - A valid email address  \n3. 📞 **Phone Number** - Contact number  \n4. 🔗 **LinkedIn** - LinkedIn profile URL  \n5. 🖥 **GitHub** - GitHub profile URL (if applicable)  \n6. 🌐 **Portfolio** - Personal website or portfolio URL  \n7. 🛂 **Visa Status** - Work authorization details (if applicable)  \n8. 📝 **Summary** - A brief professional summary or objective statement  \n9. 💼 **Experience** - Work experience details (in dictionary format)  \n10. 🎓 **Education** - Education details (in dictionary format)  \n11. 🛠 **Skills** - Skills mentioned in the resume (comma-separated)  \n12. 🚀 **Projects** - Titles, descriptions, and details of projects.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -2374,26 +2374,26 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 658,
+        "height": 324,
         "id": "note-WG04k",
         "measured": {
-          "height": 658,
-          "width": 521
+          "height": 324,
+          "width": 325
         },
         "position": {
-          "x": -642.9993717430311,
-          "y": 280.99456693272356
+          "x": -510.6692280684694,
+          "y": 451.2228866325788
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 520
+        "width": 324
       },
       {
         "data": {
           "id": "note-hi9i1",
           "node": {
-            "description": "# Extracting Resume Data in Structured Format 🚀 \n**Open Table to view the schema.**",
+            "description": "### 💡 Click **Open table** to view the schema",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2403,26 +2403,26 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 698,
+        "height": 438,
         "id": "note-hi9i1",
         "measured": {
-          "height": 698,
-          "width": 355
+          "height": 438,
+          "width": 358
         },
         "position": {
-          "x": 1309.2743153594975,
-          "y": 415.4673853259762
+          "x": 1291.3796543651624,
+          "y": 549.6773427834883
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 356
+        "width": 359
       },
       {
         "data": {
           "id": "note-tF1Er",
           "node": {
-            "description": "### 💡 Add your Anthropic API key here 👇",
+            "description": "### 💡 Add your Anthropic API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2451,7 +2451,7 @@
         "data": {
           "id": "note-Zf2Mg",
           "node": {
-            "description": "### 💡 Add your Anthropic API key here 👇",
+            "description": "### 💡 Add your Anthropic API key here",
             "display_name": "",
             "documentation": "",
             "template": {
