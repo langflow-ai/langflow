@@ -1358,15 +1358,11 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
                 "name": "format",
-<<<<<<< HEAD
                 "options": [
                   "Text",
                   "Raw HTML",
                   "JSON"
                 ],
-=======
-                "options": ["Text", "Raw HTML"],
->>>>>>> main
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
