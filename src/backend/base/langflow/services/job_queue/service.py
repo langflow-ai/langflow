@@ -216,20 +216,19 @@ class JobQueueService(Service):
                     raise exc
             logger.debug(f"Task cancellation complete for job_id {job_id}")
 
-        # If there is no active task or the task has completed, proceed with clearing the queue.
-        if task is None or task.done():
-            items_cleared = 0
-            while not main_queue.empty():
-                try:
-                    main_queue.get_nowait()
-                    items_cleared += 1
-                except asyncio.QueueEmpty:
-                    break
+        # Clear the queue since we just cancelled the task or it has completed
+        items_cleared = 0
+        while not main_queue.empty():
+            try:
+                main_queue.get_nowait()
+                items_cleared += 1
+            except asyncio.QueueEmpty:
+                break
 
-            logger.debug(f"Removed {items_cleared} items from queue for job_id {job_id}")
-            # Delete the job entry from the registry.
-            del self._queues[job_id]
-            logger.info(f"Cleanup successful for job_id {job_id}: resources have been released.")
+        logger.debug(f"Removed {items_cleared} items from queue for job_id {job_id}")
+        # Remove the job entry from the registry
+        self._queues.pop(job_id, None)
+        logger.info(f"Cleanup successful for job_id {job_id}: resources have been released.")
 
     async def _periodic_cleanup(self) -> None:
         """Execute a periodic task that cleans up completed or cancelled job queues.
@@ -260,6 +259,6 @@ class JobQueueService(Service):
         """
         for job_id in list(self._queues.keys()):
             _, _, task = self._queues[job_id]
-            if task and (task.done() or task.cancelled()):
+            if task and task.done():
                 logger.debug(f"Job queue for job_id {job_id} marked for cleanup.")
                 await self.cleanup_job(job_id)
