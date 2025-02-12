@@ -19,6 +19,7 @@ import { ColDef, NewValueParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useMemo, useRef, useState } from "react";
 import { sortByDate } from "../../utils/sort-flows";
+import DragWrapComponent from "./components/dragWrapComponent";
 
 export const FilesPage = () => {
   const tableRef = useRef<AgGridReact<any>>(null);
@@ -180,64 +181,61 @@ export const FilesPage = () => {
 
   const [quickFilterText, setQuickFilterText] = useState("");
   return (
-    <CardsWrapComponent
-      onFileDrop={onFileDrop}
-      dragMessage={`Drop your files here`}
+    <div
+      className="flex h-full w-full flex-col overflow-y-auto"
+      data-testid="cards-wrapper"
     >
-      <div
-        className="flex h-full w-full flex-col overflow-y-auto"
-        data-testid="cards-wrapper"
-      >
-        <div className="flex h-full w-full flex-col xl:container">
-          <div className="flex flex-1 flex-col justify-start px-5 pt-10">
-            <div className="flex h-full flex-col justify-start">
-              <div
-                className="flex items-center pb-8 text-xl font-semibold"
-                data-testid="mainpage_title"
-              >
-                <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-                  <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
-                    <SidebarTrigger>
-                      <ForwardedIconComponent
-                        name="PanelLeftOpen"
-                        aria-hidden="true"
-                        className=""
-                      />
-                    </SidebarTrigger>
-                  </div>
-                </div>
-                My Files
-              </div>
-              {files && files.length !== 0 ? (
-                <div className="flex justify-between">
-                  <div className="flex w-full xl:w-5/12">
-                    <Input
-                      icon="Search"
-                      data-testid="search-store-input"
-                      type="text"
-                      placeholder={`Search files...`}
-                      className="mr-2 w-full"
-                      value={quickFilterText || ""}
-                      onChange={(event) => {
-                        setQuickFilterText(event.target.value);
-                      }}
+      <div className="flex h-full w-full flex-col xl:container">
+        <div className="flex flex-1 flex-col justify-start px-5 pt-10">
+          <div className="flex h-full flex-col justify-start">
+            <div
+              className="flex items-center pb-8 text-xl font-semibold"
+              data-testid="mainpage_title"
+            >
+              <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
+                <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
+                  <SidebarTrigger>
+                    <ForwardedIconComponent
+                      name="PanelLeftOpen"
+                      aria-hidden="true"
+                      className=""
                     />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {UploadButtonComponent}
-                    <ImportButtonComponent />
-                  </div>
+                  </SidebarTrigger>
                 </div>
-              ) : (
-                <></>
-              )}
+              </div>
+              My Files
+            </div>
+            {files && files.length !== 0 ? (
+              <div className="flex justify-between">
+                <div className="flex w-full xl:w-5/12">
+                  <Input
+                    icon="Search"
+                    data-testid="search-store-input"
+                    type="text"
+                    placeholder={`Search files...`}
+                    className="mr-2 w-full"
+                    value={quickFilterText || ""}
+                    onChange={(event) => {
+                      setQuickFilterText(event.target.value);
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  {UploadButtonComponent}
+                  <ImportButtonComponent />
+                </div>
+              </div>
+            ) : (
+              <></>
+            )}
 
-              <div className="flex h-full flex-col py-4">
-                {!files || !Array.isArray(files) ? (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <Loading />
-                  </div>
-                ) : files.length > 0 ? (
+            <div className="flex h-full flex-col py-4">
+              {!files || !Array.isArray(files) ? (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Loading />
+                </div>
+              ) : files.length > 0 ? (
+                <DragWrapComponent onFileDrop={onFileDrop}>
                   <TableComponent
                     rowHeight={45}
                     headerHeight={45}
@@ -271,7 +269,12 @@ export const FilesPage = () => {
                       colResizeDefault: "shift",
                     }}
                   />
-                ) : (
+                </DragWrapComponent>
+              ) : (
+                <CardsWrapComponent
+                  onFileDrop={onFileDrop}
+                  dragMessage="Drop files to upload"
+                >
                   <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
                     <div className="flex flex-col items-center gap-2">
                       <h3 className="text-2xl font-semibold">No files</h3>
@@ -284,13 +287,13 @@ export const FilesPage = () => {
                       <ImportButtonComponent />
                     </div>
                   </div>
-                )}
-              </div>
+                </CardsWrapComponent>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </CardsWrapComponent>
+    </div>
   );
 };
 
