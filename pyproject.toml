@@ -111,7 +111,7 @@ dependencies = [
     "scrapegraph-py>=1.10.2",
     "pydantic-ai>=0.0.19",
     "permit (>=2.7.2,<3.0.0)",
-    "python-jwt==2.8.0",
+    "python-jwt==4.1.0",
     "cryptography==42.0.5",
     "requests==2.32.3"
 ]
@@ -133,7 +133,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 auth = [
-    "python-jwt==2.8.0", 
+    "python-jwt==4.1.0", 
     "cryptography==42.0.5",
     "permit>=2.7.2,<3.0.0",
     "requests==2.32.3"
