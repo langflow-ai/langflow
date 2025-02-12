@@ -156,11 +156,9 @@ ${
     ? `import os
 # API Configuration
 try:
-    api_key = os.environ["API_KEY"]
+    api_key = os.environ["LANGFLOW_API_KEY"]
 except KeyError:
-    raise ValueError("API_KEY environment variable not found. Please set your API key in the environment variables.")\n`
-    : ""
-}url = "${apiUrl}"  # The complete API endpoint URL for this flow
+    raise ValueError("LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.")\n` : ""}url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
 # Stream configuration
 querystring = {
