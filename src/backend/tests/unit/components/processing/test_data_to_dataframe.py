@@ -1,7 +1,7 @@
 import pytest
+
 from langflow.components.processing.data_to_dataframe import DataToDataFrameComponent
 from langflow.schema import Data, DataFrame
-
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -37,14 +37,14 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         """Test basic DataFrame construction."""
         component = component_class()
         component.set_attributes(default_kwargs)
-        df = component.build_dataframe()
+        result_df = component.build_dataframe()
 
-        assert isinstance(df, DataFrame)
-        assert len(df) == 2
-        assert list(df.columns) == ["field1", "field2", "text"]
-        assert df["text"].tolist() == ["Row 1", "Row 2"]
-        assert df["field1"].tolist() == ["value1", "value2"]
-        assert df["field2"].tolist() == [1, 2]
+        assert isinstance(result_df, DataFrame)
+        assert len(result_df) == 2
+        assert list(result_df.columns) == ["field1", "field2", "text"]
+        assert result_df["text"].tolist() == ["Row 1", "Row 2"]
+        assert result_df["field1"].tolist() == ["value1", "value2"]
+        assert result_df["field2"].tolist() == [1, 2]
 
     def test_single_data_input(self, component_class):
         """Test handling single Data object input."""
@@ -52,20 +52,20 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": single_data})
 
-        df = component.build_dataframe()
+        result_df = component.build_dataframe()
 
-        assert len(df) == 1
-        assert df["text"].iloc[0] == "Single Row"
-        assert df["field1"].iloc[0] == "value"
+        assert len(result_df) == 1
+        assert result_df["text"].iloc[0] == "Single Row"
+        assert result_df["field1"].iloc[0] == "value"
 
     def test_empty_data_list(self, component_class):
         """Test behavior with empty data list."""
         component = component_class()
         component.set_attributes({"data_list": []})
 
-        df = component.build_dataframe()
+        result_df = component.build_dataframe()
 
-        assert len(df) == 0
+        assert len(result_df) == 0
 
     def test_data_without_text(self, component_class):
         """Test handling Data objects without text field."""
@@ -73,11 +73,11 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": data_without_text})
 
-        df = component.build_dataframe()
+        result_df = component.build_dataframe()
 
-        assert len(df) == 2
-        assert "text" not in df.columns
-        assert df["field1"].tolist() == ["value1", "value2"]
+        assert len(result_df) == 2
+        assert "text" not in result_df.columns
+        assert result_df["field1"].tolist() == ["value1", "value2"]
 
     def test_data_without_data_dict(self, component_class):
         """Test handling Data objects without data dictionary."""
@@ -85,11 +85,11 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": data_without_dict})
 
-        df = component.build_dataframe()
+        result_df = component.build_dataframe()
 
-        assert len(df) == 2
-        assert list(df.columns) == ["text"]
-        assert df["text"].tolist() == ["Text 1", "Text 2"]
+        assert len(result_df) == 2
+        assert list(result_df.columns) == ["text"]
+        assert result_df["text"].tolist() == ["Text 1", "Text 2"]
 
     def test_mixed_data_fields(self, component_class):
         """Test handling Data objects with different fields."""
@@ -100,13 +100,13 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": mixed_data})
 
-        df = component.build_dataframe()
+        result_df = component.build_dataframe()
 
-        assert len(df) == 2
-        assert set(df.columns) == {"field1", "field2", "field3", "text"}
-        assert df["field1"].tolist() == ["value1", "value2"]
-        assert df["field2"].iloc[1] != df["field2"].iloc[1]  # Check for NaN using inequality (NaN != NaN)
-        assert df["field3"].iloc[0] != df["field3"].iloc[0]  # Check for NaN using inequality (NaN != NaN)
+        assert len(result_df) == 2
+        assert set(result_df.columns) == {"field1", "field2", "field3", "text"}
+        assert result_df["field1"].tolist() == ["value1", "value2"]
+        assert result_df["field2"].iloc[1] != result_df["field2"].iloc[1]  # Check for NaN using inequality
+        assert result_df["field3"].iloc[0] != result_df["field3"].iloc[0]  # Check for NaN using inequality
 
     def test_invalid_input_type(self, component_class):
         """Test error handling for invalid input types."""
