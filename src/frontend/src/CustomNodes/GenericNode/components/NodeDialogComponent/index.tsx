@@ -97,6 +97,14 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     setNode(nodeId, targetNode);
   };
 
+  const handleErrorData = (newState: {
+    title: string;
+    list?: Array<string>;
+  }) => {
+    setErrorData(newState);
+    setIsLoading(false);
+  };
+
   /**
    * Handles sending the payload state using mutateTemplate.
    */
@@ -108,7 +116,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
       nodeClass,
       setNodeClass,
       postTemplateValue,
-      setErrorData,
+      handleErrorData,
       name,
       handleCloseDialog,
       nodeClass.tool_mode,
