@@ -392,7 +392,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 db_info_dict[db.info.name] = {
                     "api_endpoint": api_endpoint,
                     "collections": num_collections,
-                    "status": db.status,
+                    "status": db.status if db.status != "ACTIVE" else None,
                 }
             except Exception:  # noqa: BLE001, S110
                 pass
