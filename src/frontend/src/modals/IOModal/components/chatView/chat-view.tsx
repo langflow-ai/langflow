@@ -225,6 +225,7 @@ export default function ChatView({
       </div>
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
+          playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
           lockChat={lockChat}
           sendMessage={({ repeat, files }) => {

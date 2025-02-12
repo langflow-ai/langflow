@@ -514,6 +514,7 @@ export type ChatInputType = {
     repeat: number;
     files?: string[];
   }) => void;
+  playgroundPage: boolean;
 };
 
 export type editNodeToggleType = {

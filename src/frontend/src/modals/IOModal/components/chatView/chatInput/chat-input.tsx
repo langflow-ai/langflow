@@ -33,6 +33,7 @@ export default function ChatInput({
   files,
   setFiles,
   isDragging,
+  playgroundPage,
 }: ChatInputType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +51,10 @@ export default function ChatInput({
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
   ) => {
+    if (playgroundPage) {
+      return;
+    }
+
     let file: File | null = null;
 
     if ("clipboardData" in event) {
@@ -239,15 +244,17 @@ export default function ChatInput({
           ))}
         </div>
         <div className="flex w-full items-end justify-between">
-          <div className={lockChat ? "cursor-not-allowed" : ""}>
-            <UploadFileButton
-              lockChat={lockChat}
-              fileInputRef={fileInputRef}
-              handleFileChange={handleFileChange}
-              handleButtonClick={handleButtonClick}
-            />
-          </div>
-          <div className="">
+          {!playgroundPage && (
+            <div className={lockChat ? "cursor-not-allowed" : ""}>
+              <UploadFileButton
+                lockChat={lockChat}
+                fileInputRef={fileInputRef}
+                handleFileChange={handleFileChange}
+                handleButtonClick={handleButtonClick}
+              />
+            </div>
+          )}
+          <div className={playgroundPage ? "ml-auto" : ""}>
             <ButtonSendWrapper
               send={send}
               lockChat={lockChat}
