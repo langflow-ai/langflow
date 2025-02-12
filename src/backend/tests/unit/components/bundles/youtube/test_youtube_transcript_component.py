@@ -1,10 +1,11 @@
 from unittest.mock import Mock, patch
 
 import pytest
+from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
+
 from langflow.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
 from langflow.schema import Data, DataFrame, Message
 from tests.base import ComponentTestBaseWithoutClient
-from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
 
 
 class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
@@ -25,8 +26,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         """Return the file names mapping for different versions."""
-        return [
-        ]
+        return []
 
     @pytest.fixture
     def mock_transcript_data(self):
@@ -54,12 +54,12 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         result = component.get_dataframe_output()
 
         assert isinstance(result, DataFrame)
-        df = result
-        assert len(df) == 2
-        assert list(df.columns) == ["timestamp", "text"]
-        assert df.iloc[0]["timestamp"] == "00:00"
-        assert df.iloc[1]["timestamp"] == "01:00"
-        assert df.iloc[0]["text"] == "First part of the transcript"
+        result_df = result  # More descriptive variable name
+        assert len(result_df) == 2
+        assert list(result_df.columns) == ["timestamp", "text"]
+        assert result_df.iloc[0]["timestamp"] == "00:00"
+        assert result_df.iloc[1]["timestamp"] == "01:00"
+        assert result_df.iloc[0]["text"] == "First part of the transcript"
 
     @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_get_message_output_success(self, mock_loader, component_class, default_kwargs, mock_transcript_data):
@@ -90,10 +90,11 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
     @patch("langflow.components.youtube.youtube_transcripts.YoutubeLoader")
     def test_transcript_disabled_error(self, mock_loader, component_class, default_kwargs):
         """Test handling of TranscriptsDisabled error."""
+        error_message = "Transcripts are disabled for this video"
 
         # Mock the load method to raise TranscriptsDisabled
-        def raise_error(*args, **kwargs):
-            raise TranscriptsDisabled("test123")
+        def raise_error(*_):  # Use underscore to indicate unused arguments
+            raise TranscriptsDisabled(error_message)
 
         mock_loader.from_youtube_url.return_value.load.side_effect = raise_error
 
@@ -126,7 +127,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         transcript_data = {"en": {"translationLanguages": []}}
 
         # Mock the load method to raise NoTranscriptFound
-        def raise_error(*args, **kwargs):
+        def raise_error(*_):  # Use underscore to indicate unused arguments
             raise NoTranscriptFound(video_id, requested_langs, transcript_data)
 
         mock_loader.from_youtube_url.return_value.load.side_effect = raise_error
