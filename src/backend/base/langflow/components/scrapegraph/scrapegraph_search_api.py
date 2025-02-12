@@ -28,7 +28,6 @@ class ScrapeGraphSearchApi(Component):
         MessageTextInput(
             name="user_prompt",
             display_name="Search Prompt",
-            required=True,
             tool_mode=True,
             info="The search prompt to use.",
         ),

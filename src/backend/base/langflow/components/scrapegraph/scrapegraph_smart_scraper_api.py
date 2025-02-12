@@ -35,7 +35,6 @@ class ScrapeGraphSmartScraperApi(Component):
          MessageTextInput(
             name="prompt",
             display_name="Prompt",
-            required=True,
             tool_mode=True,
             info="The prompt to use for the smart scraper.",
         ),
