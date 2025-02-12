@@ -3,6 +3,7 @@ import uuid
 from uuid import UUID
 
 import pytest
+from httpx import codes
 from langflow.memory import aget_messages
 from langflow.services.database.models.flow import FlowUpdate
 
@@ -22,7 +23,7 @@ async def test_build_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
 
     # Get the events stream
     events_response = await get_build_events(client, job_id, logged_in_headers)
-    assert events_response.status_code == 200
+    assert events_response.status_code == codes.OK
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
@@ -41,7 +42,7 @@ async def test_build_flow_from_request_data(client, json_memory_chatbot_no_llm, 
 
     # Get the events stream
     events_response = await get_build_events(client, job_id, logged_in_headers)
-    assert events_response.status_code == 200
+    assert events_response.status_code == codes.OK
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
@@ -70,7 +71,7 @@ async def test_build_flow_with_frozen_path(client, json_memory_chatbot_no_llm, l
 
     # Get the events stream
     events_response = await get_build_events(client, job_id, logged_in_headers)
-    assert events_response.status_code == 200
+    assert events_response.status_code == codes.OK
 
     # Consume and verify the events
     await consume_and_assert_stream(events_response, job_id)
@@ -97,7 +98,7 @@ async def test_build_flow_invalid_job_id(client, logged_in_headers):
     """Test getting events for an invalid job ID."""
     invalid_job_id = str(uuid.uuid4())
     response = await get_build_events(client, invalid_job_id, logged_in_headers)
-    assert response.status_code == 404
+    assert response.status_code == codes.NOT_FOUND
     assert "No queue found for job_id" in response.json()["detail"]
 
 
@@ -106,7 +107,7 @@ async def test_build_flow_invalid_flow_id(client, logged_in_headers):
     """Test starting a build with an invalid flow ID."""
     invalid_flow_id = uuid.uuid4()
     response = await client.post(f"api/v1/build/{invalid_flow_id}/flow", json={}, headers=logged_in_headers)
-    assert response.status_code == 404
+    assert response.status_code == codes.NOT_FOUND
 
 
 @pytest.mark.benchmark
@@ -157,7 +158,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
             self.client = client
             self.job_id = job_id
             self.headers = headers
-            self.status_code = 200
+            self.status_code = codes.OK
 
         async def aiter_lines(self):
             try:
@@ -167,7 +168,7 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
                     response = await self.client.get(
                         f"api/v1/build/{self.job_id}/events?stream=false", headers=self.headers
                     )
-                    assert response.status_code == 200
+                    assert response.status_code == codes.OK
                     data = response.json()
 
                     if data["event"] is None:

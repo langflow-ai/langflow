@@ -2,13 +2,13 @@ import json
 from typing import Any
 from uuid import UUID
 
-from httpx import AsyncClient
+from httpx import AsyncClient, codes
 
 
 async def create_flow(client: AsyncClient, flow_data: str, headers: dict[str, str]) -> UUID:
     """Create a flow and return its ID."""
     response = await client.post("api/v1/flows/", json=json.loads(flow_data), headers=headers)
-    assert response.status_code == 201
+    assert response.status_code == codes.CREATED
     return UUID(response.json()["id"])
 
 
@@ -19,7 +19,7 @@ async def build_flow(
     if json is None:
         json = {}
     response = await client.post(f"api/v1/build/{flow_id}/flow", json=json, headers=headers)
-    assert response.status_code == 200
+    assert response.status_code == codes.OK
     return response.json()
 
 
