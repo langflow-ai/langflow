@@ -6,7 +6,7 @@ from typing_extensions import override
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, MessageTextInput
 
 XAI_DEFAULT_MODELS = ["grok-2-latest"]
 
@@ -47,8 +47,8 @@ class XAIModelComponent(LCModelComponent):
             refresh_button=True,
             info="The xAI model to use",
         ),
-        StrInput(
-            name="api_base",
+        MessageTextInput(
+            name="base_url",
             display_name="xAI API Base",
             advanced=True,
             info="The base URL of the xAI API. Defaults to https://api.x.ai/v1",
@@ -79,7 +79,7 @@ class XAIModelComponent(LCModelComponent):
         if not self.api_key:
             return XAI_DEFAULT_MODELS
 
-        base_url = self.api_base or "https://api.x.ai/v1"
+        base_url = self.base_url or "https://api.x.ai/v1"
         url = f"{base_url}/language-models"
         headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
 
@@ -102,7 +102,7 @@ class XAIModelComponent(LCModelComponent):
     @override
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Update build configuration with fresh model list when key fields change."""
-        if field_name in {"api_key", "api_base", "model_name"}:
+        if field_name in {"api_key", "base_url", "model_name"}:
             models = self.get_models()
             build_config["model_name"]["options"] = models
         return build_config
@@ -113,7 +113,7 @@ class XAIModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        api_base = self.api_base or "https://api.x.ai/v1"
+        base_url = self.base_url or "https://api.x.ai/v1"
         json_mode = self.json_mode
         seed = self.seed
 
@@ -123,7 +123,7 @@ class XAIModelComponent(LCModelComponent):
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
             model=model_name,
-            base_url=api_base,
+            base_url=base_url,
             api_key=api_key,
             temperature=temperature if temperature is not None else 0.1,
             seed=seed,
