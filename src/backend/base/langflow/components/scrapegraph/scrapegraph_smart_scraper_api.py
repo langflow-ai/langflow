@@ -32,6 +32,13 @@ class ScrapeGraphSmartScraperApi(Component):
             tool_mode=True,
             info="The URL to scrape.",
         ),
+         MessageTextInput(
+            name="prompt",
+            display_name="Prompt",
+            required=True,
+            tool_mode=True,
+            info="The prompt to use for the smart scraper.",
+        ),
     ]
 
     outputs = [
@@ -56,6 +63,7 @@ class ScrapeGraphSmartScraperApi(Component):
             # SmartScraper request
             response = sgai_client.smartscraper(
                 website_url=self.url,
+                prompt=self.prompt,
             )
 
             # Close the client
