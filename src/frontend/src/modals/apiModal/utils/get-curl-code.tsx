@@ -99,7 +99,9 @@ export function getNewCurlCode({
       : {}),
   };
 
-  return `${isAuthenticated ? `# Get API key from environment variable
+  return `${
+    isAuthenticated
+      ? `# Get API key from environment variable
 if [ -z "$LANGFLOW_API_KEY" ]; then
   echo "Error: LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables."
 fi

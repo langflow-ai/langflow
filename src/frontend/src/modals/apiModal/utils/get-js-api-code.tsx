@@ -75,7 +75,9 @@ export function getNewJsApiCode({
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
 
-  return `${isAuthenticated ? `// Get API key from environment variable
+  return `${
+    isAuthenticated
+      ? `// Get API key from environment variable
 if (!process.env.LANGFLOW_API_KEY) {
     throw new Error('LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables.');
 }
