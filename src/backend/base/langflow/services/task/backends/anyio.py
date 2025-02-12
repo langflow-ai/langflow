@@ -41,7 +41,7 @@ class AnyIOTaskResult:
 
     async def run(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
         try:
-            async with anyio.create_task_group(), anyio.create_cancel_scope() as scope:
+            async with anyio.CancelScope() as scope:
                 self.cancel_scope = scope
                 self._result = await func(*args, **kwargs)
         except Exception as e:  # noqa: BLE001
@@ -59,6 +59,7 @@ class AnyIOBackend(TaskBackend):
     def __init__(self) -> None:
         """Initialize the AnyIO backend with an empty task dictionary."""
         self.tasks: dict[str, AnyIOTaskResult] = {}
+        self._run_tasks: list[anyio.TaskGroup] = []
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
@@ -83,8 +84,10 @@ class AnyIOBackend(TaskBackend):
             task_id = str(id(task_result))
             self.tasks[task_id] = task_result
 
-            # Start the task in the background
-            anyio.create_task(task_result.run(task_func, *args, **kwargs))
+            # Start the task in the background using TaskGroup
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(task_result.run, task_func, *args, **kwargs)
+                self._run_tasks.append(tg)
 
         except Exception as e:
             msg = f"Failed to launch task: {e!s}"
