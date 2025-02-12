@@ -88,7 +88,7 @@ class YouTubeTranscriptsComponent(Component):
 
     def get_data_output(self) -> Data:
         """Creates a structured data object with transcript and metadata.
-        
+
         Returns a Data object containing transcript text, video URL, and any error
         messages that occurred during processing. The object includes:
         - 'transcript': continuous text from the entire video (concatenated if multiple parts)
@@ -96,17 +96,17 @@ class YouTubeTranscriptsComponent(Component):
         - 'error': error message if an exception occurs
         """
         default_data = {"transcript": "", "video_url": self.url, "error": None}
-        
+
         try:
             transcripts = self._load_transcripts(as_chunks=False)
             if not transcripts:
                 default_data["error"] = "No transcripts found."
                 return Data(data=default_data)
-            
+
             # Combine all transcript parts
             full_transcript = " ".join(doc.page_content for doc in transcripts)
             return Data(data={"transcript": full_transcript, "video_url": self.url})
-        
+
         except (
             youtube_transcript_api.TranscriptsDisabled,
             youtube_transcript_api.NoTranscriptFound,
