@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
-
 from langflow.components.processing.save_to_file import SaveToFileComponent
 from langflow.schema import Data, Message
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -39,12 +39,7 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         sample_df = pd.DataFrame([{"col1": 1, "col2": "a"}, {"col1": 2, "col2": "b"}])
-        return {
-            "input_type": "DataFrame",
-            "df": sample_df,
-            "file_format": "csv",
-            "file_path": "./test_output.csv"
-        }
+        return {"input_type": "DataFrame", "df": sample_df, "file_format": "csv", "file_path": "./test_output.csv"}
 
     @pytest.fixture
     def file_names_mapping(self):
@@ -96,12 +91,14 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
                 mock_path.return_value = mock_file
 
                 component = component_class()
-                component.set_attributes({
-                    "input_type": "Message",
-                    "message": Message(text="Test message"),
-                    "file_format": fmt,
-                    "file_path": f"./test_output.{fmt}"
-                })
+                component.set_attributes(
+                    {
+                        "input_type": "Message",
+                        "message": Message(text="Test message"),
+                        "file_format": fmt,
+                        "file_path": f"./test_output.{fmt}",
+                    }
+                )
 
                 result = component.save_to_file()
 
@@ -122,12 +119,14 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
             mock_path.return_value = mock_file
 
             component = component_class()
-            component.set_attributes({
-                "input_type": "Data",
-                "data": Data(data=test_data),
-                "file_format": "json",
-                "file_path": "./test_output.json"
-            })
+            component.set_attributes(
+                {
+                    "input_type": "Data",
+                    "data": Data(data=test_data),
+                    "file_format": "json",
+                    "file_path": "./test_output.json",
+                }
+            )
 
             result = component.save_to_file()
 
