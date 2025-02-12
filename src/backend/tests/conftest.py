@@ -446,7 +446,7 @@ async def active_user(client):  # noqa: ARG001
             await _delete_transactions_and_vertex_builds(session, user.flows)
             await session.commit()
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"Error deleting transactions and vertex builds for user: {e}")
+        logger.exception(f"Error deleting transactions and vertex builds for user: {e}")
 
     try:
         async with db_manager.with_session() as session:
@@ -454,7 +454,7 @@ async def active_user(client):  # noqa: ARG001
             await session.delete(user)
             await session.commit()
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"Error deleting user: {e}")
+        logger.exception(f"Error deleting user: {e}")
 
 
 @pytest.fixture
