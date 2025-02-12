@@ -1,7 +1,7 @@
-import pandas as pd
-from langflow.components.processing.data_to_dataframe import DataToDataFrameComponent
 import pytest
+from langflow.components.processing.data_to_dataframe import DataToDataFrameComponent
 from langflow.schema import Data, DataFrame
+
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -38,7 +38,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes(default_kwargs)
         df = component.build_dataframe()
-        
+
         assert isinstance(df, DataFrame)
         assert len(df) == 2
         assert list(df.columns) == ["field1", "field2", "text"]
@@ -51,9 +51,9 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         single_data = Data(text="Single Row", data={"field1": "value"})
         component = component_class()
         component.set_attributes({"data_list": single_data})
-        
+
         df = component.build_dataframe()
-        
+
         assert len(df) == 1
         assert df["text"].iloc[0] == "Single Row"
         assert df["field1"].iloc[0] == "value"
@@ -62,37 +62,31 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         """Test behavior with empty data list."""
         component = component_class()
         component.set_attributes({"data_list": []})
-        
+
         df = component.build_dataframe()
-        
+
         assert len(df) == 0
 
     def test_data_without_text(self, component_class):
         """Test handling Data objects without text field."""
-        data_without_text = [
-            Data(data={"field1": "value1"}),
-            Data(data={"field1": "value2"})
-        ]
+        data_without_text = [Data(data={"field1": "value1"}), Data(data={"field1": "value2"})]
         component = component_class()
         component.set_attributes({"data_list": data_without_text})
-        
+
         df = component.build_dataframe()
-        
+
         assert len(df) == 2
         assert "text" not in df.columns
         assert df["field1"].tolist() == ["value1", "value2"]
 
     def test_data_without_data_dict(self, component_class):
         """Test handling Data objects without data dictionary."""
-        data_without_dict = [
-            Data(text="Text 1"),
-            Data(text="Text 2")
-        ]
+        data_without_dict = [Data(text="Text 1"), Data(text="Text 2")]
         component = component_class()
         component.set_attributes({"data_list": data_without_dict})
-        
+
         df = component.build_dataframe()
-        
+
         assert len(df) == 2
         assert list(df.columns) == ["text"]
         assert df["text"].tolist() == ["Text 1", "Text 2"]
@@ -101,13 +95,13 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         """Test handling Data objects with different fields."""
         mixed_data = [
             Data(text="Row 1", data={"field1": "value1", "field2": 1}),
-            Data(text="Row 2", data={"field1": "value2", "field3": "extra"})
+            Data(text="Row 2", data={"field1": "value2", "field3": "extra"}),
         ]
         component = component_class()
         component.set_attributes({"data_list": mixed_data})
-        
+
         df = component.build_dataframe()
-        
+
         assert len(df) == 2
         assert set(df.columns) == {"field1", "field2", "field3", "text"}
         assert df["field1"].tolist() == ["value1", "value2"]
@@ -119,7 +113,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         invalid_data = [{"not": "a Data object"}]
         component = component_class()
         component.set_attributes({"data_list": invalid_data})
-        
+
         with pytest.raises(TypeError) as exc_info:
             component.build_dataframe()
         assert "Expected Data objects" in str(exc_info.value)
@@ -129,5 +123,5 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes(default_kwargs)
         result = component.build_dataframe()
-        
+
         assert component.status is result  # Status should be set to the DataFrame
