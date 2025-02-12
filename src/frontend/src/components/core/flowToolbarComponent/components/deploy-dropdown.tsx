@@ -93,6 +93,32 @@ export default function PublishDropdown() {
           align="end"
           className="min-w-[300px] max-w-[400px]"
         >
+          <DropdownMenuItem
+            className="deploy-dropdown-item group"
+            onClick={() => setOpenApiModal(true)}
+          >
+            <div className="group-hover:bg-accent">
+              <IconComponent
+                name="Code2"
+                className={`${groupStyle} icon-size mr-2`}
+              />
+              <span>API access</span>
+            </div>
+          </DropdownMenuItem>
+          {ENABLE_WIDGET && (
+            <DropdownMenuItem
+              onClick={() => setOpenEmbedModal(true)}
+              className="deploy-dropdown-item group"
+            >
+              <div className="group-hover:bg-accent">
+                <IconComponent
+                  name="Columns2"
+                  className={`${groupStyle} icon-size mr-2`}
+                />
+                <span>Embed into site</span>
+              </div>
+            </DropdownMenuItem>
+          )}
           <ShadTooltipComponent
             styleClasses="truncate"
             side="left"
@@ -123,7 +149,7 @@ export default function PublishDropdown() {
                     name="Globe"
                     className={`${groupStyle} icon-size mr-2`}
                   />
-                  <span>Standalone app</span>
+                  <span>Shareable Playground</span>
                   <div
                     className={`icon-size ml-auto pb-6 pr-10 text-foreground`}
                   >
@@ -141,32 +167,6 @@ export default function PublishDropdown() {
               </DropdownMenuItem>
             </div>
           </ShadTooltipComponent>
-          <DropdownMenuItem
-            className="deploy-dropdown-item group"
-            onClick={() => setOpenApiModal(true)}
-          >
-            <div className="group-hover:bg-accent">
-              <IconComponent
-                name="Code2"
-                className={`${groupStyle} icon-size mr-2`}
-              />
-              <span>API access</span>
-            </div>
-          </DropdownMenuItem>
-          {ENABLE_WIDGET && (
-            <DropdownMenuItem
-              onClick={() => setOpenEmbedModal(true)}
-              className="deploy-dropdown-item group"
-            >
-              <div className="group-hover:bg-accent">
-                <IconComponent
-                  name="Columns2"
-                  className={`${groupStyle} icon-size mr-2`}
-                />
-                <span>Embed into site</span>
-              </div>
-            </DropdownMenuItem>
-          )}
           {/* <DropdownMenuItem className="deploy-dropdown-item group">
             <div className="group-hover:bg-accent">
               <IconComponent
