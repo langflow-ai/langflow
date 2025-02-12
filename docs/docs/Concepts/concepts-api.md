@@ -23,6 +23,51 @@ To use the `requests` library:
 ```python
 python3 python-api-script.py --message="tell me about something interesting"
 ```
+
+## JavaScript API
+
+The **JavaScript API** tab displays code to interact with your flow in JavaScript.
+
+1. Copy and paste the code into a JavaScript file.
+
+```javascript
+let inputValue = ""; // Insert input value here
+
+fetch(
+  "http://127.0.0.1:7864/api/v1/run/<your-flow-id>?stream=false",
+  {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer <TOKEN>",
+      "Content-Type": "application/json",
+			"x-api-key": <your api key>
+    },
+    body: JSON.stringify({
+			input_value: inputValue, 
+      output_type: "chat",
+      input_type: "chat",
+      tweaks: {
+        "ChatInput-1qjt4": {},
+        "Prompt-uWXD5": {},
+        "ChatOutput-9NqI9": {},
+        "OpenAIModel-BgSM6": {}
+}
+    }),
+  },
+)
+  .then(res => res.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+Run the script with any necessary arguments for your flow:
+
+```plain
+node test-script.js "tell me about something interesting"
+```
+
+The response content depends on your flow. Make sure the endpoint returns a successful response.
+
 ## Python code
 
 The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
