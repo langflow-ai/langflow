@@ -120,38 +120,18 @@ class URLComponent(Component):
         """Fetch content based on selected format."""
         urls = list({self.ensure_url(url.strip()) for url in self.urls if url.strip()})
 
-        no_urls_msg = "No valid URLs provided."
         if not urls:
-            raise ValueError(no_urls_msg)
+            raise ValueError("No valid URLs provided.")
 
-        # If JSON format is selected, validate JSON content first
-        if self.format == "JSON":
-            for url in urls:
-                is_json = asyncio.run(self.validate_json_content(url))
-                if not is_json:
-                    error_msg = "Invalid JSON content from URL - " + url
-                    raise ValueError(error_msg)
-
+        # Choose appropriate loader based on the format
         if self.format == "Raw HTML":
             loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
         else:
+            if self.format == "JSON":
+                return asyncio.run(self.fetch_json_content(urls))
             loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
 
         docs = loader.load()
-
-        if self.format == "JSON":
-            data = []
-            for doc in docs:
-                try:
-                    json_content = json.loads(doc.page_content)
-                    data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
-                    data.append(Data(**data_dict))
-                except json.JSONDecodeError as err:
-                    source = doc.metadata.get("source", "unknown URL")
-                    error_msg = "Invalid JSON content from " + source
-                    raise ValueError(error_msg) from err
-            return data
-
         return [Data(text=doc.page_content, **doc.metadata) for doc in docs]
 
     def fetch_content_text(self) -> Message:
@@ -173,3 +153,27 @@ class URLComponent(Component):
     def as_dataframe(self) -> DataFrame:
         """Return fetched content as a DataFrame."""
         return DataFrame(self.fetch_content())
+
+    async def fetch_json_content(self, urls: list[str]) -> list[Data]:
+        """Fetch and validate JSON content from URLs asynchronously."""
+        tasks = [self.validate_json_content(url) for url in urls]
+        results = await asyncio.gather(*tasks)
+
+        invalid_urls = [url for url, is_valid in zip(urls, results, strict=False) if not is_valid]
+        if invalid_urls:
+            raise ValueError(f"Invalid JSON content from URLs - {', '.join(invalid_urls)}")
+
+        loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
+        docs = loader.load()
+
+        data = []
+        for doc in docs:
+            try:
+                json_content = json.loads(doc.page_content)
+                data_dict = {"text": json.dumps(json_content, indent=2), **json_content, **doc.metadata}
+                data.append(Data(**data_dict))
+            except json.JSONDecodeError as err:
+                source = doc.metadata.get("source", "unknown URL")
+                raise ValueError(f"Invalid JSON content from {source}") from err
+
+        return data
