@@ -124,7 +124,7 @@ export default function APITabsComponent() {
       {tabsList.map((tab, idx) => (
         <TabsContent
           value={idx.toString()}
-          className="api-modal-tabs-content overflow-hidden mt-4"
+          className="api-modal-tabs-content mt-4 overflow-hidden"
           key={idx} // Remember to add a unique key prop
         >
           <div className="relative flex h-full w-full">

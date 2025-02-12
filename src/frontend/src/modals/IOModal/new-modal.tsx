@@ -309,16 +309,21 @@ export default function IOModal({
               >
                 <div className="flex items-center justify-between gap-2 pb-8 align-middle">
                   <div className="flex items-center gap-2">
-                  <div className={cn(`flex rounded p-1`, swatchColors[swatchIndex])}>
-                    <IconComponent
-                      name={currentFlow?.icon ?? "Workflow"}
-                      className="h-3.5 w-3.5"
-                    />
-                  </div>
-                  {sidebarOpen && (
-                    <div className="truncate font-semibold">
-                      {PlaygroundTitle}
+                    <div
+                      className={cn(
+                        `flex rounded p-1`,
+                        swatchColors[swatchIndex],
+                      )}
+                    >
+                      <IconComponent
+                        name={currentFlow?.icon ?? "Workflow"}
+                        className="h-3.5 w-3.5"
+                      />
                     </div>
+                    {sidebarOpen && (
+                      <div className="truncate font-semibold">
+                        {PlaygroundTitle}
+                      </div>
                     )}
                   </div>
                   <ShadTooltip
