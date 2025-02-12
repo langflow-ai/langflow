@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-jFgKR",
+            "id": "YfinanceComponent-oIlRZ",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-ITVOF",
+            "id": "Agent-uYa75",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YfinanceComponent-jFgKR{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-jFgKRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ITVOF{œfieldNameœ:œtoolsœ,œidœ:œAgent-ITVOFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YfinanceComponent-oIlRZ{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-oIlRZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uYa75{œfieldNameœ:œtoolsœ,œidœ:œAgent-uYa75œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-jFgKR",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-jFgKRœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-ITVOF",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ITVOFœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YfinanceComponent-oIlRZ",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-oIlRZœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-uYa75",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uYa75œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-LgUyY",
+            "id": "TavilySearchComponent-A0iuV",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,75 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-5ZAAh",
+            "id": "Agent-LXbj9",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-LgUyY{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-LgUyYœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-5ZAAh{œfieldNameœ:œtoolsœ,œidœ:œAgent-5ZAAhœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-A0iuV{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-A0iuVœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-LXbj9{œfieldNameœ:œtoolsœ,œidœ:œAgent-LXbj9œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-LgUyY",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-LgUyYœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-5ZAAh",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-5ZAAhœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-iO3Ki",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-uet8A",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CalculatorComponent-iO3Ki{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-iO3Kiœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uet8A{œfieldNameœ:œtoolsœ,œidœ:œAgent-uet8Aœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "CalculatorComponent-iO3Ki",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-iO3Kiœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-uet8A",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uet8Aœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-uet8A",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-GQOwS",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-uet8A{œdataTypeœ:œAgentœ,œidœ:œAgent-uet8Aœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-GQOwS{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GQOwSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-uet8A",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-uet8Aœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-GQOwS",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-GQOwSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "TavilySearchComponent-A0iuV",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-A0iuVœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-LXbj9",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-LXbj9œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -119,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-uzhlb",
+            "id": "ChatInput-CKF4I",
             "name": "message",
             "output_types": [
               "Message"
@@ -127,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-ITVOF",
+            "id": "Agent-uYa75",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-uzhlb{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uzhlbœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-ITVOF{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ITVOFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-CKF4I{œdataTypeœ:œChatInputœ,œidœ:œChatInput-CKF4Iœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-uYa75{œfieldNameœ:œinput_valueœ,œidœ:œAgent-uYa75œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-uzhlb",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uzhlbœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-ITVOF",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-ITVOFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-CKF4I",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-CKF4Iœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-uYa75",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-uYa75œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -147,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-H26Ui",
+            "id": "CombineText-K3kNV",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -155,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-Iwkzh",
+            "id": "CombineText-V7cV2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-H26Ui{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-H26Uiœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-Iwkzh{œfieldNameœ:œtext2œ,œidœ:œCombineText-Iwkzhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-K3kNV{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-K3kNVœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-V7cV2{œfieldNameœ:œtext2œ,œidœ:œCombineText-V7cV2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-H26Ui",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-H26Uiœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-Iwkzh",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-Iwkzhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-K3kNV",
+        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-K3kNVœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-V7cV2",
+        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-V7cV2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -175,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-uzhlb",
+            "id": "ChatInput-CKF4I",
             "name": "message",
             "output_types": [
               "Message"
@@ -183,19 +127,19 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-Iwkzh",
+            "id": "CombineText-V7cV2",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-uzhlb{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uzhlbœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-Iwkzh{œfieldNameœ:œtext1œ,œidœ:œCombineText-Iwkzhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-CKF4I{œdataTypeœ:œChatInputœ,œidœ:œChatInput-CKF4Iœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-V7cV2{œfieldNameœ:œtext1œ,œidœ:œCombineText-V7cV2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-uzhlb",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uzhlbœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-Iwkzh",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-Iwkzhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-CKF4I",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-CKF4Iœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-V7cV2",
+        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-V7cV2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -203,7 +147,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-ITVOF",
+            "id": "Agent-uYa75",
             "name": "response",
             "output_types": [
               "Message"
@@ -211,19 +155,19 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-H26Ui",
+            "id": "CombineText-K3kNV",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-ITVOF{œdataTypeœ:œAgentœ,œidœ:œAgent-ITVOFœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-H26Ui{œfieldNameœ:œtext1œ,œidœ:œCombineText-H26Uiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-uYa75{œdataTypeœ:œAgentœ,œidœ:œAgent-uYa75œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-K3kNV{œfieldNameœ:œtext1œ,œidœ:œCombineText-K3kNVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-ITVOF",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-ITVOFœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-H26Ui",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-H26Uiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-uYa75",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-uYa75œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-K3kNV",
+        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-K3kNVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -231,7 +175,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-5ZAAh",
+            "id": "Agent-LXbj9",
             "name": "response",
             "output_types": [
               "Message"
@@ -239,19 +183,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-H26Ui",
+            "id": "CombineText-K3kNV",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-5ZAAh{œdataTypeœ:œAgentœ,œidœ:œAgent-5ZAAhœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-H26Ui{œfieldNameœ:œtext2œ,œidœ:œCombineText-H26Uiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-LXbj9{œdataTypeœ:œAgentœ,œidœ:œAgent-LXbj9œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-K3kNV{œfieldNameœ:œtext2œ,œidœ:œCombineText-K3kNVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-5ZAAh",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-5ZAAhœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-H26Ui",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-H26Uiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-LXbj9",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-LXbj9œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-K3kNV",
+        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-K3kNVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -259,7 +203,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-uzhlb",
+            "id": "ChatInput-CKF4I",
             "name": "message",
             "output_types": [
               "Message"
@@ -267,19 +211,47 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-5ZAAh",
+            "id": "Agent-LXbj9",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-uzhlb{œdataTypeœ:œChatInputœ,œidœ:œChatInput-uzhlbœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-5ZAAh{œfieldNameœ:œinput_valueœ,œidœ:œAgent-5ZAAhœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-CKF4I{œdataTypeœ:œChatInputœ,œidœ:œChatInput-CKF4Iœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-LXbj9{œfieldNameœ:œinput_valueœ,œidœ:œAgent-LXbj9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-uzhlb",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-uzhlbœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-5ZAAh",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-5ZAAhœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-CKF4I",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-CKF4Iœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-LXbj9",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-LXbj9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "URL",
+            "id": "URL-6tEU6",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-uYa75",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-URL-6tEU6{œdataTypeœ:œURLœ,œidœ:œURL-6tEU6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uYa75{œfieldNameœ:œtoolsœ,œidœ:œAgent-uYa75œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "URL-6tEU6",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-6tEU6œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-uYa75",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uYa75œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -287,7 +259,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-Iwkzh",
+            "id": "CombineText-V7cV2",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -295,81 +267,53 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-uet8A",
+            "id": "SambaNovaModel-8AspB",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-Iwkzh{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-Iwkzhœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-Agent-uet8A{œfieldNameœ:œinput_valueœ,œidœ:œAgent-uet8Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__CombineText-V7cV2{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-V7cV2œ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-8AspB{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-8AspBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-Iwkzh",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-Iwkzhœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-uet8A",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-uet8Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-V7cV2",
+        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-V7cV2œ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SambaNovaModel-8AspB",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-8AspBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-Qir1w",
-            "name": "component_as_tool",
+            "dataType": "SambaNovaModel",
+            "id": "SambaNovaModel-8AspB",
+            "name": "text_output",
             "output_types": [
-              "Tool"
+              "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-ITVOF",
+            "fieldName": "input_value",
+            "id": "ChatOutput-jzrox",
             "inputTypes": [
-              "Tool"
+              "Message"
             ],
-            "type": "other"
+            "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-Qir1w{œdataTypeœ:œURLœ,œidœ:œURL-Qir1wœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ITVOF{œfieldNameœ:œtoolsœ,œidœ:œAgent-ITVOFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__SambaNovaModel-8AspB{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-8AspBœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-jzrox{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-jzroxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "URL-Qir1w",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-Qir1wœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-ITVOF",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-ITVOFœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-ltk5I",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-uet8A",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-URL-ltk5I{œdataTypeœ:œURLœ,œidœ:œURL-ltk5Iœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-uet8A{œfieldNameœ:œtoolsœ,œidœ:œAgent-uet8Aœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "URL-ltk5I",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ltk5Iœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-uet8A",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-uet8Aœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "SambaNovaModel-8AspB",
+        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-8AspBœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-jzrox",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-jzroxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-uzhlb",
+          "id": "ChatInput-CKF4I",
           "node": {
             "base_classes": [
               "Message"
@@ -395,7 +339,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -663,7 +607,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-uzhlb",
+        "id": "ChatInput-CKF4I",
         "measured": {
           "height": 66,
           "width": 192
@@ -677,7 +621,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-LgUyY",
+          "id": "TavilySearchComponent-A0iuV",
           "node": {
             "base_classes": [
               "Data",
@@ -703,7 +647,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1010,9 +954,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-LgUyY",
+        "id": "TavilySearchComponent-A0iuV",
         "measured": {
-          "height": 437,
+          "height": 435,
           "width": 320
         },
         "position": {
@@ -1024,7 +968,7 @@
       },
       {
         "data": {
-          "id": "YfinanceComponent-jFgKR",
+          "id": "YfinanceComponent-oIlRZ",
           "node": {
             "base_classes": [
               "Data",
@@ -1045,7 +989,7 @@
             "frozen": false,
             "icon": "trending-up",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1273,9 +1217,9 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-jFgKR",
+        "id": "YfinanceComponent-oIlRZ",
         "measured": {
-          "height": 519,
+          "height": 516,
           "width": 320
         },
         "position": {
@@ -1287,7 +1231,7 @@
       },
       {
         "data": {
-          "id": "Agent-ITVOF",
+          "id": "Agent-uYa75",
           "node": {
             "base_classes": [
               "Message"
@@ -1330,7 +1274,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1941,9 +1885,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-ITVOF",
+        "id": "Agent-uYa75",
         "measured": {
-          "height": 624,
+          "height": 620,
           "width": 320
         },
         "position": {
@@ -1955,7 +1899,7 @@
       },
       {
         "data": {
-          "id": "Agent-5ZAAh",
+          "id": "Agent-LXbj9",
           "node": {
             "base_classes": [
               "Message"
@@ -1998,7 +1942,7 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2609,9 +2553,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-5ZAAh",
+        "id": "Agent-LXbj9",
         "measured": {
-          "height": 624,
+          "height": 620,
           "width": 320
         },
         "position": {
@@ -2623,196 +2567,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-iO3Ki",
-          "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Perform basic arithmetic operations on a given expression.",
-            "display_name": "Calculator",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "expression"
-            ],
-            "frozen": false,
-            "icon": "calculator",
-            "legacy": false,
-            "lf_version": "1.1.4.post1",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import ast\nimport operator\nfrom collections.abc import Callable\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\n\n\nclass CalculatorComponent(Component):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n\n    # Cache operators dictionary as a class variable\n    OPERATORS: dict[type[ast.operator], Callable] = {\n        ast.Add: operator.add,\n        ast.Sub: operator.sub,\n        ast.Mult: operator.mul,\n        ast.Div: operator.truediv,\n        ast.Pow: operator.pow,\n    }\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"result\", type_=Data, method=\"evaluate_expression\"),\n    ]\n\n    def _eval_expr(self, node: ast.AST) -> float:\n        \"\"\"Evaluate an AST node recursively.\"\"\"\n        if isinstance(node, ast.Constant):\n            if isinstance(node.value, int | float):\n                return float(node.value)\n            error_msg = f\"Unsupported constant type: {type(node.value).__name__}\"\n            raise TypeError(error_msg)\n        if isinstance(node, ast.Num):  # For backwards compatibility\n            if isinstance(node.n, int | float):\n                return float(node.n)\n            error_msg = f\"Unsupported number type: {type(node.n).__name__}\"\n            raise TypeError(error_msg)\n\n        if isinstance(node, ast.BinOp):\n            op_type = type(node.op)\n            if op_type not in self.OPERATORS:\n                error_msg = f\"Unsupported binary operator: {op_type.__name__}\"\n                raise TypeError(error_msg)\n\n            left = self._eval_expr(node.left)\n            right = self._eval_expr(node.right)\n            return self.OPERATORS[op_type](left, right)\n\n        error_msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(error_msg)\n\n    def evaluate_expression(self) -> Data:\n        \"\"\"Evaluate the mathematical expression and return the result.\"\"\"\n        try:\n            tree = ast.parse(self.expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            formatted_result = f\"{float(result):.6f}\".rstrip(\"0\").rstrip(\".\")\n            self.log(f\"Calculation result: {formatted_result}\")\n\n            self.status = formatted_result\n            return Data(data={\"result\": formatted_result})\n\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n        except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:\n            error_message = f\"Invalid expression: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n    def build(self):\n        \"\"\"Return the main evaluation function.\"\"\"\n        return self.evaluate_expression\n"
-              },
-              "expression": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Expression",
-                "dynamic": false,
-                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "expression",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
-                    "name": "CalculatorComponent-evaluate_expression",
-                    "tags": [
-                      "CalculatorComponent-evaluate_expression"
-                    ]
-                  }
-                ]
-              }
-            },
-            "tool_mode": true
-          },
-          "showNode": true,
-          "type": "CalculatorComponent"
-        },
-        "dragging": false,
-        "id": "CalculatorComponent-iO3Ki",
-        "measured": {
-          "height": 334,
-          "width": 320
-        },
-        "position": {
-          "x": 736.2366244958242,
-          "y": -223.19166160154907
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "CombineText-H26Ui",
+          "id": "CombineText-K3kNV",
           "node": {
             "base_classes": [
               "Message"
@@ -2832,7 +2587,7 @@
             "frozen": false,
             "icon": "merge",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2948,9 +2703,9 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-H26Ui",
+        "id": "CombineText-K3kNV",
         "measured": {
-          "height": 415,
+          "height": 413,
           "width": 320
         },
         "position": {
@@ -2962,675 +2717,7 @@
       },
       {
         "data": {
-          "id": "Agent-uet8A",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Define the agent's instructions, then enter a task to complete using tools.",
-            "display_name": "Agent",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "agent_llm",
-              "max_tokens",
-              "model_kwargs",
-              "json_mode",
-              "model_name",
-              "openai_api_base",
-              "api_key",
-              "temperature",
-              "seed",
-              "max_retries",
-              "timeout",
-              "system_prompt",
-              "tools",
-              "input_value",
-              "handle_parsing_errors",
-              "verbose",
-              "max_iterations",
-              "agent_description",
-              "memory",
-              "sender",
-              "sender_name",
-              "n_messages",
-              "session_id",
-              "order",
-              "template",
-              "add_current_date_tool"
-            ],
-            "frozen": false,
-            "icon": "bot",
-            "legacy": false,
-            "lf_version": "1.1.4.post1",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Response",
-                "method": "message_response",
-                "name": "response",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "add_current_date_tool": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Current Date",
-                "dynamic": false,
-                "info": "If true, will add a tool to the agent that returns the current date.",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "add_current_date_tool",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "agent_description": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "display_name": "Agent Description [Deprecated]",
-                "dynamic": false,
-                "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "agent_description",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "A helpful assistant with access to the following tools:"
-              },
-              "agent_llm": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Model Provider",
-                "dynamic": false,
-                "info": "The provider of the language model that the agent will use to generate responses.",
-                "input_types": [],
-                "load_from_db": false,
-                "name": "agent_llm",
-                "options": [
-                  "Amazon Bedrock",
-                  "Anthropic",
-                  "Azure OpenAI",
-                  "Google Generative AI",
-                  "Groq",
-                  "NVIDIA",
-                  "OpenAI",
-                  "SambaNova",
-                  "Custom"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "SambaNova"
-              },
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "OpenAI API Key",
-                "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from langchain_core.tools import StructuredTool\n\nfrom langflow.base.agents.agent import LCToolsAgentComponent\nfrom langflow.base.agents.events import ExceptionWithMessageError\nfrom langflow.base.models.model_input_constants import (\n    ALL_PROVIDER_FIELDS,\n    MODEL_DYNAMIC_UPDATE_FIELDS,\n    MODEL_PROVIDERS_DICT,\n)\nfrom langflow.base.models.model_utils import get_model_name\nfrom langflow.components.helpers import CurrentDateComponent\nfrom langflow.components.helpers.memory import MemoryComponent\nfrom langflow.components.langchain_utilities.tool_calling import ToolCallingAgentComponent\nfrom langflow.custom.custom_component.component import _get_component_toolkit\nfrom langflow.custom.utils import update_component_build_config\nfrom langflow.field_typing import Tool\nfrom langflow.io import BoolInput, DropdownInput, MultilineInput, Output\nfrom langflow.logging import logger\nfrom langflow.schema.dotdict import dotdict\nfrom langflow.schema.message import Message\n\n\ndef set_advanced_true(component_input):\n    component_input.advanced = True\n    return component_input\n\n\nclass AgentComponent(ToolCallingAgentComponent):\n    display_name: str = \"Agent\"\n    description: str = \"Define the agent's instructions, then enter a task to complete using tools.\"\n    icon = \"bot\"\n    beta = False\n    name = \"Agent\"\n\n    memory_inputs = [set_advanced_true(component_input) for component_input in MemoryComponent().inputs]\n\n    inputs = [\n        DropdownInput(\n            name=\"agent_llm\",\n            display_name=\"Model Provider\",\n            info=\"The provider of the language model that the agent will use to generate responses.\",\n            options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n            value=\"OpenAI\",\n            real_time_refresh=True,\n            input_types=[],\n        ),\n        *MODEL_PROVIDERS_DICT[\"OpenAI\"][\"inputs\"],\n        MultilineInput(\n            name=\"system_prompt\",\n            display_name=\"Agent Instructions\",\n            info=\"System Prompt: Initial instructions and context provided to guide the agent's behavior.\",\n            value=\"You are a helpful assistant that can use tools to answer questions and perform tasks.\",\n            advanced=False,\n        ),\n        *LCToolsAgentComponent._base_inputs,\n        *memory_inputs,\n        BoolInput(\n            name=\"add_current_date_tool\",\n            display_name=\"Current Date\",\n            advanced=True,\n            info=\"If true, will add a tool to the agent that returns the current date.\",\n            value=True,\n        ),\n    ]\n    outputs = [Output(name=\"response\", display_name=\"Response\", method=\"message_response\")]\n\n    async def message_response(self) -> Message:\n        try:\n            # Get LLM model and validate\n            llm_model, display_name = self.get_llm()\n            if llm_model is None:\n                msg = \"No language model selected. Please choose a model to proceed.\"\n                raise ValueError(msg)\n            self.model_name = get_model_name(llm_model, display_name=display_name)\n\n            # Get memory data\n            self.chat_history = await self.get_memory_data()\n\n            # Add current date tool if enabled\n            if self.add_current_date_tool:\n                if not isinstance(self.tools, list):  # type: ignore[has-type]\n                    self.tools = []\n                current_date_tool = (await CurrentDateComponent(**self.get_base_args()).to_toolkit()).pop(0)\n                if not isinstance(current_date_tool, StructuredTool):\n                    msg = \"CurrentDateComponent must be converted to a StructuredTool\"\n                    raise TypeError(msg)\n                self.tools.append(current_date_tool)\n\n            # Validate tools\n            if not self.tools:\n                msg = \"Tools are required to run the agent. Please add at least one tool.\"\n                raise ValueError(msg)\n\n            # Set up and run agent\n            self.set(\n                llm=llm_model,\n                tools=self.tools,\n                chat_history=self.chat_history,\n                input_value=self.input_value,\n                system_prompt=self.system_prompt,\n            )\n            agent = self.create_agent_runnable()\n            return await self.run_agent(agent)\n\n        except (ValueError, TypeError, KeyError) as e:\n            logger.error(f\"{type(e).__name__}: {e!s}\")\n            raise\n        except ExceptionWithMessageError as e:\n            logger.error(f\"ExceptionWithMessageError occurred: {e}\")\n            raise\n        except Exception as e:\n            logger.error(f\"Unexpected error: {e!s}\")\n            raise\n\n    async def get_memory_data(self):\n        memory_kwargs = {\n            component_input.name: getattr(self, f\"{component_input.name}\") for component_input in self.memory_inputs\n        }\n        # filter out empty values\n        memory_kwargs = {k: v for k, v in memory_kwargs.items() if v}\n\n        return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()\n\n    def get_llm(self):\n        if not isinstance(self.agent_llm, str):\n            return self.agent_llm, None\n\n        try:\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if not provider_info:\n                msg = f\"Invalid model provider: {self.agent_llm}\"\n                raise ValueError(msg)\n\n            component_class = provider_info.get(\"component_class\")\n            display_name = component_class.display_name\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\", \"\")\n\n            return self._build_llm_model(component_class, inputs, prefix), display_name\n\n        except Exception as e:\n            logger.error(f\"Error building {self.agent_llm} language model: {e!s}\")\n            msg = f\"Failed to initialize language model: {e!s}\"\n            raise ValueError(msg) from e\n\n    def _build_llm_model(self, component, inputs, prefix=\"\"):\n        model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n        return component.set(**model_kwargs).build_model()\n\n    def set_component_params(self, component):\n        provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n        if provider_info:\n            inputs = provider_info.get(\"inputs\")\n            prefix = provider_info.get(\"prefix\")\n            model_kwargs = {input_.name: getattr(self, f\"{prefix}{input_.name}\") for input_ in inputs}\n\n            return component.set(**model_kwargs)\n        return component\n\n    def delete_fields(self, build_config: dotdict, fields: dict | list[str]) -> None:\n        \"\"\"Delete specified fields from build_config.\"\"\"\n        for field in fields:\n            build_config.pop(field, None)\n\n    def update_input_types(self, build_config: dotdict) -> dotdict:\n        \"\"\"Update input types for all fields in build_config.\"\"\"\n        for key, value in build_config.items():\n            if isinstance(value, dict):\n                if value.get(\"input_types\") is None:\n                    build_config[key][\"input_types\"] = []\n            elif hasattr(value, \"input_types\") and value.input_types is None:\n                value.input_types = []\n        return build_config\n\n    async def update_build_config(\n        self, build_config: dotdict, field_value: str, field_name: str | None = None\n    ) -> dotdict:\n        # Iterate over all providers in the MODEL_PROVIDERS_DICT\n        # Existing logic for updating build_config\n        if field_name in (\"agent_llm\",):\n            build_config[\"agent_llm\"][\"value\"] = field_value\n            provider_info = MODEL_PROVIDERS_DICT.get(field_value)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call the component class's update_build_config method\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n\n            provider_configs: dict[str, tuple[dict, list[dict]]] = {\n                provider: (\n                    MODEL_PROVIDERS_DICT[provider][\"fields\"],\n                    [\n                        MODEL_PROVIDERS_DICT[other_provider][\"fields\"]\n                        for other_provider in MODEL_PROVIDERS_DICT\n                        if other_provider != provider\n                    ],\n                )\n                for provider in MODEL_PROVIDERS_DICT\n            }\n            if field_value in provider_configs:\n                fields_to_add, fields_to_delete = provider_configs[field_value]\n\n                # Delete fields from other providers\n                for fields in fields_to_delete:\n                    self.delete_fields(build_config, fields)\n\n                # Add provider-specific fields\n                if field_value == \"OpenAI\" and not any(field in build_config for field in fields_to_add):\n                    build_config.update(fields_to_add)\n                else:\n                    build_config.update(fields_to_add)\n                # Reset input types for agent_llm\n                build_config[\"agent_llm\"][\"input_types\"] = []\n            elif field_value == \"Custom\":\n                # Delete all provider fields\n                self.delete_fields(build_config, ALL_PROVIDER_FIELDS)\n                # Update with custom component\n                custom_component = DropdownInput(\n                    name=\"agent_llm\",\n                    display_name=\"Language Model\",\n                    options=[*sorted(MODEL_PROVIDERS_DICT.keys()), \"Custom\"],\n                    value=\"Custom\",\n                    real_time_refresh=True,\n                    input_types=[\"LanguageModel\"],\n                )\n                build_config.update({\"agent_llm\": custom_component.to_dict()})\n            # Update input types for all fields\n            build_config = self.update_input_types(build_config)\n\n            # Validate required keys\n            default_keys = [\n                \"code\",\n                \"_type\",\n                \"agent_llm\",\n                \"tools\",\n                \"input_value\",\n                \"add_current_date_tool\",\n                \"system_prompt\",\n                \"agent_description\",\n                \"max_iterations\",\n                \"handle_parsing_errors\",\n                \"verbose\",\n            ]\n            missing_keys = [key for key in default_keys if key not in build_config]\n            if missing_keys:\n                msg = f\"Missing required keys in build_config: {missing_keys}\"\n                raise ValueError(msg)\n        if (\n            isinstance(self.agent_llm, str)\n            and self.agent_llm in MODEL_PROVIDERS_DICT\n            and field_name in MODEL_DYNAMIC_UPDATE_FIELDS\n        ):\n            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)\n            if provider_info:\n                component_class = provider_info.get(\"component_class\")\n                component_class = self.set_component_params(component_class)\n                prefix = provider_info.get(\"prefix\")\n                if component_class and hasattr(component_class, \"update_build_config\"):\n                    # Call each component class's update_build_config method\n                    # remove the prefix from the field_name\n                    if isinstance(field_name, str) and isinstance(prefix, str):\n                        field_name = field_name.replace(prefix, \"\")\n                    build_config = await update_component_build_config(\n                        component_class, build_config, field_value, \"model_name\"\n                    )\n        return dotdict({k: v.to_dict() if hasattr(v, \"to_dict\") else v for k, v in build_config.items()})\n\n    async def to_toolkit(self) -> list[Tool]:\n        component_toolkit = _get_component_toolkit()\n        tools_names = self._build_tools_names()\n        agent_description = self.get_tool_description()\n        # TODO: Agent Description Depreciated Feature to be removed\n        description = f\"{agent_description}{tools_names}\"\n        tools = component_toolkit(component=self).get_tools(\n            tool_name=self.get_tool_name(), tool_description=description, callbacks=self.get_langchain_callbacks()\n        )\n        if hasattr(self, \"tools_metadata\"):\n            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)\n        return tools\n"
-              },
-              "handle_parsing_errors": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Handle Parse Errors",
-                "dynamic": false,
-                "info": "Should the Agent fix errors when reading user input for better processing?",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "handle_parsing_errors",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "input_value": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Input",
-                "dynamic": false,
-                "info": "The input provided by the user for the agent to process.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "json_mode": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_iterations": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Iterations",
-                "dynamic": false,
-                "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_iterations",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 15
-              },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "The maximum number of retries to make when generating.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 5
-              },
-              "max_tokens": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Tokens",
-                "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_tokens",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 2048
-              },
-              "memory": {
-                "_input_type": "HandleInput",
-                "advanced": true,
-                "display_name": "External Memory",
-                "dynamic": false,
-                "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": [
-                  "Memory"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "memory",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
-              "model_name": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": true,
-                "dialog_inputs": {},
-                "display_name": "Model Name",
-                "dynamic": false,
-                "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
-                "input_types": [],
-                "name": "model_name",
-                "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "real_time_refresh": false,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Meta-Llama-3.1-405B-Instruct"
-              },
-              "n_messages": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Number of Messages",
-                "dynamic": false,
-                "info": "Number of messages to retrieve.",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "n_messages",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 100
-              },
-              "openai_api_base": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "order": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Order",
-                "dynamic": false,
-                "info": "Order of the messages.",
-                "input_types": [],
-                "name": "order",
-                "options": [
-                  "Ascending",
-                  "Descending"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Ascending"
-              },
-              "seed": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Filter by sender type.",
-                "input_types": [],
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User",
-                  "Machine and User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine and User"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Filter by sender name.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "system_prompt": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "Agent Instructions",
-                "dynamic": false,
-                "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "system_prompt",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "You are a helpful assistant who writes financial reports based on an user query.\nYou will get a financial and research summary\nPlease write a financial report using the provided context and input text only.\n\n\n{input}\n\n\nThink step by step\nDo not call a tool if the input depends on another tool output you do not yet have.\nDo not try to answer until you get all the tools' output. If you do not have an answer yet, you can continue calling tools until you do.\nYour answer should be in the same language as the initial query.\nensure the tool calls are proper parsable json "
-              },
-              "temperature": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "Temperature",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "temperature",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 2,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 0.1
-              },
-              "template": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "display_name": "Template",
-                "dynamic": false,
-                "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{sender_name}: {text}"
-              },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "The timeout for requests to OpenAI completion API.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 700
-              },
-              "tools": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Tools",
-                "dynamic": false,
-                "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": [
-                  "Tool"
-                ],
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "tools",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "verbose": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Verbose",
-                "dynamic": false,
-                "info": "",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "verbose",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "Agent"
-        },
-        "dragging": false,
-        "id": "Agent-uet8A",
-        "measured": {
-          "height": 624,
-          "width": 320
-        },
-        "position": {
-          "x": 1270.2082802479051,
-          "y": 79.47433251529584
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-GQOwS",
+          "id": "ChatOutput-jzrox",
           "node": {
             "base_classes": [
               "Message"
@@ -3656,7 +2743,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -3905,21 +2992,21 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-GQOwS",
+        "id": "ChatOutput-jzrox",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 2010.8485978294132,
-          "y": 400.19224092112074
+          "x": 1915.4342657794896,
+          "y": 441.2937993426264
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "CombineText-Iwkzh",
+          "id": "CombineText-V7cV2",
           "node": {
             "base_classes": [
               "Message"
@@ -3939,7 +3026,7 @@
             "frozen": false,
             "icon": "merge",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -4055,9 +3142,9 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-Iwkzh",
+        "id": "CombineText-V7cV2",
         "measured": {
-          "height": 415,
+          "height": 413,
           "width": 320
         },
         "position": {
@@ -4069,7 +3156,7 @@
       },
       {
         "data": {
-          "id": "URL-Qir1w",
+          "id": "URL-6tEU6",
           "node": {
             "base_classes": [
               "Data",
@@ -4090,7 +3177,7 @@
             "frozen": false,
             "icon": "layout-template",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -4196,6 +3283,7 @@
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "name",
                       "sortable": false,
                       "type": "text"
@@ -4207,6 +3295,7 @@
                       "edit_mode": "popover",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "description",
                       "sortable": false,
                       "type": "text"
@@ -4218,6 +3307,7 @@
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": true,
                       "name": "tags",
                       "sortable": false,
                       "type": "text"
@@ -4284,9 +3374,9 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-Qir1w",
+        "id": "URL-6tEU6",
         "measured": {
-          "height": 405,
+          "height": 402,
           "width": 320
         },
         "position": {
@@ -4298,238 +3388,9 @@
       },
       {
         "data": {
-          "id": "URL-ltk5I",
+          "id": "note-JGDJP",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Load and retrive data from specified URLs.",
-            "display_name": "URL",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "urls",
-              "format"
-            ],
-            "frozen": false,
-            "icon": "layout-template",
-            "legacy": false,
-            "lf_version": "1.1.4.post1",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Load and retrive data from specified URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Message\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.fetch_content())\n"
-              },
-              "format": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Output Format",
-                "dynamic": false,
-                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
-                "name": "format",
-                "options": [
-                  "Text",
-                  "Raw HTML"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Text"
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "fetch_content() - Load and retrive data from specified URLs.",
-                    "name": "URL-fetch_content",
-                    "tags": [
-                      "URL-fetch_content"
-                    ]
-                  },
-                  {
-                    "description": "fetch_content_text() - Load and retrive data from specified URLs.",
-                    "name": "URL-fetch_content_text",
-                    "tags": [
-                      "URL-fetch_content_text"
-                    ]
-                  },
-                  {
-                    "description": "as_dataframe() - Load and retrive data from specified URLs.",
-                    "name": "URL-as_dataframe",
-                    "tags": [
-                      "URL-as_dataframe"
-                    ]
-                  }
-                ]
-              },
-              "urls": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "URLs",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": true,
-                "list_add_label": "Add URL",
-                "load_from_db": false,
-                "name": "urls",
-                "placeholder": "Enter a URL...",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": true
-          },
-          "showNode": true,
-          "type": "URL"
-        },
-        "dragging": false,
-        "id": "URL-ltk5I",
-        "measured": {
-          "height": 405,
-          "width": 320
-        },
-        "position": {
-          "x": 735.1131983374333,
-          "y": -659.653233396074
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-HvLxE",
-          "node": {
-            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent is a multi agent flow with agents in charge of researching in the web and Yahoo news to retrieve relevant context and write reports about financial queries. Here's how it works:\n\n- **Query Start:** You start by asking the system any financial information you want to know\n\n\n- **Research agents:**\n  - **Finance Research agent:** The agent uses its tools (Yahoo finance news,  url fetcher) to gather latest news about the companies in your query.\n\n  - **Web Research agent:** The agent uses its tools (Tavily AI search) to gather relevant web information about your query.\n\n- **Merge context:** This joins the original query with all the retrieved relevant contexts \n\n- **Report generation Agent:** This agent will get the context and have access to some tools (URL fetcher, and calculator), with this the agent with write a final report/answer to your financial query!\n\n Try it with `Why Nvidia stock prices dropped in January?`",
+            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent is a multi agent flow with agents in charge of researching in the web and Yahoo news to retrieve relevant context and write reports about financial queries. Here's how it works:\n\n- **Query Start:** You start by asking the system any financial information you want to know\n\n\n- **Research agents:**\n  - **Finance Research agent:** The agent uses its tools (Yahoo finance news,  url fetcher) to gather latest news about the companies in your query.\n\n  - **Web Research agent:** The agent uses its tools (Tavily AI search) to gather relevant web information about your query.\n\n- **Merge context:** This joins the original query with all the retrieved relevant contexts \n\n- **Report generation step:** This step will get the context and have access to some tools (URL fetcher, and calculator), with this the agent with write a final report/answer to your financial query!\n\n Try it with `Why did Nvidia stock drop in January?`",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -4540,7 +3401,7 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-HvLxE",
+        "id": "note-JGDJP",
         "measured": {
           "height": 630,
           "width": 479
@@ -4550,15 +3411,15 @@
           "y": -433.35853649245854
         },
         "resizing": false,
-        "selected": true,
+        "selected": false,
         "type": "noteNode",
         "width": 478
       },
       {
         "data": {
-          "id": "note-jPKe6",
+          "id": "note-kVgYl",
           "node": {
-            "description": "## Configure the agent by obtaining your API key from [cloud.sambanova.ai/](https://cloud.sambanova.ai). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n- OpenAI/Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
+            "description": "## Configure the model by obtaining your API key from [cloud.sambanova.ai/](https://cloud.sambanova.ai). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -4568,21 +3429,24 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-jPKe6",
+        "height": 335,
+        "id": "note-kVgYl",
         "measured": {
-          "height": 410,
-          "width": 325
+          "height": 335,
+          "width": 326
         },
         "position": {
-          "x": 1268.6903882186205,
-          "y": -351.91139928664904
+          "x": 1195.2947481802175,
+          "y": -233.01046242443618
         },
+        "resizing": false,
         "selected": false,
-        "type": "noteNode"
+        "type": "noteNode",
+        "width": 325
       },
       {
         "data": {
-          "id": "note-nMQDM",
+          "id": "note-MGEz1",
           "node": {
             "description": "## Configure the agent by obtaining your API key from [cloud.sambanova.ai](https://cloud.sambanova.ai/). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n- OpenAI/Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
             "display_name": "",
@@ -4594,9 +3458,9 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-nMQDM",
+        "id": "note-MGEz1",
         "measured": {
-          "height": 410,
+          "height": 404,
           "width": 325
         },
         "position": {
@@ -4608,7 +3472,7 @@
       },
       {
         "data": {
-          "id": "note-DPtSr",
+          "id": "note-LRxRR",
           "node": {
             "description": "## Configure the agent by obtaining your API key from [cloud.sambanova.ai](https://cloud.sambanova.ai/). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n- OpenAI/Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
             "display_name": "",
@@ -4620,9 +3484,9 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-DPtSr",
+        "id": "note-LRxRR",
         "measured": {
-          "height": 410,
+          "height": 404,
           "width": 325
         },
         "position": {
@@ -4634,7 +3498,7 @@
       },
       {
         "data": {
-          "id": "note-TSinb",
+          "id": "note-qB49z",
           "node": {
             "description": "## Configure the Ai search tool by obtaining your Tavily API key from [tavily.com](https://tavily.com/).",
             "display_name": "",
@@ -4647,7 +3511,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-TSinb",
+        "id": "note-qB49z",
         "measured": {
           "height": 324,
           "width": 325
@@ -4663,7 +3527,7 @@
       },
       {
         "data": {
-          "id": "note-oeMEP",
+          "id": "note-Y3mrb",
           "node": {
             "description": "# **Finance Research Agent**\n   - **Purpose:** This agent research the latest news about the companies in the query.\n   - **Core Functions:** search for latest news based in the company Tickler and fetch web sites with news to return a summarized answer to the initial query\n   - **Tools Utilized:** Yahoo finance, get time, fetch URL\n",
             "display_name": "",
@@ -4676,7 +3540,7 @@
         },
         "dragging": false,
         "height": 334,
-        "id": "note-oeMEP",
+        "id": "note-Y3mrb",
         "measured": {
           "height": 334,
           "width": 326
@@ -4692,7 +3556,7 @@
       },
       {
         "data": {
-          "id": "note-EeB5R",
+          "id": "note-lvwaS",
           "node": {
             "description": "# **Web Research Agent**\n   - **Purpose:** This agent research the user query in the web.\n   - **Core Functions:** search for latest information about the user query and returns a summarized answer to the initial query\n   - **Tools Utilized:** Tavily AI Search\n",
             "display_name": "",
@@ -4705,7 +3569,7 @@
         },
         "dragging": false,
         "height": 335,
-        "id": "note-EeB5R",
+        "id": "note-lvwaS",
         "measured": {
           "height": 335,
           "width": 326
@@ -4721,9 +3585,9 @@
       },
       {
         "data": {
-          "id": "note-YJaq5",
+          "id": "note-OeBat",
           "node": {
-            "description": "# **Report Generation Agent**\n   - **Purpose:** This agent generate a final report / answer to the initial query.\n   - **Core Functions:** use the context from the research phase to generate a final answer / report\n   - **Tools Utilized:** Calculator, get time, fetch URL \n",
+            "description": "# **Report Generation**\n   - **Purpose:** This model generate a final report / answer to the initial query.\n   - **Core Functions:** use the context from the research phase to generate a final answer / report\n\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -4734,25 +3598,340 @@
         },
         "dragging": false,
         "height": 361,
-        "id": "note-YJaq5",
+        "id": "note-OeBat",
         "measured": {
           "height": 361,
           "width": 326
         },
         "position": {
-          "x": 1615.2659545623314,
+          "x": 1555.081529730841,
           "y": 77.85077532148986
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
         "width": 325
+      },
+      {
+        "data": {
+          "id": "SambaNovaModel-8AspB",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generate text using Sambanova LLMs.",
+            "display_name": "SambaNova",
+            "documentation": "https://cloud.sambanova.ai/",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "base_url",
+              "model_name",
+              "api_key",
+              "max_tokens",
+              "top_p",
+              "temperature"
+            ],
+            "frozen": false,
+            "icon": "SambaNova",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "text_response",
+                "name": "text_output",
+                "required_inputs": [],
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "method": "build_model",
+                "name": "model_output",
+                "required_inputs": [
+                  "api_key"
+                ],
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Sambanova API Key",
+                "dynamic": false,
+                "info": "The Sambanova API Key to use for the Sambanova model.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "base_url": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "SambaNova Cloud Base Url",
+                "dynamic": false,
+                "info": "The base URL of the Sambanova Cloud API. Defaults to https://api.sambanova.ai/v1/chat/completions. You can change this to use other urls like Sambastudio",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "base_url",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_sambanova import ChatSambaNovaCloud\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass SambaNovaComponent(LCModelComponent):\n    display_name = \"SambaNova\"\n    description = \"Generate text using Sambanova LLMs.\"\n    documentation = \"https://cloud.sambanova.ai/\"\n    icon = \"SambaNova\"\n    name = \"SambaNovaModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        StrInput(\n            name=\"base_url\",\n            display_name=\"SambaNova Cloud Base Url\",\n            advanced=True,\n            info=\"The base URL of the Sambanova Cloud API. \"\n            \"Defaults to https://api.sambanova.ai/v1/chat/completions. \"\n            \"You can change this to use other urls like Sambastudio\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=SAMBANOVA_MODEL_NAMES,\n            value=SAMBANOVA_MODEL_NAMES[0],\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Sambanova API Key\",\n            info=\"The Sambanova API Key to use for the Sambanova model.\",\n            advanced=False,\n            value=\"SAMBANOVA_API_KEY\",\n            required=True,\n        ),\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=2048,\n            info=\"The maximum number of tokens to generate.\",\n        ),\n        SliderInput(\n            name=\"top_p\",\n            display_name=\"top_p\",\n            advanced=True,\n            value=1.0,\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            info=\"Model top_p\",\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        sambanova_url = self.base_url\n        sambanova_api_key = self.api_key\n        model_name = self.model_name\n        max_tokens = self.max_tokens\n        top_p = self.top_p\n        temperature = self.temperature\n\n        api_key = SecretStr(sambanova_api_key).get_secret_value() if sambanova_api_key else None\n\n        return ChatSambaNovaCloud(\n            model=model_name,\n            max_tokens=max_tokens or 1024,\n            temperature=temperature or 0.07,\n            top_p=top_p,\n            sambanova_url=sambanova_url,\n            sambanova_api_key=api_key,\n        )\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_tokens",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 2048
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "",
+                "name": "model_name",
+                "options": [
+                  "Meta-Llama-3.3-70B-Instruct",
+                  "Meta-Llama-3.1-8B-Instruct",
+                  "Meta-Llama-3.1-70B-Instruct",
+                  "Meta-Llama-3.1-405B-Instruct",
+                  "Meta-Llama-3.2-1B-Instruct",
+                  "Meta-Llama-3.2-3B-Instruct",
+                  "Llama-3.2-11B-Vision-Instruct",
+                  "Llama-3.2-90B-Vision-Instruct",
+                  "Qwen2.5-Coder-32B-Instruct",
+                  "Qwen2.5-72B-Instruct",
+                  "QwQ-32B-Preview",
+                  "Qwen2-Audio-7B-Instruct"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Meta-Llama-3.1-405B-Instruct"
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "You are a helpful assistant who writes financial reports based on user query.\nYou will get a financial and research summary.\nPlease write a financial report or answer using the provided context and input text only.\n{input}\nYour answer should be in the same language as the initial query."
+              },
+              "temperature": {
+                "_input_type": "SliderInput",
+                "advanced": false,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "",
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "temperature",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 2,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 0.1
+              },
+              "top_p": {
+                "_input_type": "SliderInput",
+                "advanced": true,
+                "display_name": "top_p",
+                "dynamic": false,
+                "info": "Model top_p",
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "top_p",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 1
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "SambaNovaModel"
+        },
+        "dragging": false,
+        "id": "SambaNovaModel-8AspB",
+        "measured": {
+          "height": 653,
+          "width": 320
+        },
+        "position": {
+          "x": 1198.0223558351377,
+          "y": 154.90656214876276
+        },
+        "selected": false,
+        "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 628.4501000165474,
-      "y": 238.7866869531557,
-      "zoom": 0.30712548660882766
+      "x": 1202.1676138694822,
+      "y": 412.83531858771977,
+      "zoom": 0.43332052281790356
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
@@ -4760,7 +3939,7 @@
   "gradient": null,
   "icon": "landmark",
   "icon_bg_color": null,
-  "id": "07b9dfab-4778-4fa8-b7a4-bbdccac2e183",
+  "id": "ed36650a-fbaa-436c-9ba1-9c67e4f4978b",
   "is_component": false,
   "name": "Financial Agent",
   "tags": [
@@ -4770,5 +3949,5 @@
     "web-scraping",
     "sambanova"
   ],
-  "updated_at": "2025-02-10T19:02:26+00:00"
+  "updated_at": "2025-02-12T17:27:18+00:00"
 }
