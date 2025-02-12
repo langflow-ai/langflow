@@ -103,28 +103,30 @@ class SaveToFileComponent(Component):
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
         if input_type == "DataFrame":
-            df = self.df
-            return self._save_dataframe(df, file_path, file_format)
+            dataframe = self.df
+            return self._save_dataframe(dataframe, file_path, file_format)
         if input_type == "Data":
             data = self.data
             return self._save_data(data, file_path, file_format)
         if input_type == "Message":
             message = self.message
             return self._save_message(message, file_path, file_format)
-        raise ValueError(f"Unsupported input type: {input_type}")
 
-    def _save_dataframe(self, df: DataFrame, path: Path, fmt: str) -> str:
+        error_msg = f"Unsupported input type: {input_type}"
+        raise ValueError(error_msg)
+
+    def _save_dataframe(self, dataframe: DataFrame, path: Path, fmt: str) -> str:
         if fmt == "csv":
-            df.to_csv(path, index=False)
+            dataframe.to_csv(path, index=False)
         elif fmt == "excel":
-            df.to_excel(path, index=False, engine="openpyxl")
+            dataframe.to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
-            df.to_json(path, orient="records", indent=2)
+            dataframe.to_json(path, orient="records", indent=2)
         elif fmt == "markdown":
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(df.to_markdown(index=False))
+            path.write_text(dataframe.to_markdown(index=False), encoding="utf-8")
         else:
-            raise ValueError(f"Unsupported DataFrame format: {fmt}")
+            error_msg = f"Unsupported DataFrame format: {fmt}"
+            raise ValueError(error_msg)
 
         return f"DataFrame saved successfully as '{path}'"
 
@@ -134,13 +136,15 @@ class SaveToFileComponent(Component):
         elif fmt == "excel":
             pd.DataFrame(data.data).to_excel(path, index=False, engine="openpyxl")
         elif fmt == "json":
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data.data, f, indent=2)
+            path.write_text(json.dumps(data.data, indent=2), encoding="utf-8")
         elif fmt == "markdown":
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(pd.DataFrame(data.data).to_markdown(index=False))
+            path.write_text(
+                pd.DataFrame(data.data).to_markdown(index=False),
+                encoding="utf-8"
+            )
         else:
-            raise ValueError(f"Unsupported Data format: {fmt}")
+            error_msg = f"Unsupported Data format: {fmt}"
+            raise ValueError(error_msg)
 
         return f"Data saved successfully as '{path}'"
 
@@ -148,15 +152,16 @@ class SaveToFileComponent(Component):
         content = message.text
 
         if fmt == "txt":
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(content)
+            path.write_text(content, encoding="utf-8")
         elif fmt == "json":
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump({"message": content}, f, indent=2)
+            path.write_text(
+                json.dumps({"message": content}, indent=2),
+                encoding="utf-8"
+            )
         elif fmt == "markdown":
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(f"**Message:**\n\n{content}")
+            path.write_text(f"**Message:**\n\n{content}", encoding="utf-8")
         else:
-            raise ValueError(f"Unsupported Message format: {fmt}")
+            error_msg = f"Unsupported Message format: {fmt}"
+            raise ValueError(error_msg)
 
         return f"Message saved successfully as '{path}'"
