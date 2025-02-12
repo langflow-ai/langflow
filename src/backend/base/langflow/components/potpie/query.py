@@ -1,7 +1,7 @@
 import httpx
 
 from langflow.custom import Component
-from langflow.inputs import MessageTextInput
+from langflow.inputs import DropdownInput, MessageTextInput, PromptInput
 from langflow.io import SecretStrInput
 from langflow.schema import Message
 from langflow.template import Output
@@ -26,9 +26,23 @@ class Query(Component):
             info="ID of the project from Potpie.",
             required=True,
         ),
-        MessageTextInput(
-            name="message_content",
-            display_name="Message Content",
+        DropdownInput(
+            name="agent_type",
+            display_name="Agent Type",
+            info="The type of agent to use for the query",
+            options=[
+                "codebase_qna_agent",
+                "debugging_agent",
+                "unit_test_agent",
+                "integration_test_agent",
+                "LLD_agent",
+                "code_changes_agent",
+                "code_generation_agent",
+            ],
+        ),
+        PromptInput(
+            name="query",
+            display_name="Query",
             info="The message content for the agent to query the project with.",
             placeholder="Example: What is the purpose of this project?",
             required=True,
@@ -47,7 +61,8 @@ class Query(Component):
         }
 
         payload = {
-            "content": self.message_content,
+            "content": self.query,
+            "agent_id": self.agent_type,
         }
 
         try:

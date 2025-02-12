@@ -84,7 +84,14 @@ class ParseRepository(Component):
         except httpx.HTTPStatusError as e:
             raise ValueError(e.response.text) from e
 
-        while self.get_status(project_id) != "ready":
+        # Wait for status change
+        status_res = "ready"
+
+        while True:
+            status = self.get_status(project_id)
+            if status in ("ready", "error"):
+                status_res = status
+                break
             time.sleep(10)
 
-        return Message(text=project_id)
+        return Message(text=project_id, status=status_res)
