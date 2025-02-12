@@ -1,7 +1,7 @@
 from langflow.components.processing.parse_data import ParseDataComponent
 import pytest
 from langflow.schema import Data, Message
-from tests.base import ComponentTestBaseWithoutClient
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
 
 
 class TestParseDataComponent(ComponentTestBaseWithoutClient):
@@ -26,6 +26,7 @@ class TestParseDataComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return the file names mapping for different versions."""
         return [
+            {"version": "1.0.19", "module": "processing", "file_name": DID_NOT_EXIST},
             {"version": "1.1.0", "module": "processing", "file_name": "parse_data"},
             {"version": "1.1.1", "module": "processing", "file_name": "parse_data"},
         ]
