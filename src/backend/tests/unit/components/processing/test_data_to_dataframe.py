@@ -1,4 +1,4 @@
-from turtle import pd
+import pandas as pd
 from langflow.components.processing.data_to_dataframe import DataToDataFrameComponent
 import pytest
 from langflow.schema import Data, DataFrame
@@ -37,10 +37,9 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         """Test basic DataFrame construction."""
         component = component_class()
         component.set_attributes(default_kwargs)
-        result = component.build_dataframe()
+        df = component.build_dataframe()
         
-        assert isinstance(result, DataFrame)
-        df = result.to_pandas()  # Convert to pandas for easier testing
+        assert isinstance(df, DataFrame)
         assert len(df) == 2
         assert list(df.columns) == ["field1", "field2", "text"]
         assert df["text"].tolist() == ["Row 1", "Row 2"]
@@ -53,8 +52,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": single_data})
         
-        result = component.build_dataframe()
-        df = result.to_pandas()
+        df = component.build_dataframe()
         
         assert len(df) == 1
         assert df["text"].iloc[0] == "Single Row"
@@ -65,8 +63,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": []})
         
-        result = component.build_dataframe()
-        df = result.to_pandas()
+        df = component.build_dataframe()
         
         assert len(df) == 0
 
@@ -79,8 +76,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": data_without_text})
         
-        result = component.build_dataframe()
-        df = result.to_pandas()
+        df = component.build_dataframe()
         
         assert len(df) == 2
         assert "text" not in df.columns
@@ -95,8 +91,7 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": data_without_dict})
         
-        result = component.build_dataframe()
-        df = result.to_pandas()
+        df = component.build_dataframe()
         
         assert len(df) == 2
         assert list(df.columns) == ["text"]
@@ -111,14 +106,13 @@ class TestDataToDataFrameComponent(ComponentTestBaseWithoutClient):
         component = component_class()
         component.set_attributes({"data_list": mixed_data})
         
-        result = component.build_dataframe()
-        df = result.to_pandas()
+        df = component.build_dataframe()
         
         assert len(df) == 2
         assert set(df.columns) == {"field1", "field2", "field3", "text"}
         assert df["field1"].tolist() == ["value1", "value2"]
-        assert pd.isna(df["field2"].iloc[1])  # Second row should have NaN for field2
-        assert pd.isna(df["field3"].iloc[0])  # First row should have NaN for field3
+        assert df["field2"].iloc[1] != df["field2"].iloc[1]  # Check for NaN using inequality (NaN != NaN)
+        assert df["field3"].iloc[0] != df["field3"].iloc[0]  # Check for NaN using inequality (NaN != NaN)
 
     def test_invalid_input_type(self, component_class):
         """Test error handling for invalid input types."""
