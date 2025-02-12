@@ -138,10 +138,7 @@ class SaveToFileComponent(Component):
         elif fmt == "json":
             path.write_text(json.dumps(data.data, indent=2), encoding="utf-8")
         elif fmt == "markdown":
-            path.write_text(
-                pd.DataFrame(data.data).to_markdown(index=False),
-                encoding="utf-8"
-            )
+            path.write_text(pd.DataFrame(data.data).to_markdown(index=False), encoding="utf-8")
         else:
             error_msg = f"Unsupported Data format: {fmt}"
             raise ValueError(error_msg)
@@ -154,10 +151,7 @@ class SaveToFileComponent(Component):
         if fmt == "txt":
             path.write_text(content, encoding="utf-8")
         elif fmt == "json":
-            path.write_text(
-                json.dumps({"message": content}, indent=2),
-                encoding="utf-8"
-            )
+            path.write_text(json.dumps({"message": content}, indent=2), encoding="utf-8")
         elif fmt == "markdown":
             path.write_text(f"**Message:**\n\n{content}", encoding="utf-8")
         else:
