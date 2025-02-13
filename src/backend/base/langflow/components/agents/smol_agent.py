@@ -92,7 +92,7 @@ class SmolAgentComponent(Component):
 
     outputs = [Output(name="response", display_name="Response", method="run_agent")]
 
-    def build_agent(self) -> CodeAgent:
+    def build_agent(self) -> CodeAgent | ToolCallingAgent:
         # Convert LangChain model to HuggingFace model interface
         hf_model = LangChainHFModel(chat_model=self.language_model)
         try:
