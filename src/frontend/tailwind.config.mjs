@@ -2,7 +2,6 @@
 import tailwindcssForms from "@tailwindcss/forms";
 import tailwindcssTypography from "@tailwindcss/typography";
 import tailwindcssAnimate from "tailwindcss-animate";
-import tailwindcssDottedBackground from "tailwindcss-dotted-background";
 import { fontFamily } from "tailwindcss/defaultTheme";
 
 import plugin from "tailwindcss/plugin";
@@ -392,7 +391,6 @@ const config = {
       });
     }),
     tailwindcssTypography,
-    tailwindcssDottedBackground,
     plugin(({ addVariant }) => {
       addVariant("group-increment-hover", ":merge(.group-increment):hover &");
       addVariant("group-decrement-hover", ":merge(.group-decrement):hover &");

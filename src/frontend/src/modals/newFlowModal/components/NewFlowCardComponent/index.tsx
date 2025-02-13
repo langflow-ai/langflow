@@ -28,7 +28,7 @@ export default function NewFlowCardComponent() {
       data-testid="blank-flow"
     >
       <CardContent className="h-full w-full">
-        <div className="flex h-full w-full flex-col items-center justify-center rounded-md bg-muted align-middle bg-dotted-spacing-6 bg-dotted-muted-foreground bg-dotted-radius-px"></div>
+        <div className="flex h-full w-full flex-col items-center justify-center rounded-md bg-muted align-middle"></div>
       </CardContent>
       <CardDescription className="px-6 pb-4">
         <CardTitle className="text-lg text-primary">Blank Flow</CardTitle>
