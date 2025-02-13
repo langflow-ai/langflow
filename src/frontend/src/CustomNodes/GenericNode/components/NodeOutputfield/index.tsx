@@ -42,14 +42,6 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
 
-const ScanEyeIcon = memo(({ className }: { className: string }) => (
-  <IconComponent
-    className={className}
-    name="ScanEye"
-    strokeWidth={ICON_STROKE_WIDTH}
-  />
-));
-
 // Memoize Button components
 const HideShowButton = memo(
   ({

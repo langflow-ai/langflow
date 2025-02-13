@@ -27,7 +27,12 @@ export const ContentRenderKey = ({
             </div>
           )}
 
-          <Input ref={inputRef} readOnly={true} value={apiKeyValue} />
+          <Input
+            data-testid="api-key-input"
+            ref={inputRef}
+            readOnly={true}
+            value={apiKeyValue}
+          />
         </div>
 
         <Button

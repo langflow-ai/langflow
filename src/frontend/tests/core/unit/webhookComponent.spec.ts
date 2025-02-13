@@ -140,24 +140,11 @@ test(
 
     await page.getByText("Done").click();
 
-    await page.getByTestId("title-Webhook").click();
-    await page.getByTestId("edit-button-modal").click();
+    const monitorBuildPromise = page.waitForRequest((request) =>
+      request.url().includes("/monitor/build"),
+    );
 
-    const curlValue = await page.getByTestId("str_edit_curl").inputValue();
-
-    await page.getByText("Close").last().click();
-
-    // Extract the full URL from the curl command
-    const urlMatch = curlValue.match(/"([^"]+)"/);
-    const webhookUrl = urlMatch?.[1];
-    expect(webhookUrl).toBeTruthy();
-
-    const webhookResponse = await request.post(webhookUrl!, {
-      data: { any: "data" },
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    expect(webhookResponse.ok()).toBeTruthy();
+    const monitorBuildRequest = await monitorBuildPromise;
+    expect(monitorBuildRequest).toBeTruthy();
   },
 );

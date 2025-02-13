@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useMutationFunctionType } from "@/types/api";
 import { FlowPoolType } from "@/types/zustand/flow";
@@ -89,6 +90,10 @@ export const useGetBuildsMutation: useMutationFunctionType<
   const webhookPoolingInterval = useUtilityStore(
     (state) => state.webhookPoolingInterval,
   );
+
+  const setFlowPool = useFlowStore((state) => state.setFlowPool);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+
   const flowIdRef = useRef<string | null>(null);
 
   const getBuildsFn = async (
@@ -97,6 +102,12 @@ export const useGetBuildsMutation: useMutationFunctionType<
     const config = {};
     config["params"] = { flow_id: payload.flowId };
     const res = await api.get<any>(`${getURL("BUILDS")}`, config);
+
+    if (currentFlow) {
+      const flowPool = res?.data?.vertex_builds;
+      setFlowPool(flowPool);
+    }
+
     return res.data;
   };
 
