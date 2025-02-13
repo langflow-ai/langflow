@@ -92,7 +92,7 @@ export default function CopyFieldAreaComponent({
     navigator.clipboard.writeText(valueToRender);
 
     setSuccessData({
-      title: COPIED_NOTICE_ALERT,
+      title: "Endpoint URL copied",
     });
 
     event?.stopPropagation();

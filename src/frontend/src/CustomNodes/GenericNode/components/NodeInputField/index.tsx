@@ -75,14 +75,9 @@ export default function NodeInputField({
       flowName: currentFlow?.name ?? "",
       endpointName: currentFlow?.endpoint_name ?? "",
       isAuth,
+      variableName: name,
     };
-  }, [
-    data?.node?.id,
-    data?.type,
-    data?.node?.endpoint_name,
-    data?.node?.flow_name,
-    isAuth,
-  ]);
+  }, [data?.node?.id, isAuth, name]);
 
   useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
 

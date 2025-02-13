@@ -1,3 +1,4 @@
+import { useUtilityStore } from "@/stores/utilityStore";
 import { useMutationFunctionType } from "@/types/api";
 import { FlowPoolType } from "@/types/zustand/flow";
 import { useEffect, useRef } from "react";
@@ -20,6 +21,12 @@ const PollingManager = {
     if (!this.pollingQueue.has(flowId)) {
       this.pollingQueue.set(flowId, []);
     }
+    this.pollingQueue.set(
+      flowId,
+      (this.pollingQueue.get(flowId) || []).filter(
+        (item) => item.timestamp !== pollingItem.timestamp,
+      ),
+    );
     this.pollingQueue.get(flowId)?.push(pollingItem);
 
     if (!this.activePolls.has(flowId)) {
@@ -34,7 +41,7 @@ const PollingManager = {
       return;
     }
 
-    const nextPoll = queue[queue.length - 1];
+    const nextPoll = queue[0];
     this.activePolls.set(flowId, nextPoll);
     nextPoll.callback();
   },
@@ -70,7 +77,6 @@ const PollingManager = {
 
 interface IGetBuilds {
   flowId: string;
-  pollingInterval?: number;
   onSuccess?: (data: { vertex_builds: FlowPoolType }) => void;
   stopPollingOn?: (data: { vertex_builds: FlowPoolType }) => boolean;
 }
@@ -80,7 +86,10 @@ export const useGetBuildsMutation: useMutationFunctionType<
   IGetBuilds
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const webhookPoolingInterval = useUtilityStore(
+    (state) => state.webhookPoolingInterval,
+  );
+  const flowIdRef = useRef<string | null>(null);
 
   const getBuildsFn = async (
     payload: IGetBuilds,
@@ -92,12 +101,13 @@ export const useGetBuildsMutation: useMutationFunctionType<
   };
 
   const startPolling = (payload: IGetBuilds) => {
-    if (!payload.pollingInterval) {
+    if (!webhookPoolingInterval || webhookPoolingInterval === 0) {
       return getBuildsFn(payload);
     }
 
-    const timestamp = Date.now();
+    flowIdRef.current = payload.flowId;
 
+    const timestamp = Date.now();
     const pollCallback = async () => {
       const data = await getBuildsFn(payload);
       payload.onSuccess?.(data);
@@ -107,11 +117,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
       }
     };
 
-    const intervalId = setInterval(
-      pollCallback,
-      payload.pollingInterval * 1000,
-    );
-    pollingIntervalRef.current = intervalId;
+    const intervalId = setInterval(pollCallback, webhookPoolingInterval);
 
     const pollingItem: PollingItem = {
       interval: intervalId,
@@ -122,7 +128,6 @@ export const useGetBuildsMutation: useMutationFunctionType<
 
     PollingManager.enqueuePolling(payload.flowId, pollingItem);
 
-    // Execute initial call
     return getBuildsFn(payload).then((data) => {
       payload.onSuccess?.(data);
       if (payload.stopPollingOn?.(data)) {
@@ -133,8 +138,8 @@ export const useGetBuildsMutation: useMutationFunctionType<
 
   useEffect(() => {
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
+      if (flowIdRef.current) {
+        PollingManager.stopPoll(flowIdRef.current);
       }
     };
   }, []);

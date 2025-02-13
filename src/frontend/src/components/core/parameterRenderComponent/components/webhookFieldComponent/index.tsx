@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { AuthContext } from "@/contexts/authContext";
-import { useGetBuildsMutation } from "@/controllers/API/queries/_builds/use-get-builds-mutation";
+import { useGetBuildsMutation } from "@/controllers/API/queries/_builds/use-get-builds-pooling-mutation";
 import SecretKeyModal from "@/modals/secretKeyModal";
 import { getModalPropsApiKey } from "@/pages/SettingsPage/pages/ApiKeysPage/helpers/get-modal-props";
 import { useContext, useEffect, useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { InputProps, TextAreaComponentType } from "../../types";
 import CopyFieldAreaComponent from "../copyFieldAreaComponent";
+import TextAreaComponent from "../textAreaComponent";
 
 export default function WebhookFieldComponent({
   value,
@@ -19,47 +20,71 @@ export default function WebhookFieldComponent({
   const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
   const modalProps = getModalPropsApiKey();
+  const { mutate: getBuildsMutation } = useGetBuildsMutation();
+
+  const isBackendUrl = nodeInformationMetadata?.variableName === "endpoint";
+  const isCurlWebhook = nodeInformationMetadata?.variableName === "curl";
+  const showGenerateToken = isBackendUrl && !editNode;
+
+  useEffect(() => {
+    if (!editNode && isBackendUrl) {
+      getBuildsMutation({
+        flowId: nodeInformationMetadata?.flowId!,
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (userData) {
       setUserId(userData.id);
     }
   }, [userData]);
 
-  const { mutate: getBuildsMutation } = useGetBuildsMutation();
-
-  useEffect(() => {
-    getBuildsMutation({
-      flowId: nodeInformationMetadata?.flowId!,
-      pollingInterval: 5,
-    });
-  }, []);
-
   return (
     <div className="grid w-full gap-2">
-      <div>
-        <CopyFieldAreaComponent
-          id={id}
-          value={value}
-          editNode={editNode}
-          handleOnNewValue={handleOnNewValue}
-          {...baseInputProps}
-        />
-      </div>
-      <div>
-        <SecretKeyModal
-          modalProps={{ ...modalProps, size: "small-h-full" }}
-          data={userId}
-        >
-          <Button
-            size="sm"
-            data-testid="generate_token_webhook_button"
-            variant="outline"
+      {isBackendUrl && (
+        <div>
+          <CopyFieldAreaComponent
+            id={id}
+            value={value}
+            editNode={editNode}
+            handleOnNewValue={handleOnNewValue}
+            {...baseInputProps}
+          />
+        </div>
+      )}
+
+      {isCurlWebhook && (
+        <div>
+          <TextAreaComponent
+            id={id}
+            value={value}
+            editNode={editNode}
+            handleOnNewValue={handleOnNewValue}
+            {...baseInputProps}
+            nodeInformationMetadata={nodeInformationMetadata}
+          />
+        </div>
+      )}
+
+      {showGenerateToken && (
+        <div>
+          <SecretKeyModal
+            modalProps={{ ...modalProps, size: "small-h-full" }}
+            data={userId}
           >
-            <ForwardedIconComponent name="Key" className="h-4 w-4" />
-            Generate token
-          </Button>
-        </SecretKeyModal>
-      </div>
+            <Button
+              size="sm"
+              data-testid="generate_token_webhook_button"
+              variant="outline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ForwardedIconComponent name="Key" className="h-4 w-4" />
+              Generate token
+            </Button>
+          </SecretKeyModal>
+        </div>
+      )}
     </div>
   );
 }

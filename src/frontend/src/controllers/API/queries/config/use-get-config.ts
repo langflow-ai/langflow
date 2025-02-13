@@ -13,6 +13,7 @@ export interface ConfigResponse {
   health_check_max_retries: number;
   max_file_size_upload: number;
   feature_flags: Record<string, any>;
+  webhook_pooling_interval: number;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -29,6 +30,9 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setMaxFileSizeUpload,
   );
   const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
+  const setWebhookPoolingInterval = useUtilityStore(
+    (state) => state.setWebhookPoolingInterval,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -46,6 +50,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
       setFeatureFlags(data.feature_flags);
+      setWebhookPoolingInterval(data.webhook_pooling_interval);
     }
     return data;
   };

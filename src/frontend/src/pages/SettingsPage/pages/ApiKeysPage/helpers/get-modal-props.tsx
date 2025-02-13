@@ -2,7 +2,7 @@ export const getModalPropsApiKey = () => {
   const modalProps = {
     title: "Create API Key",
     description: "Create a secret API Key to use Langflow API.",
-    inputPlaceholder: "Enter your API Key",
+    inputPlaceholder: "My API Key",
     buttonText: "Generate API Key",
     generatedKeyMessage: (
       <>
@@ -14,6 +14,12 @@ export const getModalPropsApiKey = () => {
       </>
     ),
     showIcon: true,
+    inputLabel: (
+      <>
+        <span className="text-sm">Description</span>{" "}
+        <span className="text-xs text-muted-foreground">(optional)</span>
+      </>
+    ),
   };
 
   return modalProps;

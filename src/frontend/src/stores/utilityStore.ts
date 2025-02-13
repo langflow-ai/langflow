@@ -35,4 +35,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   setTags: (tags: Tag[]) => set({ tags }),
   featureFlags: {},
   setFeatureFlags: (featureFlags: Record<string, any>) => set({ featureFlags }),
+  webhookPoolingInterval: 5000,
+  setWebhookPoolingInterval: (webhookPoolingInterval: number) =>
+    set({ webhookPoolingInterval }),
 }));

@@ -49,14 +49,9 @@ export default function TableNodeCellRender({
       flowName: currentFlow?.name ?? "",
       endpointName: currentFlow?.endpoint_name ?? "",
       isAuth,
+      variableName: parameterId,
     };
-  }, [
-    node?.data?.node?.id,
-    node?.data?.node?.type,
-    node?.data?.node?.endpoint_name,
-    node?.data?.node?.flow_name,
-    isAuth,
-  ]);
+  }, [nodeId, isAuth, parameterId]);
 
   return (
     parameter && (
