@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.composio import ComposioAPIComponent
 from tests.base import ComponentTestBaseWithClient
 
