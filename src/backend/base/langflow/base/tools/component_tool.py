@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import re
+import string
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
@@ -154,10 +154,12 @@ def _build_output_async_function(
 
 
 def _format_tool_name(name: str):
-    # format to '^[a-zA-Z0-9_-]+$'."
-    # to do that we must remove all non-alphanumeric characters
+    # Create a translation table for unwanted characters
+    valid_chars = string.ascii_letters + string.digits + "_-"
+    translate_table = str.maketrans({ch: "_" for ch in set(name) - set(valid_chars)})
 
-    return re.sub(r"[^a-zA-Z0-9_-]", "_", name)
+    # Translate the input string using the table
+    return name.translate(translate_table)
 
 
 def _add_commands_to_tool_description(tool_description: str, commands: str):
