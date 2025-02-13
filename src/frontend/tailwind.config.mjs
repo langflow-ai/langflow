@@ -377,10 +377,6 @@ const config = {
         ".text-align-last-right": {
           "text-align-last": "right",
         },
-        ":focus-visible": {
-          outline: "none  !important",
-          outlineOffset: "0px !important",
-        },
         ".note-node-markdown": {
           lineHeight: "1",
           "& ul li::marker": {
