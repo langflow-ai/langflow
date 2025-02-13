@@ -209,6 +209,9 @@ class NVIDIAIngestComponent(Component):
                             description=content_metadata.get("description", ""),
                         )
                     )
+                else:
+                    # image is not yet supported; skip if encountered
+                    self.log(f"Unsupported document type: {document_type}", name="NVIDIAIngestComponent")
 
         self.status = data if data else "No data"
         return data
