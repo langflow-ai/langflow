@@ -32,7 +32,6 @@ class TestStringifyComponent(ComponentTestBaseWithoutClient):
         - Latest tested: 1.2.0
         """
 
-
     def test_stringify_none_input(self):
         """Test validation with None input."""
         component = StringifyComponent()
