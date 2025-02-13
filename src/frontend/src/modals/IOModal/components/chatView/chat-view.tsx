@@ -6,6 +6,7 @@ import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -16,7 +17,6 @@ import ChatInput from "./chatInput/chat-input";
 import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
 import { useFileHandler } from "./chatInput/hooks/use-file-handler";
 import ChatMessage from "./chatMessage/chat-message";
-import { v5 as uuidv5 } from "uuid";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -39,7 +39,9 @@ export default function ChatView({
   const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage ? uuidv5("publish_"+realFlowId, uuidv5.DNS) : realFlowId;
+  const currentFlowId = playgroundPage
+    ? uuidv5("publish_" + realFlowId, uuidv5.DNS)
+    : realFlowId;
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,

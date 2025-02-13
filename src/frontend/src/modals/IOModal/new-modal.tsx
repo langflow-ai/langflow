@@ -11,6 +11,7 @@ import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -24,7 +25,6 @@ import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
-import { v5 as uuidv5 } from "uuid";
 export default function IOModal({
   children,
   open,
@@ -61,7 +61,9 @@ export default function IOModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage ? uuidv5("publish_"+realFlowId, uuidv5.DNS) : realFlowId;
+  const currentFlowId = playgroundPage
+    ? uuidv5("publish_" + realFlowId, uuidv5.DNS)
+    : realFlowId;
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
