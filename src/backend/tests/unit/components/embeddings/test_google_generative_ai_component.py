@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.embeddings import GoogleGenerativeAIEmbeddingsComponent
 from tests.base import ComponentTestBaseWithClient
 
