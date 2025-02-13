@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from langflow.components.Notion import NotionSearch
 from tests.base import ComponentTestBaseWithoutClient
 
