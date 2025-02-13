@@ -130,6 +130,7 @@ class NVIDIAIngestComponent(Component):
             raise ValueError(err_msg)
 
         try:
+            self.base_url = self.base_url.strip()
             parsed_url = urlparse(self.base_url)
             if not parsed_url.hostname or not parsed_url.port:
                 err_msg = "Invalid URL: Missing hostname or port."
