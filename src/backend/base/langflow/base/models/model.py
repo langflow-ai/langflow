@@ -7,17 +7,16 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import BaseOutputParser
+from nemoguardrails import RailsConfig
+from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageInput
-from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput, DataInput
+from langflow.inputs.inputs import BoolInput, DataInput, InputTypes, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
-
-from nemoguardrails import RailsConfig
-from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
 
 class LCModelComponent(Component):
@@ -204,7 +203,7 @@ class LCModelComponent(Component):
                 print(f"Guardrails: {self.guardrails.text}")
                 print(f"Type of guardrails: {type(self.guardrails.text)}")
                 print(f"Prompt: {prompt}")
-                
+
                 config = RailsConfig.from_content(yaml_content=self.guardrails.text)
                 guardrails = RunnableRails(config)
                 runnable = (prompt | (guardrails | runnable)) if prompt else (guardrails | runnable)
@@ -218,7 +217,7 @@ class LCModelComponent(Component):
         try:
             # TODO: Depreciated Feature to be removed in upcoming release
             if hasattr(self, "output_parser") and self.output_parser is not None:
-                runnable = (runnable | self.output_parser) 
+                runnable = runnable | self.output_parser
 
             runnable = runnable.with_config(
                 {

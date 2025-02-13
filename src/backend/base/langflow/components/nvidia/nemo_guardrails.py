@@ -19,9 +19,13 @@ class NVIDIANeMoGuardrailsComponent(Component):
 
     inputs = [
         MultilineInput(
-            name="yaml_content", display_name="YAML Content", info="Defines the guardrails rules. Takes precedence over the file path"
+            name="yaml_content",
+            display_name="YAML Content",
+            info="Defines the guardrails rules. Takes precedence over the file path",
         ),
-        FileInput(name="path", display_name="YAML File Path", file_types=file_types, info="File path to the guardrails rules"),
+        FileInput(
+            name="path", display_name="YAML File Path", file_types=file_types, info="File path to the guardrails rules"
+        ),
     ]
 
     outputs = [

@@ -1,4 +1,4 @@
-from .nvidia_rerank import NvidiaRerankComponent
 from .nemo_guardrails import NVIDIANeMoGuardrailsComponent
+from .nvidia_rerank import NvidiaRerankComponent
 
-__all__ = ["NvidiaRerankComponent", "NVIDIANeMoGuardrailsComponent"]
+__all__ = ["NVIDIANeMoGuardrailsComponent", "NvidiaRerankComponent"]
