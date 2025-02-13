@@ -122,26 +122,32 @@ class AgentComponent(ToolCallingAgentComponent):
         return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 
     def get_llm(self):
-        if not isinstance(self.agent_llm, str):
-            return self.agent_llm, None
+        # Avoid multiple accesses to self.agent_llm by storing in a local variable
+        agent_llm = self.agent_llm
+        if not isinstance(agent_llm, str):
+            return agent_llm, None
+
+        # Single dictionary lookup for the provider info
+        provider_info = MODEL_PROVIDERS_DICT.get(agent_llm)
+        if provider_info is None:
+            raise ValueError(f"Invalid model provider: {agent_llm}")
 
         try:
-            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-            if not provider_info:
-                msg = f"Invalid model provider: {self.agent_llm}"
-                raise ValueError(msg)
-
-            component_class = provider_info.get("component_class")
-            display_name = component_class.display_name
-            inputs = provider_info.get("inputs")
+            component_class = provider_info["component_class"]
+            inputs = provider_info["inputs"]
             prefix = provider_info.get("prefix", "")
 
-            return self._build_llm_model(component_class, inputs, prefix), display_name
+            return self._build_llm_model(component_class, inputs, prefix), component_class.display_name
 
+        except KeyError as e:
+            # Logging and raising errors only when necessary
+            error_msg = f"Failed to initialize language model (missing key: {e!s})"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
         except Exception as e:
-            logger.error(f"Error building {self.agent_llm} language model: {e!s}")
-            msg = f"Failed to initialize language model: {e!s}"
-            raise ValueError(msg) from e
+            error_msg = f"Failed to initialize language model: {e!s}"
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
 
     def _build_llm_model(self, component, inputs, prefix=""):
         model_kwargs = {input_.name: getattr(self, f"{prefix}{input_.name}") for input_ in inputs}
