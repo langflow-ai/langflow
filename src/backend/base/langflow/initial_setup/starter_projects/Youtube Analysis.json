@@ -2921,7 +2921,7 @@
         "data": {
           "id": "note-n9LmZ",
           "node": {
-            "description": "# Batch Run\n## Overview\nThis component processes a DataFrame by running each row through a Language Model (LLM). Perfect for batch analysis, sentiment scoring, or content generation at scale.\n\n## How It Works\n1. Accepts a DataFrame with text data\n2. Routes each row through your chosen LLM\n3. Returns new DataFrame with original text + model responses\n\n## Quick Start\n1. Connect an LLM component\n2. Input your DataFrame\n3. Specify the text column name (defaults to 'text')\n4. Optional: Add system instructions for consistent processing\n\n## Output\nReturns DataFrame with two columns:\n- `text_input`: Original text\n- `model_response`: Generated LLM response\n\n",
+            "description": "# Batch Run component\n\nThis component processes a DataFrame by running each row through a Language Model (LLM). Perfect for batch analysis, sentiment scoring, or content generation at scale.\n\n## How It Works\n1. Accepts a DataFrame with text data.\n2. Routes each row through your chosen LLM.\n3. Returns new DataFrame with `text_input` and `model_response`.\n\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2935,7 +2935,7 @@
         "id": "note-n9LmZ",
         "measured": {
           "height": 522,
-          "width": 324
+          "width": 325
         },
         "position": {
           "x": 631.7137680312561,
@@ -2950,7 +2950,7 @@
         "data": {
           "id": "note-piUDG",
           "node": {
-            "description": "## Setting Up YouTube API\n1. Go to [Google Cloud Console](https://console.cloud.google.com)\n2. Create a new project or select existing one\n3. Enable YouTube Data API v3:\n   - Navigate to APIs & Services > Library\n   - Search \"YouTube Data API v3\"\n   - Click Enable\n4. Create credentials:\n   - Go to APIs & Services > Credentials\n   - Click Create Credentials > API Key\n5. Copy your new API key for use in the component\n\n⚠️ Remember to:\n- Restrict the API key to YouTube Data API v3 only\n- Set appropriate quotas and restrictions\n",
+            "description": "## Set up the YouTube API\n1. Go to [Google Cloud Console](https://console.cloud.google.com).\n2. Create a new project or select existing one.\n3. Enable YouTube Data API v3:\n   - Navigate to APIs & Services > Library.\n   - Search \"YouTube Data API v3\".\n   - Click Enable.\n4. Create credentials:\n   - Go to APIs & Services > Credentials.\n   - Click Create Credentials > API Key.\n5. Copy your new API key for use in the component.\n\n⚠️ Remember to:\n- Restrict the API key to YouTube Data API v3 only.\n- Set appropriate quotas and restrictions.\n",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2964,7 +2964,7 @@
         "id": "note-piUDG",
         "measured": {
           "height": 486,
-          "width": 324
+          "width": 325
         },
         "position": {
           "x": 1579.119903578572,
@@ -2979,7 +2979,7 @@
         "data": {
           "id": "note-qq8Uo",
           "node": {
-            "description": "# 🎥 YouTube Video Analysis Flow\nThis flow performs comprehensive analysis of YouTube videos by:\n1.  Extracting video comments and transcripts\n2.  Running sentiment analysis on comments using LLM \n3.  Combining transcript content and comment sentiment for comprehensive video analysis\n\n## ⚡ Components Flow\n- **Input**:  Video URL\n- **Data Collection**: \n -  YouTube Comments extraction with sentiment batch processing\n -  Transcript extraction via YouTube API\n- **Analysis**:  GPT-powered agent analyzes content & reception patterns\n- **Output**:  Detailed report with content summary, audience reception analysis, and actionable insights\n\n## ⚙️ Setup Required\n-  OpenAI API Key\n-  YouTube Data API v3 key\n\n## 💡 Key Features\n-  Parallel processing of multiple comments\n-  Configurable comment sample size\n-  Combined transcript + sentiment analysis\n-  Structured output format for clear insights",
+            "description": "# 🎥 YouTube Video Analysis\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n\n## Prerequisites\n-  OpenAI API Key\n-  YouTube Data API v3 key",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2989,15 +2989,15 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 889,
+        "height": 454,
         "id": "note-qq8Uo",
         "measured": {
-          "height": 889,
-          "width": 432
+          "height": 454,
+          "width": 433
         },
         "position": {
-          "x": -1085.0646792629705,
-          "y": 5356.2286779666165
+          "x": -1366.105596485301,
+          "y": 6422.034220724462
         },
         "resizing": false,
         "selected": false,
