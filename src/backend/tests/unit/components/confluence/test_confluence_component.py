@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.confluence import ConfluenceComponent
 from tests.base import ComponentTestBaseWithClient
 
