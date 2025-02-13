@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated.store_message import StoreMessageComponent
 from tests.base import ComponentTestBaseWithClient
 
