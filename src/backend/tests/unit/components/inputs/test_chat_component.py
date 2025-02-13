@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.inputs import ChatInput
+
 from tests.base import ComponentTestBaseWithClient
 
 
