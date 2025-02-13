@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.logic import RunFlowComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
