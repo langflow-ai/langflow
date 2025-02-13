@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.icosacomputing import CombinatorialReasonerComponent
 from tests.base import ComponentTestBaseWithClient
 
