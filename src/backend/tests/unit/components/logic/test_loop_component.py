@@ -1,7 +1,7 @@
 import pytest
-
 from langflow.components.logic import LoopComponent
 from langflow.schema import Data
+
 from tests.base import ComponentTestBaseWithClient
 
 
