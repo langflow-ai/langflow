@@ -12,6 +12,7 @@ import IconComponent, {
 import { Input } from "../../../../ui/input";
 import { InputProps, TextAreaComponentType } from "../../types";
 import CopyFieldAreaComponent from "../copyFieldAreaComponent";
+import GenerateTokenDialog from "./components/generate-token-dialog";
 
 const BACKEND_URL = "BACKEND_URL";
 const URL_WEBHOOK = `${window.location.protocol}//${window.location.host}/api/v1/webhook/`;
@@ -76,14 +77,16 @@ export default function WebhookFieldComponent({
         />
       </div>
       <div>
-        <Button
-          size="sm"
-          data-testid="generate_token_webhook_button"
-          variant="outline"
-        >
-          <ForwardedIconComponent name="Key" className="h-4 w-4" />
-          Generate token
-        </Button>
+        <GenerateTokenDialog>
+          <Button
+            size="sm"
+            data-testid="generate_token_webhook_button"
+            variant="outline"
+          >
+            <ForwardedIconComponent name="Key" className="h-4 w-4" />
+            Generate token
+          </Button>
+        </GenerateTokenDialog>
       </div>
     </div>
   );
