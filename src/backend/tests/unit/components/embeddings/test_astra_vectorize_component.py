@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.embeddings import AstraVectorizeComponent
 from tests.base import ComponentTestBaseWithClient
 
