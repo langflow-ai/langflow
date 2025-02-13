@@ -28,6 +28,27 @@ class SmolAgentComponent(Component):
             info="The language model to use for the agent",
         ),
         HandleInput(
+            name="smol_agent",
+            display_name="SMOL Agent",
+            input_types=["ManagedAgent"],
+            info="The SMOL agent to manage",
+            is_list=True,
+        ),
+        MessageTextInput(
+            name="agent_name",
+            display_name="Agent Name",
+            info="The name of the managed agent",
+            required=False,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="agent_description",
+            display_name="Agent Description",
+            info="A description of what the managed agent does",
+            required=False,
+            advanced=True,
+        ),
+        HandleInput(
             name="tools",
             display_name="Tools",
             input_types=["Tool"],
@@ -88,7 +109,15 @@ class SmolAgentComponent(Component):
         ),
     ]
 
-    outputs = [Output(name="response", display_name="Response", method="run_agent")]
+    outputs = [
+        Output(name="response", display_name="Response", method="run_agent"),
+        Output(
+            name="agent",
+            display_name="SMOL Agent",
+            method="build_agent",
+            output_types=["CodeAgent", "ToolCallingAgent"],
+        ),
+    ]
 
     def build_agent(self) -> CodeAgent | ToolCallingAgent:
         # Convert LangChain model to HuggingFace model interface
@@ -100,8 +129,7 @@ class SmolAgentComponent(Component):
             raise ImportError(msg) from e
 
         # Convert LangChain tools to HuggingFace tools
-
-        hf_tools = [SmolTool.from_langchain(_tool) for _tool in self.tools]
+        hf_tools = [SmolTool.from_langchain(_tool) for _tool in self.tools] if self.tools else []
         # Process additional imports if provided
         additional_imports = None
         if hasattr(self, "additional_authorized_imports") and self.additional_authorized_imports:
@@ -118,6 +146,11 @@ class SmolAgentComponent(Component):
                 "planning_interval": self.planning_interval if self.planning_interval else None,
                 "use_e2b_executor": self.use_e2b_executor if self.use_e2b_executor else False,
                 "max_print_outputs_length": self.max_print_outputs_length if self.max_print_outputs_length else None,
+                "managed_agent": [self.smol_agent]
+                if self.smol_agent and not isinstance(self.smol_agent, list)
+                else self.smol_agent,
+                "name": self.agent_name if self.agent_name else None,
+                "description": self.agent_description if self.agent_description else None,
             }
             self.agent = CodeAgent(**{k: v for k, v in agent_kwargs.items() if v is not None})
         else:  # tool calling agent
@@ -126,6 +159,8 @@ class SmolAgentComponent(Component):
                 "tools": hf_tools,
                 "system_prompt": self.system_message if self.system_message else None,
                 "planning_interval": self.planning_interval if self.planning_interval else None,
+                "name": self.agent_name if self.agent_name else None,
+                "description": self.agent_description if self.agent_description else None,
             }
             self.agent = ToolCallingAgent(**{k: v for k, v in agent_kwargs.items() if v is not None})
 
