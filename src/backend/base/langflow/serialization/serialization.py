@@ -27,9 +27,9 @@ UNSERIALIZABLE_SENTINEL = _UnserializableSentinel()
 
 def _serialize_str(obj: str, max_length: int | None, _) -> str:
     """Truncate long strings with ellipsis if max_length provided."""
-    if max_length is None or len(obj) <= max_length:
+    if max_length is None:
         return obj
-    return obj[:max_length] + "..."
+    return obj if len(obj) <= max_length else obj[:max_length] + "..."
 
 
 def _serialize_bytes(obj: bytes, max_length: int | None, _) -> str:
