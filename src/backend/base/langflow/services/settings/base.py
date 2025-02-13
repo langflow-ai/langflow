@@ -10,7 +10,7 @@ import orjson
 import yaml
 from aiofile import async_open
 from loguru import logger
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -204,6 +204,14 @@ class Settings(BaseSettings):
     """If set to False, Langflow will not enable the MCP server."""
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
+
+    # Public Flow Settings
+    public_flow_cleanup_interval: int = Field(default=3600, gt=600)
+    """The interval in seconds at which public temporary flows will be cleaned up.
+    Default is 1 hour (3600 seconds). Minimum is 600 seconds (10 minutes)."""
+    public_flow_expiration: int = Field(default=86400, gt=600)
+    """The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup.
+    Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes)."""
 
     @field_validator("dev")
     @classmethod
