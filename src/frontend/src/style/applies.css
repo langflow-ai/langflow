@@ -1785,3 +1785,19 @@
     opacity: 1;
   }
 }
+
+@utility truncate-* {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 0;
+    background: linear-gradient(
+      to right,
+      transparent,
+      75%,
+      --value(--color- *)
+    );
+  }
+}
