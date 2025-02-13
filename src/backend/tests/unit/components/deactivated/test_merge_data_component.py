@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated import MergeDataComponent
 from langflow.schema import Data
 from tests.base import ComponentTestBaseWithClient
