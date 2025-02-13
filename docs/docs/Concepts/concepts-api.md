@@ -3,15 +3,22 @@ title: API pane
 slug: /concepts-api
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 The **API** pane presents code templates for integrating your flow into external applications.
 
 ![](/img/api-pane.png)
 
-## cURL
+<Tabs>
+
+<TabItem value="curl" label="curl" default>
 
 The **cURL** tab displays sample code for posting a query to your flow. Modify the `input_value` to change your input message. Copy the code and run it to post a query to your flow and get the result.
 
-## Python API
+</TabItem>
+
+<TabItem value="Python API" label="Python API">
 
 The **Python API** tab displays code to interact with your flow using the Python HTTP `requests` library.
 
@@ -21,46 +28,17 @@ To use the `requests` library:
 2. Run the script and pass your message with it.
 
 ```python
-python3 python-api-script.py --message="tell me about something interesting"
+python3 python-test-script.py --message="tell me about something interesting"
 ```
 
-## JavaScript API
+</TabItem>
+
+<TabItem value="JS API" label="Javascript API" default>
 
 The **JavaScript API** tab displays code to interact with your flow in JavaScript.
 
 1. Copy and paste the code into a JavaScript file.
-
-```javascript
-let inputValue = ""; // Insert input value here
-
-fetch(
-  "http://127.0.0.1:7864/api/v1/run/<your-flow-id>?stream=false",
-  {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer <TOKEN>",
-      "Content-Type": "application/json",
-			"x-api-key": <your api key>
-    },
-    body: JSON.stringify({
-			input_value: inputValue, 
-      output_type: "chat",
-      input_type: "chat",
-      tweaks: {
-        "ChatInput-1qjt4": {},
-        "Prompt-uWXD5": {},
-        "ChatOutput-9NqI9": {},
-        "OpenAIModel-BgSM6": {}
-}
-    }),
-  },
-)
-  .then(res => res.json())
-  .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));
-```
-
-Run the script with any necessary arguments for your flow:
+2. Run the script with any necessary arguments for your flow:
 
 ```plain
 node test-script.js "tell me about something interesting"
@@ -68,7 +46,10 @@ node test-script.js "tell me about something interesting"
 
 The response content depends on your flow. Make sure the endpoint returns a successful response.
 
-## Python code
+</TabItem>
+
+<TabItem value="Python code" label="Python code" default>
+
 
 The **Python Code** tab displays code to interact with your flow's `.json` file using the Langflow runtime.
 
@@ -79,30 +60,16 @@ To use your code in a Python application using the Langflow runtime, you have to
 2. Download the flow to your local machine. Make sure the flow path in the script matches the flow’s location on your machine.
 
 3. Copy and paste the code from the API tab into a Python script file.
-It will look like this:
-
-```python
-from langflow.load import run_flow_from_json
-TWEAKS = {
-  "ChatInput-kKhri": {},
-  "Prompt-KDSi5": {},
-  "ChatOutput-Vr3Q7": {},
-  "OpenAIModel-4xYtx": {}
-}
-
-result = run_flow_from_json(flow="./basic-prompting-local.json",
-                            input_value="tell me about something interesting",
-                            fallback_to_env_vars=True, # False by default
-                            tweaks=TWEAKS)
-
-print(result)
-```
 
 4. Run the script:
 
 ```python
-python3 python-api-script.py
+python python-test-script.py
 ```
+
+</TabItem>
+
+</Tabs>
 
 ## Tweaks
 
