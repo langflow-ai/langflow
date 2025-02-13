@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.logic import PassMessageComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
@@ -26,6 +26,6 @@ class TestPassMessageComponent(ComponentTestBaseWithClient):
     async def test_latest_version(self, component_class, default_kwargs):
         component_instance = await self.component_setup(component_class, default_kwargs)
         result = await component_instance.run()
-        assert (
-            result == default_kwargs["input_message"]
-        ), "Component should return the input message for the latest version."
+        assert result == default_kwargs["input_message"], (
+            "Component should return the input message for the latest version."
+        )
