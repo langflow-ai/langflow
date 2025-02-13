@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.memories import RedisIndexChatMemory
 from tests.base import ComponentTestBaseWithClient
 
