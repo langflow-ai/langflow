@@ -9,6 +9,7 @@ import {
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { ChatMessageType } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import Robot from "../../../../../assets/robot.png";
@@ -30,10 +31,8 @@ import { convertFiles } from "./helpers/convert-files";
 
 export default function ChatMessage({
   chat,
-  lockChat,
   lastMessage,
   updateChat,
-  setLockChat,
   closeChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
@@ -53,11 +52,13 @@ export default function ChatMessage({
   const chatMessageRef = useRef(chatMessage);
   const [editMessage, setEditMessage] = useState(false);
   const [showError, setShowError] = useState(false);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
-  }, [chat]);
+    chatMessageRef.current = chatMessage;
+  }, [chat, isBuilding]);
 
   const playgroundScrollBehaves = useUtilityStore(
     (state) => state.playgroundScrollBehaves,
@@ -65,10 +66,6 @@ export default function ChatMessage({
   const setPlaygroundScrollBehaves = useUtilityStore(
     (state) => state.setPlaygroundScrollBehaves,
   );
-  // Sync ref with state
-  useEffect(() => {
-    chatMessageRef.current = chatMessage;
-  }, [chatMessage]);
 
   // The idea now is that chat.stream_url MAY be a URL if we should stream the output of the chat
   // probably the message is empty when we have a stream_url
@@ -107,21 +104,17 @@ export default function ChatMessage({
 
   useEffect(() => {
     if (streamUrl && !isStreaming) {
-      setLockChat(true);
       streamChunks(streamUrl)
         .then(() => {
-          setLockChat(false);
           if (updateChat) {
             updateChat(chat, chatMessageRef.current);
           }
         })
         .catch((error) => {
           console.error(error);
-          setLockChat(false);
         });
     }
   }, [streamUrl, chatMessage]);
-
   useEffect(() => {
     return () => {
       eventSource.current?.close();
@@ -327,8 +320,9 @@ export default function ChatMessage({
                 contentBlocks={chat.content_blocks}
                 isLoading={
                   chatMessage === "" &&
-                  lockChat &&
-                  chat.properties?.state === "partial"
+                  chat.properties?.state === "partial" &&
+                  isBuilding &&
+                  lastMessage
                 }
                 state={chat.properties?.state}
                 chatId={chat.id}
@@ -367,7 +361,7 @@ export default function ChatMessage({
                         }
                         className="flex w-full flex-col"
                       >
-                        {chatMessage === "" && lockChat ? (
+                        {chatMessage === "" && isBuilding && lastMessage ? (
                           <IconComponent
                             name="MoreHorizontal"
                             className="h-8 w-8 animate-pulse"

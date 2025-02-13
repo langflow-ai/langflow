@@ -26,7 +26,6 @@ import UploadFileButton from "./components/upload-file-button";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
 export default function ChatInput({
-  lockChat,
   sendMessage,
   inputRef,
   noInput,
@@ -40,10 +39,10 @@ export default function ChatInput({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { validateFileSize } = useFileSizeValidator(setErrorData);
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
-
+  const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
 
-  useFocusOnUnlock(lockChat, inputRef);
+  useFocusOnUnlock(isBuilding, inputRef);
   useAutoResizeTextArea(chatValue, inputRef);
 
   const { mutate } = usePostUploadFile();
@@ -139,7 +138,7 @@ export default function ChatInput({
     return () => {
       document.removeEventListener("paste", handleFileChange);
     };
-  }, [handleFileChange, currentFlowId, lockChat]);
+  }, [handleFileChange, currentFlowId, isBuilding]);
 
   const send = () => {
     sendMessage({
@@ -152,7 +151,7 @@ export default function ChatInput({
   const checkSendingOk = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     return (
       event.key === "Enter" &&
-      !lockChat &&
+      !isBuilding &&
       !event.shiftKey &&
       !event.nativeEvent.isComposing
     );
@@ -173,7 +172,7 @@ export default function ChatInput({
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
         <div className="flex w-full flex-col items-center justify-center gap-3 rounded-md border border-input bg-muted p-2 py-4">
-          {!lockChat ? (
+          {!isBuilding ? (
             <Button
               data-testid="button-send"
               className="font-semibold"
@@ -219,9 +218,9 @@ export default function ChatInput({
     <div className="flex w-full flex-col-reverse">
       <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary">
         <TextAreaWrapper
+          isBuilding={isBuilding}
           checkSendingOk={checkSendingOk}
           send={send}
-          lockChat={lockChat}
           noInput={noInput}
           chatValue={chatValue}
           CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
@@ -245,19 +244,18 @@ export default function ChatInput({
         </div>
         <div className="flex w-full items-end justify-between">
           {!playgroundPage && (
-            <div className={lockChat ? "cursor-not-allowed" : ""}>
+            <div className={isBuilding ? "cursor-not-allowed" : ""}>
               <UploadFileButton
-                lockChat={lockChat}
+                isBuilding={isBuilding}
                 fileInputRef={fileInputRef}
                 handleFileChange={handleFileChange}
                 handleButtonClick={handleButtonClick}
-              />
+            />
             </div>
           )}
           <div className={playgroundPage ? "ml-auto" : ""}>
             <ButtonSendWrapper
               send={send}
-              lockChat={lockChat}
               noInput={noInput}
               chatValue={chatValue}
               files={files}
