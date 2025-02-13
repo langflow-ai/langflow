@@ -1,4 +1,4 @@
-from smolagents import CodeAgent, ManagedAgent, ToolCallingAgent
+from smolagents import ManagedAgent, ToolCallingAgent
 
 from langflow.base.huggingface.model_bridge import LangChainHFModel
 from langflow.custom import Component
