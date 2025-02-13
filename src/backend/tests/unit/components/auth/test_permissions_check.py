@@ -1,4 +1,5 @@
 """Test cases for Permissions Check component."""
+
 from unittest.mock import Mock, patch
 
 import pytest
@@ -34,11 +35,7 @@ def test_permission_check(mock_permit_client):
         mock_permit_client.check.return_value = True
 
         checker.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
-        result = checker.validate_auth(
-            user="test-user",
-            action="read",
-            resource="document-1"
-        )
+        result = checker.validate_auth(user="test-user", action="read", resource="document-1")
 
         assert result is True
         mock_permit_client.check.assert_called_once()
@@ -52,17 +49,9 @@ def test_permission_check_with_tenant(mock_permit_client):
         mock_permit_client.check.return_value = True
 
         checker.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
-        result = checker.validate_auth(
-            user="test-user",
-            action="read",
-            resource="document-1",
-            tenant="tenant-1"
-        )
+        result = checker.validate_auth(user="test-user", action="read", resource="document-1", tenant="tenant-1")
 
         assert result is True
         mock_permit_client.check.assert_called_once_with(
-            user="test-user",
-            action="read",
-            resource="document-1",
-            context={"tenant": "tenant-1"}
+            user="test-user", action="read", resource="document-1", context={"tenant": "tenant-1"}
         )

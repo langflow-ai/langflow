@@ -1,4 +1,5 @@
 """Test cases for Data Protection component."""
+
 from unittest.mock import Mock, patch
 
 import pytest
@@ -32,7 +33,7 @@ def test_get_all_permissions(mock_permit_client):
     mock_permissions = [
         Mock(resource_id="doc1", action="read"),
         Mock(resource_id="doc2", action="read"),
-        Mock(resource_id="doc3", action="write")
+        Mock(resource_id="doc3", action="write"),
     ]
 
     with patch("permit.Permit") as mock_permit:
@@ -40,11 +41,7 @@ def test_get_all_permissions(mock_permit_client):
         mock_permit_client.get_user_permissions.return_value = mock_permissions
 
         protection.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
-        result = protection.validate_auth(
-            user_id="test-user",
-            action="read",
-            resource_type="document"
-        )
+        result = protection.validate_auth(user_id="test-user", action="read", resource_type="document")
 
         assert len(result) == 2  # Should only get the 'read' permissions
         assert "doc1" in result
@@ -56,10 +53,7 @@ def test_filter_permissions(mock_permit_client):
     """Test filtering specific resource IDs."""
     protection = DataProtectionComponent()
     filter_ids = ["doc1", "doc2", "doc3"]
-    mock_filtered = [
-        {"id": "doc1"},
-        {"id": "doc2"}
-    ]
+    mock_filtered = [{"id": "doc1"}, {"id": "doc2"}]
 
     with patch("permit.Permit") as mock_permit:
         mock_permit.return_value = mock_permit_client
@@ -67,10 +61,7 @@ def test_filter_permissions(mock_permit_client):
 
         protection.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
         result = protection.validate_auth(
-            user_id="test-user",
-            action="read",
-            resource_type="document",
-            filter_ids=filter_ids
+            user_id="test-user", action="read", resource_type="document", filter_ids=filter_ids
         )
 
         assert len(result) == 2

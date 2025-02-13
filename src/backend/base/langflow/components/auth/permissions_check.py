@@ -1,4 +1,3 @@
-
 from permit import Permit
 
 from langflow.base.auth.model import AuthComponent
@@ -37,23 +36,14 @@ class PermissionsCheckComponent(AuthComponent):
                 "description": "Permit.io API key",
                 "type": "str",
                 "required": True,
-            }
+            },
         }
 
     def build(self, pdp_url: str, api_key: str) -> None:
         """Initialize the Permit client."""
-        self.permit = Permit(
-            pdp=pdp_url,
-            token=api_key
-        )
+        self.permit = Permit(pdp=pdp_url, token=api_key)
 
-    def execute(
-        self,
-        user: str,
-        action: str,
-        resource: str,
-        tenant: str | None = None
-    ) -> bool:
+    def execute(self, user: str, action: str, resource: str, tenant: str | None = None) -> bool:
         """Check if the action is allowed.
 
         Args:
@@ -70,12 +60,7 @@ class PermissionsCheckComponent(AuthComponent):
             context = {"tenant": tenant} if tenant else {}
 
             # Perform the permission check
-            allowed = self.permit.check(
-                user=user,
-                action=action,
-                resource=resource,
-                context=context
-            )
+            allowed = self.permit.check(user=user, action=action, resource=resource, context=context)
 
             self.status = allowed
         except Exception as e:

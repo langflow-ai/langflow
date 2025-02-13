@@ -14,36 +14,24 @@ class DataProtectionComponent(AuthComponent):
     icon = "shield"
 
     inputs = [
-        StrInput(
-            name="user_id",
-            display_name="User ID",
-            required=True,
-            info="User identifier"
-        ),
-        StrInput(
-            name="action",
-            display_name="Action",
-            required=True,
-            info="Action to check (e.g., 'read', 'write')"
-        ),
+        StrInput(name="user_id", display_name="User ID", required=True, info="User identifier"),
+        StrInput(name="action", display_name="Action", required=True, info="Action to check (e.g., 'read', 'write')"),
         StrInput(
             name="resource_type",
             display_name="Resource Type",
             required=True,
-            info="Type of resource to check permissions for"
+            info="Type of resource to check permissions for",
         ),
         StrInput(
             name="filter_ids",
             display_name="Filter IDs",
             field_type="list",
             required=False,
-            info="Optional list of specific IDs to check permissions for"
-        )
+            info="Optional list of specific IDs to check permissions for",
+        ),
     ]
 
-    outputs = [
-        Output(display_name="Allowed IDs", name="auth_result", method="validate_auth")
-    ]
+    outputs = [Output(display_name="Allowed IDs", name="auth_result", method="validate_auth")]
 
     def build_config(self) -> dict:
         """Return configuration options for the component."""
@@ -59,22 +47,15 @@ class DataProtectionComponent(AuthComponent):
                 "description": "Permit.io API key",
                 "type": "str",
                 "required": True,
-            }
+            },
         }
 
     def build(self, pdp_url: str, api_key: str) -> None:
         """Initialize the Permit client."""
-        self.permit = Permit(
-            pdp=pdp_url,
-            token=api_key
-        )
+        self.permit = Permit(pdp=pdp_url, token=api_key)
 
     def validate_auth(
-        self,
-        user_id: str,
-        action: str,
-        resource_type: str,
-        filter_ids: list[str] | None = None
+        self, user_id: str, action: str, resource_type: str, filter_ids: list[str] | None = None
     ) -> list[str]:
         """Get list of resource IDs the user has permission to access.
 
@@ -98,23 +79,13 @@ class DataProtectionComponent(AuthComponent):
                 # Filter provided IDs using filter_objects
                 objects = [{"id": id_} for id_ in filter_ids]
                 filtered = self.permit.filter_objects(
-                    user=user_id,
-                    objects=objects,
-                    action=action,
-                    resource_type=resource_type
+                    user=user_id, objects=objects, action=action, resource_type=resource_type
                 )
                 allowed_ids = [obj["id"] for obj in filtered]
             else:
                 # Get all permissions and filter by action
-                permissions = self.permit.get_user_permissions(
-                    user=user_id,
-                    resource_type=resource_type
-                )
-                allowed_ids = [
-                    perm.resource_id
-                    for perm in permissions
-                    if perm.action == action
-                ]
+                permissions = self.permit.get_user_permissions(user=user_id, resource_type=resource_type)
+                allowed_ids = [perm.resource_id for perm in permissions if perm.action == action]
         except Exception as exc:
             error_msg = f"Failed to get user permissions: {exc}"
             raise ValueError(error_msg) from exc
