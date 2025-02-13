@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.langwatch import LangWatchComponent
 from tests.base import ComponentTestBaseWithClient
 
