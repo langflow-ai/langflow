@@ -17,6 +17,8 @@ from langflow.services.deps import get_settings_service, get_storage_service, se
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+    from langflow.services.database.models.flow.model import Flow
+
 
 class CleanupWorker:
     def __init__(self) -> None:
@@ -46,12 +48,18 @@ class CleanupWorker:
 
     async def _run(self):
         """Run the cleanup worker until stopped."""
+        from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+
         settings = get_settings_service().settings
         while not self._stop_event.is_set():
-            try:
-                await cleanup_expired_public_flows()
-            except Exception as exc:  # noqa: BLE001
-                logger.error(f"Error in cleanup worker: {exc!s}")
+            # Only run if there are public flows
+            async with session_scope() as session:
+                public_flows = (await session.exec(select(Flow).where(Flow.access_type == AccessTypeEnum.PUBLIC))).all()
+                if public_flows:
+                    try:
+                        await cleanup_expired_public_flows(public_flows, session)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.error(f"Error in cleanup worker: {exc!s}")
 
             try:
                 # Create a task for the timeout
@@ -102,7 +110,7 @@ async def cleanup_public_flow_data(flow_id: uuid.UUID, session: AsyncSession) ->
         raise
 
 
-async def cleanup_expired_public_flows() -> None:
+async def cleanup_expired_public_flows(public_flows: list[Flow], session: AsyncSession) -> None:
     """Clean up all expired public flows."""
     from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 
@@ -111,38 +119,37 @@ async def cleanup_expired_public_flows() -> None:
         seconds=settings.public_flow_expiration
     )
 
-    async with session_scope() as session:
-        # Find all public flows that have expired
-        public_flows = (
-            await session.exec(
-                select(Flow).where(
-                    Flow.access_type == AccessTypeEnum.PUBLIC,
-                    Flow.updated_at < expiration_time,
-                )
+    # Find all public flows that have expired
+    public_flows = (
+        await session.exec(
+            select(Flow).where(
+                Flow.access_type == AccessTypeEnum.PUBLIC,
+                Flow.updated_at < expiration_time,
             )
-        ).all()
+        )
+    ).all()
 
-        storage_service = get_storage_service()
-        for flow in public_flows:
-            public_flow_id = get_public_flow_id(flow.id)
+    storage_service = get_storage_service()
+    for flow in public_flows:
+        public_flow_id = get_public_flow_id(flow.id)
 
-            # Clean up database records
-            try:
-                await cleanup_public_flow_data(public_flow_id, session)
-            except Exception as exc:  # noqa: BLE001
-                logger.error(f"Failed to clean up flow {flow.id}: {exc!s}")
-                continue
+        # Clean up database records
+        try:
+            await cleanup_public_flow_data(public_flow_id, session)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Failed to clean up flow {flow.id}: {exc!s}")
+            continue
 
-            # Clean up storage files
-            try:
-                files = await storage_service.list_files(str(public_flow_id))
-                for file in files:
-                    try:
-                        await storage_service.delete_file(str(public_flow_id), file)
-                    except Exception as exc:  # noqa: BLE001
-                        logger.error(f"Failed to delete file {file} for flow {public_flow_id}: {exc!s}")
-            except Exception as exc:  # noqa: BLE001
-                logger.error(f"Failed to list files for flow {public_flow_id}: {exc!s}")
+        # Clean up storage files
+        try:
+            files = await storage_service.list_files(str(public_flow_id))
+            for file in files:
+                try:
+                    await storage_service.delete_file(str(public_flow_id), file)
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(f"Failed to delete file {file} for flow {public_flow_id}: {exc!s}")
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Failed to list files for flow {public_flow_id}: {exc!s}")
 
 
 # Create a global instance of the worker
