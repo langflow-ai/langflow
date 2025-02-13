@@ -23,6 +23,7 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
     description: str = "Implementation of Graph Vector Store using Astra DB"
     name = "AstraDBGraph"
     icon: str = "AstraDB"
+    legacy: bool = True
 
     inputs = [
         SecretStrInput(

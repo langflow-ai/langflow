@@ -3243,6 +3243,21 @@
                   "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Vector Store Connection",
+                "hidden": true,
+                "method": "as_vectorstore",
+                "name": "vectorstore",
+                "required_inputs": [],
+                "selected": "VectorStore",
+                "tool_mode": true,
+                "types": [
+                  "VectorStore"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -3736,6 +3751,21 @@
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Vector Store Connection",
+                "hidden": true,
+                "method": "as_vectorstore",
+                "name": "vectorstore",
+                "required_inputs": [],
+                "selected": "VectorStore",
+                "tool_mode": true,
+                "types": [
+                  "VectorStore"
                 ],
                 "value": "__UNDEFINED__"
               }
