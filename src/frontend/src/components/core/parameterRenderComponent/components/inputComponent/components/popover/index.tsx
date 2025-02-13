@@ -125,7 +125,7 @@ const getInputClassName = (
     editNode && "px-2",
     editNode && disabled && "h-fit w-fit",
     disabled &&
-      "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
+      "disabled:text-muted disabled:opacity-100 disabled:placeholder:text-muted-foreground",
     password && "text-clip pr-14",
     selectedOptions?.length >= 0 && "cursor-default",
   );

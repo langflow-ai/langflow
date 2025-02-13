@@ -49,9 +49,9 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
         <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
           <defs>
             <filter id="lf-balls">
-              <feGaussianBlur in="turbulence" stdDeviation="10" result="blur" />
+              <feGaussianBlur in="turbulence" stdDeviation="10" result="blur-xs" />
               <feColorMatrix
-                in="blur"
+                in="blur-xs"
                 type="matrix"
                 values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8"
                 result="color-matrix"

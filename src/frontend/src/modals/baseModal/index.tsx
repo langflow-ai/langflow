@@ -44,7 +44,7 @@ const Content: React.FC<ContentProps> = ({
   return (
     <div
       className={cn(
-        `flex w-full flex-grow flex-col transition-all duration-300`,
+        `flex w-full grow flex-col transition-all duration-300`,
         overflowHidden ? "overflow-hidden" : "overflow-visible",
         className,
       )}
@@ -104,8 +104,8 @@ const Footer: React.FC<{
     <div
       className={
         centered
-          ? "flex flex-shrink-0 justify-center"
-          : "flex flex-shrink-0 flex-row-reverse"
+          ? "flex shrink-0 justify-center"
+          : "flex shrink-0 flex-row-reverse"
       }
     >
       {submit ? (

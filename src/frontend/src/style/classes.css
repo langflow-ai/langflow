@@ -206,9 +206,7 @@ textarea[class^="ag-"]:focus {
 
 .card-shine-effect {
   --shine-deg: 135deg;
-  position: relative;
   overflow: hidden;
-  padding: 4rem 2rem;
   max-width: 28rem;
 
   background-repeat: no-repeat;

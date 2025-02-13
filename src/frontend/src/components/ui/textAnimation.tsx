@@ -8,7 +8,7 @@ import {
 } from "framer-motion";
 import React, { ReactElement } from "react";
 
-type PresetType = "blur" | "shake" | "scale" | "fade" | "slide";
+type PresetType = "blur-xs" | "shake" | "scale" | "fade" | "slide";
 
 type TextEffectProps = {
   children: string;

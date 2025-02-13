@@ -44,7 +44,7 @@ export default function ErrorAlert({
         className="error-build-message noflow nowheel nopan nodelete nodrag"
       >
         <div className="flex">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <IconComponent
               name="XCircle"
               className="error-build-message-circle"

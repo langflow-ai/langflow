@@ -47,7 +47,7 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="PanelLeftOpen"
-                className="h-[18px] w-[18px] text-ring"
+                className="text-ring h-[18px] w-[18px]"
               />
             </Button>
             <div className="font-semibold">Playground</div>
@@ -56,13 +56,13 @@ export const ChatViewWrapper = ({
         <div
           className={cn(
             sidebarOpen ? "pointer-events-none opacity-0" : "",
-            "absolute flex h-8 items-center justify-center rounded-sm ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            isPlayground ? "right-2 top-4" : "right-12 top-2",
+            "ring-offset-background focus:ring-ring absolute flex h-8 items-center justify-center rounded-sm transition-opacity focus:ring-2 focus:ring-offset-2 focus:outline-hidden",
+            isPlayground ? "top-4 right-2" : "top-2 right-12",
           )}
         >
           <ShadTooltip side="bottom" styleClasses="z-50" content="New Chat">
             <Button
-              className="mr-2 h-[32px] w-[32px] hover:bg-secondary-hover"
+              className="hover:bg-secondary-hover mr-2 h-[32px] w-[32px]"
               variant="ghost"
               size="icon"
               onClick={() => {
@@ -72,7 +72,7 @@ export const ChatViewWrapper = ({
             >
               <IconComponent
                 name="Plus"
-                className="!h-[18px] !w-[18px] text-ring"
+                className="text-ring h-[18px]! w-[18px]!"
               />
             </Button>
           </ShadTooltip>
@@ -83,7 +83,7 @@ export const ChatViewWrapper = ({
         className={cn(
           visibleSession ? "h-[95%]" : "h-full",
           sidebarOpen
-            ? "pointer-events-none blur-sm lg:pointer-events-auto lg:blur-0"
+            ? "pointer-events-none blur-xs lg:pointer-events-auto lg:blur-none"
             : "",
         )}
       >

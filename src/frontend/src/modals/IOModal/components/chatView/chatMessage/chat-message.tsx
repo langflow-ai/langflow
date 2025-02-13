@@ -322,7 +322,7 @@ export default function ChatMessage({
               />
             )}
             {!chat.isSend ? (
-              <div className="form-modal-chat-text-position flex-grow">
+              <div className="form-modal-chat-text-position grow">
                 <div className="form-modal-chat-text">
                   {hidden && chat.thought && chat.thought !== "" && (
                     <div
@@ -386,7 +386,7 @@ export default function ChatMessage({
                 </div>
               </div>
             ) : (
-              <div className="form-modal-chat-text-position flex-grow">
+              <div className="form-modal-chat-text-position grow">
                 <div className="flex w-full flex-col">
                   {editMessage ? (
                     <EditMessageField

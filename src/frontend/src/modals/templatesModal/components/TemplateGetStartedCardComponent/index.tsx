@@ -42,7 +42,7 @@ export default function TemplateGetStartedCardComponent({
 
   return flow ? (
     <div
-      className="group relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border focus-visible:border-ring"
+      className="group focus-visible:border-ring relative flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-3xl border"
       tabIndex={1}
       onKeyDown={handleKeyDown}
       onClick={handleClick}
@@ -62,7 +62,7 @@ export default function TemplateGetStartedCardComponent({
       <div className="card-shine-effect absolute inset-2 flex h-[calc(100%-16px)] min-w-[calc(100%-16px)] flex-col items-start gap-1 rounded-2xl p-4 text-white md:gap-3 lg:gap-4 lg:py-6">
         <div className="flex items-center gap-2 text-zinc-400 mix-blend-plus-lighter">
           <ForwardedIconComponent name={icon} className="h-4 w-4" />
-          <span className="font-mono text-xs font-semibold uppercase tracking-wider">
+          <span className="font-mono text-xs font-semibold tracking-wider uppercase">
             {category}
           </span>
         </div>

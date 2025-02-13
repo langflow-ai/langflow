@@ -377,7 +377,7 @@ const SideBarFoldersButtonsComponent = ({
                           isActive={checkPathName(item.id!)}
                           onClick={() => handleChangeFolder!(item.id!)}
                           className={cn(
-                            "flex-grow pr-8",
+                            "grow pr-8",
                             hoveredFolderId === item.id && "bg-accent",
                             checkHoveringFolder(item.id!),
                           )}

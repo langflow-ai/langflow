@@ -17,7 +17,7 @@ export default function SingleAlert({
       className="mx-2 mb-2 flex rounded-md bg-error-background p-3"
       key={dropItem.id}
     >
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <IconComponent
           name="XCircle"
           className="h-5 w-5 text-status-red"
@@ -94,7 +94,7 @@ export default function SingleAlert({
       className="mx-2 mb-2 flex rounded-md bg-info-background p-3"
       key={dropItem.id}
     >
-      <div className="flex-shrink-0 cursor-help">
+      <div className="shrink-0 cursor-help">
         <IconComponent
           name="Info"
           className="h-5 w-5 text-status-blue"
@@ -145,7 +145,7 @@ export default function SingleAlert({
       className="mx-2 mb-2 flex rounded-md bg-success-background p-3"
       key={dropItem.id}
     >
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <IconComponent
           name="CheckCircle2"
           className="h-5 w-5 text-status-green"

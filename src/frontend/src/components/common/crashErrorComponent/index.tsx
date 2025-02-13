@@ -8,8 +8,8 @@ export default function CrashErrorComponent({
   resetErrorBoundary,
 }: crashComponentPropsType): JSX.Element {
   return (
-    <div className="z-50 flex h-screen w-screen items-center justify-center bg-foreground bg-opacity-50">
-      <div className="flex h-screen w-screen flex-col bg-background text-start shadow-lg">
+    <div className="bg-foreground/50 z-50 flex h-screen w-screen items-center justify-center">
+      <div className="bg-background flex h-screen w-screen flex-col text-start shadow-lg">
         <div className="m-auto grid w-1/2 justify-center gap-5 text-center">
           <Card className="p-8">
             <CardHeader>
@@ -17,7 +17,7 @@ export default function CrashErrorComponent({
                 <XCircle strokeWidth={1.5} className="h-16 w-16" />
               </div>
               <div>
-                <p className="mb-4 text-xl text-foreground">
+                <p className="text-foreground mb-4 text-xl">
                   Sorry, we found an unexpected error!
                 </p>
               </div>

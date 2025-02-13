@@ -116,7 +116,7 @@ function NoteNode({
           debouncedResize(width, height);
         }}
         isVisible={selected}
-        lineClassName="!border !border-muted-foreground"
+        lineClassName="border! border-muted-foreground!"
         onResizeStart={() => {
           setResizedNote(true);
           setIsResizing(true);
@@ -139,7 +139,7 @@ function NoteNode({
           "transition-all duration-200 ease-in-out",
           !isResizing && "transition-transform",
           COLOR_OPTIONS[bgColor] !== null &&
-            `border ${!selected && "-z-50 shadow-sm"}`,
+            `border ${!selected && "-z-50 shadow-2xs"}`,
         )}
       >
         {MemoNoteToolbarComponent}
@@ -160,12 +160,12 @@ function NoteNode({
               "border-0 ring-0 focus:ring-0 resize-none shadow-none rounded-sm h-full w-full",
               COLOR_OPTIONS[bgColor] === null
                 ? ""
-                : "dark:!ring-background dark:text-background",
+                : "dark:ring-background! dark:text-background",
             )}
             mdClassName={cn(
               COLOR_OPTIONS[bgColor] === null
                 ? "dark:prose-invert"
-                : "dark:!text-background",
+                : "dark:text-background!",
             )}
             style={{ backgroundColor: COLOR_OPTIONS[bgColor] ?? "#00000000" }}
             charLimit={CHAR_LIMIT}
@@ -174,7 +174,7 @@ function NoteNode({
             description={dataDescription}
             emptyPlaceholder="Double-click to start typing or enter Markdown..."
             placeholderClassName={
-              COLOR_OPTIONS[bgColor] === null ? "" : "dark:!text-background"
+              COLOR_OPTIONS[bgColor] === null ? "" : "dark:text-background!"
             }
             editNameDescription={editNameDescription}
             setEditNameDescription={set}
