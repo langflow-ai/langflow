@@ -42,7 +42,13 @@ export default function ApiModal({
 
   return (
     <>
-      <BaseModal closeButtonClassName="!top-3"  open={open} setOpen={setOpen} size="medium" className="pt-4">
+      <BaseModal
+        closeButtonClassName="!top-3"
+        open={open}
+        setOpen={setOpen}
+        size="medium"
+        className="pt-4"
+      >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
           description={
