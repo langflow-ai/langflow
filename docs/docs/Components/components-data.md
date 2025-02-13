@@ -210,7 +210,7 @@ curl -X POST \
 To test the webhook component:
 
 1. Add a **Webhook** component to the flow.
-2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Data to Message](/components-processing#parse-data-data-to-message) component.
+2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Data to Message](/components-processing#data-to-message) component.
 3. Connect the **Data to Message** component's **Message** output to the **Text** input of a [Chat Output](/components-io#chat-output) component.
 4. To send a POST request, copy the code from the **Webhook cURL** tab in the **API** pane and paste it into a terminal.
 5. Send the POST request.
