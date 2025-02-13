@@ -102,9 +102,7 @@ class SmolAgentComponent(Component):
             raise ImportError(msg) from e
 
         # Convert LangChain tools to HuggingFace tools
-        print(self.tools)
         hf_tools = [SmolTool.from_langchain(_tool) for _tool in self.tools]
-        print(hf_tools)
         # Process additional imports if provided
         additional_imports = None
         if hasattr(self, "additional_authorized_imports") and self.additional_authorized_imports:
