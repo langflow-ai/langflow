@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@config "./../tailwind.config.mjs";
+
 /* Prevent react flow to overflow the page */
 body {
   overflow: hidden;

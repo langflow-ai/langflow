@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@config "./../../../tailwind.config.mjs";
+
 @layer base {
   * {
     @apply border-border;
