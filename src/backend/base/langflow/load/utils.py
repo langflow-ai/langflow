@@ -99,5 +99,28 @@ def get_flow(url: str, flow_id: str):
         msg = f"Error retrieving flow: {e}"
         raise UploadError(msg) from e
 
-    msg = f"Error retrieving flow: {response.status_code}"
-    raise UploadError(msg)
+
+def replace_tweaks_with_env(tweaks: dict, env_vars: dict) -> dict:
+    """Replace keys in the tweaks dictionary with their corresponding environment variable values.
+
+    This function recursively traverses the tweaks dictionary and replaces any string keys
+    with their values from the provided environment variables. If a key's value is a dictionary,
+    the function will call itself to handle nested dictionaries.
+
+    Args:
+        tweaks (dict): A dictionary containing keys that may correspond to environment variable names.
+        env_vars (dict): A dictionary of environment variables where keys are variable names
+                         and values are their corresponding values.
+
+    Returns:
+        dict: The updated tweaks dictionary with keys replaced by their environment variable values.
+    """
+    for key, value in tweaks.items():
+        if isinstance(value, dict):
+            # Recursively replace in nested dictionaries
+            tweaks[key] = replace_tweaks_with_env(value, env_vars)
+        elif isinstance(value, str):
+            env_value = env_vars.get(value)  # Get the value from the provided environment variables
+            if env_value is not None:
+                tweaks[key] = env_value
+    return tweaks
