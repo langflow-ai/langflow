@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.agents import AgentComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
