@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.crewai import CrewAIAgentComponent
 from tests.base import ComponentTestBaseWithClient
 
