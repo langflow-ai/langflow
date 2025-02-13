@@ -1,7 +1,6 @@
 from unittest.mock import Mock
 
 import pytest
-
 from langflow.components.embeddings import TextEmbedderComponent
 from langflow.schema import Data
 from tests.base import ComponentTestBaseWithClient
