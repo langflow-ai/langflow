@@ -70,7 +70,7 @@ dependencies = [
     "composio-core==0.7.1",
     "spider-client==0.1.24",
     "nltk==3.9.1",
-    "lark==1.2.2",
+    "lark>=1.1.7,<1.2.dev0",
     "jq==1.8.0",
     "pydantic-settings==2.4.0",
     "ragstack-ai-knowledge-store==0.2.1",
@@ -111,6 +111,13 @@ dependencies = [
     "ag2>=0.1.0",
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
+    "arize[Datasets]>=1.0.0",
+    "llama-index",
+    "llama-index-embeddings-nvidia",
+    "pymilvus[bulk_writer,model]==2.5.0",
+    "python-pptx==0.6.23",
+    "nv-ingest-client==2025.2.7.dev0",
+    "nemoguardrails==0.11.0",
 ]
 
 [tool.uv.sources]
@@ -123,6 +130,9 @@ members = ["src/backend/base", "."]
 [tool.hatch.build.targets.wheel]
 packages = ["src/backend/langflow"]
 
+# TEMPORARY FOR NV-INGEST-CLIENT
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
