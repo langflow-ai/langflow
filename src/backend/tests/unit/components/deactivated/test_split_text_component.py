@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated import SplitTextComponent
 from langflow.schema import Data
 from tests.base import ComponentTestBaseWithClient
