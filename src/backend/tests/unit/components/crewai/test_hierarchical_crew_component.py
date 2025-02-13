@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.crewai import HierarchicalCrewComponent
 from tests.base import ComponentTestBaseWithClient
 
