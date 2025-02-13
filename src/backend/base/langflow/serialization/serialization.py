@@ -111,7 +111,7 @@ def _truncate_value(value: Any, max_length: int | None, max_items: int | None) -
     """Truncate value based on its type and provided limits."""
     if isinstance(value, str) and max_length is not None and len(value) > max_length:
         return value[:max_length]
-    if isinstance(value, list | tuple) and max_items is not None and len(value) > max_items:
+    if isinstance(value, (list, tuple)) and max_items is not None and len(value) > max_items:
         return value[:max_items]
     return value
 
@@ -129,7 +129,8 @@ def _serialize_dataframe(obj: pd.DataFrame, max_length: int | None, max_items: i
 def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | None) -> dict:
     """Serialize pandas Series to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
-        obj = obj.head(max_items)
+        truncated_indices = obj.index[:max_items]
+        return {index: _truncate_value(obj[index], max_length, max_items) for index in truncated_indices}
     return {index: _truncate_value(value, max_length, max_items) for index, value in obj.items()}
 
 
