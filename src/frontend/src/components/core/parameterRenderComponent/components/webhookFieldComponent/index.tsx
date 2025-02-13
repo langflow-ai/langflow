@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { AuthContext } from "@/contexts/authContext";
-import { useGetBuildsMutation } from "@/controllers/API/queries/_builds/use-get-builds-pooling-mutation";
+import { useGetBuildsMutation } from "@/controllers/API/queries/_builds/use-get-builds-polling-mutation";
 import SecretKeyModal from "@/modals/secretKeyModal";
 import { getModalPropsApiKey } from "@/pages/SettingsPage/pages/ApiKeysPage/helpers/get-modal-props";
 import { useContext, useEffect, useState } from "react";

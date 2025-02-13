@@ -376,4 +376,4 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
-    webhook_pooling_interval: int
+    webhook_polling_interval: int

@@ -156,7 +156,7 @@ def run(
         help="Defines the maximum file size for the upload in MB.",
         show_default=False,
     ),
-    webhook_pooling_interval: int | None = typer.Option(  # noqa: ARG001
+    webhook_polling_interval: int | None = typer.Option(  # noqa: ARG001
         None,
         help="Defines the polling interval for the webhook.",
         show_default=False,

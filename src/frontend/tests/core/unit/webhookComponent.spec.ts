@@ -78,7 +78,7 @@ test(
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          webhook_pooling_interval: 1000,
+          webhook_polling_interval: 1000,
         }),
         headers: {
           "content-type": "application/json",

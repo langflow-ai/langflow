@@ -87,8 +87,8 @@ export const useGetBuildsMutation: useMutationFunctionType<
   IGetBuilds
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
-  const webhookPoolingInterval = useUtilityStore(
-    (state) => state.webhookPoolingInterval,
+  const webhookPollingInterval = useUtilityStore(
+    (state) => state.webhookPollingInterval,
   );
 
   const setFlowPool = useFlowStore((state) => state.setFlowPool);
@@ -112,7 +112,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
   };
 
   const startPolling = (payload: IGetBuilds) => {
-    if (!webhookPoolingInterval || webhookPoolingInterval === 0) {
+    if (!webhookPollingInterval || webhookPollingInterval === 0) {
       return getBuildsFn(payload);
     }
 
@@ -128,7 +128,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
       }
     };
 
-    const intervalId = setInterval(pollCallback, webhookPoolingInterval);
+    const intervalId = setInterval(pollCallback, webhookPollingInterval);
 
     const pollingItem: PollingItem = {
       interval: intervalId,
