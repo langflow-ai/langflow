@@ -9,8 +9,9 @@ class DataProtectionComponent(AuthComponent):
     
     display_name = "Data Protection"
     description = "Retrieves allowed resource IDs for a user using Permit.io"
-    documentation = "https://docs.permit.io/"
+    documentation = "https://docs.langflow.org/components-auth"
     icon = "shield"
+    
     inputs = [
         StrInput(
             name="user_id",

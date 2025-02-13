@@ -8,9 +8,9 @@ class PermissionsCheckComponent(AuthComponent):
     
     display_name = "Permissions Check"
     description = "Performs authorization checks using Permit.io"
-    documentation = "https://docs.permit.io/"
+    documentation = "https://docs.langflow.org/components-auth"
     icon = "lock"
-    
+
     inputs = [
         StrInput(name="user", display_name="User", required=True),
         StrInput(name="action", display_name="Action", required=True),

@@ -11,7 +11,7 @@ class JWTValidatorComponent(AuthComponent):
     
     display_name = "JWT Validator"
     description = "Validates JWT tokens and extracts user ID using JWKs"
-    documentation = "https://docs.permit.io/"
+    documentation = "https://docs.langflow.org/components-auth"
     icon = "key"
 
     inputs = [
