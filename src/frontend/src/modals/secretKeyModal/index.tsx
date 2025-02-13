@@ -1,4 +1,5 @@
 import * as Form from "@radix-ui/react-form";
+import { Label } from "@radix-ui/react-form";
 import { useEffect, useRef, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import { Button } from "../../components/ui/button";
@@ -13,6 +14,7 @@ export default function SecretKeyModal({
   children,
   data,
   onCloseModal,
+  modalProps,
 }: ApiKeyType) {
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
@@ -27,7 +29,7 @@ export default function SecretKeyModal({
       setRenderKey(false);
       resetForm();
     } else {
-      onCloseModal();
+      onCloseModal?.();
     }
   }, [open]);
 
@@ -72,39 +74,41 @@ export default function SecretKeyModal({
   return (
     <BaseModal
       onSubmit={handleSubmitForm}
-      size="small-h-full"
+      size={modalProps?.size ?? "small-h-full"}
       open={open}
       setOpen={setOpen}
     >
       <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
       <BaseModal.Header
+        clampDescription={3}
         description={
           renderKey ? (
-            <>
-              {" "}
-              Please save this secret key somewhere safe and accessible. For
-              security reasons,{" "}
-              <strong>you won't be able to view it again</strong> through your
-              account. If you lose this secret key, you'll need to generate a
-              new one.
-            </>
+            <>{modalProps?.generatedKeyMessage}</>
           ) : (
-            <>Create a secret API Key to use Langflow API.</>
+            <>{modalProps?.description}</>
           )
         }
       >
-        <span className="pr-2">Create API Key</span>
-        <IconComponent
-          name="Key"
-          className="h-6 w-6 pl-1 text-foreground"
-          aria-hidden="true"
-        />
+        <span className="pr-2">{modalProps?.title}</span>
+        {modalProps?.showIcon && (
+          <IconComponent
+            name="Key"
+            className="h-6 w-6 pl-1 text-foreground"
+            aria-hidden="true"
+          />
+        )}
       </BaseModal.Header>
       <BaseModal.Content>
         {renderKey ? (
           <>
             <div className="flex items-center gap-3">
               <div className="w-full">
+                {modalProps?.inputLabel && !renderKey && (
+                  <div className="relative bottom-1">
+                    {modalProps?.inputLabel as React.ReactNode}
+                  </div>
+                )}
+
                 <Input ref={inputRef} readOnly={true} value={apiKeyValue} />
               </div>
 
@@ -125,6 +129,14 @@ export default function SecretKeyModal({
           </>
         ) : (
           <Form.Field name="apikey">
+            {modalProps?.inputLabel && (
+              <Form.Label asChild className="mb-2">
+                <Label className="relative bottom-1">
+                  {modalProps?.inputLabel as React.ReactNode}
+                </Label>
+              </Form.Label>
+            )}
+
             <div className="flex items-center justify-between gap-2">
               <Form.Control asChild>
                 <Input
@@ -135,7 +147,7 @@ export default function SecretKeyModal({
                   onChange={({ target: { value } }) => {
                     setApiKeyName(value);
                   }}
-                  placeholder="Insert a name for your API Key"
+                  placeholder={modalProps?.inputPlaceholder}
                 />
               </Form.Control>
             </div>
@@ -143,7 +155,7 @@ export default function SecretKeyModal({
         )}
       </BaseModal.Content>
       <BaseModal.Footer
-        submit={{ label: renderKey ? "Done" : "Create Secret Key" }}
+        submit={{ label: renderKey ? "Done" : (modalProps?.buttonText ?? "") }}
       />
     </BaseModal>
   );

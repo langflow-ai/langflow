@@ -1,5 +1,7 @@
+import { COPIED_NOTICE_ALERT } from "@/constants/alerts_constants";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
+import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useMemo, useRef, useState } from "react";
@@ -63,6 +65,7 @@ export default function CopyFieldAreaComponent({
   const [isCopied, setIsCopied] = useState(false);
 
   const isValueToReplace = value === BACKEND_URL;
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const valueToRender = useMemo(() => {
     if (isValueToReplace) {
@@ -87,6 +90,11 @@ export default function CopyFieldAreaComponent({
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
     navigator.clipboard.writeText(valueToRender);
+
+    setSuccessData({
+      title: COPIED_NOTICE_ALERT,
+    });
+
     event?.stopPropagation();
   };
 
