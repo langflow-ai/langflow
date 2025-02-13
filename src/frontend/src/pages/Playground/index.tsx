@@ -4,6 +4,8 @@ import { track } from "@/customization/utils/analytics";
 import IOModal from "@/modals/IOModal/new-modal";
 import useFlowStore from "@/stores/flowStore";
 import { useStoreStore } from "@/stores/storeStore";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";
@@ -12,8 +14,6 @@ import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
 } from "../../utils/storeUtils";
-import { getCookie, setCookie, CookieOptions } from "@/utils/utils";
-import { useUtilityStore } from "@/stores/utilityStore";
 export default function PlaygroundPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
@@ -76,14 +76,14 @@ export default function PlaygroundPage() {
 
   useEffect(() => {
     // Get client ID from cookie or create new one
-    const clientId = getCookie('client_id');
+    const clientId = getCookie("client_id");
     if (!clientId) {
       const newClientId = uuid();
       const cookieOptions: CookieOptions = {
-        secure: window.location.protocol === 'https:',
-        sameSite: 'Strict',
+        secure: window.location.protocol === "https:",
+        sameSite: "Strict",
       };
-      setCookie('client_id', newClientId, cookieOptions);
+      setCookie("client_id", newClientId, cookieOptions);
       setClientId(newClientId);
     } else {
       setClientId(clientId);

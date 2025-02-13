@@ -4,6 +4,7 @@ import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { v4 as uuid } from "uuid";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
   MESSAGES_TABLE_ORDER,
@@ -25,7 +26,6 @@ import { AllNodeType, NodeDataType } from "../types/flow";
 import { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
 import { parseString } from "./stringManipulation";
-import { v4 as uuid } from 'uuid';
 
 export function classNames(...classes: Array<string>): string {
   return classes.filter(Boolean).join(" ");
@@ -762,11 +762,11 @@ export const stringToBool = (str) => (str === "false" ? false : true);
  */
 export function getCookie(name: string): string | undefined {
   const cookie = document.cookie
-    .split('; ')
-    .find(row => row.startsWith(`${name}=`));
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
 
   if (cookie) {
-    return cookie.split('=')[1];
+    return cookie.split("=")[1];
   }
   return undefined;
 }
@@ -780,7 +780,7 @@ export interface CookieOptions {
   maxAge?: number;
   expires?: Date;
   secure?: boolean;
-  sameSite?: 'Strict' | 'Lax' | 'None';
+  sameSite?: "Strict" | "Lax" | "None";
 }
 
 /**
@@ -792,15 +792,15 @@ export interface CookieOptions {
 export function setCookie(
   name: string,
   value: string,
-  options: CookieOptions = {}
+  options: CookieOptions = {},
 ): void {
   const {
-    path = '/',
+    path = "/",
     domain,
     maxAge,
     expires,
     secure = true,
-    sameSite = 'Strict'
+    sameSite = "Strict",
   } = options;
 
   let cookieString = `${name}=${encodeURIComponent(value)}`;
@@ -809,7 +809,7 @@ export function setCookie(
   if (domain) cookieString += `; domain=${domain}`;
   if (maxAge) cookieString += `; max-age=${maxAge}`;
   if (expires) cookieString += `; expires=${expires.toUTCString()}`;
-  if (secure) cookieString += '; secure';
+  if (secure) cookieString += "; secure";
   if (sameSite) cookieString += `; SameSite=${sameSite}`;
 
   document.cookie = cookieString;
