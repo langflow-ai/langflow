@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated import ExtractKeyFromDataComponent
 from langflow.schema import Data
 from tests.base import ComponentTestBaseWithClient
