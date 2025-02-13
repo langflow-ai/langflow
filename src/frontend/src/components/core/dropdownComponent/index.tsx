@@ -3,6 +3,7 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
+import { getStatusColor } from "@/utils/stringManipulation";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
@@ -58,7 +59,7 @@ export default function Dropdown({
   const fuse = new Fuse(options, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { nodeClass, nodeId, handleNodeClass } = baseInputProps;
+  const { nodeClass, nodeId, handleNodeClass, tooltip } = baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
@@ -71,7 +72,7 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = [""],
+    excludeKeys: string[] = ["api_endpoint"],
   ) => {
     return Object.fromEntries(
       Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
@@ -153,60 +154,54 @@ export default function Dropdown({
   );
 
   const renderTriggerButton = () => (
-    <PopoverTrigger asChild>
-      <Button
-        disabled={
-          disabled ||
-          (Object.keys(options).length === 0 &&
-            !combobox &&
-            !dialogInputs?.fields?.data?.node?.template)
-        }
-        variant="primary"
-        size="xs"
-        role="combobox"
-        ref={refButton}
-        aria-expanded={open}
-        data-testid={id}
-        className={cn(
-          editNode
-            ? "dropdown-component-outline input-edit-node"
-            : "dropdown-component-false-outline py-2",
-          "w-full justify-between font-normal",
-        )}
-      >
-        <span
-          className="flex items-center gap-2 truncate"
-          data-testid={`value-dropdown-${id}`}
+    <ShadTooltip content={!value ? (tooltip as string) : ""}>
+      <PopoverTrigger asChild>
+        <Button
+          disabled={
+            disabled ||
+            (Object.keys(options).length === 0 &&
+              !combobox &&
+              !dialogInputs?.fields?.data?.node?.template)
+          }
+          variant="primary"
+          size="xs"
+          role="combobox"
+          ref={refButton}
+          aria-expanded={open}
+          data-testid={id}
+          className={cn(
+            editNode
+              ? "dropdown-component-outline input-edit-node"
+              : "dropdown-component-false-outline py-2",
+            "w-full justify-between font-normal",
+          )}
         >
-          {optionsMetaData?.[
-            filteredOptions.findIndex((option) => option === value)
-          ]?.icon && (
+          <span
+            className="flex items-center gap-2 truncate"
+            data-testid={`value-dropdown-${id}`}
+          >
             <ForwardedIconComponent
               name={
-                optionsMetaData[
+                optionsMetaData?.[
                   filteredOptions.findIndex((option) => option === value)
-                ].icon
+                ]?.icon || "Unknown"
               }
               className="h-4 w-4"
             />
-          )}
-          {value &&
-          value !== "" &&
-          filteredOptions.find((option) => option === value)
-            ? filteredOptions.find((option) => option === value)
-            : placeholderName}
-        </span>
-        <ForwardedIconComponent
-          name="ChevronsUpDown"
-          className={cn(
-            "ml-2 h-4 w-4 shrink-0 text-foreground",
-            disabled
-              ? "hover:text-placeholder-foreground"
-              : "hover:text-foreground",
-          )}
-        />
-      </Button>
-    </PopoverTrigger>
+            {value && filteredOptions.includes(value) ? value : placeholderName}{" "}
+          </span>
+          <ForwardedIconComponent
+            name="ChevronsUpDown"
+            className={cn(
+              "ml-2 h-4 w-4 shrink-0 text-foreground",
+              disabled
+                ? "hover:text-placeholder-foreground"
+                : "hover:text-foreground",
+            )}
+          />
+        </Button>
+      </PopoverTrigger>
+    </ShadTooltip>
   );
 
   const renderSearchInput = () => (
@@ -274,6 +269,7 @@ export default function Dropdown({
     </CommandGroup>
   );
 
+  console.log(optionsMetaData?.[0]?.icon);
   const renderOptionsList = () => (
     <CommandList>
       <CommandGroup defaultChecked={false}>
@@ -296,12 +292,10 @@ export default function Dropdown({
                   data-testid={`${option}-${index}-option`}
                 >
                   <div className="flex w-full items-center gap-2">
-                    {optionsMetaData?.[index]?.icon ? (
-                      <ForwardedIconComponent
-                        name={optionsMetaData?.[index]?.icon}
-                        className="h-4 w-4 shrink-0 text-primary"
-                      />
-                    ) : null}
+                    <ForwardedIconComponent
+                      name={optionsMetaData?.[index]?.icon || "Unknown"}
+                      className="h-4 w-4 shrink-0 text-primary"
+                    />
                     <div
                       className={cn("flex truncate", {
                         "flex-col":
@@ -309,7 +303,18 @@ export default function Dropdown({
                         "w-full pl-2": !optionsMetaData?.[index]?.icon,
                       })}
                     >
-                      <div className="flex truncate">{option}</div>
+                      <div className="flex truncate">
+                        {option}{" "}
+                        <span
+                          className={`flex items-center pl-2 text-xs ${getStatusColor(
+                            optionsMetaData?.[index]?.status,
+                          )}`}
+                        >
+                          <LoadingTextComponent
+                            text={optionsMetaData?.[index]?.status}
+                          />
+                        </span>
+                      </div>
                       {optionsMetaData && optionsMetaData?.length > 0 ? (
                         <div className="flex w-full items-center text-muted-foreground">
                           {Object.entries(

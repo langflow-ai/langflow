@@ -13,6 +13,10 @@ const LoadingTextComponent = ({ text }: { text: string }) => {
     };
   }, []);
 
+  if (!text) {
+    return null;
+  }
+
   return <span>{`${text}${dots}`}</span>;
 };
 
