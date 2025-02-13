@@ -1,5 +1,4 @@
 import logging
-import time
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -7,7 +6,7 @@ from nv_ingest_client.client import Ingestor
 from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
 
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, IntInput, MessageTextInput, Output, StrInput, DropdownInput
+from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, Output, StrInput
 from langflow.schema import Data
 
 logger = logging.getLogger(__name__)
@@ -132,7 +131,9 @@ class NVIDIAIngestComponent(Component):
             self.log(f"Error parsing URL: {e}", name="NVIDIAIngestComponent")
             raise
 
-        self.log(f"Creating Ingestor for host: {parsed_url.hostname}, port: {parsed_url.port}", name="NVIDIAIngestComponent")
+        self.log(
+            f"Creating Ingestor for host: {parsed_url.hostname}, port: {parsed_url.port}", name="NVIDIAIngestComponent"
+        )
         try:
             ingestor = (
                 Ingestor(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
