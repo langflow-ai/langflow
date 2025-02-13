@@ -36,7 +36,7 @@ The flow storage location can be customized with the [LANGFLOW_CONFIG_DIR](/envi
 
 If you're new to Langflow, it's OK to feel a bit lost at first. We’ll take you on a tour, so you can orient yourself and start creating applications quickly.
 
-Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [API pane](#api-pane) are available in the upper right corner.
+Langflow has four distinct regions: the [workspace](#workspace) is the main area where you build your flows. The components sidebar is on the left, and lists the available [components](#components). The [playground](#playground) and [Publish pane](#publish-pane) are available in the upper right corner.
 
 ![](/img/workspace.png)
 
@@ -75,11 +75,11 @@ For more information, see the [Playground](/concepts-playground).
 
 ![](/img/playground.png)
 
-## API pane {#api-pane}
+## Publish pane {#publish-pane}
 
-The **API** pane provides code templates to integrate your flows into external applications.
+The **Publish** pane provides code templates to integrate your flows into external applications.
 
-For more information, see the [API pane](/concepts-api).
+For more information, see the [Publish pane](/concepts-api).
 
 ![](/img/api-pane.png)
 
