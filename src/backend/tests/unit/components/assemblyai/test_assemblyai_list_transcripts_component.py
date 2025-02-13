@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.assemblyai import AssemblyAIListTranscripts
 from tests.base import ComponentTestBaseWithClient
 
@@ -41,9 +40,9 @@ class TestAssemblyAIListTranscripts(ComponentTestBaseWithClient):
         component = await self.component_setup(component_class, {**default_kwargs, "status_filter": "completed"})
         result = await component.list_transcripts()
         # Assuming the result contains a status field to check against
-        assert all(
-            transcript.status == "completed" for transcript in result
-        ), "All transcripts should have status 'completed'."
+        assert all(transcript.status == "completed" for transcript in result), (
+            "All transcripts should have status 'completed'."
+        )
 
     async def test_list_transcripts_error_handling(self, component_class, default_kwargs):
         component = await self.component_setup(component_class, {**default_kwargs, "api_key": "invalid_key"})
