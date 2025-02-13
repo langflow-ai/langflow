@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.logic import ListenComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
