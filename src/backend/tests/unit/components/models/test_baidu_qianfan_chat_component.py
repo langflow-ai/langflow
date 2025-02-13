@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.models import QianfanChatEndpointComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
