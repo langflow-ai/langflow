@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.cohere import CohereRerankComponent
 from tests.base import ComponentTestBaseWithClient
 
