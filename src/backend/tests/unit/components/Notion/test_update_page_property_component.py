@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from langflow.components.Notion import NotionPageUpdate
 from tests.base import ComponentTestBaseWithClient
 
