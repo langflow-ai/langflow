@@ -1,5 +1,4 @@
 from smolagents import CodeAgent, ToolCallingAgent
-from smolagents import Tool as SmolTool
 
 from langflow.base.huggingface.model_bridge import LangChainHFModel
 from langflow.custom import Component
@@ -10,7 +9,6 @@ from langflow.field_typing import (
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema.message import Message
-from langflow.schema.content_block import ContentBlock
 
 
 class SmolAgentComponent(Component):
