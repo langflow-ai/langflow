@@ -109,10 +109,14 @@ def _serialize_instance(obj: Any, *_) -> str:
 
 def _truncate_value(value: Any, max_length: int | None, max_items: int | None) -> Any:
     """Truncate value based on its type and provided limits."""
-    if max_length is not None and isinstance(value, str) and len(value) > max_length:
+    value_type = type(value)
+
+    if max_length is not None and value_type is str and len(value) > max_length:
         return value[:max_length]
-    if max_items is not None and isinstance(value, list | tuple) and len(value) > max_items:
+
+    if max_items is not None and (value_type is list or value_type is tuple) and len(value) > max_items:
         return value[:max_items]
+
     return value
 
 
