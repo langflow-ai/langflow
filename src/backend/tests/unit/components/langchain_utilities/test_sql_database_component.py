@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.langchain_utilities import SQLDatabaseComponent
 from tests.base import ComponentTestBaseWithClient
 
