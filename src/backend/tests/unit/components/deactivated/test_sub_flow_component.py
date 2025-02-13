@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated import SubFlowComponent
 from tests.base import ComponentTestBaseWithClient
 
