@@ -113,7 +113,7 @@ dependencies = [
     "permit (>=2.7.2,<3.0.0)",
     "python-jwt==4.1.0",
     "cryptography==42.0.5",
-    "requests==2.32.3"
+    "requests==2.32.3",
     "smolagents>=1.8.0",
 ]
 
