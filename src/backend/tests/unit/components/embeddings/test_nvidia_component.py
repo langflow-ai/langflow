@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.embeddings import NVIDIAEmbeddingsComponent
 from tests.base import ComponentTestBaseWithClient
 
