@@ -60,9 +60,10 @@ export default function IOModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
+  const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
-    ? uuidv5("publish_" + realFlowId, uuidv5.DNS)
+    ? uuidv5(clientId + realFlowId, uuidv5.DNS)
     : realFlowId;
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);

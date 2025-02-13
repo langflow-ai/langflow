@@ -10,6 +10,7 @@ import {
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import React, { useEffect, useRef, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
@@ -35,8 +36,9 @@ export default function SessionSelector({
   setSelectedView: (view: { type: string; id: string } | undefined) => void;
   playgroundPage: boolean;
 }) {
+  const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage ? uuidv5("publish_"+realFlowId, uuidv5.DNS) : realFlowId;
+  const currentFlowId = playgroundPage ? uuidv5(clientId + realFlowId, uuidv5.DNS) : realFlowId;
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();

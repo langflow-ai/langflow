@@ -38,9 +38,10 @@ export default function ChatView({
 }: chatViewProps): JSX.Element {
   const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
+  const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
-    ? uuidv5("publish_" + realFlowId, uuidv5.DNS)
+    ? uuidv5(clientId + realFlowId, uuidv5.DNS)
     : realFlowId;
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(

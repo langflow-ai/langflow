@@ -6,15 +6,18 @@ import useFlowStore from "@/stores/flowStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { v4 as uuid } from "uuid";
 import { getComponent } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import cloneFLowWithParent, {
   getInputsAndOutputs,
 } from "../../utils/storeUtils";
-
+import { getCookie, setCookie, CookieOptions } from "@/utils/utils";
+import { useUtilityStore } from "@/stores/utilityStore";
 export default function PlaygroundPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
+  const setClientId = useUtilityStore((state) => state.setClientId);
 
   const { id } = useParams();
   const { mutateAsync: getFlow } = useGetFlow();
@@ -70,6 +73,22 @@ export default function PlaygroundPage() {
       }
     }
   }, [currentSavedFlow]);
+
+  useEffect(() => {
+    // Get client ID from cookie or create new one
+    const clientId = getCookie('client_id');
+    if (!clientId) {
+      const newClientId = uuid();
+      const cookieOptions: CookieOptions = {
+        secure: window.location.protocol === 'https:',
+        sameSite: 'Strict',
+      };
+      setCookie('client_id', newClientId, cookieOptions);
+      setClientId(newClientId);
+    } else {
+      setClientId(clientId);
+    }
+  }, []);
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
