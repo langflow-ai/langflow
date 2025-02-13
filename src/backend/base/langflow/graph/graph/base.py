@@ -1979,21 +1979,21 @@ class Graph:
         runnable_vertices = []
         visited = set()
 
-        def find_runnable_predecessors(predecessor: Vertex) -> None:
-            predecessor_id = predecessor.id
+        def find_runnable_predecessors(predecessor_id: str) -> None:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            is_active = self.get_vertex(predecessor_id).is_active()
-            is_loop = self.get_vertex(predecessor_id).is_loop
+            predecessor_vertex = self.get_vertex(predecessor_id)
+            is_active = predecessor_vertex.is_active()
+            is_loop = predecessor_vertex.is_loop
             if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active, is_loop=is_loop):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
-                    find_runnable_predecessors(self.get_vertex(pred_pred_id))
+                    find_runnable_predecessors(pred_pred_id)
 
         for predecessor_id in self.run_manager.run_predecessors.get(vertex_id, []):
-            find_runnable_predecessors(self.get_vertex(predecessor_id))
+            find_runnable_predecessors(predecessor_id)
         return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
