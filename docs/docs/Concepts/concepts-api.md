@@ -71,14 +71,6 @@ python python-test-script.py
 
 </Tabs>
 
-## Tweaks
-
-The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
-
-## Send image files to your flow with the API
-
-For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files).
-
 ## Chat Widget
 
 The **Chat Widget HTML** tab displays code that can be inserted in the `<body>` of your HTML to interact with your flow.
@@ -217,6 +209,15 @@ Props with the type JSON need to be passed as stringified JSONs, with the format
 | user_message_style    | JSON    | No       | Determines the formatting for user messages in the chat window.                                                                                                  |
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
 | window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
+
+
+## Tweaks
+
+The **Tweaks** tab displays the available parameters for your flow. Modifying the parameters changes the code parameters across all windows. For example, changing the **Chat Input** component's `input_value` will change that value across all API calls.
+
+## Send image files to your flow with the API
+
+For information on sending files to the Langflow API, see [API examples](/api-reference-api-examples#upload-image-files).
 
 ## Webhook cURL
 
