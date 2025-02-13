@@ -122,24 +122,29 @@ class AgentComponent(ToolCallingAgentComponent):
         return await MemoryComponent(**self.get_base_args()).set(**memory_kwargs).retrieve_messages()
 
     def get_llm(self):
-        if not isinstance(self.agent_llm, str):
-            return self.agent_llm, None
+        agent_llm = self.agent_llm
+        if not isinstance(agent_llm, str):
+            return agent_llm, None
+
+        provider_info = MODEL_PROVIDERS_DICT.get(agent_llm)
+        if not provider_info:
+            msg = f"Invalid model provider: {agent_llm}"
+            raise ValueError(msg)
 
         try:
-            provider_info = MODEL_PROVIDERS_DICT.get(self.agent_llm)
-            if not provider_info:
-                msg = f"Invalid model provider: {self.agent_llm}"
-                raise ValueError(msg)
-
-            component_class = provider_info.get("component_class")
+            component_class = provider_info["component_class"]
             display_name = component_class.display_name
-            inputs = provider_info.get("inputs")
+            inputs = provider_info["inputs"]
             prefix = provider_info.get("prefix", "")
 
             return self._build_llm_model(component_class, inputs, prefix), display_name
 
+        except KeyError as key_error:
+            logger.error(f"Key error access: {key_error}")
+            msg = f"Failed to initialize language model: {key_error}"
+            raise ValueError(msg) from key_error
         except Exception as e:
-            logger.error(f"Error building {self.agent_llm} language model: {e!s}")
+            logger.error(f"Error building {agent_llm} language model: {e!s}")
             msg = f"Failed to initialize language model: {e!s}"
             raise ValueError(msg) from e
 
