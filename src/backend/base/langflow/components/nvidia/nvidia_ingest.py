@@ -39,25 +39,25 @@ class NVIDIAIngestComponent(Component):
         ),
         BoolInput(
             name="extract_text",
-            display_name="Extract text",
+            display_name="Extract Text",
             info="Extract text from document",
             value=True,
         ),
         BoolInput(
             name="extract_charts",
-            display_name="Extract charts",
+            display_name="Extract Charts",
             info="Extract text from charts",
             value=False,
         ),
         BoolInput(
             name="extract_tables",
-            display_name="Extract tables",
+            display_name="Extract Tables",
             info="Extract text from tables",
             value=True,
         ),
         DropdownInput(
             name="text_depth",
-            display_name="Text depth",
+            display_name="Text Depth",
             info="Level at which text is extracted (applies before splitting). Support for 'block', 'line', 'span' varies by document type.",
             options=["document", "page", "block", "line", "span"],
             value="document",  # Default value
@@ -65,13 +65,13 @@ class NVIDIAIngestComponent(Component):
         ),
         BoolInput(
             name="split_text",
-            display_name="Split text",
+            display_name="Split Text",
             info="Split text into smaller chunks",
             value=True,
         ),
         DropdownInput(
             name="split_by",
-            display_name="Split by",
+            display_name="Split By",
             info="How to split into chunks ('size' splits by number of characters)",
             options=["page", "sentence", "word", "size"],
             value="word",  # Default value
@@ -111,33 +111,43 @@ class NVIDIAIngestComponent(Component):
         Output(display_name="Data", name="data", method="load_file"),
     ]
 
-    def load_file(self) -> Data:
+    def load_file(self) -> list[Data]:
         if not self.path:
             err_msg = "Upload a file to use this component."
+            self.log(err_msg, name="NVIDIAIngestComponent")
             raise ValueError(err_msg)
 
         resolved_path = self.resolve_path(self.path)
         extension = Path(resolved_path).suffix[1:].lower()
         if extension not in self.file_types:
             err_msg = f"Unsupported file type: {extension}"
+            self.log(err_msg, name="NVIDIAIngestComponent")
             raise ValueError(err_msg)
 
-        parsed_url = urlparse(self.base_url)
+        try:
+            parsed_url = urlparse(self.base_url)
+            if not parsed_url.hostname or not parsed_url.port:
+                raise ValueError("Invalid URL: Missing hostname or port.")
+        except Exception as e:
+            self.log(f"Error parsing URL: {e}", name="NVIDIAIngestComponent")
+            raise
 
-        message = f"creating Ingestor for host: {parsed_url.hostname}, port: {parsed_url.port}"
-        self.log(message, name="NVIDIAIngestComponent")
-
-        ingestor = (
-            Ingestor(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
-            .files(resolved_path)
-            .extract(
-                extract_text=self.extract_text,
-                extract_tables=self.extract_tables,
-                extract_charts=self.extract_charts,
-                extract_images=False,
-                text_depth=self.text_depth,
+        self.log(f"Creating Ingestor for host: {parsed_url.hostname}, port: {parsed_url.port}", name="NVIDIAIngestComponent")
+        try:
+            ingestor = (
+                Ingestor(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
+                .files(resolved_path)
+                .extract(
+                    extract_text=self.extract_text,
+                    extract_tables=self.extract_tables,
+                    extract_charts=self.extract_charts,
+                    extract_images=False,  # Currently not supported
+                    text_depth=self.text_depth,
+                )
             )
-        )
+        except Exception as e:
+            self.log(f"Error creating Ingestor: {e}", name="NVIDIAIngestComponent")
+            raise
 
         if self.split_text:
             ingestor = ingestor.split(
@@ -148,36 +158,47 @@ class NVIDIAIngestComponent(Component):
                 sentence_window_size=self.sentence_window_size,
             )
 
-        result = ingestor.ingest()
-        result_str = str(result)
-        msg = f"results: {result_str}"
-        self.log(msg, name="NVIDIAIngestComponent")
+        try:
+            result = ingestor.ingest()
+        except Exception as e:
+            self.log(f"Error during ingestion: {e}", name="NVIDIAIngestComponent")
+            raise
+
+        self.log(f"Results: {result}", name="NVIDIAIngestComponent")
 
         data = []
+        DOCUMENT_TYPE_TEXT = "text"
+        DOCUMENT_TYPE_STRUCTURED = "structured"
 
         # Result is a list of segments as determined by the text_depth option (if "document" then only one segment)
         # each segment is a list of elements (text, structured, image)
         for segment in result:
             for element in segment:
-                if element["document_type"] == "text":
+                document_type = element.get("document_type")
+                metadata = element.get("metadata", {})
+                source_metadata = metadata.get("source_metadata", {})
+                content_metadata = metadata.get("content_metadata", {})
+
+                if document_type == DOCUMENT_TYPE_TEXT:
                     data.append(
                         Data(
-                            text=element["metadata"]["content"],
-                            file_path=element["metadata"]["source_metadata"]["source_name"],
-                            document_type=element["document_type"],
-                            description=element["metadata"]["content_metadata"]["description"],
+                            text=metadata.get("content", ""),
+                            file_path=source_metadata.get("source_name", ""),
+                            document_type=document_type,
+                            description=content_metadata.get("description", ""),
                         )
                     )
-                # both charts and tables are returned as "structured" document type, with extracted text in "table_content"
-                elif element["document_type"] == "structured":
+                # Both charts and tables are returned as "structured" document type, with extracted text in "table_content"
+                elif document_type == DOCUMENT_TYPE_STRUCTURED:
+                    table_metadata = metadata.get("table_metadata", {})
                     data.append(
                         Data(
-                            text=element["metadata"]["table_metadata"]["table_content"],
-                            file_path=element["metadata"]["source_metadata"]["source_name"],
-                            document_type=element["document_type"],
-                            description=element["metadata"]["content_metadata"]["description"],
+                            text=table_metadata.get("table_content", ""),
+                            file_path=source_metadata.get("source_name", ""),
+                            document_type=document_type,
+                            description=content_metadata.get("description", ""),
                         )
                     )
 
         self.status = data if data else "No data"
-        return data or Data()
+        return data
