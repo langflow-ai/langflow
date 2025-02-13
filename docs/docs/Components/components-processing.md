@@ -17,7 +17,7 @@ The component offers control over chunk size, overlap, and separator, which affe
 
 ## Alter metadata
 
-This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects) objects, and can also create a new Data object from user-provided text.
+This component modifies metadata of input objects. It can add new metadata, update existing metadata, and remove specified metadata fields. The component works with both [Message](/concepts-objects#message-object) and [Data](/concepts-objects#data-object) objects, and can also create a new Data object from user-provided text.
 
 ### Inputs
 
@@ -164,7 +164,7 @@ This component transforms structured data into human-readable text formats, allo
 This component is in **Beta** as of Langflow version 1.1.3, and is not yet fully supported.
 :::
 
-This component filters a [Data](/concepts-objects#data-objects) object based on a list of keys.
+This component filters a [Data](/concepts-objects#data-object) object based on a list of keys.
 
 ### Inputs
 
