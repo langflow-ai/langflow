@@ -4,13 +4,13 @@ from langflow.io import StrInput
 from langflow.template import Output
 from langflow.base.auth.model import AuthComponent
 
-class GetUserPermissionsComponent(AuthComponent):
+class DataProtectionComponent(AuthComponent):
     """Component for retrieving allowed resource IDs for a user."""
     
-    display_name = "Get User Permissions"
+    display_name = "Data Protection"
     description = "Retrieves allowed resource IDs for a user using Permit.io"
-    name = "GetUserPermissions"
-
+    documentation = "https://docs.permit.io/"
+    icon = "shield"
     inputs = [
         StrInput(
             name="user_id",

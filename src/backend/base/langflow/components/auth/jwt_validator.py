@@ -7,11 +7,12 @@ from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
 
 class JWTValidatorComponent(AuthComponent):
+    """Component for validating JWT tokens and extracting user IDs."""
+    
     display_name = "JWT Validator"
     description = "Validates JWT tokens and extracts user ID using JWKs"
-    documentation: str = "https://python-jose.readthedocs.io/en/latest/jwt/"
-    icon = "jwt"
-    name = "JWTValidator"
+    documentation = "https://docs.permit.io/"
+    icon = "key"
 
     inputs = [
         MessageTextInput(

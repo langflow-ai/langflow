@@ -1,5 +1,5 @@
 ---
-title: Auth
+title: Access Control 
 slug: /components-auth
 ---
 
@@ -13,9 +13,9 @@ They handle critical security tasks like verifying tokens, confirming permission
 
 ## **JWT Validator**
 
-This component verifies JSON Web Tokens (JWT) using JSON Web Key Sets (JWKS) and extracts the user's identifier. It performs a thorough validation process, including signature checks, expiration date verification, and key validation via the specified JWKS endpoint.
+This component verifies JSON Web Tokens (JWT) using JSON Web Key Sets (JWKs) and extracts the user's identifier. It performs a thorough validation process, including signature checks, expiration date verification, and key validation via the specified JWKs endpoint.
 
-To optimize performance, the component automatically fetches and caches the JWKS from the provided URL, handling key rotations efficiently and reducing unnecessary HTTP requests. It supports the RS256 algorithm and retrieves the subject claim (`sub`) as the user identifier.
+To optimize performance, the component automatically fetches and caches the JWKs from the provided URL, handling key rotations efficiently and reducing unnecessary HTTP requests. It supports the RS256 algorithm and retrieves the subject claim (`sub`) as the user identifier.
 
 ### **Inputs**
 | Name       | Display Name | Description                                                                 |
@@ -25,7 +25,7 @@ To optimize performance, the component automatically fetches and caches the JWKS
 ### **Configuration**
 | Name       | Display Name | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
-| jwks_url   | JWKS URL     | The URL of the JWKS endpoint (e.g., `https://your-domain/.well-known/jwks.json`). |
+| jwks_url   | JWKs URL     | The URL of the JWKs endpoint (e.g., `https://your-domain/.well-known/jwks.json`). |
 
 ### **Outputs**
 | Name       | Display Name | Description                                                                 |
@@ -34,7 +34,7 @@ To optimize performance, the component automatically fetches and caches the JWKS
 
 ---
 
-## **Permit Check**
+## **Permissions Check**
 
 This component evaluates whether a user has permission to perform a specific action on a resource. It integrates with Permit.io's Policy Decision Point (PDP) to enforce fine-grained access control based on your defined policies.
 
@@ -61,7 +61,7 @@ It supports context-aware authorization by optionally including tenant informati
 
 ---
 
-## **Get User Permissions**
+## **Data Protection**
 
 This component retrieves and filters the list of resources a user is allowed to access. It can either fetch all permissions for a given resource type or filter a specific set of resource IDs based on the user's permissions.
 
@@ -88,8 +88,15 @@ The component supports bulk permission checks and uses caching to enhance perfor
 
 ---
 
-## **How These Components Work Together**
+## How These Components Work Together
 
-These components can be combined to create robust authentication and authorization flows. Typically, the JWT Validator acts as the starting point, confirming the user's identity. This is followed by the Permit Check component, which makes high-level authorization decisions. Finally, the Get User Permissions component provides detailed resource-level access control.
+These components implement the four security perimeters for LLM applications:
 
-When setting up these components, ensure your Permit.io policies are properly configured, and your JWKS endpoint is accessible. The components are designed to handle errors gracefully, providing clear messages for issues such as invalid tokens, network problems, or denied permissions.
+1. **Prompt Filtering**: Use JWT Validator to authenticate users and filter inputs
+2. **RAG Data Protection**: Use Data Protection to control access to RAG data
+3. **Secure External Access**: Use Permissions Check for API and external service access
+4. **Response Enforcement**: Use Data Protection to filter sensitive information from responses
+
+Each component can be used individually or combined to create comprehensive security flows.
+
+When setting up these components, ensure your Permit.io policies are properly configured, and your JWKs endpoint is accessible. The components are designed to handle errors gracefully, providing clear messages for issues such as invalid tokens, network problems, or denied permissions.

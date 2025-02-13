@@ -1,10 +1,10 @@
-"""Authentication components for Langflow."""
+"""Access Control components for Langflow."""
 from .jwt_validator import JWTValidatorComponent
-from .permit_check import PermitCheckComponent
-from .get_user_permissions import GetUserPermissionsComponent
+from .permissions_check import PermissionsCheckComponent
+from .data_protection import DataProtectionComponent
 
 __all__ = [
     "JWTValidatorComponent",
-    "PermitCheckComponent",
-    "GetUserPermissionsComponent"
+    "PermissionsCheckComponent",
+    "DataProtectionComponent"
 ]

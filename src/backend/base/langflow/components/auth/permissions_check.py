@@ -3,12 +3,14 @@ from langflow.io import StrInput, Output
 from permit import Permit
 from langflow.base.auth.model import AuthComponent
 
-class PermitCheckComponent(AuthComponent):
-    display_name = "Permit Check"
+class PermissionsCheckComponent(AuthComponent):
+    """Component for performing authorization checks."""
+    
+    display_name = "Permissions Check"
     description = "Performs authorization checks using Permit.io"
-    documentation = "https://python.langchain.com/docs/get_started/introduction"
-    icon = "PermitCheck"
-
+    documentation = "https://docs.permit.io/"
+    icon = "lock"
+    
     inputs = [
         StrInput(name="user", display_name="User", required=True),
         StrInput(name="action", display_name="Action", required=True),
