@@ -1,11 +1,13 @@
-from typing import Dict, Optional
-from langflow.io import StrInput, Output
+
 from permit import Permit
+
 from langflow.base.auth.model import AuthComponent
+from langflow.io import Output, StrInput
+
 
 class PermissionsCheckComponent(AuthComponent):
     """Component for performing authorization checks."""
-    
+
     display_name = "Permissions Check"
     description = "Performs authorization checks using Permit.io"
     documentation = "https://docs.langflow.org/components-auth"
@@ -22,7 +24,7 @@ class PermissionsCheckComponent(AuthComponent):
         Output(name="allowed", display_name="Allowed", method="execute"),
     ]
 
-    def build_config(self) -> Dict:
+    def build_config(self) -> dict:
         return {
             "pdp_url": {
                 "display_name": "PDP URL",
@@ -50,26 +52,23 @@ class PermissionsCheckComponent(AuthComponent):
         user: str,
         action: str,
         resource: str,
-        tenant: Optional[str] = None
+        tenant: str | None = None
     ) -> bool:
-        """
-        Check if the action is allowed.
-        
+        """Check if the action is allowed.
+
         Args:
             user: User identifier
             action: Action to check
             resource: Resource identifier
             tenant: Optional tenant identifier
-            
+
         Returns:
             bool: True if action is allowed, False otherwise
         """
         try:
             # Create the context for the check
-            context = {
-                "tenant": tenant
-            } if tenant else {}
-            
+            context = {"tenant": tenant} if tenant else {}
+
             # Perform the permission check
             allowed = self.permit.check(
                 user=user,
@@ -77,9 +76,10 @@ class PermissionsCheckComponent(AuthComponent):
                 resource=resource,
                 context=context
             )
-            
+
             self.status = allowed
-            return allowed
-            
         except Exception as e:
-            raise ValueError(f"Permission check failed: {str(e)}")
+            error_msg = f"Failed to get user permissions: {e!s}"
+            raise ValueError(error_msg) from e
+
+        return allowed

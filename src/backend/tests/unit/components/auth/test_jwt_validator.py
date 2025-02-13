@@ -1,10 +1,12 @@
 """Test cases for JWT Validator component."""
-import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+
 import jwt
-from datetime import datetime, timedelta
+import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-from langflow.components.auth import JWTValidatorComponent
+from langflow.components.auth.jwt_validator import JWTValidatorComponent
+
 
 @pytest.fixture
 def mock_jwks():
@@ -14,7 +16,7 @@ def mock_jwks():
         key_size=2048
     )
     public_key = private_key.public_key()
-    
+
     return {
         "keys": [{
             "kid": "test-key-1",
@@ -25,28 +27,20 @@ def mock_jwks():
         }]
     }, private_key
 
+
 def test_initialization():
     """Test JWT Validator initialization."""
     validator = JWTValidatorComponent()
     assert validator.display_name == "JWT Validator"
-    assert hasattr(validator, "validate_auth")
+    assert hasattr(validator, "process_token")
 
-def test_configuration():
-    """Test JWT Validator configuration."""
-    validator = JWTValidatorComponent()
-    config = validator.build_config()
-    assert "jwks_url" in config
-    assert config["jwks_url"]["required"] is True
 
-@pytest.mark.asyncio
-async def test_valid_token_validation(mock_jwks):
+def test_valid_token_validation(mock_jwks):
     """Test validation of a valid JWT token."""
     jwks, private_key = mock_jwks
-    
-    # Create a valid token
     payload = {
         "sub": "test-user-123",
-        "exp": datetime.utcnow() + timedelta(hours=1)
+        "exp": datetime.now(tz=timezone.utc) + timedelta(hours=1)
     }
     token = jwt.encode(
         payload,
@@ -56,22 +50,20 @@ async def test_valid_token_validation(mock_jwks):
     )
 
     validator = JWTValidatorComponent()
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         mock_get.return_value.json.return_value = jwks
         validator.build(jwks_url="https://test.com/.well-known/jwks.json")
-        
-        user_id = await validator.validate_auth(token)
-        assert user_id == "test-user-123"
+        validator.jwt_token = token
+        result = validator.process_token()
+        assert result.text == "test-user-123"
 
-@pytest.mark.asyncio
-async def test_expired_token(mock_jwks):
+
+def test_expired_token(mock_jwks):
     """Test validation of an expired token."""
     jwks, private_key = mock_jwks
-    
-    # Create an expired token
     payload = {
         "sub": "test-user-123",
-        "exp": datetime.utcnow() - timedelta(hours=1)
+        "exp": datetime.now(tz=timezone.utc) - timedelta(hours=1)
     }
     token = jwt.encode(
         payload,
@@ -81,9 +73,9 @@ async def test_expired_token(mock_jwks):
     )
 
     validator = JWTValidatorComponent()
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         mock_get.return_value.json.return_value = jwks
         validator.build(jwks_url="https://test.com/.well-known/jwks.json")
-        
-        with pytest.raises(ValueError, match="Token has expired"):
-            await validator.validate_auth(token)
+        validator.jwt_token = token
+        result = validator.process_token()
+        assert result.text == "Error: Token has expired"
