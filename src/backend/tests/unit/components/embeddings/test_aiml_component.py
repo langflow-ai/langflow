@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.embeddings import AIMLEmbeddingsComponent
 from tests.base import ComponentTestBaseWithClient
 
