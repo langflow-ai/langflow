@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.langchain_utilities import RetrieverToolComponent
 from langflow.field_typing import BaseRetriever
 from tests.base import ComponentTestBaseWithClient
