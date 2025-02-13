@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.langchain_utilities import LangChainHubPromptComponent
 from tests.base import ComponentTestBaseWithClient
 
