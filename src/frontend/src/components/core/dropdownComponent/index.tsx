@@ -180,14 +180,18 @@ export default function Dropdown({
             className="flex items-center gap-2 truncate"
             data-testid={`value-dropdown-${id}`}
           >
-            <ForwardedIconComponent
-              name={
-                optionsMetaData?.[
-                  filteredOptions.findIndex((option) => option === value)
-                ]?.icon || "Unknown"
-              }
-              className="h-4 w-4"
-            />
+            {optionsMetaData?.[
+              filteredOptions.findIndex((option) => option === value)
+            ]?.icon && (
+              <ForwardedIconComponent
+                name={
+                  optionsMetaData?.[
+                    filteredOptions.findIndex((option) => option === value)
+                  ]?.icon
+                }
+                className="h-4 w-4"
+              />
+            )}
             {value && filteredOptions.includes(value) ? value : placeholderName}{" "}
           </span>
           <ForwardedIconComponent
