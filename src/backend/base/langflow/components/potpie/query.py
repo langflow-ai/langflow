@@ -54,7 +54,7 @@ class Query(Component):
     ]
 
     def run_query(self) -> Message:
-        endpoint = f"https://production-api.potpie.ai/api/v2/project/{self.project_id}/message"
+        endpoint = f"https://conversation-production-api.potpie.ai/api/v2/project/{self.project_id}/message"
         headers = {
             "X-API-Key": self.potpie_api_key,
             "Content-Type": "application/json",
