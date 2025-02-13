@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.models import HuggingFaceEndpointsComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
