@@ -12,9 +12,12 @@ from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.custom import Component
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageInput
-from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
+from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput, DataInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
+
+from nemoguardrails import RailsConfig
+from nemoguardrails.integrations.langchain.runnable_rails import RunnableRails
 
 
 class LCModelComponent(Component):
@@ -34,6 +37,12 @@ class LCModelComponent(Component):
             advanced=False,
         ),
         BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=False),
+        DataInput(
+            name="guardrails",
+            display_name="Guardrails",
+            info="Rules to apply to model interactions using LLM Guardrails",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -167,11 +176,13 @@ class LCModelComponent(Component):
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
             raise ValueError(msg)
+
         system_message_added = False
         if input_value:
             if isinstance(input_value, Message):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
+                    print(f"Input value: {input_value}")
                     if "prompt" in input_value:
                         prompt = input_value.load_lc_prompt()
                         if system_message:
@@ -180,7 +191,6 @@ class LCModelComponent(Component):
                                 *prompt.messages,  # type: ignore[has-type]
                             ]
                             system_message_added = True
-                        runnable = prompt | runnable
                     else:
                         messages.append(input_value.to_lc_message())
             else:
@@ -188,11 +198,27 @@ class LCModelComponent(Component):
 
         if system_message and not system_message_added:
             messages.insert(0, SystemMessage(content=system_message))
+
+        try:
+            if self.guardrails and self.guardrails.text:
+                print(f"Guardrails: {self.guardrails.text}")
+                print(f"Type of guardrails: {type(self.guardrails.text)}")
+                print(f"Prompt: {prompt}")
+                
+                config = RailsConfig.from_content(yaml_content=self.guardrails.text)
+                guardrails = RunnableRails(config)
+                runnable = (prompt | (guardrails | runnable)) if prompt else (guardrails | runnable)
+            elif prompt:
+                runnable = prompt | runnable
+        except Exception as e:
+            print(f"Error configuring guardrails: {e}, {self._get_exception_message(e)}")
+            raise ValueError(f"Error configuring guardrails: {e}") from e
+
         inputs: list | dict = messages or {}
         try:
             # TODO: Depreciated Feature to be removed in upcoming release
             if hasattr(self, "output_parser") and self.output_parser is not None:
-                runnable |= self.output_parser
+                runnable = (runnable | self.output_parser) 
 
             runnable = runnable.with_config(
                 {
