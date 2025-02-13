@@ -8,7 +8,7 @@ import typing
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
@@ -764,6 +764,7 @@ async def build_public_tmp(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     flow_name: str | None = None,
+    request: Request,
 ):
     async with session_scope() as session:
         flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
@@ -772,7 +773,13 @@ async def build_public_tmp(
             raise HTTPException(status_code=403, detail="Flow is not public")
         # Copy the flow to a new flow with a new id
         current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    new_id = f"publish_{flow_id}"
+
+    # Get cookie from request and raise if not found
+    cookie = request.cookies.get("session")
+    if not cookie:
+        raise HTTPException(status_code=400, detail="No session cookie found")
+
+    new_id = f"{cookie}_{flow_id}"
     new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
     if not flow_name:
         flow_name = new_id
