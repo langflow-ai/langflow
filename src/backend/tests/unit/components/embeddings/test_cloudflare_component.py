@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.embeddings import CloudflareWorkersAIEmbeddingsComponent
 from tests.base import ComponentTestBaseWithClient
 
