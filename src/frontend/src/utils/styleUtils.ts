@@ -434,6 +434,9 @@ export const nodeColors: { [char: string]: string } = {
   Agent: "#903BBE",
   AgentExecutor: "#903BBE",
   Tool: "#00fbfc",
+  ToolCallingAgent: "#FFD21E",  // HuggingFace yellow
+  CodeAgent: "#FFD21E",  // HuggingFace yellow
+  ManagedAgent: "#FFD21E",  // HuggingFace yellow
 };
 
 export const nodeColorsName: { [char: string]: string } = {
@@ -449,6 +452,9 @@ export const nodeColorsName: { [char: string]: string } = {
   agents: "purple",
   tools: "cyan",
   memories: "amber",
+  ToolCallingAgent: "yellow",
+  CodeAgent: "yellow",
+  ManagedAgent: "yellow",
   saved_components: "lime",
   advanced: "slate",
   chat: "sky",
