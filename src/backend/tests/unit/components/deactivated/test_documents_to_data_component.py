@@ -1,6 +1,5 @@
 import pytest
 from langchain_core.documents import Document
-
 from langflow.components.deactivated.documents_to_data import DocumentsToDataComponent
 from langflow.schema import Data
 from tests.base import ComponentTestBaseWithClient
