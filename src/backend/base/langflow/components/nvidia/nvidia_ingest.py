@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 
 class NVIDIAIngestComponent(Component):
     display_name = "NVIDIA Ingest"
-    description = """NVIDIA Ingest (nv-ingest) efficiently processes, transforms, and stores large datasets for AI and ML integration."""
+    description = (
+        "NVIDIA Ingest (nv-ingest) efficiently processes, transforms, and stores "
+        "large datasets for AI and ML integration."
+    )
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
     name = "NVIDIAIngest"
@@ -57,7 +60,10 @@ class NVIDIAIngestComponent(Component):
         DropdownInput(
             name="text_depth",
             display_name="Text Depth",
-            info="Level at which text is extracted (applies before splitting). Support for 'block', 'line', 'span' varies by document type.",
+            info=(
+                "Level at which text is extracted (applies before splitting). "
+                "Support for 'block', 'line', 'span' varies by document type."
+            ),
             options=["document", "page", "block", "line", "span"],
             value="document",  # Default value
             advanced=True,
@@ -126,7 +132,9 @@ class NVIDIAIngestComponent(Component):
         try:
             parsed_url = urlparse(self.base_url)
             if not parsed_url.hostname or not parsed_url.port:
-                raise ValueError("Invalid URL: Missing hostname or port.")
+                err_msg = "Invalid URL: Missing hostname or port."
+                self.log(err_msg, name="NVIDIAIngestComponent")
+                raise ValueError(err_msg)
         except Exception as e:
             self.log(f"Error parsing URL: {e}", name="NVIDIAIngestComponent")
             raise
@@ -168,8 +176,8 @@ class NVIDIAIngestComponent(Component):
         self.log(f"Results: {result}", name="NVIDIAIngestComponent")
 
         data = []
-        DOCUMENT_TYPE_TEXT = "text"
-        DOCUMENT_TYPE_STRUCTURED = "structured"
+        document_type_text = "text"
+        document_type_structured = "structured"
 
         # Result is a list of segments as determined by the text_depth option (if "document" then only one segment)
         # each segment is a list of elements (text, structured, image)
@@ -180,7 +188,7 @@ class NVIDIAIngestComponent(Component):
                 source_metadata = metadata.get("source_metadata", {})
                 content_metadata = metadata.get("content_metadata", {})
 
-                if document_type == DOCUMENT_TYPE_TEXT:
+                if document_type == document_type_text:
                     data.append(
                         Data(
                             text=metadata.get("content", ""),
@@ -189,8 +197,9 @@ class NVIDIAIngestComponent(Component):
                             description=content_metadata.get("description", ""),
                         )
                     )
-                # Both charts and tables are returned as "structured" document type, with extracted text in "table_content"
-                elif document_type == DOCUMENT_TYPE_STRUCTURED:
+                # Both charts and tables are returned as "structured" document type, 
+                # with extracted text in "table_content"
+                elif document_type == document_type_structured:
                     table_metadata = metadata.get("table_metadata", {})
                     data.append(
                         Data(
