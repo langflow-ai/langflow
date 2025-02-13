@@ -775,7 +775,7 @@ async def build_public_tmp(
         current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
 
     # Get cookie from request and raise if not found
-    cookie = request.cookies.get("session")
+    cookie = request.cookies.get("client_id")
     if not cookie:
         raise HTTPException(status_code=400, detail="No session cookie found")
 
