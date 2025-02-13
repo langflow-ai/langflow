@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.firecrawl import FirecrawlCrawlApi
 from tests.base import ComponentTestBaseWithClient
 
