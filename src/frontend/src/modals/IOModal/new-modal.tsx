@@ -340,6 +340,7 @@ export default function IOModal({
                     handleDeleteSession={handleDeleteSession}
                     visibleSession={visibleSession}
                     selectedViewField={selectedViewField}
+                    playgroundPage={!!playgroundPage}
                   />
                 )}
                 {sidebarOpen && showPublishOptions && (

@@ -7,4 +7,5 @@ export type SidebarOpenViewProps = {
   handleDeleteSession: (session: string) => void;
   visibleSession: string | undefined;
   selectedViewField: { type: string; id: string } | undefined;
+  playgroundPage: boolean;
 };
