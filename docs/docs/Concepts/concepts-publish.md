@@ -197,6 +197,9 @@ Props with the type JSON need to be passed as stringified JSONs, with the format
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
 | window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
 
-
 ## Shareable playground
+
+The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
+
+You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
 
