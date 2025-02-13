@@ -1,10 +1,10 @@
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+from langflow.components.embeddings import HuggingFaceInferenceAPIEmbeddingsComponent
 from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.field_typing import Embeddings
-from langflow.components.embeddings import HuggingFaceInferenceAPIEmbeddingsComponent
 
 
 def test_huggingface_initialization():
@@ -129,7 +129,9 @@ def test_huggingface_build_embeddings_connection_error(mocker):
     component.inference_endpoint = "https://api-inference.huggingface.co/models/"
     component.model_name = "BAAI/bge-large-en-v1.5"
 
-    mock_create = mocker.patch.object(component, "create_huggingface_embeddings", side_effect=Exception("Connection error"))
+    mock_create = mocker.patch.object(
+        component, "create_huggingface_embeddings", side_effect=Exception("Connection error")
+    )
 
     with pytest.raises(ValueError, match="Could not connect to HuggingFace Inference API."):
         component.build_embeddings()
