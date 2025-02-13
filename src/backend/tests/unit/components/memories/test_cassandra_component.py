@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.memories import CassandraChatMemory
 from tests.base import ComponentTestBaseWithClient
 
