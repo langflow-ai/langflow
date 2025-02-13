@@ -13,7 +13,6 @@ from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
-from langflow.graph.utils import log_vertex_build
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
@@ -32,6 +31,7 @@ from langflow.graph.graph.utils import (
     should_continue,
 )
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
+from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
@@ -1597,7 +1597,6 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
-                
                 await log_vertex_build(
                     flow_id=self.flow_id,
                     vertex_id=result.vertex.id,
@@ -1606,7 +1605,7 @@ class Graph:
                     data=result.result_dict,
                     artifacts=result.artifacts,
                 )
-                
+
                 vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"

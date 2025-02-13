@@ -9,7 +9,7 @@ class WebhookComponent(Component):
     display_name = "Webhook"
     name = "Webhook"
     icon = "webhook"
-    
+
     inputs = [
         MultilineInput(
             name="data",
