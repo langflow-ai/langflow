@@ -250,7 +250,7 @@ export default function ChatInput({
                 fileInputRef={fileInputRef}
                 handleFileChange={handleFileChange}
                 handleButtonClick={handleButtonClick}
-            />
+              />
             </div>
           )}
           <div className={playgroundPage ? "ml-auto" : ""}>
