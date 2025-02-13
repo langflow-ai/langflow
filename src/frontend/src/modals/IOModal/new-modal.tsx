@@ -257,7 +257,7 @@ export default function IOModal({
 
   useEffect(() => {
     if (playgroundPage && messages.length > 0) {
-      window.localStorage.setItem(currentFlowId, JSON.stringify(messages));
+      window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
   }, [playgroundPage, messages]);
 

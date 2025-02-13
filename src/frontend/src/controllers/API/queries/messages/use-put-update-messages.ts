@@ -26,12 +26,12 @@ export const useUpdateMessage: useMutationFunctionType<
       message.files = JSON.parse(message.files);
     }
     if (isPlayground && flowId) {
-      const messages = JSON.parse(localStorage.getItem(flowId) || "");
+      const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
       const messageIndex = messages.findIndex(
         (m: Message) => m.id === message.id,
       );
       messages[messageIndex] = message;
-      localStorage.setItem(flowId, JSON.stringify(messages));
+      sessionStorage.setItem(flowId, JSON.stringify(messages));
       return {
         data: message,
       };

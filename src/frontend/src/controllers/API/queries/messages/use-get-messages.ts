@@ -39,7 +39,7 @@ export const useGetMessagesQuery: useQueryFunctionType<
       return await api.get<any>(`${getURL("MESSAGES")}`, config);
     } else {
       return {
-        data: JSON.parse(window.localStorage.getItem(id ?? "") || "[]"),
+        data: JSON.parse(window.sessionStorage.getItem(id ?? "") || "[]"),
       };
     }
   };

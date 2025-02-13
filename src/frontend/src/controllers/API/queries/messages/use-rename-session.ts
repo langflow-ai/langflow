@@ -22,14 +22,14 @@ export const useUpdateSessionName: useMutationFunctionType<
     const flowId = useFlowStore.getState().currentFlow?.id;
     // if we are in playground we will edit the local storage instead of the API
     if (isPlayground && flowId) {
-      const messages = JSON.parse(localStorage.getItem(flowId) || "");
+      const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
       const messagesWithNewSessionId = messages.map((message: Message) => {
         if (message.session_id === data.old_session_id) {
           message.session_id = data.new_session_id;
         }
         return message;
       });
-      localStorage.setItem(flowId, JSON.stringify(messagesWithNewSessionId));
+      sessionStorage.setItem(flowId, JSON.stringify(messagesWithNewSessionId));
       return {
         data: messagesWithNewSessionId,
       };
