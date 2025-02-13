@@ -158,6 +158,8 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
         try:
             await session.commit()
             # This is a hack.
+            # We are doing this because build_public_tmp causes the CancelledError to be raised
+            # while build_flow does not.
         except asyncio.CancelledError:
             await session.commit()
         for message in messages:
