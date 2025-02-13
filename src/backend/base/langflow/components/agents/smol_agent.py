@@ -1,4 +1,4 @@
-from smolagents import CodeAgent, ManagedAgent, ToolCallingAgent
+from smolagents import CodeAgent, ToolCallingAgent
 
 from langflow.base.huggingface.model_bridge import LangChainHFModel
 from langflow.custom import Component
@@ -26,13 +26,6 @@ class SmolAgentComponent(Component):
             input_types=["LanguageModel"],
             required=True,
             info="The language model to use for the agent",
-        ),
-        HandleInput(
-            name="smol_agent",
-            display_name="SMOL Agent",
-            input_types=["ManagedAgent"],
-            info="The SMOL agent to manage",
-            is_list=True,
         ),
         HandleInput(
             name="tools",
@@ -95,15 +88,7 @@ class SmolAgentComponent(Component):
         ),
     ]
 
-    outputs = [
-        Output(name="response", display_name="Response", method="run_agent"),
-        Output(
-            name="agent",
-            display_name="SMOL Agent",
-            method="build_agent",
-            output_types=["CodeAgent", "ToolCallingAgent"],
-        ),
-    ]
+    outputs = [Output(name="response", display_name="Response", method="run_agent")]
 
     def build_agent(self) -> CodeAgent | ToolCallingAgent:
         # Convert LangChain model to HuggingFace model interface
@@ -115,7 +100,8 @@ class SmolAgentComponent(Component):
             raise ImportError(msg) from e
 
         # Convert LangChain tools to HuggingFace tools
-        hf_tools = [SmolTool.from_langchain(_tool) for _tool in self.tools] if self.tools else []
+
+        hf_tools = [SmolTool.from_langchain(_tool) for _tool in self.tools]
         # Process additional imports if provided
         additional_imports = None
         if hasattr(self, "additional_authorized_imports") and self.additional_authorized_imports:
@@ -132,9 +118,6 @@ class SmolAgentComponent(Component):
                 "planning_interval": self.planning_interval if self.planning_interval else None,
                 "use_e2b_executor": self.use_e2b_executor if self.use_e2b_executor else False,
                 "max_print_outputs_length": self.max_print_outputs_length if self.max_print_outputs_length else None,
-                "managed_agent": [self.smol_agent]
-                if self.smol_agent and not isinstance(self.smol_agent, list)
-                else self.smol_agent,
             }
             self.agent = CodeAgent(**{k: v for k, v in agent_kwargs.items() if v is not None})
         else:  # tool calling agent
