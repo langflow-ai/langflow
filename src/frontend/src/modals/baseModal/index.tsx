@@ -184,6 +184,7 @@ interface BaseModalProps {
   type?: "modal" | "dialog" | "full-screen";
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  closeButtonClassName?: string;
 }
 function BaseModal({
   className,
@@ -195,6 +196,7 @@ function BaseModal({
   type = "dialog",
   onSubmit,
   onEscapeKeyDown,
+  closeButtonClassName,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -249,6 +251,7 @@ function BaseModal({
             onOpenAutoFocus={(event) => event.preventDefault()}
             onEscapeKeyDown={onEscapeKeyDown}
             className={contentClasses}
+            closeButtonClassName={closeButtonClassName}
           >
             {onSubmit ? (
               <Form.Root

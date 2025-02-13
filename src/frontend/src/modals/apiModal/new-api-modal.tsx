@@ -42,7 +42,7 @@ export default function ApiModal({
 
   return (
     <>
-      <BaseModal open={open} setOpen={setOpen} size="medium" className="">
+      <BaseModal closeButtonClassName="!top-3"  open={open} setOpen={setOpen} size="medium" className="pt-4">
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
           description={
@@ -83,7 +83,7 @@ export default function ApiModal({
                 />
                 <span>Temporary overrides ({Object.keys(tweaks).length}) </span>
               </Button>
-              <Separator orientation="vertical" className="ml-1 h-8" />
+              <Separator orientation="vertical" className="ml-2 h-8" />
             </div>
           )}
         </BaseModal.Header>
