@@ -393,51 +393,6 @@ const config = {
     }),
     tailwindcssTypography,
     tailwindcssDottedBackground,
-    plugin(function ({ addUtilities, theme, e }) {
-      const colors = theme("colors");
-
-      const generateUtilities = (colors, prefix = "") => {
-        return Object.keys(colors).reduce((acc, colorName) => {
-          const colorValue = colors[colorName];
-          const className = prefix ? `${prefix}-${e(colorName)}` : e(colorName);
-
-          if (typeof colorValue === "string") {
-            acc[`.truncate-${className}`] = {
-              position: "relative",
-              overflow: "hidden",
-              "&::after": {
-                content: '""',
-                position: "absolute",
-                inset: "0 0 0 0",
-                background: `linear-gradient(to right, transparent, 75%, ${colorValue})`,
-              },
-            };
-          } else if (typeof colorValue === "object") {
-            // Use the DEFAULT value for the base class if it exists
-            if (colorValue.DEFAULT) {
-              acc[`.truncate-${className}`] = {
-                position: "relative",
-                overflow: "hidden",
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  inset: "0 0 0 0",
-                  background: `linear-gradient(to right, transparent, ${colorValue.DEFAULT})`,
-                },
-              };
-            }
-            // Recursively generate utilities for nested color objects
-            Object.assign(acc, generateUtilities(colorValue, className));
-          }
-
-          return acc;
-        }, {});
-      };
-
-      const newUtilities = generateUtilities(colors);
-
-      addUtilities(newUtilities, ["responsive", "hover"]);
-    }),
     plugin(({ addVariant }) => {
       addVariant("group-increment-hover", ":merge(.group-increment):hover &");
       addVariant("group-decrement-hover", ":merge(.group-decrement):hover &");
