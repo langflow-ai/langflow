@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated.code_block_extractor import CodeBlockExtractor
 from tests.base import ComponentTestBaseWithClient
 
