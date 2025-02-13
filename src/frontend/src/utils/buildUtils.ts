@@ -14,7 +14,6 @@ import { VertexLayerElementType } from "../types/zustand/flow";
 import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
-  setLockChat?: (lock: boolean) => void;
   flowId: string; // Assuming FlowType is the type for your flow
   input_value?: any; // Replace any with the actual type if it's not any
   files?: string[];
@@ -67,7 +66,6 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
 
 export async function updateVerticesOrder(
   flowId: string,
-  setLockChat?: (lock: boolean) => void,
   startNodeId?: string | null,
   stopNodeId?: string | null,
   nodes?: Node[],
@@ -95,7 +93,6 @@ export async function updateVerticesOrder(
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
       useFlowStore.getState().setIsBuilding(false);
-      setLockChat && setLockChat(false);
       throw new Error("Invalid components");
     }
     // orderResponse.data.ids,
@@ -155,7 +152,6 @@ export async function buildFlowVertices({
   nodes,
   edges,
   logBuilds,
-  setLockChat,
   session,
   playgroundPage,
 }: BuildVerticesParams) {
@@ -229,7 +225,6 @@ export async function buildFlowVertices({
             return true;
           } catch (e) {
             useFlowStore.getState().setIsBuilding(false);
-            setLockChat && setLockChat(false);
             return false;
           }
         }
@@ -384,7 +379,6 @@ export async function buildVertices({
   onValidateNodes,
   nodes,
   edges,
-  setLockChat,
 }: BuildVerticesParams) {
   // if startNodeId and stopNodeId are provided
   // something is wrong
@@ -393,7 +387,6 @@ export async function buildVertices({
   }
   let verticesOrderResponse = await updateVerticesOrder(
     flowId,
-    setLockChat,
     startNodeId,
     stopNodeId,
     nodes,
@@ -404,7 +397,6 @@ export async function buildVertices({
       onValidateNodes(verticesOrderResponse.verticesToRun);
     } catch (e) {
       useFlowStore.getState().setIsBuilding(false);
-      setLockChat && setLockChat(false);
       return;
     }
   }

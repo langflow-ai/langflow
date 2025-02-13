@@ -262,7 +262,7 @@ This component connects to a [Model Context Protocol (MCP)](https://modelcontext
 
 To use the MCP stdio component, follow these steps:
 
-1. Add the [MCP stdio](/components-tools#mcp-stdio) component to your workflow, and connect it to an agent. The flow looks like this:
+1. Add the MCP stdio component to your workflow, and connect it to an agent. The flow looks like this:
 
 ![MCP stdio component](/img/mcp-stdio-component.png)
 
@@ -294,7 +294,7 @@ This component connects to a [Model Context Protocol (MCP)](https://modelcontext
 
 To use the MCP SSE component, follow these steps:
 
-1. Add the [MCP SSE](/components-tools#mcp-sse) component to your workflow, and connect it to an agent. The flow looks similar to the MCP stdio component flow.
+1. Add the MCP SSE component to your workflow, and connect it to an agent. The flow looks similar to the MCP stdio component flow.
 
 2. In the MCP SSE component, in the **url** field, enter the URL of your current Langflow server's `mcp/sse` endpoint.
 This will fetch all currently available tools from the Langflow server.
