@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated.should_run_next import ShouldRunNextComponent
 from tests.base import ComponentTestBaseWithClient
 
@@ -30,16 +29,16 @@ class TestShouldRunNextComponent(ComponentTestBaseWithClient):
         mock_llm.invoke.return_value = "yes"
         component = component_class(**default_kwargs)
         result = await component.build(llm=mock_llm, **default_kwargs)
-        assert (
-            component.status == "Should Run Next: True"
-        ), "The status should indicate that the next component should run."
+        assert component.status == "Should Run Next: True", (
+            "The status should indicate that the next component should run."
+        )
 
     async def test_should_run_next_condition_no(self, component_class, default_kwargs):
         mock_llm = Mock()
         mock_llm.invoke.return_value = "no"
         component = component_class(**default_kwargs)
         result = await component.build(llm=mock_llm, **default_kwargs)
-        assert (
-            component.status == "Should Run Next: False"
-        ), "The status should indicate that the next component should not run."
+        assert component.status == "Should Run Next: False", (
+            "The status should indicate that the next component should not run."
+        )
         assert component.stop_called, "The stop method should be called when the condition is false."
