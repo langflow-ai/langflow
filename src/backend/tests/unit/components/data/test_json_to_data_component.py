@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import pytest
-
 from langflow.components.data import JSONToDataComponent
 from langflow.schema import Data
+
 from tests.base import ComponentTestBaseWithClient
 
 
