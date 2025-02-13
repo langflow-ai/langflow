@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.deactivated.embed import EmbedComponent
 from tests.base import ComponentTestBaseWithClient
 
