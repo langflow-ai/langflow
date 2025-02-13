@@ -771,16 +771,12 @@ async def build_public_tmp(
         if flow.access_type is not AccessTypeEnum.PUBLIC:
             raise HTTPException(status_code=403, detail="Flow is not public")
         # Copy the flow to a new flow with a new id
-        new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, f"publish_{flow_id}")
-        new_flow = flow.model_copy(update={"id": new_flow_id})
-        flow_exists = await session.exec(select(Flow).where(Flow.id == new_flow_id))
-        if not flow_exists.first():
-            session.add(new_flow)
-            await session.commit()
         current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    new_id = f"publish_{flow_id}"
+    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
     if not flow_name:
-        flow_name = f"publish_{flow_id}"
-    # Create a deterministic UUID using uuid5 with DNS namespace and the flow_id string
+        flow_name = new_id
+        # Create a deterministic UUID using uuid5 with DNS namespace and the flow_id string
     try:
         return await build_flow(
             background_tasks=background_tasks,
