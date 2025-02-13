@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.langchain_utilities import JsonAgentComponent
 from tests.base import ComponentTestBaseWithClient
 
