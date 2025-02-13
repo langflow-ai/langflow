@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.custom_component import CustomComponent
 from tests.base import ComponentTestBaseWithClient
 
