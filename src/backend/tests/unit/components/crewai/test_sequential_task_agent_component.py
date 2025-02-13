@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.crewai import SequentialTaskAgentComponent
 from tests.base import ComponentTestBaseWithClient
 
