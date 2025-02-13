@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.astra_assistants import AssistantsGetAssistantName
 from tests.base import ComponentTestBaseWithClient
 
