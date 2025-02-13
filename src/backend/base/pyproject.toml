@@ -205,7 +205,8 @@ all = [
     "flower>=1.0.0",
     "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
-    "ctransformers>=0.2"
+    "ctransformers>=0.2",
+    "nemoguardrails==0.11.0"
 ]
 
 # Development dependencies

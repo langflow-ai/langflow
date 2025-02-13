@@ -1,4 +1,3 @@
-
 [project]
 name = "langflow"
 version = "1.1.5"
@@ -70,7 +69,7 @@ dependencies = [
     "composio-core==0.7.1",
     "spider-client==0.1.24",
     "nltk==3.9.1",
-    "lark==1.2.2",
+    "lark>=1.1.7,<1.2.dev0",
     "jq==1.8.0",
     "pydantic-settings==2.4.0",
     "ragstack-ai-knowledge-store==0.2.1",
@@ -146,6 +145,9 @@ local = [
 ]
 clickhouse-connect = [
     "clickhouse-connect==0.7.19"
+]
+nemo-guardrails = [
+    "nemoguardrails==0.11.0"
 ]
 
 [project.scripts]
