@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from langflow.components.embeddings import EmbeddingSimilarityComponent
 from tests.base import ComponentTestBaseWithClient
 
