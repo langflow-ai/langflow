@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.agentql import AgentQL
 from tests.base import ComponentTestBaseWithClient
 
