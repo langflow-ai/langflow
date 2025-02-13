@@ -4,7 +4,7 @@ from typing import Any
 
 import requests
 from langchain.pydantic_v1 import BaseModel, Field, create_model
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import StructuredTool, Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import DictInput, IntInput, SecretStrInput, StrInput
@@ -140,7 +140,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
 
-    def build_tool(self) -> StructuredTool:
+    def build_tool(self) -> Tool:
         """Builds a Astra DB CQL Table tool.
 
         Args:

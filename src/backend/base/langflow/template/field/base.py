@@ -200,6 +200,9 @@ class Output(BaseModel):
     allows_loop: bool = Field(default=False)
     """Specifies if the output allows looping."""
 
+    tool_mode: bool = Field(default=True)
+    """Specifies if the output should be used as a tool"""
+
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 

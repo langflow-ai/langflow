@@ -69,7 +69,7 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.post("/build/{flow_id}/vertices")
+@router.post("/build/{flow_id}/vertices", deprecated=True)
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
@@ -389,7 +389,6 @@ async def build_flow(
             raise
         event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
-
         tasks = []
         for vertex_id in ids:
             task = asyncio.create_task(build_vertices(vertex_id, graph, client_consumed_queue, event_manager))
@@ -471,7 +470,7 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
                 break
 
 
-@router.post("/build/{flow_id}/vertices/{vertex_id}")
+@router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
 async def build_vertex(
     *,
     flow_id: uuid.UUID,
@@ -713,7 +712,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
-@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
+@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse, deprecated=True)
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,

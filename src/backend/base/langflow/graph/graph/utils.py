@@ -151,10 +151,13 @@ def update_target_handle(new_edge, g_nodes):
         dict: The updated edge.
     """
     target_handle = new_edge["data"]["targetHandle"]
-    if target_handle.get("proxy"):
-        proxy_id = target_handle["proxy"]["id"]
-        if node := next((n for n in g_nodes if n["id"] == proxy_id), None):
-            set_new_target_handle(proxy_id, new_edge, target_handle, node)
+    if proxy := target_handle.get("proxy"):
+        proxy_id = proxy["id"]
+        for node in g_nodes:
+            if node["id"] == proxy_id:
+                set_new_target_handle(proxy_id, new_edge, target_handle, node)
+                break
+
     return new_edge
 
 
@@ -179,13 +182,18 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
         "type": type_,
         "id": proxy_id,
     }
-    if node["data"]["node"].get("flow"):
+
+    node_data = node["data"]["node"]
+    if node_data.get("flow"):
+        field_template_proxy = node_data["template"][field]["proxy"]
         new_target_handle["proxy"] = {
-            "field": node["data"]["node"]["template"][field]["proxy"]["field"],
-            "id": node["data"]["node"]["template"][field]["proxy"]["id"],
+            "field": field_template_proxy["field"],
+            "id": field_template_proxy["id"],
         }
+
     if input_types := target_handle.get("inputTypes"):
         new_target_handle["inputTypes"] = input_types
+
     new_edge["data"]["targetHandle"] = new_target_handle
 
 
@@ -409,25 +417,25 @@ def find_all_cycle_edges(entry_point: str, edges: list[tuple[str, str]]) -> list
         graph[u].append(v)
 
     # Utility function to perform DFS
-    def dfs(v, visited, rec_stack):
+    def dfs(v, visited, rec_stack, cycle_edges):
         visited.add(v)
         rec_stack.add(v)
 
-        cycle_edges = []
-
         for neighbor in graph[v]:
             if neighbor not in visited:
-                cycle_edges += dfs(neighbor, visited, rec_stack)
+                dfs(neighbor, visited, rec_stack, cycle_edges)
             elif neighbor in rec_stack:
                 cycle_edges.append((v, neighbor))  # This edge causes a cycle
 
         rec_stack.remove(v)
-        return cycle_edges
 
     visited: set[str] = set()
     rec_stack: set[str] = set()
+    cycle_edges: list[tuple[str, str]] = []
 
-    return dfs(entry_point, visited, rec_stack)
+    dfs(entry_point, visited, rec_stack, cycle_edges)
+
+    return cycle_edges
 
 
 def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) -> bool:
@@ -453,11 +461,11 @@ def find_cycle_vertices(edges):
 def layered_topological_sort(
     vertices_ids: set[str],
     in_degree_map: dict[str, int],
-    successor_map: dict[str, list[str]],
-    predecessor_map: dict[str, list[str]],
+    successor_map: dict[str, set[str]],
+    predecessor_map: dict[str, set[str]],
     start_id: str | None = None,
     cycle_vertices: set[str] | None = None,
-    is_input_vertex: Callable[[str], bool] | None = None,
+    is_input_vertex: Callable[[str], bool] | None = None,  # noqa: ARG001
     *,
     is_cyclic: bool = False,
 ) -> list[list[str]]:
@@ -503,7 +511,9 @@ def layered_topological_sort(
         queue = deque(
             vertex_id
             for vertex_id in vertices_ids
-            if in_degree_map[vertex_id] == 0 or (is_input_vertex and is_input_vertex(vertex_id))
+            if in_degree_map[vertex_id] == 0
+            # We checked if it is input but that caused the TextInput to be at the start
+            # or (is_input_vertex and is_input_vertex(vertex_id))
         )
 
     layers: list[list[str]] = []
@@ -770,8 +780,8 @@ def get_sorted_vertices(
     start_component_id: str | None = None,
     graph_dict: dict[str, Any] | None = None,
     in_degree_map: dict[str, int] | None = None,
-    successor_map: dict[str, list[str]] | None = None,
-    predecessor_map: dict[str, list[str]] | None = None,
+    successor_map: dict[str, set[str]] | None = None,
+    predecessor_map: dict[str, set[str]] | None = None,
     is_input_vertex: Callable[[str], bool] | None = None,
     get_vertex_predecessors: Callable[[str], list[str]] | None = None,
     get_vertex_successors: Callable[[str], list[str]] | None = None,
@@ -816,18 +826,18 @@ def get_sorted_vertices(
         successor_map = {}
         for vertex_id in vertices_ids:
             if get_vertex_successors is not None:
-                successor_map[vertex_id] = get_vertex_successors(vertex_id)
+                successor_map[vertex_id] = set(get_vertex_successors(vertex_id))
             else:
-                successor_map[vertex_id] = []
+                successor_map[vertex_id] = set()
 
     # Build predecessor_map if not provided
     if predecessor_map is None:
         predecessor_map = {}
         for vertex_id in vertices_ids:
             if get_vertex_predecessors is not None:
-                predecessor_map[vertex_id] = get_vertex_predecessors(vertex_id)
+                predecessor_map[vertex_id] = set(get_vertex_predecessors(vertex_id))
             else:
-                predecessor_map[vertex_id] = []
+                predecessor_map[vertex_id] = set()
 
     # If we have a stop component, we need to filter out all vertices
     # that are not predecessors of the stop component
