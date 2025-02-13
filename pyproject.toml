@@ -111,7 +111,7 @@ dependencies = [
     "ag2>=0.1.0",
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
-    "smolagents>=1.6.0",
+    "smolagents>=1.8.0",
 ]
 
 [tool.uv.sources]
