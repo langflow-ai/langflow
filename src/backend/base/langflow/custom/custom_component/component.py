@@ -987,7 +987,7 @@ class Component(CustomComponent):
     def extract_data(self, result):
         """Extract the data from the result. this is where the self.status is set."""
         if isinstance(result, Message):
-            self.status = getattr(result, result.text_key, None)
+            self.status = result.get_text()
             return (
                 self.status if self.status is not None else "No text available"
             )  # Provide a default message if .text_key is missing
