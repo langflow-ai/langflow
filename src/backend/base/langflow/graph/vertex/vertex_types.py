@@ -466,7 +466,7 @@ class StateVertex(ComponentVertex):
         self.is_state = False
 
     @property
-    def successors_ids(self) -> list[str]:
+    def successors_ids(self) -> set[str]:
         if self._successors_ids is None:
             self.is_state = False
             return super().successors_ids
