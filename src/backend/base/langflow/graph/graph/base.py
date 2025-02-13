@@ -116,10 +116,10 @@ class Graph:
 
         self.top_level_vertices: list[str] = []
         self.vertex_map: dict[str, Vertex] = {}
-        self.predecessor_map: dict[str, list[str]] = defaultdict(list)
-        self.successor_map: dict[str, list[str]] = defaultdict(list)
+        self.predecessor_map: dict[str, set[str]] = defaultdict(set)
+        self.successor_map: dict[str, set[str]] = defaultdict(set)
         self.in_degree_map: dict[str, int] = defaultdict(int)
-        self.parent_child_map: dict[str, list[str]] = defaultdict(list)
+        self.parent_child_map: dict[str, set[str]] = defaultdict(set)
         self._run_queue: deque[str] = deque()
         self._first_layer: list[str] = []
         self._lock = asyncio.Lock()
@@ -469,10 +469,10 @@ class Graph:
         self.add_edge(edge)
         source_id = edge["data"]["sourceHandle"]["id"]
         target_id = edge["data"]["targetHandle"]["id"]
-        self.predecessor_map[target_id].append(source_id)
-        self.successor_map[source_id].append(target_id)
+        self.predecessor_map[target_id].add(source_id)
+        self.successor_map[source_id].add(target_id)
         self.in_degree_map[target_id] += 1
-        self.parent_child_map[source_id].append(target_id)
+        self.parent_child_map[source_id].add(target_id)
 
     def add_node(self, node: NodeData) -> None:
         self._vertices.append(node)
@@ -1554,7 +1554,7 @@ class Graph:
         logger.debug("Graph processing complete")
         return self
 
-    def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
+    def find_next_runnable_vertices(self, vertex_successors_ids: set[str]) -> list[str]:
         next_runnable_vertices = set()
         for v_id in sorted(vertex_successors_ids):
             if not self.is_vertex_runnable(v_id):
@@ -1692,7 +1692,7 @@ class Graph:
 
     def get_successors(self, vertex: Vertex) -> list[Vertex]:
         """Returns the successors of a vertex."""
-        return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, [])]
+        return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, set())]
 
     def get_vertex_neighbors(self, vertex: Vertex) -> dict[Vertex, int]:
         """Returns the neighbors of a vertex."""
