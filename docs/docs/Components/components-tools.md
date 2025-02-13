@@ -25,6 +25,25 @@ To make a component into a tool that an agent can use, enable **Tool mode** in t
 If the component you want to connect to an agent doesn't have a **Tool mode** option, you can modify the component's inputs to become a tool.
 For an example, see [Make any component a tool](/agents-tool-calling-agent-component#make-any-component-a-tool).
 
+## arXiv
+
+This component searches and retrieves papers from [arXiv.org](https://arXiv.org).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| search_query | Search Query | The search query for arXiv papers (for example, `quantum computing`) |
+| search_type | Search Field | The field to search in |
+| max_results | Max Results | Maximum number of results to return |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| papers | Papers | List of retrieved arXiv papers |
+
+
 ## Astra DB Tool
 
 The `Astra DB Tool` allows agents to connect to and query data from Astra DB collections.
@@ -110,7 +129,7 @@ This component creates a tool for performing basic arithmetic operations on a gi
 
 | Name       | Type   | Description                                                        |
 |------------|--------|--------------------------------------------------------------------|
-| expression | String | The arithmetic expression to evaluate (e.g., `4*4*(33/22)+12-20`). |
+| expression | String | The arithmetic expression to evaluate (for example, `4*4*(33/22)+12-20`). |
 
 ### Outputs
 
@@ -141,6 +160,42 @@ This component runs Icosa's Combinatorial Reasoning (CR) pipeline on an input to
 | optimized_prompt | Optimized Prompt| A message object containing the optimized prompt |
 | reasons | Selected Reasons| A list of the selected reasons that are embedded in the optimized prompt|
 
+## DuckDuckGo search
+
+This component performs web searches using the [DuckDuckGo](https://www.duckduckgo.com) search engine with result-limiting capabilities.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_value | Search Query | The search query to be used for the DuckDuckGo search |
+| max_results | Max Results | Maximum number of results to return |
+| max_snippet_length | Max Snippet Length | Maximum length of each result snippet |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | List of search results as Data objects |
+
+## Exa Search
+
+This component provides an [https://exa.ai/](Exa Search) toolkit for search and content retrieval.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| metaphor_api_key | Exa Search API Key | API key for Exa Search (entered as a password) |
+| use_autoprompt | Use Autoprompt | Whether to use autoprompt feature (default: true) |
+| search_num_results | Search Number of Results | Number of results to return for search (default: 5) |
+| similar_num_results | Similar Number of Results | Number of similar results to return (default: 5) |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| tools | Tools | List of search tools provided by the toolkit |
 ## Glean Search API
 
 This component allows you to call the Glean Search API.
@@ -205,6 +260,22 @@ This component allows you to call the Serper.dev Google Search API.
 
 This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over `stdio` and exposes its tools as Langflow tools to be used by an Agent component.
 
+To use the MCP stdio component, follow these steps:
+
+1. Add the MCP stdio component to your workflow, and connect it to an agent. The flow looks like this:
+
+![MCP stdio component](/img/mcp-stdio-component.png)
+
+2. In the MCP stdio component, in the **mcp command** field, enter the command to start your MCP server. For a [Fetch](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) server, the command is:
+
+```bash
+uvx mcp-server-fetch
+```
+
+3. Open the **Playground**.
+Ask the agent to summarize recent tech news. The agent calls the MCP server function `fetch` and returns the summary.
+This confirms the MCP server is connected and working.
+
 ### Inputs
 
 | Name    | Type   | Description                                |
@@ -221,6 +292,13 @@ This component connects to a [Model Context Protocol (MCP)](https://modelcontext
 
 This component connects to a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server over [SSE (Server-Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) and exposes its tools as Langflow tools to be used by an Agent component.
 
+To use the MCP SSE component, follow these steps:
+
+1. Add the MCP SSE component to your workflow, and connect it to an agent. The flow looks similar to the MCP stdio component flow.
+
+2. In the MCP SSE component, in the **url** field, enter the URL of your current Langflow server's `mcp/sse` endpoint.
+This will fetch all currently available tools from the Langflow server.
+
 ### Inputs
 
 | Name | Type   | Description                                          |
@@ -232,7 +310,6 @@ This component connects to a [Model Context Protocol (MCP)](https://modelcontext
 | Name  | Type      | Description                               |
 |-------|-----------|-------------------------------------------|
 | tools | List[Tool]| List of tools exposed by the MCP server   |
-
 
 ## Python Code Structured Tool
 
@@ -352,6 +429,47 @@ This component creates a tool for searching using the Serp API.
 |---------|-----------|---------------------------------------------|
 | results | List[Data]| List of search results                      |
 | tool    | Tool      | Serp API search tool for use in LangChain   |
+
+## Tavily AI Search
+
+This component performs searches using the Tavily AI search engine, which is optimized for LLMs and RAG applications.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| api_key | Tavily API Key | Your Tavily API Key. |
+| query | Search Query | The search query you want to execute with Tavily. |
+| search_depth | Search Depth | The depth of the search. |
+| topic | Search Topic | The category of the search. |
+| max_results | Max Results | The maximum number of search results to return. |
+| include_images | Include Images | Include a list of query-related images in the response. |
+| include_answer | Include Answer | Include a short answer to original query. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The search results as a list of Data objects. |
+| text | Text | The search results formatted as a text string. |
+
+## Wikidata
+
+This component performs a search using the Wikidata API.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Query | The text query for similarity search on Wikidata. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The search results from Wikidata API as a list of Data objects. |
+| text | Message | The search results formatted as a text message. |
+
 
 ## Wikipedia API
 
