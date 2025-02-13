@@ -39,7 +39,7 @@ module.exports = {
         "Concepts/concepts-components",
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
-        "Concepts/concepts-api",
+        "Concepts/concepts-publish",
       ],
     },
     {
