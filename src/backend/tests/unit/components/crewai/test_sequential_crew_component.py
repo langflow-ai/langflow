@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.crewai import SequentialCrewComponent
 from tests.base import ComponentTestBaseWithClient
 
