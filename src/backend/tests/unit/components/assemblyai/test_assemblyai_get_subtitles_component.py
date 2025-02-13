@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.assemblyai import AssemblyAIGetSubtitles
 from tests.base import ComponentTestBaseWithClient
 
