@@ -38,7 +38,7 @@ export default function SessionSelector({
 }) {
   const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
-  const currentFlowId = playgroundPage ? uuidv5(clientId + realFlowId, uuidv5.DNS) : realFlowId;
+  const currentFlowId = playgroundPage ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS) : realFlowId;
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
   const { mutate: updateSessionName } = useUpdateSessionName();

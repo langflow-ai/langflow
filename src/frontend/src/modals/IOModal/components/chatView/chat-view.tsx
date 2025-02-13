@@ -41,7 +41,7 @@ export default function ChatView({
   const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
-    ? uuidv5(clientId + realFlowId, uuidv5.DNS)
+    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(

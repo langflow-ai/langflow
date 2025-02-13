@@ -63,7 +63,7 @@ export default function IOModal({
   const clientId = useUtilityStore((state) => state.clientId);
   let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = playgroundPage
-    ? uuidv5(clientId + realFlowId, uuidv5.DNS)
+    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
     : realFlowId;
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
