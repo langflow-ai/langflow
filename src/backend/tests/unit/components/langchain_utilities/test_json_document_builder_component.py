@@ -1,6 +1,5 @@
 import pytest
 from langchain_core.documents import Document
-
 from langflow.components.langchain_utilities import JSONDocumentBuilder
 from tests.base import ComponentTestBaseWithClient
 
