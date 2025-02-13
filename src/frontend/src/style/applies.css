@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@config "./../../../tailwind.config.mjs";
+@config "./../../tailwind.config.mjs";
 
 @layer base {
   * {
