@@ -11,6 +11,7 @@ import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -59,12 +60,15 @@ export default function IOModal({
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const deleteSession = useMessagesStore((state) => state.deleteSession);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = playgroundPage
+    ? uuidv5("publish_" + realFlowId, uuidv5.DNS)
+    : realFlowId;
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
   setPlaygroundPage(!!playgroundPage);
-  console.log(currentFlow?.icon, "currentFlow?.icon");
+  console.log(currentFlowId, "currentFlowId");
 
   const { mutate: deleteSessionFunction } = useDeleteMessages();
   const [visibleSession, setvisibleSession] = useState<string | undefined>(

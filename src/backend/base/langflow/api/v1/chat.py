@@ -153,6 +153,7 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     current_user: CurrentActiveUser,
+    flow_name: str | None = None,
 ):
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -167,7 +168,7 @@ async def build_flow(
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
-                graph = await create_graph(fresh_session, flow_id_str)
+                graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
             graph.validate_stream()
             first_layer = sort_vertices(graph)
@@ -209,12 +210,12 @@ async def build_flow(
             ),
         )
 
-    async def create_graph(fresh_session, flow_id_str: str) -> Graph:
+    async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None = None) -> Graph:
         if not data:
             return await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
-
-        result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-        flow_name = result.first()
+        if not flow_name:
+            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+            flow_name = result.first()
 
         return await build_graph_from_data(
             flow_id=flow_id_str,
@@ -762,21 +763,32 @@ async def build_public_tmp(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     log_builds: bool | None = True,
-    session: DbSession,
+    flow_name: str | None = None,
 ):
-    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
-    if access_type is not AccessTypeEnum.PUBLIC:
-        raise HTTPException(status_code=403, detail="Flow is not public")
+    async with session_scope() as session:
+        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
-    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    return await build_flow(
-        background_tasks=background_tasks,
-        flow_id=flow_id,
-        inputs=inputs,
-        data=data,
-        files=files,
-        stop_component_id=stop_component_id,
-        start_component_id=start_component_id,
-        log_builds=log_builds,
-        current_user=current_user,
-    )
+        if flow.access_type is not AccessTypeEnum.PUBLIC:
+            raise HTTPException(status_code=403, detail="Flow is not public")
+        # Copy the flow to a new flow with a new id
+        current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    new_id = f"publish_{flow_id}"
+    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
+    if not flow_name:
+        flow_name = new_id
+        # Create a deterministic UUID using uuid5 with DNS namespace and the flow_id string
+    try:
+        return await build_flow(
+            background_tasks=background_tasks,
+            flow_id=new_flow_id,
+            inputs=inputs,
+            data=data,
+            files=files,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            log_builds=log_builds,
+            current_user=current_user,
+            flow_name=flow_name,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Error building Component") from exc
