@@ -33,7 +33,7 @@ python3 python-test-script.py --message="tell me about something interesting"
 
 </TabItem>
 
-<TabItem value="JS API" label="Javascript API" default>
+<TabItem value="JS API" label="JS API" default>
 
 The **JavaScript API** tab displays code to interact with your flow in JavaScript.
 
