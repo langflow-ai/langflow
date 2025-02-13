@@ -273,7 +273,6 @@ export default function Dropdown({
     </CommandGroup>
   );
 
-  console.log(optionsMetaData, optionsMetaData?.[0]?.icon);
   const renderOptionsList = () => (
     <CommandList>
       <CommandGroup defaultChecked={false}>
