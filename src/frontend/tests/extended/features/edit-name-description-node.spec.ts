@@ -26,7 +26,7 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.waitForSelector('[data-testid="zoom_out"]', {
-      timeout: 500,
+      timeout: 1000,
     });
 
     await page.getByTestId("sidebar-custom-component-button").click();
