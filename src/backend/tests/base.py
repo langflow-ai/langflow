@@ -153,7 +153,16 @@ class ComponentTestBase:
                 for version in SUPPORTED_VERSIONS
             }
 
-        mapping = version_mappings[version]
+        try:
+            mapping = version_mappings[version]
+        except KeyError as e:
+            supported_versions = ", ".join(sorted(m["version"] for m in file_names_mapping))
+            msg = (
+                f"Version {version} not found in file_names_mapping for {self.__class__.__name__}.\n"
+                f"Currently defined versions: {supported_versions}\n"
+                "Please add this version to your component's file_names_mapping."
+            )
+            raise AssertionError(msg) from e
         if mapping["file_name"] is DID_NOT_EXIST:
             pytest.skip(f"Skipping version {version} as it does not have a file name defined.")
 
