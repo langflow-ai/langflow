@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.processing import UpdateDataComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
