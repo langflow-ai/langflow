@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import datetime
-from datetime import timezone
 
 from loguru import logger
 from sqlmodel import col, delete, select
@@ -12,47 +10,6 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
-
-
-async def cleanup_expired_public_flows() -> None:
-    """Clean up all expired public flows and their associated records."""
-    from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
-
-    settings = get_settings_service().settings
-    expiration_time = datetime.datetime.now(timezone.utc) - datetime.timedelta(seconds=settings.public_flow_expiration)
-
-    async with session_scope() as session:
-        # Find all expired public flows
-        expired_flows = (
-            await session.exec(
-                select(Flow).where(
-                    Flow.access_type == AccessTypeEnum.PUBLIC,
-                    Flow.updated_at < expiration_time,
-                )
-            )
-        ).all()
-
-        if expired_flows:
-            logger.debug(f"Found {len(expired_flows)} expired public flows")
-            for flow in expired_flows:
-                try:
-                    # Clean up any associated storage files
-                    storage_service = get_storage_service()
-                    try:
-                        files = await storage_service.list_files(str(flow.id))
-                        for file in files:
-                            await storage_service.delete_file(str(flow.id), file)
-                        # Delete the flow directory after all files are deleted
-                        flow_dir = storage_service.data_dir / str(flow.id)
-                        if flow_dir.exists():
-                            flow_dir.rmdir()
-                    except Exception as exc:  # noqa: BLE001
-                        logger.error(f"Failed to handle files for flow {flow.id}: {exc!s}")
-
-                except Exception as exc:  # noqa: BLE001
-                    logger.error(f"Error cleaning up expired public flow {flow.id}: {exc!s}")
-
-            logger.debug("Successfully cleaned up expired public flows")
 
 
 async def cleanup_orphaned_records() -> None:
@@ -137,9 +94,7 @@ class CleanupWorker:
         settings = get_settings_service().settings
         while not self._stop_event.is_set():
             try:
-                # First clean up expired public flows
-                await cleanup_expired_public_flows()
-                # Then clean up any orphaned records
+                # Clean up any orphaned records
                 await cleanup_orphaned_records()
             except Exception as exc:  # noqa: BLE001
                 logger.error(f"Error in cleanup worker: {exc!s}")
