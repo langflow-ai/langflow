@@ -36,7 +36,6 @@ test(
     await page.waitForSelector('[data-testid="shareable-playground"]', {
       timeout: 3000,
     });
-    // expect the save post request to be sent and resolved
     await expect(
       page.waitForResponse(
         (response) =>
