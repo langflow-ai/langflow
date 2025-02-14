@@ -266,6 +266,7 @@ export function groupByFamily(
     return (
       template?.type &&
       template?.show &&
+      !template?.advanced &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template?.input_types &&
