@@ -82,6 +82,12 @@ def blockbuster(request):
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
             )
 
+            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
+                bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+
+            for func in ["os.path.abspath", "os.scandir"]:
+                bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
+
             (
                 bb.functions["os.path.abspath"]
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
