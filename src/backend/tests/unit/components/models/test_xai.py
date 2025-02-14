@@ -169,16 +169,17 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             component.build_model()
         assert exc_info.value.body["message"] == "Invalid API key provided"
 
-    def test_json_mode(self, component_class, mocker):
-        component = component_class()
-        component.api_key = "test-key"
-        component.json_mode = True
-        component.temperature = 0.7
-        component.max_tokens = 100
-        component.model_name = "grok-2-latest"
-        component.model_kwargs = {}
-        component.api_base = "https://api.x.ai/v1"
-        component.seed = 1
+    def test_json_mode(self, mocker):
+        component = XAIModelComponent(
+            api_key = "test-key",
+            json_mode = True,
+            temperature = 0.7,
+            max_tokens = 100,
+            model_name = "grok-2-latest",
+            model_kwargs = {},
+            api_base = "https://api.x.ai/v1",
+            seed = 1,
+        )
 
         mock_instance = MagicMock()
         mock_bound_instance = MagicMock()
