@@ -7,12 +7,23 @@ from langflow.schema.message import Message
 
 class ParseDataComponent(Component):
     display_name = "Data to Message"
-    description = "Convert Data objects into Messages using any {field_name} from input data."
+    description = (
+        "Convert Data objects into Messages using any {field_name} from input data."
+    )
     icon = "message-square"
     name = "ParseData"
+    metadata = {
+        "legacy_name": "Parse Data",
+    }
 
     inputs = [
-        DataInput(name="data", display_name="Data", info="The data to convert to text.", is_list=True, required=True),
+        DataInput(
+            name="data",
+            display_name="Data",
+            info="The data to convert to text.",
+            is_list=True,
+            required=True,
+        ),
         MultilineInput(
             name="template",
             display_name="Template",
