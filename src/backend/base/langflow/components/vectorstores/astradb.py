@@ -442,21 +442,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def get_keyspace(self):
         keyspace = self.keyspace
-
         if keyspace:
             return keyspace.strip()
-
         return None
 
     def get_database_object(self, api_endpoint: str | None = None):
+        if self.database_cache:
+            return self.database_cache
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
-
-            return client.get_database(
+            self.database_cache = client.get_database(
                 api_endpoint=api_endpoint or self.get_api_endpoint(),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
+            return self.database_cache
         except Exception as e:
             msg = f"Error fetching database object: {e}"
             raise ValueError(msg) from e
@@ -464,20 +464,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
             if not database:
-                client = DataAPIClient(token=self.token, environment=self.environment)
-
-                database = client.get_database(
-                    api_endpoint=self.get_api_endpoint(),
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                )
-
+                database = self.get_database_object()
             collection = database.get_collection(collection_name, keyspace=self.get_keyspace())
-
             return collection.estimated_document_count()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             self.log(f"Error checking collection data: {e}")
-
             return None
 
     def _initialize_database_options(self):
@@ -497,40 +488,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
-        # Nothing to generate if we don't have an API endpoint yet
         api_endpoint = api_endpoint or self.get_api_endpoint()
         if not api_endpoint:
             return []
-
-        # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
-
-        # Get the list of collections
         collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
-
-        # Return the list of collections and metadata associated
-        return [
-            {
-                "name": col.name,
-                "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
-                "icon": (
-                    "vectorstores"
-                    if not col.options.vector or not col.options.vector.service
-                    else "NVIDIA"
-                    if col.options.vector.service.provider == "nvidia"
-                    else "OpenAI"
-                    if col.options.vector.service.provider == "openai"  # TODO: Add more icons
-                    else col.options.vector.service.provider.title()
-                ),
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
-            }
-            for col in collection_list
-        ]
+        return [self._get_collection_metadata(col, database) for col in collection_list]
 
     def reset_provider_options(self, build_config: dict):
         # Get the list of vectorize providers
@@ -946,3 +909,30 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def __init__(self):
+        super().__init__()
+        self.database_cache = None
+
+    def _get_collection_metadata(self, collection, database):
+        options_vector_service = collection.options.vector.service if collection.options.vector else None
+        service_provider = options_vector_service.provider if options_vector_service else None
+        service_model = options_vector_service.model_name if options_vector_service else None
+        icon = self._determine_icon(service_provider)
+        return {
+            "name": collection.name,
+            "records": self.collection_data(collection_name=collection.name, database=database),
+            "provider": service_provider,
+            "icon": icon,
+            "model": service_model,
+        }
+
+    def _determine_icon(self, provider):
+        if provider is None:
+            return "vectorstores"
+        provider = provider.lower()
+        if provider == "nvidia":
+            return "NVIDIA"
+        if provider == "openai":
+            return "OpenAI"
+        return provider.title()
