@@ -73,7 +73,7 @@ export default function FilesContextMenuComponent({
               handleSelectOptionsChange("rename");
             }}
             className="cursor-pointer"
-            data-testid="btn-edit-flow"
+            data-testid="btn-rename-file"
           >
             <ForwardedIconComponent
               name="SquarePen"
@@ -131,11 +131,11 @@ export default function FilesContextMenuComponent({
           )}
           <DropdownMenuItem
             onClick={(e) => {
-              e.preventDefault();
               e.stopPropagation();
               handleSelectOptionsChange("delete");
             }}
             className="cursor-pointer text-destructive"
+            data-testid="btn-delete-file"
           >
             <ForwardedIconComponent
               name={isLocal ? "Trash2" : "ListX"}
