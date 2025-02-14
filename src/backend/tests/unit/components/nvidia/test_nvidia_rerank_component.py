@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.nvidia import NvidiaRerankComponent
 from tests.base import ComponentTestBaseWithClient
 
