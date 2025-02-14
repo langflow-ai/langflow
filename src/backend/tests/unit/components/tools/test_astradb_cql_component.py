@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.tools import AstraDBCQLToolComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
