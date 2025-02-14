@@ -87,7 +87,7 @@ export default function ApiModal({
                   name="SlidersHorizontal"
                   className="h-3.5 w-3.5"
                 />
-                <span>Temporary overrides ({Object.keys(tweaks).length}) </span>
+                <span>Tweaks ({Object.keys(tweaks).length}) </span>
               </Button>
               <Separator orientation="vertical" className="ml-2 h-8" />
             </div>
