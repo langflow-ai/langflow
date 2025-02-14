@@ -48,6 +48,14 @@ class TestArXivComponent(ComponentTestBaseWithClient):
     def file_names_mapping(self):
         return []
 
+    @pytest.fixture
+    def module(self):
+        return "tools"
+
+    @pytest.fixture
+    def file_name(self):
+        return "arxiv"
+
     def test_component_initialization(self, component_class, default_kwargs):
         # Arrange
         component = component_class(**default_kwargs)

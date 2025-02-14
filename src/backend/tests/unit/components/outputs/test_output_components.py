@@ -27,11 +27,18 @@ class TestChatOutput(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        return [
-            {"version": "1.0.19", "module": "outputs", "file_name": "ChatOutput"},
-            {"version": "1.1.0", "module": "outputs", "file_name": "chat"},
-            {"version": "1.1.1", "module": "outputs", "file_name": "chat"},
-        ]
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    @pytest.fixture
+    def module(self):
+        """Return the module name for the component."""
+        return "outputs"
+
+    @pytest.fixture
+    def file_name(self):
+        """Return the file name for the component."""
+        return "chat"
 
 
 class TestTextOutputComponent(ComponentTestBaseWithoutClient):
@@ -47,8 +54,15 @@ class TestTextOutputComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        return [
-            {"version": "1.0.19", "module": "outputs", "file_name": "TextOutput"},
-            {"version": "1.1.0", "module": "outputs", "file_name": "text"},
-            {"version": "1.1.1", "module": "outputs", "file_name": "text"},
-        ]
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    @pytest.fixture
+    def module(self):
+        """Return the module name for the component."""
+        return "outputs"
+
+    @pytest.fixture
+    def file_name(self):
+        """Return the file name for the component."""
+        return "text"

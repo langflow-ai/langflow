@@ -29,11 +29,15 @@ class TestChatInput(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        return [
-            {"version": "1.0.19", "module": "inputs", "file_name": "ChatInput"},
-            {"version": "1.1.0", "module": "inputs", "file_name": "chat"},
-            {"version": "1.1.1", "module": "inputs", "file_name": "chat"},
-        ]
+        return []
+
+    @pytest.fixture
+    def module(self):
+        return "inputs"
+
+    @pytest.fixture
+    def file_name(self):
+        return "chat"
 
     async def test_message_response(self, component_class, default_kwargs):
         """Test that the message_response method returns a valid Message object."""
@@ -139,8 +143,12 @@ class TestTextInputComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        return [
-            {"version": "1.0.19", "module": "inputs", "file_name": "TextInput"},
-            {"version": "1.1.0", "module": "inputs", "file_name": "text"},
-            {"version": "1.1.1", "module": "inputs", "file_name": "text"},
-        ]
+        return []
+
+    @pytest.fixture
+    def module(self):
+        return "inputs"
+
+    @pytest.fixture
+    def file_name(self):
+        return "text"

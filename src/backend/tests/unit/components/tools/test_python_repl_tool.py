@@ -1,7 +1,7 @@
 import pytest
 from langflow.components.tools import PythonREPLComponent
 
-from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient
+from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
@@ -18,14 +18,18 @@ class TestPythonREPLComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        # Component not yet released, mark all versions as non-existent
-        return [
-            {"version": "1.0.17", "module": "tools", "file_name": DID_NOT_EXIST},
-            {"version": "1.0.18", "module": "tools", "file_name": DID_NOT_EXIST},
-            {"version": "1.0.19", "module": "tools", "file_name": DID_NOT_EXIST},
-            {"version": "1.1.0", "module": "tools", "file_name": DID_NOT_EXIST},
-            {"version": "1.1.1", "module": "tools", "file_name": DID_NOT_EXIST},
-        ]
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    @pytest.fixture
+    def module(self):
+        """Return the module name for the component."""
+        return "tools"
+
+    @pytest.fixture
+    def file_name(self):
+        """Return the file name for the component."""
+        return "python_repl"
 
     def test_component_initialization(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)

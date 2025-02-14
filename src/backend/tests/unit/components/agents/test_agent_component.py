@@ -20,7 +20,18 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
         return []
+
+    @pytest.fixture
+    def module(self):
+        """Return the module name for the component."""
+        return "agents"
+
+    @pytest.fixture
+    def file_name(self):
+        """Return the file name for the component."""
+        return "agent"
 
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
         component_instance = await super().component_setup(component_class, default_kwargs)
@@ -78,9 +89,9 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert all(provider in updated_config["agent_llm"]["options"] for provider in MODEL_PROVIDERS_DICT)
         assert "Anthropic" in updated_config["agent_llm"]["options"]
         assert updated_config["agent_llm"]["input_types"] == []
-        assert any("sonnet" in option.lower() for option in updated_config["model_name"]["options"]), (
-            f"Options: {updated_config['model_name']['options']}"
-        )
+        assert any(
+            "sonnet" in option.lower() for option in updated_config["model_name"]["options"]
+        ), f"Options: {updated_config['model_name']['options']}"
 
         # Test updating build config for Custom
         updated_config = await component.update_build_config(build_config, "Custom", "agent_llm")
@@ -113,6 +124,9 @@ async def test_agent_component_with_calculator():
         model_name="gpt-4o",
         llm_type="OpenAI",
         temperature=temperature,
+        session_id=str(uuid4()),
+        sender=MESSAGE_SENDER_AI,
+        sender_name=MESSAGE_SENDER_NAME_AI,
     )
 
     response = await agent.message_response()

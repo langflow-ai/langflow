@@ -24,18 +24,32 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         }
 
     @pytest.fixture
+    def module(self):
+        """Return the module name for the component."""
+        return "data"
+
+    @pytest.fixture
+    def file_name(self):
+        """Return the file name for the component."""
+        return "url"
+
+    @pytest.fixture
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
-        return [
-            {"version": "1.0.19", "module": "data", "file_name": "URL"},
-            {"version": "1.1.0", "module": "data", "file_name": "url"},
-            {"version": "1.1.1", "module": "data", "file_name": "url"},
-        ]
+        return []
 
     @pytest.fixture
     def mock_web_load(self):
         """Mock the WebBaseLoader.load method."""
         with patch("langchain_community.document_loaders.WebBaseLoader.load") as mock:
+            mock.return_value = [Mock(page_content="test content", metadata={"source": "https://example.com"})]
+            yield mock
+
+    @pytest.fixture
+    def mock_async_html_load(self):
+        """Mock the AsyncHtmlLoader.load method."""
+        with patch("langchain_community.document_loaders.AsyncHtmlLoader.load") as mock:
+            mock.return_value = [Mock(page_content="test content", metadata={"source": "https://example.com"})]
             yield mock
 
     def test_url_component(self, mock_web_load):

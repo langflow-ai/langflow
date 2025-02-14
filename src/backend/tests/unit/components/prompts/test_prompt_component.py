@@ -16,11 +16,18 @@ class TestPromptComponent(ComponentTestBaseWithClient):
 
     @pytest.fixture
     def file_names_mapping(self):
-        return [
-            {"version": "1.0.19", "module": "prompts", "file_name": "Prompt"},
-            {"version": "1.1.0", "module": "prompts", "file_name": "prompt"},
-            {"version": "1.1.1", "module": "prompts", "file_name": "prompt"},
-        ]
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    @pytest.fixture
+    def module(self):
+        """Return the module name for the component."""
+        return "prompts"
+
+    @pytest.fixture
+    def file_name(self):
+        """Return the file name for the component."""
+        return "prompt"
 
     def test_post_code_processing(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)

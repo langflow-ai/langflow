@@ -28,6 +28,14 @@ class TestBatchRunComponent(ComponentTestBaseWithoutClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
+    @pytest.fixture
+    def module(self):
+        return "helpers"
+
+    @pytest.fixture
+    def file_name(self):
+        return "batch_run"
+
     async def test_successful_batch_run_with_system_message(self):
         # Create test data
         test_df = DataFrame({"text": ["Hello", "World", "Test"]})

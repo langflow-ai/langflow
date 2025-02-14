@@ -15,7 +15,16 @@ class TestCalculatorComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
         return []
+
+    @pytest.fixture
+    def module(self):
+        return "tools"
+
+    @pytest.fixture
+    def file_name(self):
+        return "calculator"
 
     def test_basic_calculation(self, component_class, default_kwargs):
         # Arrange

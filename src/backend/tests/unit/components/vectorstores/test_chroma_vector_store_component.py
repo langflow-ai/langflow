@@ -6,7 +6,7 @@ import pytest
 from langflow.components.vectorstores.chroma import ChromaVectorStoreComponent
 from langflow.schema.data import Data
 
-from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+from tests.base import ComponentTestBaseWithoutClient
 
 
 @pytest.mark.api_key_required
@@ -33,13 +33,19 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
         }
 
     @pytest.fixture
-    def file_names_mapping(self) -> list[VersionComponentMapping]:
-        """Return the file names mapping for different versions."""
-        return [
-            {"version": "1.0.19", "module": "vectorstores", "file_name": "Chroma"},
-            {"version": "1.1.0", "module": "vectorstores", "file_name": "chroma"},
-            {"version": "1.1.1", "module": "vectorstores", "file_name": "chroma"},
-        ]
+    def file_names_mapping(self):
+        """Return an empty list since this component doesn't have version-specific files."""
+        return []
+
+    @pytest.fixture
+    def module(self):
+        """Return the module name for the component."""
+        return "vectorstores"
+
+    @pytest.fixture
+    def file_name(self):
+        """Return the file name for the component."""
+        return "chroma"
 
     def test_create_db(self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any]) -> None:
         """Test the create_collection method."""

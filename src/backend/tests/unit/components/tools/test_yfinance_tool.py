@@ -21,6 +21,14 @@ class TestYfinanceComponent:
     def file_names_mapping(self):
         return []
 
+    @pytest.fixture
+    def module(self):
+        return "tools"
+
+    @pytest.fixture
+    def file_name(self):
+        return "yfinance"
+
     def test_initialization(self, component_class):
         component = component_class()
         assert component.display_name == "Yahoo Finance"
