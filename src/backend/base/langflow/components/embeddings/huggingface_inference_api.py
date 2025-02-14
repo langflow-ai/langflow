@@ -1,3 +1,4 @@
+from functools import cache
 from urllib.parse import urlparse
 
 import requests
@@ -46,6 +47,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
         Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
+    @cache
     def validate_inference_endpoint(self, inference_endpoint: str) -> bool:
         parsed_url = urlparse(inference_endpoint)
         if not all([parsed_url.scheme, parsed_url.netloc]):
@@ -68,7 +70,7 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
         if response.status_code != requests.codes.ok:
             msg = f"HuggingFace health check failed: {response.status_code}"
             raise ValueError(msg)
-        # returning True to solve linting error
+
         return True
 
     def get_api_url(self) -> str:
@@ -90,17 +92,25 @@ class HuggingFaceInferenceAPIEmbeddingsComponent(LCEmbeddingsModel):
             or "huggingface.co" not in api_url.lower()
         )
 
-        if not self.api_key and is_local_url:
-            self.validate_inference_endpoint(api_url)
-            api_key = SecretStr("APIKeyForLocalDeployment")
-        elif not self.api_key:
-            msg = "API Key is required for non-local inference endpoints"
-            raise ValueError(msg)
+        if api_url not in self.validated_endpoints:
+            if not self.api_key and is_local_url:
+                self.validate_inference_endpoint(api_url)
+                self.validated_endpoints.add(api_url)
+                api_key = SecretStr("APIKeyForLocalDeployment")
+            elif not self.api_key:
+                msg = "API Key is required for non-local inference endpoints"
+                raise ValueError(msg)
+            else:
+                api_key = SecretStr(self.api_key)
         else:
-            api_key = SecretStr(self.api_key).get_secret_value()
+            api_key = SecretStr("APIKeyForLocalDeployment") if is_local_url else SecretStr(self.api_key)
 
         try:
             return self.create_huggingface_embeddings(api_key, api_url, self.model_name)
         except Exception as e:
             msg = "Could not connect to HuggingFace Inference API."
             raise ValueError(msg) from e
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.validated_endpoints = set()
