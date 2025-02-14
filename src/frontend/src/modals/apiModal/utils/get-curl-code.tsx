@@ -84,7 +84,6 @@ export function getNewCurlCode({
   const protocol = window.location.protocol;
   const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
-  // Convert tweaks object to a string if it exists and is active
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
 
