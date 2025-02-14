@@ -2,15 +2,9 @@ import { expect, test } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { generateRandomFilename } from "../../utils/generate-filename";
 
 // Function to generate random 10-character filename
-function generateRandomFilename() {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  return Array.from(
-    { length: 10 },
-    () => chars[Math.floor(Math.random() * chars.length)],
-  ).join("");
-}
 
 test(
   "should navigate to files page and show empty state",

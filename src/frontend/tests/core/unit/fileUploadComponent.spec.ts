@@ -3,15 +3,7 @@ import fs from "fs";
 import path from "path";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-// Function to generate random 10-character filename
-function generateRandomFilename() {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  return Array.from(
-    { length: 10 },
-    () => chars[Math.floor(Math.random() * chars.length)],
-  ).join("");
-}
+import { generateRandomFilename } from "../../utils/generate-filename";
 
 test(
   "should be able to upload a file",
