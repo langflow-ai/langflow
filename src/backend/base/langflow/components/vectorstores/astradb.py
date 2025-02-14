@@ -315,7 +315,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     @classmethod
-    def create_collection_api(
+    async def create_collection_api(
         cls,
         new_collection_name: str,
         token: str,
@@ -325,12 +325,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         dimension: int | None = None,
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
+        authentication: dict | None = None,
+        parameters: dict | None = None,
     ):
         # Create the data API client
         client = DataAPIClient(token=token)
 
         # Get the database object
-        database = client.get_database(api_endpoint=api_endpoint, token=token)
+        database = client.get_async_database(api_endpoint=api_endpoint, token=token)
 
         # Build vectorize options, if needed
         vectorize_options = None
@@ -340,12 +342,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     token=token, environment=environment, api_endpoint=api_endpoint
                 ).get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
-                authentication=None,
-                parameters=None,
+                authentication=authentication,
+                parameters=parameters,
             )
 
         # Create the collection
-        return database.create_collection(
+        return await database.create_collection(
             name=new_collection_name,
             keyspace=keyspace,
             dimension=dimension,
@@ -587,9 +589,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        # TODO: For initializing databases, show status as metadata
-        # This implies it came from the create dialog
-        if field_name == "database_name" and isinstance(field_value, dict):
+        # Callback for database creation
+        if field_name == "database_name" and isinstance(field_value, dict) and "new_database_name" in field_value:
             try:
                 await self.create_database_api(
                     new_database_name=field_value["new_database_name"],
@@ -616,7 +617,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return self.reset_collection_list(build_config)
 
         # Callback for the creation of collections
-        if field_name == "collection_name" and isinstance(field_value, dict):
+        if field_name == "collection_name" and isinstance(field_value, dict) and "new_collection_name" in field_value:
             try:
                 # Get the dimension if its a BYO provider
                 dimension = (
@@ -626,7 +627,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 )
 
                 # Create the collection
-                self.create_collection_api(
+                await self.create_collection_api(
                     new_collection_name=field_value["new_collection_name"],
                     token=self.token,
                     api_endpoint=build_config["api_endpoint"]["value"],
@@ -641,23 +642,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 raise ValueError(msg) from e
 
             # Add the new collection to the list of options
-            build_config["collection_name"]["value"] = build_config["new_collection_name"]["value"]
-            build_config["collection_name"]["options"] = build_config["collection_name"]["options"] + [
-                build_config["new_collection_name"]["value"]
-            ]
+            build_config["collection_name"]["value"] = field_value["new_collection_name"]
+            build_config["collection_name"]["options"].append(field_value["new_collection_name"])
 
             # Get the provider and model for the new collection
-            generation_provider = build_config["embedding_generation_provider"]["value"]
+            generation_provider = field_value["embedding_generation_provider"]
             provider = generation_provider if generation_provider != "Bring your own" else None
-            generation_model = build_config["embedding_generation_model"]["value"]
+            generation_model = field_value["embedding_generation_model"]
             model = generation_model if generation_model else None
 
             # Add the new collection to the list of options
+            icon = "NVIDIA" if provider == "Nvidia" else "vectorstores"
             build_config["collection_name"]["options_metadata"] = build_config["collection_name"][
                 "options_metadata"
-            ] + [{"records": 0, "provider": provider, "icon": "", "model": model}]
+            ] + [{"records": 0, "provider": provider, "icon": icon, "model": model}]
 
-            return self.reset_collection_list(build_config)
+            return build_config
 
         # When the component first executes, this is the update refresh call
         first_run = field_name == "collection_name" and not field_value and not build_config["database_name"]["options"]
@@ -685,7 +685,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return build_config
 
         # Refresh the collection name options
-        if field_name == "database_name":
+        if field_name == "database_name" and not isinstance(field_value, dict):
             # If missing, refresh the database options
             if field_value not in build_config["database_name"]["options"]:
                 build_config = await self.update_build_config(build_config, field_value=self.token, field_name="token")
@@ -708,7 +708,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return self.reset_collection_list(build_config)
 
         # Hide embedding model option if opriona_metadata provider is not null
-        if field_name == "collection_name" and field_value:
+        if field_name == "collection_name" and not isinstance(field_value, dict):
             # Assume we will be autodetecting the collection:
             build_config["autodetect_collection"]["value"] = True
 
