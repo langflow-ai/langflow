@@ -1,5 +1,5 @@
 import json
-from typing import Any, Union
+from typing import Any
 
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text, data_to_text_list
@@ -66,7 +66,7 @@ class ParseComponent(Component):
         """Detect whether the input is a DataFrame or Data object(s)."""
         if isinstance(self.input_data, DataFrame):
             return "DataFrame"
-        elif isinstance(self.input_data, (Data, list)) or self.input_data is None:
+        if isinstance(self.input_data, (Data, list)) or self.input_data is None:
             return "Data"
         raise ValueError(INVALID_INPUT_ERROR)
 
@@ -119,7 +119,7 @@ class ParseComponent(Component):
     def parse_combined_text(self) -> Message:
         """Parse input into a single combined text message."""
         input_type = self._detect_input_type()
-        
+
         if input_type == "DataFrame":
             df = self._handle_dataframe_input()
             lines = [self._format_dataframe_row(row.to_dict()) for _, row in df.iterrows()]
@@ -136,11 +136,11 @@ class ParseComponent(Component):
     def parse_as_list(self) -> list[Data]:
         """Parse input into a list of Data objects."""
         input_type = self._detect_input_type()
-        
+
         if input_type == "DataFrame":
             df = self._handle_dataframe_input()
             return [Data(text=self._format_dataframe_row(row.to_dict())) for _, row in df.iterrows()]
-        
+
         # input_type == "Data"
         data = self._handle_data_input()
         if self.template_to_parse and data:
