@@ -2,7 +2,12 @@ import {
   BROKEN_EDGES_WARNING,
   componentsToIgnoreUpdate,
 } from "@/constants/constants";
-import { track } from "@/customization/utils/analytics";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  track,
+  trackDataLoaded,
+  trackFlowBuild,
+} from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
   EdgeChange,
@@ -19,7 +24,7 @@ import {
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
 import { BuildStatus } from "../constants/enums";
-import { VertexBuildTypeAPI } from "../types/api";
+import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
   AllNodeType,
@@ -699,6 +704,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...get().verticesBuild!.verticesIds,
           ...next_vertices_ids,
         ];
+        if (
+          ENABLE_DATASTAX_LANGFLOW &&
+          vertexBuildData?.id?.includes("AstraDB")
+        ) {
+          const search_results: LogsLogType[] = Object.values(
+            vertexBuildData?.data?.logs?.search_results,
+          );
+          search_results.forEach((log) => {
+            if (
+              log.message.includes("Adding") &&
+              log.message.includes("documents") &&
+              log.message.includes("Vector Store")
+            ) {
+              trackDataLoaded(
+                get().currentFlow?.id,
+                get().currentFlow?.name,
+                "AstraDB Vector Store",
+                vertexBuildData?.id,
+              );
+            }
+          });
+        }
         get().updateVerticesBuild({
           verticesIds: newIds,
           verticesLayers: newLayers,
@@ -747,6 +774,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setIsBuilding(false);
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
+          flowId: get().currentFlow?.id,
+        });
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title: string, list: string[], elementList) => {
@@ -767,6 +797,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         setErrorData({ list, title });
         get().setIsBuilding(false);
         get().buildController.abort();
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
+          flowId: get().currentFlow?.id,
+          error: list,
+        });
       },
       onBuildStart: (elementList) => {
         const idList = elementList
