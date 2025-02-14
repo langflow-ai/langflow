@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Langflow",
-        "version": "1.1.1"
+        "version": "1.1.4"
     },
     "paths": {
         "/api/v1/build/{flow_id}/vertices": {
@@ -13,6 +13,7 @@
                 "summary": "Retrieve Vertices Order",
                 "description": "Retrieve the vertices order for a given flow.\n\nArgs:\n    flow_id (str): The ID of the flow.\n    background_tasks (BackgroundTasks): The background tasks.\n    data (Optional[FlowDataRequest], optional): The flow data. Defaults to None.\n    stop_component_id (str, optional): The ID of the stop component. Defaults to None.\n    start_component_id (str, optional): The ID of the start component. Defaults to None.\n    session (AsyncSession, optional): The session dependency.\n\nReturns:\n    VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.\n\nRaises:\n    HTTPException: If there is an error checking the build status.",
                 "operationId": "retrieve_vertices_order_api_v1_build__flow_id__vertices_post",
+                "deprecated": true,
                 "parameters": [
                     {
                         "name": "flow_id",
@@ -215,6 +216,7 @@
                 "summary": "Build Vertex",
                 "description": "Build a vertex instead of the entire graph.\n\nArgs:\n    flow_id (str): The ID of the flow.\n    vertex_id (str): The ID of the vertex to build.\n    background_tasks (BackgroundTasks): The background tasks dependency.\n    inputs (Optional[InputValueRequest], optional): The input values for the vertex. Defaults to None.\n    files (List[str], optional): The files to use. Defaults to None.\n    current_user (Any, optional): The current user dependency. Defaults to Depends(get_current_active_user).\n\nReturns:\n    VertexBuildResponse: The response containing the built vertex information.\n\nRaises:\n    HTTPException: If there is an error building the vertex.",
                 "operationId": "build_vertex_api_v1_build__flow_id__vertices__vertex_id__post",
+                "deprecated": true,
                 "security": [
                     {
                         "OAuth2PasswordBearer": []
@@ -288,6 +290,7 @@
                 "summary": "Build Vertex Stream",
                 "description": "Build a vertex instead of the entire graph.\n\nThis function is responsible for building a single vertex instead of the entire graph.\nIt takes the `flow_id` and `vertex_id` as required parameters, and an optional `session_id`.\nIt also depends on the `ChatService` and `SessionService` services.\n\nIf `session_id` is not provided, it retrieves the graph from the cache using the `chat_service`.\nIf `session_id` is provided, it loads the session data using the `session_service`.\n\nOnce the graph is obtained, it retrieves the specified vertex using the `vertex_id`.\nIf the vertex does not support streaming, an error is raised.\nIf the vertex has a built result, it sends the result as a chunk.\nIf the vertex is not frozen or not built, it streams the vertex data.\nIf the vertex has a result, it sends the result as a chunk.\nIf none of the above conditions are met, an error is raised.\n\nIf any exception occurs during the process, an error message is sent.\nFinally, the stream is closed.\n\nReturns:\n    A `StreamingResponse` object with the streamed vertex data in text/event-stream format.\n\nRaises:\n    HTTPException: If an error occurs while building the vertex.",
                 "operationId": "build_vertex_stream_api_v1_build__flow_id___vertex_id__stream_get",
+                "deprecated": true,
                 "parameters": [
                     {
                         "name": "flow_id",
@@ -361,7 +364,7 @@
                 "tags": [
                     "Base"
                 ],
-                "summary": "Run Flow",
+                "summary": "Simplified Run Flow",
                 "description": "Executes a specified flow by ID with support for streaming and telemetry.\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    request (Request): The incoming HTTP request\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result",
                 "operationId": "simplified_run_flow_api_v1_run__flow_id_or_name__post",
                 "security": [
@@ -7476,6 +7479,16 @@
                             }
                         ],
                         "title": "Required Inputs"
+                    },
+                    "allows_loop": {
+                        "type": "boolean",
+                        "title": "Allows Loop",
+                        "default": false
+                    },
+                    "tool_mode": {
+                        "type": "boolean",
+                        "title": "Tool Mode",
+                        "default": true
                     }
                 },
                 "type": "object",
@@ -8054,88 +8067,7 @@
                 "title": "ResultData"
             },
             "ResultDataResponse": {
-                "properties": {
-                    "results": {
-                        "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Results"
-                    },
-                    "outputs": {
-                        "additionalProperties": {
-                            "$ref": "#/components/schemas/OutputValue"
-                        },
-                        "type": "object",
-                        "title": "Outputs"
-                    },
-                    "logs": {
-                        "additionalProperties": {
-                            "items": {
-                                "$ref": "#/components/schemas/Log"
-                            },
-                            "type": "array"
-                        },
-                        "type": "object",
-                        "title": "Logs"
-                    },
-                    "message": {
-                        "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Message"
-                    },
-                    "artifacts": {
-                        "anyOf": [
-                            {},
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Artifacts"
-                    },
-                    "timedelta": {
-                        "anyOf": [
-                            {
-                                "type": "number"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Timedelta"
-                    },
-                    "duration": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Duration"
-                    },
-                    "used_frozen_result": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Used Frozen Result",
-                        "default": false
-                    }
-                },
-                "type": "object",
-                "title": "ResultDataResponse"
+                "type": "object"
             },
             "RunOutputs": {
                 "properties": {
@@ -8610,14 +8542,7 @@
                         "title": "Target Id"
                     },
                     "inputs": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
+                        "type": "object",
                         "title": "Inputs"
                     },
                     "outputs": {

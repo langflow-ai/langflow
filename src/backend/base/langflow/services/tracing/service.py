@@ -78,7 +78,7 @@ class TracingService(Service):
                 self.logs_queue.task_done()
 
     async def start(self) -> None:
-        if self.running or self.deactivated:
+        if self.running:
             return
         try:
             self.running = True
@@ -113,8 +113,11 @@ class TracingService(Service):
         self.outputs_metadata = defaultdict(dict)
 
     async def initialize_tracers(self) -> None:
+        if self.deactivated:
+            return
         try:
             await self.start()
+
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()

@@ -49,10 +49,10 @@ test(
     //fourth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
+    await page.getByTestId("sidebar-search-input").fill("data to message");
 
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 100, y: 500 },
       });
@@ -144,7 +144,7 @@ import time
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
 

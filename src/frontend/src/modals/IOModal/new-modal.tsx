@@ -113,8 +113,7 @@ export default function IOModal({
 
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
-  const lockChat = useFlowStore((state) => state.lockChat);
-  const setLockChat = useFlowStore((state) => state.setLockChat);
+
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const messages = useMessagesStore((state) => state.messages);
   const [sessions, setSessions] = useState<string[]>(
@@ -147,8 +146,6 @@ export default function IOModal({
       files?: string[];
     }): Promise<void> => {
       if (isBuilding) return;
-      setIsBuilding(true);
-      setLockChat(true);
       setChatValue("");
       for (let i = 0; i < repeat; i++) {
         await buildFlow({
@@ -157,24 +154,12 @@ export default function IOModal({
           files: files,
           silent: true,
           session: sessionId,
-          setLockChat,
         }).catch((err) => {
           console.error(err);
-          setLockChat(false);
         });
       }
-      // refetch();
-      setLockChat(false);
     },
-    [
-      isBuilding,
-      setIsBuilding,
-      setLockChat,
-      chatValue,
-      chatInput?.id,
-      sessionId,
-      buildFlow,
-    ],
+    [isBuilding, setIsBuilding, chatValue, chatInput?.id, sessionId, buildFlow],
   );
 
   useEffect(() => {
@@ -264,7 +249,7 @@ export default function IOModal({
           <div className="flex-max-width h-full">
             <div
               className={cn(
-                "flex h-full flex-shrink-0 flex-col justify-start transition-all duration-300",
+                "flex h-full flex-shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
                 sidebarOpen
                   ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
                   : "w-0",
@@ -331,8 +316,6 @@ export default function IOModal({
                 messagesFetched={messagesFetched}
                 sessionId={sessionId}
                 sendMessage={sendMessage}
-                lockChat={lockChat}
-                setLockChat={setLockChat}
                 canvasOpen={canvasOpen}
                 setOpen={setOpen}
               />

@@ -75,6 +75,12 @@ def blockbuster(request):
                 .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
             )
 
+            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
+                bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+
+            for func in ["os.path.abspath", "os.scandir"]:
+                bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
+
             (
                 bb.functions["os.path.abspath"]
                 .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
@@ -103,6 +109,8 @@ def pytest_configure(config):
     pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
     pytest.SIMPLE_API_TEST = data_path / "SimpleAPITest.json"
     pytest.MEMORY_CHATBOT_NO_LLM = data_path / "MemoryChatbotNoLLM.json"
+    pytest.ENV_VARIABLE_TEST = data_path / "env_variable_test.json"
+    pytest.LOOP_TEST = data_path / "LoopTest.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
@@ -121,6 +129,7 @@ def get_text():
         pytest.TWO_OUTPUTS,
         pytest.VECTOR_STORE_PATH,
         pytest.MEMORY_CHATBOT_NO_LLM,
+        pytest.LOOP_TEST,
     ]:
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
@@ -322,6 +331,11 @@ def json_webhook_test():
 @pytest.fixture
 def json_memory_chatbot_no_llm():
     return pytest.MEMORY_CHATBOT_NO_LLM.read_text(encoding="utf-8")
+
+
+@pytest.fixture
+def json_loop_test():
+    return pytest.LOOP_TEST.read_text(encoding="utf-8")
 
 
 @pytest.fixture(autouse=True)

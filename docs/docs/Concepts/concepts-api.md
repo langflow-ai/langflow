@@ -82,7 +82,7 @@ Clicking the Chat Widget HTML tab, you'll get the code to be inserted. Read belo
 To embed the chat widget into any HTML page, insert the code snippet. inside a `<body>` tag.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.6/dist/build/static/js/bundle.min.js""></script>
+<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js""></script>
 
   <langflow-chat
     window_title="Basic Prompting"
@@ -205,4 +205,17 @@ Props with the type JSON need to be passed as stringified JSONs, with the format
 | user_message_style    | JSON    | No       | Determines the formatting for user messages in the chat window.                                                                                                  |
 | width                 | Number  | No       | Sets the width of the chat window in pixels.                                                                                                                     |
 | window_title          | String  | No       | Sets the title displayed in the chat window's header or title bar.                                                                                               |
+
+## Webhook cURL
+
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+
+```bash
+curl -X POST \
+  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  -H 'Content-Type: application/json'\
+  -d '{"any": "data"}'
+  ```
+
+To test the **Webhook** component in your flow, see the [Webhook component](/components-data#webhook).
 

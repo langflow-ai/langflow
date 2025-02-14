@@ -8,7 +8,7 @@ import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 
 test(
   "Market Research",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

@@ -15,7 +15,7 @@ Memory components provide access to their respective external databases **as mem
 
 This example flow stores and retrieves chat history from an **Astra DB Chat Memory** component with **Store Message** and **Chat Memory** components.
 
-The **Store Message** helper component stores chat memories as [Data](/configuration-objects) objects, and the **Message History** helper component retrieves chat messages as [Data](/configuration-objects) objects or strings.
+The **Store Message** helper component stores chat memories as [Data](/concepts-objects) objects, and the **Message History** helper component retrieves chat messages as [Data](/concepts-objects) objects or strings.
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
@@ -60,6 +60,53 @@ This component creates a `CassandraChatMessageHistory` instance, enabling storag
 | Name            | Type                    | Description                                                  |
 |-----------------|-------------------------|--------------------------------------------------------------|
 | message_history | BaseChatMessageHistory  | An instance of CassandraChatMessageHistory for the session.  |
+
+## Mem0 Chat Memory
+
+The Mem0 Chat Memory component retrieves and stores chat messages using Mem0 memory storage.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| mem0_config | Mem0 Configuration | Configuration dictionary for initializing Mem0 memory instance. |
+| ingest_message | Message to Ingest | The message content to be ingested into Mem0 memory. |
+| existing_memory | Existing Memory Instance | Optional existing Mem0 memory instance. |
+| user_id | User ID | Identifier for the user associated with the messages. |
+| search_query | Search Query | Input text for searching related memories in Mem0. |
+| mem0_api_key | Mem0 API Key | API key for Mem0 platform (leave empty to use the local version). |
+| metadata | Metadata | Additional metadata to associate with the ingested message. |
+| openai_api_key | OpenAI API Key | API key for OpenAI. This item is required if you use OpenAI embeddings without a provided configuration. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| memory | Mem0 Memory | The resulting Mem0 Memory object after ingesting data. |
+| search_results | Search Results | The search results from querying Mem0 memory. |
+
+
+## Redis Chat Memory
+
+This component retrieves and stores chat messages from Redis.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| host | hostname | IP address or hostname. |
+| port | port | Redis Port Number. |
+| database | database | Redis database. |
+| username | Username | The Redis user name. |
+| password | Password | The password for username. |
+| key_prefix | Key prefix | Key prefix. |
+| session_id | Session ID | Session ID for the message. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| memory | Memory | The Redis chat message history object |
 
 ## ZepChatMemory Component
 
