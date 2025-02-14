@@ -597,7 +597,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If we retrieved options based on the token, show the dropdown
         build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
         build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+            {k: v for k, v in col.items() if k != "name"} for col in collection_options
         ]
 
         # Reset the selected collection
@@ -616,7 +616,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If we retrieved options based on the token, show the dropdown
         build_config["database_name"]["options"] = [db["name"] for db in database_options]
         build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            {k: v for k, v in db.items() if k != "name"} for db in database_options
         ]
 
         # Reset the selected database
@@ -740,7 +740,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return self.reset_build_config(build_config)
 
         # If this is the first execution of the component, reset and build database list
-        if first_run or field_name in ["token", "environment"]:
+        if first_run or field_name in {"token", "environment"}:
             return self.reset_database_list(build_config)
 
         # Refresh the collection name options
@@ -782,7 +782,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 # Add the new collection to the list of options
                 build_config["collection_name"]["options"].append(field_value)
                 build_config["collection_name"]["options_metadata"].append(
-                    {"records": 0, "provider": None, "icon": "", "model": None}
+                    {
+                        "records": 0,
+                        "provider": None,
+                        "icon": "",
+                        "model": None,
+                    }
                 )
 
                 # Ensure that autodetect collection is set to False, since its a new collection

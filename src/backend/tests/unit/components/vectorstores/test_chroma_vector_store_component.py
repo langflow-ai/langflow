@@ -271,9 +271,9 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
             assert isinstance(data_obj, Data)
             assert "id" in data_obj.data
             assert "text" in data_obj.data
-            assert data_obj.data["text"] in ["Document 1", "Document 2"]
+            assert data_obj.data["text"] in {"Document 1", "Document 2"}
             assert "metadata_field" in data_obj.data
-            assert data_obj.data["metadata_field"] in ["value1", "value2"]
+            assert data_obj.data["metadata_field"] in {"value1", "value2"}
 
     def test_chroma_collection_to_data_without_metadata(
         self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any]
@@ -300,7 +300,7 @@ class TestChromaVectorStoreComponent(ComponentTestBaseWithoutClient):
             assert isinstance(data_obj, Data)
             assert "id" in data_obj.data
             assert "text" in data_obj.data
-            assert data_obj.data["text"] in ["Simple document 1", "Simple document 2"]
+            assert data_obj.data["text"] in {"Simple document 1", "Simple document 2"}
 
     def test_chroma_collection_to_data_empty_collection(
         self, component_class: type[ChromaVectorStoreComponent], default_kwargs: dict[str, Any]
