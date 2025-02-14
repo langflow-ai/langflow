@@ -93,13 +93,13 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
 
     def test_build_model(self, mocker):
         component = XAIModelComponent(
-            temperature = 0.7,
-            max_tokens = 100,
-            api_key = "test-key",
-            model_name = "grok-2-latest",
-            model_kwargs = {},
-            api_base = "https://api.x.ai/v1",
-            seed = 1,
+            temperature=0.7,
+            max_tokens=100,
+            api_key="test-key",
+            model_name="grok-2-latest",
+            model_kwargs={},
+            api_base="https://api.x.ai/v1",
+            seed=1,
         )
 
         mock_chat_openai = mocker.patch("langflow.components.models.xai.ChatOpenAI", return_value=MagicMock())
@@ -171,14 +171,14 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
 
     def test_json_mode(self, mocker):
         component = XAIModelComponent(
-            api_key = "test-key",
-            json_mode = True,
-            temperature = 0.7,
-            max_tokens = 100,
-            model_name = "grok-2-latest",
-            model_kwargs = {},
-            api_base = "https://api.x.ai/v1",
-            seed = 1,
+            api_key="test-key",
+            json_mode=True,
+            temperature=0.7,
+            max_tokens=100,
+            model_name="grok-2-latest",
+            model_kwargs={},
+            api_base="https://api.x.ai/v1",
+            seed=1,
         )
 
         mock_instance = MagicMock()
