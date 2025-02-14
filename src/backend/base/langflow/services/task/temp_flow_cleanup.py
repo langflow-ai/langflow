@@ -44,8 +44,8 @@ async def cleanup_expired_public_flows() -> None:
                             await storage_service.delete_file(str(flow.id), file)
                         # Delete the flow directory after all files are deleted
                         flow_dir = storage_service.data_dir / str(flow.id)
-                        if await flow_dir.exists():
-                            await flow_dir.rmdir()
+                        if flow_dir.exists():
+                            flow_dir.rmdir()
                     except Exception as exc:  # noqa: BLE001
                         logger.error(f"Failed to handle files for flow {flow.id}: {exc!s}")
 
@@ -93,8 +93,8 @@ async def cleanup_orphaned_records() -> None:
                                     logger.error(f"Failed to delete file {file} for flow {flow_id}: {exc!s}")
                             # Delete the flow directory after all files are deleted
                             flow_dir = storage_service.data_dir / str(flow_id)
-                            if await flow_dir.exists():
-                                await flow_dir.rmdir()
+                            if flow_dir.exists():
+                                flow_dir.rmdir()
                         except Exception as exc:  # noqa: BLE001
                             logger.error(f"Failed to list files for flow {flow_id}: {exc!s}")
 
