@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.scrapegraph import ScrapeGraphSmartScraperApi
 from tests.base import ComponentTestBaseWithClient
 
