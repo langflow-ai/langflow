@@ -78,7 +78,11 @@ export default function PublishDropdown() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="default" className="!h-8 !w-[95px] font-medium">
+          <Button
+            variant="default"
+            className="!h-8 !w-[95px] font-medium"
+            data-testid="publish-button"
+          >
             Publish
             <IconComponent
               name="ChevronDown"
@@ -132,6 +136,7 @@ export default function PublishDropdown() {
           >
             <div className={!hasIO ? "cursor-not-allowed" : ""}>
               <DropdownMenuItem
+                data-testid="shareable-playground"
                 disabled={!hasIO}
                 className="deploy-dropdown-item group"
                 onClick={() => {
@@ -152,6 +157,7 @@ export default function PublishDropdown() {
                     className={`icon-size ml-auto pb-6 pr-10 text-foreground`}
                   >
                     <Switch
+                      data-testid="publish-switch"
                       className="scale-[85%]"
                       checked={isPublished}
                       onClick={(e) => {
