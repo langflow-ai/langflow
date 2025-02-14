@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-6fb13",
+            "id": "AgentQL-yCxh0",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7MSQT",
+            "id": "Agent-bettA",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-6fb13{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-6fb13œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7MSQT{œfieldNameœ:œtoolsœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__AgentQL-yCxh0{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-yCxh0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-bettA{œfieldNameœ:œtoolsœ,œidœ:œAgent-bettAœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-6fb13",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-6fb13œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-yCxh0",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-yCxh0œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-bettA",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-bettAœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-141bi",
+            "id": "TavilySearchComponent-YkkKr",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7MSQT",
+            "id": "Agent-bettA",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-141bi{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-141biœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7MSQT{œfieldNameœ:œtoolsœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "xy-edge__TavilySearchComponent-YkkKr{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-YkkKrœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-bettA{œfieldNameœ:œtoolsœ,œidœ:œAgent-bettAœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-141bi",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-141biœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-YkkKr",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-YkkKrœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-bettA",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-bettAœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-X0wLK",
+            "id": "ChatInput-6s4mH",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-7MSQT",
+            "id": "Agent-bettA",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-X0wLK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X0wLKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7MSQT{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__ChatInput-6s4mH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-6s4mHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-bettA{œfieldNameœ:œinput_valueœ,œidœ:œAgent-bettAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-X0wLK",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X0wLKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-6s4mH",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-6s4mHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-bettA",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-bettAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-7MSQT",
+            "id": "Agent-bettA",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,25 +99,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-QZLoV",
+            "id": "ChatOutput-frsc5",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-7MSQT{œdataTypeœ:œAgentœ,œidœ:œAgent-7MSQTœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-QZLoV{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-QZLoVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "xy-edge__Agent-bettA{œdataTypeœ:œAgentœ,œidœ:œAgent-bettAœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-frsc5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-frsc5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-7MSQT",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-7MSQTœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-QZLoV",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-QZLoVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-bettA",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-bettAœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-frsc5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-frsc5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-X0wLK",
+          "id": "ChatInput-6s4mH",
           "node": {
             "base_classes": [
               "Message"
@@ -414,21 +414,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-X0wLK",
+        "id": "ChatInput-6s4mH",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
           "x": 32.99622536761149,
-          "y": 367.6878380048698
+          "y": 390.87664574793473
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-QZLoV",
+          "id": "ChatOutput-frsc5",
           "node": {
             "base_classes": [
               "Message"
@@ -706,7 +706,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-QZLoV",
+        "id": "ChatOutput-frsc5",
         "measured": {
           "height": 66,
           "width": 192
@@ -720,13 +720,14 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-141bi",
+          "id": "TavilySearchComponent-YkkKr",
           "node": {
             "base_classes": [
               "Data",
               "Message"
             ],
             "beta": false,
+            "category": "tools",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
@@ -738,14 +739,15 @@
               "query",
               "search_depth",
               "topic",
-              "time_range",
               "max_results",
               "include_images",
               "include_answer"
             ],
             "frozen": false,
             "icon": "TavilyIcon",
+            "key": "TavilySearchComponent",
             "legacy": false,
+            "lf_version": "1.1.4.post1",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -767,6 +769,7 @@
               }
             ],
             "pinned": false,
+            "score": 0.0075846556637275304,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -804,7 +807,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily AI Search\"\n    description = \"\"\"**Tavily AI** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_range\",\n            display_name=\"Time Range\",\n            info=\"The time range back from the current date to include in the search results.\",\n            options=[\"day\", \"week\", \"month\", \"year\"],\n            value=None,\n            advanced=True,\n            combobox=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n                \"time_range\": self.time_range,\n            }\n\n            with httpx.Client() as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                data_results.append(\n                    Data(\n                        text=content,\n                        data={\n                            \"title\": result.get(\"title\"),\n                            \"url\": result.get(\"url\"),\n                            \"content\": content,\n                            \"score\": result.get(\"score\"),\n                        },\n                    )\n                )\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily AI Search\"\n    description = \"\"\"**Tavily AI** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n            }\n\n            with httpx.Client() as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                data_results.append(\n                    Data(\n                        text=content,\n                        data={\n                            \"title\": result.get(\"title\"),\n                            \"url\": result.get(\"url\"),\n                            \"content\": content,\n                            \"score\": result.get(\"score\"),\n                        },\n                    )\n                )\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
               },
               "include_answer": {
                 "_input_type": "BoolInput",
@@ -905,30 +908,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "advanced"
-              },
-              "time_range": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": true,
-                "dialog_inputs": {},
-                "display_name": "Time Range",
-                "dynamic": false,
-                "info": "The time range back from the current date to include in the search results.",
-                "name": "time_range",
-                "options": [
-                  "day",
-                  "week",
-                  "month",
-                  "year"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str"
               },
               "tools_metadata": {
                 "_input_type": "TableInput",
@@ -1052,21 +1031,21 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-141bi",
+        "id": "TavilySearchComponent-YkkKr",
         "measured": {
-          "height": 435,
+          "height": 437,
           "width": 320
         },
         "position": {
-          "x": 345.9762510966062,
-          "y": 500.79656821057074
+          "x": 343.39971690293237,
+          "y": 496.93176692006
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "AgentQL-6fb13",
+          "id": "AgentQL-yCxh0",
           "node": {
             "base_classes": [
               "Data"
@@ -1124,7 +1103,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1332,9 +1311,9 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-6fb13",
+        "id": "AgentQL-yCxh0",
         "measured": {
-          "height": 497,
+          "height": 499,
           "width": 320
         },
         "position": {
@@ -1346,7 +1325,7 @@
       },
       {
         "data": {
-          "id": "Agent-7MSQT",
+          "id": "Agent-bettA",
           "node": {
             "base_classes": [
               "Message"
@@ -1495,7 +1474,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1996,9 +1975,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-7MSQT",
+        "id": "Agent-bettA",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -2010,62 +1989,61 @@
       },
       {
         "data": {
-          "id": "note-atyJV",
+          "id": "note-N2BIW",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "## Get Your AgentQL API Key\n\n**Steps**:\n\n1. **Visit** [AgentQL's API Key Page](https://dev.agentql.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new AgentQL account.\n\n3. **Generate API Key**:\n   - Click \"+ Create a new API Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the AgentQL API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
             "display_name": "",
             "documentation": "",
             "template": {
-              "backgroundColor": "transparent"
+              "backgroundColor": "rose"
             }
           },
           "type": "note"
         },
         "dragging": false,
-        "id": "note-atyJV",
+        "id": "note-N2BIW",
         "measured": {
-          "height": 324,
-          "width": 324
+          "height": 325,
+          "width": 325
         },
         "position": {
-          "x": 775.1028775592921,
-          "y": -131.5725508478389
+          "x": -45.4032980635786,
+          "y": -72.98737363115742
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "note-jHwfH",
+          "id": "note-KF5EU",
           "node": {
-            "description": "### 💡 Add your AgentQL API key here",
+            "description": "## Get Your AgentQL API Key\n\n**Steps**:\n\n1. **Visit** [AgentQL's API Key Page](https://dev.agentql.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new AgentQL account.\n\n3. **Generate API Key**:\n   - Click \"+ Create a new API Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the AgentQL API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
             "display_name": "",
             "documentation": "",
             "template": {
-              "backgroundColor": "transparent"
+              "backgroundColor": "rose"
             }
           },
           "type": "note"
         },
         "dragging": false,
-        "height": 346,
-        "id": "note-jHwfH",
+        "id": "note-KF5EU",
         "measured": {
-          "height": 346,
-          "width": 324
+          "height": 325,
+          "width": 325
         },
         "position": {
-          "x": 328.21954223681814,
-          "y": -160.4106577664784
+          "x": -40.067075877475474,
+          "y": 602.0651422680113
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "note-5TPRO",
+          "id": "note-ZXWAw",
           "node": {
-            "description": "# Price Deal Finder \n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
+            "description": "# Price Deal Finder\n\n## Quick Start\n\n1. **Enter** a product in Chat Input (ex. \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n2. **Tavily AI Search** searches for e-commerce platforms\n3. **AgentQL** extracts prices from e-commerce platforms\n4. **Response** appears in Chat Output",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -2073,61 +2051,39 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 674,
-        "id": "note-5TPRO",
+        "height": 402,
+        "id": "note-ZXWAw",
         "measured": {
-          "height": 674,
-          "width": 467
+          "height": 402,
+          "width": 325
         },
         "position": {
-          "x": -472.5459222813072,
-          "y": 102.70113417861305
+          "x": -458.42896304977614,
+          "y": 170.57949772149323
         },
         "resizing": false,
-        "selected": false,
+        "selected": true,
         "type": "noteNode",
-        "width": 466
-      },
-      {
-        "data": {
-          "id": "note-eqJwa",
-          "node": {
-            "description": "### 💡 Add your Tavily AI Search key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-eqJwa",
-        "measured": {
-          "height": 324,
-          "width": 344
-        },
-        "position": {
-          "x": 331.0865722920669,
-          "y": 447.2225407807426
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 345
+        "width": 330
       }
     ],
     "viewport": {
-      "x": 443.6808096885552,
-      "y": 80.83479654841267,
-      "zoom": 0.7762365447780835
+      "x": 228.71890849754823,
+      "y": 196.0835161981173,
+      "zoom": 0.34678311694428676
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
-  "id": "ab091b94-13c1-42af-9f9b-3689e99fb0bf",
+  "gradient": "4",
+  "icon": "DollarSign",
+  "id": "891a31e2-beb2-4fcc-afae-a745763730d1",
   "is_component": false,
-  "last_tested_version": "1.1.5",
-  "name": "Price Deal Finder"
+  "last_tested_version": "1.1.4.post1",
+  "name": "Price Deal Finder",
+  "tags": [
+    "web-scraping",
+    "agents",
+    "assistants"
+  ]
 }
