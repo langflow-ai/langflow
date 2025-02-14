@@ -82,7 +82,6 @@ export function getNewCurlCode({
 }): string {
   const host = window.location.host;
   const protocol = window.location.protocol;
-  // get the api url
   const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
   // Convert tweaks object to a string if it exists and is active
