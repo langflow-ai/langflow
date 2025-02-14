@@ -2,7 +2,12 @@ import {
   BROKEN_EDGES_WARNING,
   componentsToIgnoreUpdate,
 } from "@/constants/constants";
-import { track } from "@/customization/utils/analytics";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  track,
+  trackDataLoaded,
+  trackFlowBuild,
+} from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import {
   EdgeChange,
@@ -19,7 +24,7 @@ import {
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
 import { BuildStatus } from "../constants/enums";
-import { VertexBuildTypeAPI } from "../types/api";
+import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
   AllNodeType,
@@ -49,7 +54,6 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
-import { useMessagesStore } from "./messagesStore";
 import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -101,11 +105,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
-  lockChat: false,
-  setLockChat: (lockChat) => {
-    useMessagesStore.setState({ displayLoadingMessage: lockChat });
-    set({ lockChat });
-  },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
@@ -120,7 +119,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     );
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
-    get().setLockChat(false);
     useAlertStore.getState().setErrorData({
       title: "Build stopped",
     });
@@ -595,7 +593,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value,
     files,
     silent,
-    setLockChat,
     session,
   }: {
     startNodeId?: string;
@@ -603,11 +600,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value?: string;
     files?: string[];
     silent?: boolean;
-    setLockChat?: (lock: boolean) => void;
     session?: string;
   }) => {
     get().setIsBuilding(true);
-    get().setLockChat(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
@@ -627,7 +622,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     }
     if (error) {
       get().setIsBuilding(false);
-      get().setLockChat(false);
       throw new Error("Invalid components");
     }
 
@@ -710,6 +704,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...get().verticesBuild!.verticesIds,
           ...next_vertices_ids,
         ];
+        if (
+          ENABLE_DATASTAX_LANGFLOW &&
+          vertexBuildData?.id?.includes("AstraDB")
+        ) {
+          const search_results: LogsLogType[] = Object.values(
+            vertexBuildData?.data?.logs?.search_results,
+          );
+          search_results.forEach((log) => {
+            if (
+              log.message.includes("Adding") &&
+              log.message.includes("documents") &&
+              log.message.includes("Vector Store")
+            ) {
+              trackDataLoaded(
+                get().currentFlow?.id,
+                get().currentFlow?.name,
+                "AstraDB Vector Store",
+                vertexBuildData?.id,
+              );
+            }
+          });
+        }
         get().updateVerticesBuild({
           verticesIds: newIds,
           verticesLayers: newLayers,
@@ -734,7 +750,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      setLockChat,
       onGetOrderSuccess: () => {
         if (!silent) {
           setNoticeData({ title: "Running components" });
@@ -759,7 +774,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setIsBuilding(false);
-        get().setLockChat(false);
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
+          flowId: get().currentFlow?.id,
+        });
       },
       onBuildUpdate: handleBuildUpdate,
       onBuildError: (title: string, list: string[], elementList) => {
@@ -779,8 +796,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         );
         setErrorData({ list, title });
         get().setIsBuilding(false);
-        get().setLockChat(false);
         get().buildController.abort();
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
+          flowId: get().currentFlow?.id,
+          error: list,
+        });
       },
       onBuildStart: (elementList) => {
         const idList = elementList
@@ -807,7 +827,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       logBuilds: get().onFlowPage,
     });
     get().setIsBuilding(false);
-    get().setLockChat(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {

@@ -6,7 +6,7 @@ import { classNames } from "../../../../../../utils/utils";
 const TextAreaWrapper = ({
   checkSendingOk,
   send,
-  lockChat,
+  isBuilding,
   noInput,
   chatValue,
   CHAT_INPUT_PLACEHOLDER,
@@ -36,10 +36,10 @@ const TextAreaWrapper = ({
     "form-input block w-full border-0 custom-scroll focus:border-ring rounded-none shadow-none focus:ring-0 p-0 sm:text-sm !bg-transparent";
 
   useEffect(() => {
-    if (!lockChat && !noInput) {
+    if (!isBuilding && !noInput) {
       inputRef.current?.focus();
     }
-  }, [lockChat, noInput]);
+  }, [isBuilding, noInput]);
 
   return (
     <Textarea
@@ -51,7 +51,7 @@ const TextAreaWrapper = ({
       }}
       rows={1}
       ref={inputRef}
-      disabled={lockChat || noInput}
+      disabled={isBuilding || noInput}
       style={{
         resize: "none",
         bottom: `${inputRef?.current?.scrollHeight}px`,
