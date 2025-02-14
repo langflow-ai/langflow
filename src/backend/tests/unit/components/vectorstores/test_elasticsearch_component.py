@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.vectorstores import ElasticsearchVectorStoreComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
