@@ -44,7 +44,19 @@ export default function getJsApiCode({
   .catch(error => console.error('Error:', error));
 `;
 }
-
+/**
+ * Generates JavaScript code for making API calls to a Langflow endpoint.
+ *
+ * @param {Object} params - The parameters for generating the API code
+ * @param {string} params.flowId - The ID of the flow to run
+ * @param {boolean} params.isAuthenticated - Whether authentication is required
+ * @param {string} params.input_value - The input value to send to the flow
+ * @param {string} params.input_type - The type of input (e.g. "text", "chat")
+ * @param {string} params.output_type - The type of output (e.g. "text", "chat")
+ * @param {Object} params.tweaksObject - Optional tweaks to customize flow behavior
+ * @param {boolean} params.activeTweaks - Whether tweaks should be included
+ * @returns {string} Generated JavaScript code as a string
+ */
 export function getNewJsApiCode({
   flowId,
   isAuthenticated,
@@ -62,14 +74,10 @@ export function getNewJsApiCode({
   tweaksObject: any;
   activeTweaks: boolean;
 }): string {
-  // get the host from the window location
   const host = window.location.host;
-  // get the protocol from the window location
   const protocol = window.location.protocol;
-  // get the api url
   const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
 
-  // Convert tweaks object to a string if it exists and is active
   const tweaksString =
     tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
 
@@ -102,7 +110,7 @@ const options = {
     body: JSON.stringify(payload)
 };
 
-fetch('${apiUrl}')
+fetch('${apiUrl}', options)
     .then(response => response.json())
     .then(response => console.log(response))
     .catch(err => console.error(err));
