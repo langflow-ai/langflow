@@ -5,7 +5,7 @@ import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
 test(
   "Vector Store RAG",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

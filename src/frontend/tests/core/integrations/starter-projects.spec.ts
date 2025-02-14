@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "vector store from starter projects should have its connections and nodes on the flow",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page, request }) => {
     const response = await request.get("/api/v1/starter-projects");
     expect(response.status()).toBe(200);
