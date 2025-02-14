@@ -9,4 +9,5 @@ export type FileType = {
   size: number;
   progress?: number;
   file?: File;
+  type?: string;
 };
