@@ -68,7 +68,6 @@ test(
     });
     await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    // navigate to the new page
     await page.goto(newUrl);
     await expect(page.getByTestId("mainpage_title")).toBeVisible();
   },
