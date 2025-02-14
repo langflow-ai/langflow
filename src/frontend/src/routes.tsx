@@ -50,7 +50,7 @@ const router = createBrowserRouter(
       <Route
         path=""
         element={
-          <ContextWrapper>
+          <ContextWrapper key={1}>
             <PlaygroundPage />
           </ContextWrapper>
         }
@@ -59,7 +59,7 @@ const router = createBrowserRouter(
     <Route
       path={ENABLE_CUSTOM_PARAM ? "/:customParam?" : "/"}
       element={
-        <ContextWrapper>
+        <ContextWrapper key={2}>
           <Outlet />
         </ContextWrapper>
       }
