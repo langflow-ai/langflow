@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.notdiamond.notdiamond import NotDiamondComponent
 from tests.base import ComponentTestBaseWithClient
 
