@@ -242,18 +242,22 @@ def prepare_global_scope(module):
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", LangChainDeprecationWarning)
-                    imported_module = importlib.import_module(node.module)
-                    for alias in node.names:
-                        try:
-                            # First try getting it as an attribute
-                            exec_globals[alias.name] = getattr(imported_module, alias.name)
-                        except AttributeError:
-                            # If that fails, try importing the full module path
-                            full_module_path = f"{node.module}.{alias.name}"
-                            exec_globals[alias.name] = importlib.import_module(full_module_path)
+                    # check if module is installed
+                    if importlib.util.find_spec(node.module) is None:
+                        msg = f"Module {node.module} not found. Please install it if desired."
+                    else:
+                        imported_module = importlib.import_module(node.module)
+                        for alias in node.names:
+                            try:
+                                # First try getting it as an attribute
+                                exec_globals[alias.name] = getattr(imported_module, alias.name)
+                            except AttributeError:
+                                # If that fails, try importing the full module path
+                                full_module_path = f"{node.module}.{alias.name}"
+                                exec_globals[alias.name] = importlib.import_module(full_module_path)
             except ModuleNotFoundError as e:
-                msg = f"Module {node.module} not found. Please install it and try again"
-                raise ModuleNotFoundError(msg) from e
+                msg = f"Module {node.module} not found. Please install it if desired."
+                # raise ModuleNotFoundError(msg) from e
         elif isinstance(node, ast.ClassDef):
             # Compile and execute the class definition to properly create the class
             class_code = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
