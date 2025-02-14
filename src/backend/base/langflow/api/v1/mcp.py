@@ -3,7 +3,6 @@ import base64
 import json
 import logging
 import traceback
-from contextlib import suppress
 from contextvars import ContextVar
 from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
@@ -266,8 +265,9 @@ async def handle_call_tool(
                     return collected_results
                 finally:
                     progress_task.cancel()
-                    with suppress(asyncio.CancelledError):
-                        await progress_task
+                    await asyncio.wait([progress_task])
+                    if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
+                        raise exc
             except Exception as e:
                 msg = f"Error in async session: {e}"
                 logger.exception(msg)
@@ -333,6 +333,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                 logger.info("Client disconnected from SSE connection")
             except asyncio.CancelledError:
                 logger.info("SSE connection was cancelled")
+                raise
             except Exception as e:
                 msg = f"Error in MCP: {e!s}"
                 logger.exception(msg)
