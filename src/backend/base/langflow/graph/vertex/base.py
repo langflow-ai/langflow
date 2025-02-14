@@ -79,7 +79,7 @@ class Vertex:
         self.built_object: Any = UnbuiltObject()
         self.built_result: Any = None
         self.built = False
-        self._successors_ids: set[str] | None = None
+        self._successors_ids: list[str] | None = None
         self.artifacts: dict[str, Any] = {}
         self.artifacts_raw: dict[str, Any] = {}
         self.artifacts_type: dict[str, str] = {}
@@ -207,8 +207,8 @@ class Vertex:
         return self.graph.get_successors(self)
 
     @property
-    def successors_ids(self) -> set[str]:
-        return self.graph.successor_map.get(self.id, set())
+    def successors_ids(self) -> list[str]:
+        return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
         state = self.__dict__.copy()

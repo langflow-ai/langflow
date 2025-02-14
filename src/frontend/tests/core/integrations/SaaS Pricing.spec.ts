@@ -13,7 +13,7 @@ import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-moda
 
 test(
   "SaaS Pricing",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

@@ -461,8 +461,8 @@ def find_cycle_vertices(edges):
 def layered_topological_sort(
     vertices_ids: set[str],
     in_degree_map: dict[str, int],
-    successor_map: dict[str, set[str]],
-    predecessor_map: dict[str, set[str]],
+    successor_map: dict[str, list[str]],
+    predecessor_map: dict[str, list[str]],
     start_id: str | None = None,
     cycle_vertices: set[str] | None = None,
     is_input_vertex: Callable[[str], bool] | None = None,  # noqa: ARG001
@@ -780,8 +780,8 @@ def get_sorted_vertices(
     start_component_id: str | None = None,
     graph_dict: dict[str, Any] | None = None,
     in_degree_map: dict[str, int] | None = None,
-    successor_map: dict[str, set[str]] | None = None,
-    predecessor_map: dict[str, set[str]] | None = None,
+    successor_map: dict[str, list[str]] | None = None,
+    predecessor_map: dict[str, list[str]] | None = None,
     is_input_vertex: Callable[[str], bool] | None = None,
     get_vertex_predecessors: Callable[[str], list[str]] | None = None,
     get_vertex_successors: Callable[[str], list[str]] | None = None,
@@ -826,18 +826,18 @@ def get_sorted_vertices(
         successor_map = {}
         for vertex_id in vertices_ids:
             if get_vertex_successors is not None:
-                successor_map[vertex_id] = set(get_vertex_successors(vertex_id))
+                successor_map[vertex_id] = get_vertex_successors(vertex_id)
             else:
-                successor_map[vertex_id] = set()
+                successor_map[vertex_id] = []
 
     # Build predecessor_map if not provided
     if predecessor_map is None:
         predecessor_map = {}
         for vertex_id in vertices_ids:
             if get_vertex_predecessors is not None:
-                predecessor_map[vertex_id] = set(get_vertex_predecessors(vertex_id))
+                predecessor_map[vertex_id] = get_vertex_predecessors(vertex_id)
             else:
-                predecessor_map[vertex_id] = set()
+                predecessor_map[vertex_id] = []
 
     # If we have a stop component, we need to filter out all vertices
     # that are not predecessors of the stop component

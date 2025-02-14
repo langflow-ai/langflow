@@ -6,7 +6,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test.skip(
   "Sequential Task Agent",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

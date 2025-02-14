@@ -6,7 +6,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "Basic Prompting (Hello, World)",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
