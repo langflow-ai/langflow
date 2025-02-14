@@ -3072,7 +3072,7 @@
         "data": {
           "id": "note-2icq2",
           "node": {
-            "description": "### 💡 Add your Assembly AI API key here 👇",
+            "description": "### 💡 Add your Assembly AI API key and audio file here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3082,26 +3082,26 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 328,
+        "height": 324,
         "id": "note-2icq2",
         "measured": {
-          "height": 328,
-          "width": 359
+          "height": 324,
+          "width": 455
         },
         "position": {
-          "x": 499.0071944038359,
-          "y": 186.13119080292748
+          "x": 452.7834981529654,
+          "y": 186.89794978262478
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 360
+        "width": 456
       },
       {
         "data": {
           "id": "note-OejoR",
           "node": {
-            "description": "### 💡 Add your Assembly AI API key here 👇",
+            "description": "### 💡 Add your Assembly AI API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3130,7 +3130,7 @@
         "data": {
           "id": "note-9B1rT",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3159,7 +3159,7 @@
         "data": {
           "id": "note-tO2On",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -3517,7 +3517,7 @@
         "data": {
           "id": "note-fB5Sk",
           "node": {
-            "description": "# 📢 Meeting Summary Generator\n\nThis Langflow-powered pipeline **automatically transcribes and summarizes meetings** by converting audio recordings into concise summaries using **AssemblyAI** and **OpenAI GPT-4**. \n\n## 📌 Features\n\n- 🎙 **Automatic Transcription**: Converts meeting audio into text using **AssemblyAI**.\n- ✍ **AI-Powered Summarization**: Extracts key points using **GPT-4**.\n- 🧠 **Context-Aware Responses**: Maintains conversation history for better insights.\n- 🔄 **Seamless Data Flow**: Ensures smooth processing from transcription to summary.\n- 📊 **User-Friendly Output**: Delivers structured summaries in an easy-to-read format.\n\n## 🛠️ Requirements\n\n- **[AssemblyAI API Key](https://www.assemblyai.com/)** 🎙: Required for transcription services.\n- **OpenAI API Key** 🤖: Needed to generate summaries with GPT models.\n\n## 🚀 How It Works\n\n1. **Upload Audio** 🎵 - The user provides a recorded meeting file.\n2. **Transcription Processing** 📝 - The system transcribes the audio using **AssemblyAI**.\n3. **Data Structuring** 📦 - The transcript is formatted for AI processing.\n4. **AI Summarization** 🔍 - **GPT-4** extracts key points and insights.\n5. **Final Output** 💬 - The summarized meeting details are displayed in a chat-friendly format.\n\n\n\n",
+            "description": "# Meeting Summary Generator\n\nThis flow automatically transcribes and summarizes meetings by converting audio recordings into concise summaries using **AssemblyAI** and **OpenAI GPT-4**. \n\n## Prerequisites\n\n- **[AssemblyAI API Key](https://www.assemblyai.com/)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Upload an audio file. Most common audio file formats are [supported](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/assemblyai/assemblyai_start_transcript.py#L27).\n2. To run the summary generator flow, click **Playground**.\n\nThe flow transcribes the audio using **AssemblyAI**.\nThe transcript is formatted for AI processing.\nThe **GPT-4** model extracts key points and insights.\nThe summarized meeting details are displayed in a chat-friendly format.\n\n\n\n",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -3525,20 +3525,20 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 922,
+        "height": 612,
         "id": "note-fB5Sk",
         "measured": {
-          "height": 922,
-          "width": 621
+          "height": 612,
+          "width": 549
         },
         "position": {
           "x": -128.87171443390673,
-          "y": 225.91777591586788
+          "y": 227.16742082405324
         },
         "resizing": false,
-        "selected": true,
+        "selected": false,
         "type": "noteNode",
-        "width": 620
+        "width": 548
       }
     ],
     "viewport": {
