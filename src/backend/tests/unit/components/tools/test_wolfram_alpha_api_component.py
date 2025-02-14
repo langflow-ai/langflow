@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.tools import WolframAlphaAPIComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
