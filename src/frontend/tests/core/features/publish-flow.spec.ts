@@ -11,7 +11,6 @@ test(
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 3000,
     });
-    // retrieve the flow id from the url
     const flowId = page.url().split("/").pop();
     expect(flowId).toBeDefined();
     expect(flowId).not.toBeNull();
