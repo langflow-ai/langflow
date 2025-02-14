@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
-from functools import cache
+from functools import cache, cached_property
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -447,11 +447,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     @cache
     def get_database_object(self, api_endpoint: str | None = None):
         try:
-            client = self._get_client(self.token, self.environment)
-            api_endpoint = api_endpoint or self.get_api_endpoint()
             keyspace = self.get_keyspace()
-            return client.get_database(
-                api_endpoint=api_endpoint,
+            return self.client.get_database(
+                api_endpoint=self.api_endpoint,
                 token=self.token,
                 keyspace=keyspace,
             )
@@ -952,3 +950,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     @cache
     def _get_client(token, environment):
         return DataAPIClient(token=token, environment=environment)
+
+    @cached_property
+    def api_endpoint(self):
+        return self.get_api_endpoint_static(
+            token=self.token,
+            environment=self.environment,
+            api_endpoint=self.api_endpoint,
+            database_name=self.database_name,
+        )
+
+    @cached_property
+    def client(self):
+        return self._get_client(self.token, self.environment)
