@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Any
 
 import cohere
@@ -42,24 +43,23 @@ class CohereEmbeddingsComponent(LCModelComponent):
         Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
+    @lru_cache(maxsize=32)
     def build_embeddings(self) -> Embeddings:
-        data = None
+        if not self.api_key or not self.model_name:
+            raise ValueError("API key and model name must be provided.")
+
         try:
             data = CohereEmbeddings(
                 cohere_api_key=self.api_key,
                 model=self.model_name,
-                truncate=self.truncate,
-                max_retries=self.max_retries,
-                user_agent=self.user_agent,
+                truncate=self.truncate or "",
+                max_retries=self.max_retries or 3,
+                user_agent=self.user_agent or "langchain",
                 request_timeout=self.request_timeout or None,
             )
         except Exception as e:
-            msg = (
-                "Unable to create Cohere Embeddings. ",
-                "Please verify the API key and model parameters, and try again.",
-            )
+            msg = "Unable to create Cohere Embeddings. Please verify the API key and model parameters, and try again."
             raise ValueError(msg) from e
-        # added status if not the return data would be serialised to create the status
         return data
 
     def get_model(self):
