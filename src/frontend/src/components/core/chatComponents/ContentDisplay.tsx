@@ -195,7 +195,6 @@ export default function ContentDisplay({
           return String(output);
         }
       };
-      console.log("output",content.output);
 
       contentData = (
         <div className="flex flex-col gap-2">
