@@ -19,8 +19,6 @@ export const ChatViewWrapper = ({
   messagesFetched,
   sessionId,
   sendMessage,
-  lockChat,
-  setLockChat,
   canvasOpen,
   setOpen,
   playgroundTitle,
@@ -105,8 +103,6 @@ export const ChatViewWrapper = ({
           <ChatView
             focusChat={sessionId}
             sendMessage={sendMessage}
-            lockChat={lockChat}
-            setLockChat={setLockChat}
             visibleSession={visibleSession}
             closeChat={
               !canvasOpen
