@@ -505,45 +505,50 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Retrieve the database object
         database = self.get_database_object(api_endpoint=api_endpoint)
 
-        # Get the list of collections
-        collection_list = list(database.list_collections(keyspace=self.get_keyspace()))
+        # Get the list of collections and their metadata
+        collection_tuples = [
+            (
+                col.name,
+                col.options.vector and col.options.vector.service.provider,
+                col.options.vector and col.options.vector.service.model_name,
+            )
+            for col in database.list_collections(keyspace=self.get_keyspace())
+        ]
 
         # Return the list of collections and metadata associated
         return [
             {
-                "name": col.name,
-                "records": self.collection_data(collection_name=col.name, database=database),
-                "provider": (
-                    col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
-                ),
+                "name": name,
+                "records": self.collection_data(collection_name=name, database=database),
+                "provider": provider if provider else None,
                 "icon": (
                     "vectorstores"
-                    if not col.options.vector or not col.options.vector.service
+                    if not provider
                     else "NVIDIA"
-                    if col.options.vector.service.provider == "nvidia"
+                    if provider == "nvidia"
                     else "OpenAI"
-                    if col.options.vector.service.provider == "openai"  # TODO: Add more icons
-                    else col.options.vector.service.provider.title()
+                    if provider == "openai"
+                    else provider.title()
                 ),
-                "model": (
-                    col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
-                ),
+                "model": model if model else None,
             }
-            for col in collection_list
+            for name, provider, model in collection_tuples
         ]
 
     def reset_collection_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
         collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
-        ]
+        # Process options for dropdown
+        collection_names = [col["name"] for col in collection_options]
+        collections_metadata = [{k: v for k, v in col.items() if k != "name"} for col in collection_options]
 
-        # Reset the selected collection
-        if build_config["collection_name"]["value"] not in build_config["collection_name"]["options"]:
+        # Update build config with collection options
+        build_config["collection_name"]["options"] = collection_names
+        build_config["collection_name"]["options_metadata"] = collections_metadata
+
+        # Reset the selected collection if it is not in the collection names
+        if build_config["collection_name"]["value"] not in collection_names:
             build_config["collection_name"]["value"] = ""
 
         # If we have a database, collection name should not be advanced
