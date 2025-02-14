@@ -25,7 +25,11 @@ async def cleanup_orphaned_records() -> None:
         flow_ids_subquery = select(Flow.id)
 
         # Tables that have flow_id foreign keys
-        tables = [MessageTable, VertexBuildTable, TransactionTable]
+        tables: list[type[VertexBuildTable | MessageTable | TransactionTable]] = [
+            MessageTable,
+            VertexBuildTable,
+            TransactionTable,
+        ]
 
         for table in tables:
             try:
