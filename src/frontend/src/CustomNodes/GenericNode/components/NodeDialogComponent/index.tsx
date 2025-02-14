@@ -69,6 +69,17 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     ].value = newValue;
     setNode(nodeId, targetNode);
     setPayloadValues((prev) => ({ ...prev, [fieldKey]: newValue }));
+
+    if (template[fieldKey].real_time_refresh) {
+      mutateTemplate(
+        { [fieldKey]: newValue },
+        nodeClass,
+        setNodeClass,
+        postTemplateValue,
+        handleErrorData,
+        name,
+      );
+    }
   };
 
   /**
