@@ -10,16 +10,7 @@ from langflow.schema import Data
 
 class NVIDIAIngestComponent(Component):
     display_name = "NVIDIA Ingest"
-    try:
-        from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
-
-        description = (
-            "NVIDIA Ingest (nv-ingest) efficiently processes, transforms, and stores "
-            "large datasets for AI and ML integration."
-        )
-    except ImportError:
-        description = "Install nv-ingest to use this component."
-
+    description = "Process, transform, and store data."
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
     name = "NVIDIAIngest"
@@ -30,10 +21,10 @@ class NVIDIAIngestComponent(Component):
 
         file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
         supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
-    except ImportError:
-        msg = "Failed to import NVIDIA Ingest dependencies. Install it using `uv sync --extra nv-ingest`"
+    except ImportError as e:
+        msg = "NVIDIA Ingest dependencies missing."
         logger.warning(msg)
-        file_types = []
+        file_types = [msg]
         supported_file_types_info = msg
 
     inputs = [
@@ -52,7 +43,7 @@ class NVIDIAIngestComponent(Component):
         BoolInput(
             name="extract_text",
             display_name="Extract Text",
-            info="Extract text from document",
+            info="Extract text from documents",
             value=True,
         ),
         BoolInput(
@@ -130,7 +121,7 @@ class NVIDIAIngestComponent(Component):
         try:
             from nv_ingest_client.client import Ingestor
         except ImportError as e:
-            msg = "Failed to import NVIDIA Ingest dependencies. Install it using `uv sync --extra nv-ingest`"
+            msg = "NVIDIA Ingest dependencies missing."
             raise ImportError(msg) from e
 
         if not self.path:
@@ -160,6 +151,8 @@ class NVIDIAIngestComponent(Component):
             f"Creating Ingestor for host: {parsed_url.hostname}, port: {parsed_url.port}", name="NVIDIAIngestComponent"
         )
         try:
+            from nv_ingest_client.client import Ingestor
+
             ingestor = (
                 Ingestor(message_client_hostname=parsed_url.hostname, message_client_port=parsed_url.port)
                 .files(resolved_path)
