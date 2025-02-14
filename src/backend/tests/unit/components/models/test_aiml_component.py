@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.models import AIMLModelComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
@@ -66,7 +66,7 @@ class TestAIMLModelComponent(ComponentTestBaseWithClient):
                 raise AssertionError(msg)
 
             mapping = version_mappings[version]
-            assert (
-                mapping["file_name"] is not None
-            ), f"file_name is None for version {version} in {self.__class__.__name__}."
+            assert mapping["file_name"] is not None, (
+                f"file_name is None for version {version} in {self.__class__.__name__}."
+            )
             assert mapping["module"] is not None, f"module is None for version {version} in {self.__class__.__name__}."
