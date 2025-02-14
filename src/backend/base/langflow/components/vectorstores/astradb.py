@@ -744,7 +744,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config = self.reset_collection_list(build_config)
 
             # Set the options for collection name to be the field value if its a new collection
-            if field_value not in build_config["collection_name"]["options"]:
+            if field_value and field_value not in build_config["collection_name"]["options"]:
                 # Add the new collection to the list of options
                 build_config["collection_name"]["options"].append(field_value)
                 build_config["collection_name"]["options_metadata"].append(
