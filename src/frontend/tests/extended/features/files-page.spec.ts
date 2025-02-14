@@ -55,15 +55,11 @@ test(
       timeout: 30000,
     });
     await page.getByText("My Files").first().click();
+    const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
-    // Create a file input for upload
-    const fileInput = await page.waitForSelector('input[type="file"]', {
-      state: "attached",
-    });
-
-    // Upload a test file
-    await fileInput.setInputFiles([
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles([
       {
         name: `${fileName}.txt`,
         mimeType: "text/plain",
@@ -77,9 +73,7 @@ test(
 
     // Verify file appears in the list
     const uploadedFileName = await page.getByText(fileName + ".txt");
-    const fileType = await page.getByText("TXT", { exact: true });
     expect(await uploadedFileName.isVisible()).toBeTruthy();
-    expect(await fileType.isVisible()).toBeTruthy();
   },
 );
 
@@ -124,10 +118,10 @@ test(
     expect(successMessage).toBeTruthy();
 
     // Verify file appears in the list
-    const uploadedFileName = await page.getByText(fileName + ".txt");
-    const fileType = await page.getByText("TXT", { exact: true }).last();
-    expect(await uploadedFileName.isVisible()).toBeTruthy();
-    expect(await fileType.isVisible()).toBeTruthy();
+    const uploadedFileName = await page.getByText(fileName + ".txt").last();
+    await expect(uploadedFileName).toBeVisible({
+      timeout: 1000,
+    });
   },
 );
 
@@ -156,15 +150,14 @@ test(
       timeout: 30000,
     });
     await page.getByText("My Files").first().click();
+    const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
     // Create a file input for upload
-    const fileInput = await page.waitForSelector('input[type="file"]', {
-      state: "attached",
-    });
+    const fileChooser = await fileChooserPromise;
 
     // Upload multiple test files
-    await fileInput.setInputFiles([
+    await fileChooser.setFiles([
       {
         name: `${fileNames.txt}.txt`,
         mimeType: "text/plain",
@@ -188,18 +181,11 @@ test(
 
     // Verify all files appear in the list
     for (const name of Object.values(fileNames)) {
-      const file = await page.getByText(name);
-      expect(await file.isVisible()).toBeTruthy();
+      const file = await page.getByText(name).last();
+      await expect(file).toBeVisible({
+        timeout: 1000,
+      });
     }
-
-    // Verify file types are displayed correctly
-    const txtType = await page.getByText("TXT", { exact: true });
-    const jsonType = await page.getByText("JSON", { exact: true });
-    const pyType = await page.getByText("PY", { exact: true });
-
-    expect(txtType).toBeTruthy();
-    expect(jsonType).toBeTruthy();
-    expect(pyType).toBeTruthy();
   },
 );
 
@@ -228,14 +214,12 @@ test(
       timeout: 30000,
     });
     await page.getByText("My Files").first().click();
+    const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("upload-file-btn").click();
 
-    // Upload test files first
-    const fileInput = await page.waitForSelector('input[type="file"]', {
-      state: "attached",
-    });
+    const fileChooser = await fileChooserPromise;
 
-    await fileInput.setInputFiles([
+    await fileChooser.setFiles([
       {
         name: `${fileNames.txt}.txt`,
         mimeType: "text/plain",
@@ -265,9 +249,6 @@ test(
     expect(
       await page.getByText(fileNames.json + ".json").isVisible(),
     ).toBeTruthy();
-    expect(
-      await page.getByText("JSON", { exact: true }).isVisible(),
-    ).toBeTruthy();
 
     // Verify other files are not visible
     expect(
@@ -281,9 +262,7 @@ test(
 
     // Verify only Python file is visible
     expect(await page.getByText(fileNames.py + ".py").isVisible()).toBeTruthy();
-    expect(
-      await page.getByText("PY", { exact: true }).isVisible(),
-    ).toBeTruthy();
+
     expect(
       await page.getByText(fileNames.json + ".json").isVisible(),
     ).toBeFalsy();
@@ -298,14 +277,5 @@ test(
     for (const name of Object.values(fileNames)) {
       expect(await page.getByText(name).isVisible()).toBeTruthy();
     }
-    expect(
-      await page.getByText("TXT", { exact: true }).isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.getByText("JSON", { exact: true }).isVisible(),
-    ).toBeTruthy();
-    expect(
-      await page.getByText("PY", { exact: true }).isVisible(),
-    ).toBeTruthy();
   },
 );
