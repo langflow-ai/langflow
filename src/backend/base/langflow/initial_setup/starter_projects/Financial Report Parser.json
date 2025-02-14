@@ -1703,7 +1703,7 @@
         "data": {
           "id": "note-FyXxe",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1729,7 +1729,7 @@
         "data": {
           "id": "note-GnLTb",
           "node": {
-            "description": "\n# Financial Report Parser\n\nThis project extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data includes **Gross Profit, EBITDA, Net Income, and Operating Expenses**, which are structured and formatted for easy processing.\n\n## 📌 Features\n\n- **Extract Key Financial Metrics**: Identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from financial reports.\n- **Structured Output**: Formats extracted data into a structured format for better readability and further processing.\n- **Dynamic Prompting**: Uses an AI-driven prompt system to extract relevant financial details from input text.\n- **Data Transformation**: Converts extracted data into formatted messages for easy consumption.\n- **Chat-Based Interface**: Enables users to input financial reports via a chat system and receive structured outputs.\n\n## 🛠️ Requirements\n\n- **OpenAI API Key**: Required to access GPT models. Ensure you have a valid API key to use the system.\n\n\n",
+            "description": "\n# Financial Report Parser\n\nThis template extracts key financial metrics from a given financial report text using OpenAI's GPT-4o-mini model. The extracted data is structured and formatted for chat consumption.\n\n## Prerequisites\n\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quickstart\n\n1. Add your OpenAI API key to the OpenAI model.\n2. To run the flow, click **Playground**.\nThe **Chat Input** component in this template is pre-loaded with a sample financial report for demonstrating how structured data is extracted.\n\n* The **OpenAI** model component identifies and retrieves Gross Profit, EBITDA, Net Income, and Operating Expenses from the financial report.\n* The **Structured Output** component formats extracted data into a structured format for better readability and further processing.\n* The **Data to Message** component converts extracted data into formatted messages for chat consumption.\n\n\n\n\n\n",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1737,78 +1737,20 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 682,
+        "height": 688,
         "id": "note-GnLTb",
         "measured": {
-          "height": 682,
-          "width": 619
+          "height": 688,
+          "width": 620
         },
         "position": {
-          "x": 269.49924861225594,
-          "y": -397.9301645337526
+          "x": 270.9912976390468,
+          "y": -396.43811550696176
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 618
-      },
-      {
-        "data": {
-          "id": "note-GaZNo",
-          "node": {
-            "description": "## 💡 This Component Extract data into Structured format 👇",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-GaZNo",
-        "measured": {
-          "height": 324,
-          "width": 335
-        },
-        "position": {
-          "x": 1372.9857415583085,
-          "y": 157.32492696801978
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 336
-      },
-      {
-        "data": {
-          "id": "note-DOMBb",
-          "node": {
-            "description": "# 📜 Sample Input\nBelow is an example of a financial report input that the **Financial Report Parser** processes to extract key financial metrics.\n\n## 📝 Sample Input\n\nIn 2022, the company demonstrated strong financial performance, reporting a gross profit of $1.2 billion, reflecting stable revenue generation and effective cost management. The EBITDA stood at $900 million, highlighting the company’s solid operational efficiency and profitability before interest, taxes, depreciation, and amortization. Despite a slight increase in operating expenses compared to 2021, the company maintained a healthy bottom line, achieving a net income of $500 million. This growth underscores the company’s ability to navigate economic challenges while sustaining profitability, reinforcing its financial stability and competitive position in the market.",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 434,
-        "id": "note-DOMBb",
-        "measured": {
-          "height": 434,
-          "width": 617
-        },
-        "position": {
-          "x": 272.76860898634646,
-          "y": 289.9842634225248
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 616
+        "width": 619
       }
     ],
     "viewport": {
