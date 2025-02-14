@@ -1,9 +1,5 @@
-import { COPIED_NOTICE_ALERT } from "@/constants/alerts_constants";
-import { GRADIENT_CLASS } from "@/constants/constants";
-import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
+import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
 import useAlertStore from "@/stores/alertStore";
-import useAuthStore from "@/stores/authStore";
-import useFlowStore from "@/stores/flowStore";
 import { useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
@@ -113,7 +109,7 @@ export default function CopyFieldAreaComponent({
           )}
           style={{
             pointerEvents: "none",
-            background: isFocused ? undefined : GRADIENT_CLASS,
+            background: isFocused ? undefined : GRADIENT_CLASS_DISABLED,
           }}
           aria-hidden="true"
         />
@@ -123,12 +119,12 @@ export default function CopyFieldAreaComponent({
           dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
           name={isCopied ? "Check" : "Copy"}
           className={cn(
-            "cursor-pointer bg-background",
+            "cursor-pointer bg-muted",
             externalLinkIconClasses.icon,
             editNode
               ? externalLinkIconClasses.editNodeTop
               : externalLinkIconClasses.iconTop,
-            "bg-background text-foreground",
+            "bg-muted text-foreground",
           )}
         />
       </div>
@@ -144,11 +140,11 @@ export default function CopyFieldAreaComponent({
         data-testid={id}
         value={valueToRender}
         onChange={handleInputChange}
-        className={getInputClassName()}
+        className={cn(getInputClassName())}
         aria-label={valueToRender}
         ref={inputRef}
         type="text"
-        readOnly
+        disabled
       />
       <div className="relative w-full">{renderIcon()}</div>
     </div>

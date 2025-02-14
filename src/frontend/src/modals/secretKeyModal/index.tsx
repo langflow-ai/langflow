@@ -11,12 +11,17 @@ import { ContentRenderKey } from "./components/content-render";
 import { FormKeyRender } from "./components/form-key-render";
 import { HeaderRender } from "./components/header-render";
 
+interface ModalProps {
+  generatedKeyMessage?: React.ReactNode;
+  description?: React.ReactNode;
+}
+
 export default function SecretKeyModal({
   children,
   data,
   onCloseModal,
   modalProps,
-}: ApiKeyType) {
+}: ApiKeyType & { modalProps?: ModalProps }) {
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
   const [apiKeyValue, setApiKeyValue] = useState("");
