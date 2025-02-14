@@ -9,6 +9,13 @@ from langflow.field_typing import (
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema.message import Message
+from langflow.schema.content_block import ContentBlock, TextContent
+from langflow.utils.constants import MESSAGE_SENDER_AI
+from langflow.base.agents.events import process_smol_agent_events
+from langflow.base.agents.callback import AgentAsyncHandler
+from langflow.memory import delete_message
+from langflow.logging import logger
+from langflow.base.agents.events import ExceptionWithMessageError
 
 
 class SmolAgentComponent(Component):
@@ -166,14 +173,83 @@ class SmolAgentComponent(Component):
 
         return self.agent
 
-    def run_agent(self) -> Message:
+    async def run_agent(self) -> Message:
         """Run the agent and return its response as a Message."""
         agent = self.build_agent()
-        response = agent.run(self.input_value)
 
-        # Convert response to string if it's not already
-        if not isinstance(response, str):
-            response = str(response)
+        # Create a Message object for streaming updates
+        agent_message = Message(
+            sender=MESSAGE_SENDER_AI,
+            sender_name=self.display_name or "SMOL Agent",
+            properties={"icon": "Bot", "state": "partial"},
+            content_blocks=[
+                ContentBlock(
+                    title="Agent Steps",
+                    contents=[
+                        TextContent(
+                            type="text",
+                            text="Starting SMOL agent...",
+                            header={"title": "Initialization", "icon": "Bot"}
+                        )
+                    ]
+                )
+            ],
+            session_id=self.graph.session_id if hasattr(self, "graph") else None,
+        )
 
-        # Create a Message with proper content blocks
-        return Message(text=response)
+        try:
+            # Get the stream of events from the agent
+            events = agent.run(self.input_value, stream=True)
+
+            # Process the events and update the message
+            return await process_smol_agent_events(
+                events,
+                agent_message,
+                self.send_message,
+            )
+
+        except ExceptionWithMessageError as e:
+            # If we already have an error message in the content blocks, don't add another one
+            if not any(block.title == "Error" for block in agent_message.content_blocks):
+                error_content = TextContent(
+                    type="text",
+                    text=str(e),
+                    header={"title": "Error", "icon": "AlertTriangle"}
+                )
+                agent_message.content_blocks.append(
+                    ContentBlock(
+                        title="Error",
+                        contents=[error_content],
+                    )
+                )
+            agent_message.properties.state = "complete"
+            agent_message.error = True
+            await self.send_message(agent_message)
+            logger.error(f"ExceptionWithMessageError: {e}")
+            raise
+        except Exception as e:
+            # Handle any other exceptions
+            error_message = str(e)
+            if "code parsing" in error_message.lower():
+                error_message = (
+                    f"Error in code parsing: {error_message}\n\n"
+                    "Please ensure your code follows the correct format:\n"
+                    "Thoughts: Your thoughts\n"
+                    "Code:\n```python\n# Your code here\n```<end_code>"
+                )
+            error_content = TextContent(
+                type="text",
+                text=error_message,
+                header={"title": "Error", "icon": "AlertTriangle"}
+            )
+            agent_message.content_blocks.append(
+                ContentBlock(
+                    title="Error",
+                    contents=[error_content],
+                )
+            )
+            agent_message.properties.state = "complete"
+            agent_message.error = True
+            await self.send_message(agent_message)
+            logger.error(f"Error: {e}")
+            raise ExceptionWithMessageError(agent_message, error_message) from e

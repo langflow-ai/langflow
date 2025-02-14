@@ -1,7 +1,7 @@
 # Add helper functions for each event type
 from collections.abc import AsyncIterator
 from time import perf_counter
-from typing import Any, Protocol
+from typing import Any, Protocol, AsyncGenerator, Callable, Dict, Optional
 
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import BaseMessage
@@ -11,6 +11,7 @@ from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
 from langflow.schema.log import SendMessageFunctionType
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class ExceptionWithMessageError(Exception):
@@ -283,3 +284,315 @@ async def process_agent_events(
     except Exception as e:
         raise ExceptionWithMessageError(agent_message, str(e)) from e
     return await Message.create(**agent_message.model_dump())
+
+
+async def process_smol_agent_events(
+    agent_executor: AsyncGenerator[Any, None] | Any,
+    agent_message: Message,
+    send_message_method: Callable,
+) -> Message:
+    """Process events from a SMOL agent and update the message accordingly."""
+    # Initialize message with proper state
+    if isinstance(agent_message.properties, dict):
+        agent_message.properties.update({"icon": "Bot", "state": "partial"})
+    else:
+        agent_message.properties.icon = "Bot"
+        agent_message.properties.state = "partial"
+    
+    # Initialize content blocks if they don't exist
+    if not agent_message.content_blocks:
+        agent_message.content_blocks = [
+            ContentBlock(
+                title="Agent Steps",
+                contents=[
+                    TextContent(
+                        type="text",
+                        text="Starting SMOL agent...",
+                        header={"title": "Initialization", "icon": "Bot"}
+                    )
+                ]
+            )
+        ]
+    
+    # Store the initial message
+    try:
+        agent_message = await send_message_method(message=agent_message)
+    except Exception as e:
+        error_message = f"Failed to send initial message: {str(e)}"
+        agent_message.properties.state = "complete"
+        agent_message.error = True
+        raise ExceptionWithMessageError(agent_message, error_message) from e
+
+    try:
+        # Create a mapping of run_ids to tool contents
+        tool_blocks_map: dict[str, ToolContent] = {}
+        start_time = perf_counter()
+
+        # Convert regular generator to async generator if needed
+        async def aiter():
+            try:
+                if hasattr(agent_executor, "__aiter__"):
+                    async for event in agent_executor:
+                        if event is None:
+                            continue
+                        yield event
+                else:
+                    for event in agent_executor:
+                        if event is None:
+                            continue
+                        yield event
+            except Exception as e:
+                error_message = str(e)
+                if "code parsing" in error_message.lower():
+                    # Extract the code snippet if available
+                    code_snippet = ""
+                    if "Here is your code snippet:" in error_message:
+                        parts = error_message.split("Here is your code snippet:")
+                        if len(parts) > 1:
+                            code_snippet = parts[1].strip()
+                    
+                    error_message = (
+                        f"Code Parsing Error: {error_message}\n\n"
+                        f"The provided code:\n{code_snippet}\n\n"
+                        "Please ensure your code follows this exact format:\n"
+                        "Thoughts: Your reasoning about the task\n"
+                        "Code:\n```python\n# Your Python code here\n```<end_code>\n\n"
+                        "Common issues to check:\n"
+                        "1. Missing 'Thoughts:' section\n"
+                        "2. Incorrect code block format\n"
+                        "3. Missing <end_code> tag\n"
+                        "4. Improper indentation"
+                    )
+                
+                error_content = TextContent(
+                    type="text",
+                    text=error_message,
+                    duration=_calculate_duration(start_time),
+                    header={"title": "Error", "icon": "AlertTriangle"},
+                )
+                agent_message.content_blocks.append(
+                    ContentBlock(
+                        title="Error",
+                        contents=[error_content],
+                    )
+                )
+                agent_message.properties.state = "complete"
+                agent_message.error = True
+                await send_message_method(agent_message)
+                raise ExceptionWithMessageError(agent_message, error_message) from e
+
+        async for event in aiter():
+            # Handle PlanningStep events
+            if hasattr(event, "plan"):
+                try:
+                    plan_content = TextContent(
+                        type="text",
+                        text=event.plan,
+                        duration=_calculate_duration(start_time),
+                        header={"title": "Planning", "icon": "Plan"},
+                    )
+                    agent_message.content_blocks.append(
+                        ContentBlock(
+                            title="Planning",
+                            contents=[plan_content],
+                        )
+                    )
+                    if hasattr(event, "facts"):
+                        facts_content = TextContent(
+                            type="text",
+                            text=event.facts,
+                            duration=_calculate_duration(start_time),
+                            header={"title": "Facts", "icon": "Info"},
+                        )
+                        agent_message.content_blocks.append(
+                            ContentBlock(
+                                title="Facts",
+                                contents=[facts_content],
+                            )
+                        )
+                    await send_message_method(agent_message)
+                    continue
+                except Exception as e:
+                    error_message = f"Error processing planning step: {str(e)}"
+                    raise ExceptionWithMessageError(agent_message, error_message) from e
+
+            # Handle ActionStep events with tool execution
+            if hasattr(event, "tool_calls") and event.tool_calls:
+                for tool_call in event.tool_calls:
+                    try:
+                        # Convert arguments to dictionary if it's a string
+                        tool_input = tool_call.arguments
+                        if isinstance(tool_input, str):
+                            # Check if this is Python code
+                            if tool_call.name == "python_interpreter":
+                                # Validate code format
+                                if not tool_input.strip().startswith("Thoughts:"):
+                                    tool_input = f"Thoughts: Executing the following code\nCode:\n```python\n{tool_input}\n```<end_code>"
+                                tool_input = {"code": tool_input}
+                            else:
+                                tool_input = {"input": tool_input}
+                        
+                        # Tool start
+                        tool_content = ToolContent(
+                            type="tool_use",
+                            name=tool_call.name,
+                            input=tool_input,
+                            output=None,
+                            error=None,
+                            header={"title": f"Using **{tool_call.name}**", "icon": "Hammer"},
+                            duration=_calculate_duration(start_time),
+                        )
+                        tool_blocks_map[tool_call.id] = tool_content
+                        agent_message.content_blocks.append(
+                            ContentBlock(
+                                title="Tool Execution",
+                                contents=[tool_content],
+                            )
+                        )
+                        await send_message_method(agent_message)
+
+                        # Tool end
+                        if hasattr(event, "observations"):
+                            tool_content.output = str(event.observations)
+                            tool_content.duration = _calculate_duration(start_time)
+                            tool_content.header = {"title": f"Executed **{tool_call.name}**", "icon": "Hammer"}
+                            await send_message_method(agent_message)
+                    except Exception as e:
+                        error_message = f"Error processing tool call {tool_call.name}: {str(e)}"
+                        raise ExceptionWithMessageError(agent_message, error_message) from e
+
+            # Handle final response
+            if hasattr(event, "action_output") and event.action_output is not None:
+                try:
+                    output_text = str(event.action_output)
+                    agent_message.content = output_text
+                    agent_message.text = output_text  # Set text for playground display
+                    agent_message.properties.state = "complete"
+                    # Add final output as a content block too
+                    output_content = TextContent(
+                        type="text",
+                        text=output_text,
+                        duration=_calculate_duration(start_time),
+                        header={"title": "Output", "icon": "MessageSquare"},
+                    )
+                    agent_message.content_blocks.append(
+                        ContentBlock(
+                            title="Output",
+                            contents=[output_content],
+                        )
+                    )
+                    await send_message_method(agent_message)
+                    return agent_message
+                except Exception as e:
+                    error_message = f"Error processing final response: {str(e)}"
+                    raise ExceptionWithMessageError(agent_message, error_message) from e
+
+            # Handle errors
+            if hasattr(event, "error") and event.error is not None:
+                try:
+                    error_message = str(event.error)
+                    # Special handling for code parsing errors
+                    if "code parsing" in error_message.lower():
+                        # Extract the code snippet if available
+                        code_snippet = ""
+                        if "Here is your code snippet:" in error_message:
+                            parts = error_message.split("Here is your code snippet:")
+                            if len(parts) > 1:
+                                code_snippet = parts[1].strip()
+                        
+                        error_message = (
+                            f"Code Parsing Error:\n{code_snippet}\n\n"
+                            "Please ensure your code follows this exact format:\n"
+                            "Thoughts: Your reasoning about the task\n"
+                            "Code:\n```python\n# Your Python code here\n```<end_code>\n\n"
+                            "Common issues to check:\n"
+                            "1. Missing 'Thoughts:' section\n"
+                            "2. Incorrect code block format\n"
+                            "3. Missing <end_code> tag\n"
+                            "4. Improper indentation"
+                        )
+                    
+                    # Set both content and text for proper display
+                    agent_message.content = error_message
+                    agent_message.text = error_message
+                    
+                    error_content = TextContent(
+                        type="text",
+                        text=error_message,
+                        duration=_calculate_duration(start_time),
+                        header={"title": "Error", "icon": "AlertTriangle"},
+                    )
+                    # Clear existing error blocks to prevent duplication
+                    agent_message.content_blocks = [block for block in agent_message.content_blocks if block.title != "Error"]
+                    agent_message.content_blocks.append(
+                        ContentBlock(
+                            title="Error",
+                            contents=[error_content],
+                        )
+                    )
+                    agent_message.properties.state = "complete"
+                    agent_message.error = True
+                    await send_message_method(agent_message)
+                    raise ExceptionWithMessageError(agent_message, error_message)
+                except Exception as e:
+                    if not isinstance(e, ExceptionWithMessageError):
+                        error_message = f"Error processing error event: {str(e)}"
+                        raise ExceptionWithMessageError(agent_message, error_message) from e
+                    raise
+
+        # If we reach here without a final response or error, set state to complete
+        agent_message.properties.state = "complete"
+        return agent_message
+
+    except ExceptionWithMessageError:
+        # Re-raise ExceptionWithMessageError as is
+        raise
+    except Exception as e:
+        error_message = str(e)
+        # Special handling for code parsing errors in the exception
+        if "code parsing" in error_message.lower():
+            # Extract the code snippet if available
+            code_snippet = ""
+            if "Here is your code snippet:" in error_message:
+                parts = error_message.split("Here is your code snippet:")
+                if len(parts) > 1:
+                    code_snippet = parts[1].strip()
+            
+            error_message = (
+                f"Code Parsing Error:\n{code_snippet}\n\n"
+                "Please ensure your code follows this exact format:\n"
+                "Thoughts: Your reasoning about the task\n"
+                "Code:\n```python\n# Your Python code here\n```<end_code>\n\n"
+                "Common issues to check:\n"
+                "1. Missing 'Thoughts:' section\n"
+                "2. Incorrect code block format\n"
+                "3. Missing <end_code> tag\n"
+                "4. Improper indentation"
+            )
+        
+        # Set both content and text for proper display
+        agent_message.content = error_message
+        agent_message.text = error_message
+        
+        try:
+            # Clear existing error blocks to prevent duplication
+            agent_message.content_blocks = [block for block in agent_message.content_blocks if block.title != "Error"]
+            error_content = TextContent(
+                type="text",
+                text=error_message,
+                duration=_calculate_duration(start_time),
+                header={"title": "Error", "icon": "AlertTriangle"},
+            )
+            agent_message.content_blocks.append(
+                ContentBlock(
+                    title="Error",
+                    contents=[error_content],
+                )
+            )
+            agent_message.properties.state = "complete"
+            agent_message.error = True
+            await send_message_method(agent_message)
+        except Exception as send_error:
+            # If we can't send the error message, wrap both errors
+            error_message = f"Original error: {error_message}\nFailed to send error message: {str(send_error)}"
+        raise ExceptionWithMessageError(agent_message, error_message) from e
