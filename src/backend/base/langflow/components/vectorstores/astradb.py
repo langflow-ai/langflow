@@ -515,9 +515,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
                 ),
                 "icon": (
-                    "vectorstores" if not col.options.vector or not col.options.vector.service
-                    else "NVIDIA" if col.options.vector.service.provider == "nvidia"
-                    else "OpenAI" if col.options.vector.service.provider == "openai"  # TODO: Add more icons
+                    "vectorstores"
+                    if not col.options.vector or not col.options.vector.service
+                    else "NVIDIA"
+                    if col.options.vector.service.provider == "nvidia"
+                    else "OpenAI"
+                    if col.options.vector.service.provider == "openai"  # TODO: Add more icons
                     else col.options.vector.service.provider.title()
                 ),
                 "model": (
