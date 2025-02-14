@@ -5,6 +5,7 @@ import { useQueryFunctionType } from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { EventDeliveryType } from "@/constants/enums";
 
 export interface ConfigResponse {
   frontend_timeout: number;
@@ -13,7 +14,7 @@ export interface ConfigResponse {
   health_check_max_retries: number;
   max_file_size_upload: number;
   feature_flags: Record<string, any>;
-  event_delivery: string;
+  event_delivery: EventDeliveryType;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (

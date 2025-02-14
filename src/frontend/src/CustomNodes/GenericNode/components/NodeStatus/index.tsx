@@ -6,7 +6,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { BuildStatus } from "@/constants/enums";
+import { BuildStatus, EventDeliveryType } from "@/constants/enums";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { track } from "@/customization/utils/analytics";
 import { useDarkStore } from "@/stores/darkStore";
@@ -70,10 +70,10 @@ export default function NodeStatus({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
   const version = useDarkStore((state) => state.version);
-  const eventDelivery = useGetConfig((state) => state.data?.event_delivery);
+  const config = useGetConfig();
   const shouldStreamEvents = () => {
     // Get from useGetConfig store
-    return eventDelivery === "streaming";
+    return config.data?.event_delivery === EventDeliveryType.STREAMING;
   };
 
   function handlePlayWShortcut() {

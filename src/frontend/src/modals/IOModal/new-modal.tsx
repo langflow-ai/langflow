@@ -18,6 +18,7 @@ import BaseModal from "../baseModal";
 import { ChatViewWrapper } from "./components/chat-view-wrapper";
 import { SelectedViewField } from "./components/selected-view-field";
 import { SidebarOpenView } from "./components/sidebar-open-view";
+import { EventDeliveryType } from "@/constants/enums";
 
 export default function IOModal({
   children,
@@ -135,10 +136,10 @@ export default function IOModal({
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
-  const eventDelivery = useGetConfig((state) => state.data?.event_delivery);
+  const config = useGetConfig();
 
   function shouldStreamEvents() {
-    return eventDelivery === "streaming";
+    return config.data?.event_delivery === EventDeliveryType.STREAMING;
   }
 
   const sendMessage = useCallback(
