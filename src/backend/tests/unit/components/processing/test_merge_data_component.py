@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.processing.merge_data import MergeDataComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
