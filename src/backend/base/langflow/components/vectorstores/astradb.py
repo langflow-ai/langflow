@@ -482,6 +482,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_database_options(self):
         try:
+            database_list = self.get_database_list()
             return [
                 {
                     "name": name,
@@ -490,7 +491,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "api_endpoint": info["api_endpoint"],
                     "icon": "data",
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in database_list.items()
             ]
         except Exception as e:
             msg = f"Error fetching database options: {e}"
@@ -555,14 +556,20 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Get the list of options we have based on the token provided
         database_options = self._initialize_database_options()
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["database_name"]["options"] = [db["name"] for db in database_options]
-        build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        # Extract names and metadata in a single pass
+        options = []
+        options_metadata = []
+        for db in database_options:
+            name = db.pop("name")
+            options.append(name)
+            options_metadata.append(db)
 
-        # Reset the selected database
-        if build_config["database_name"]["value"] not in build_config["database_name"]["options"]:
+        # Assign extracted options and metadata
+        build_config["database_name"]["options"] = options
+        build_config["database_name"]["options_metadata"] = options_metadata
+
+        # Reset the selected database if needed
+        if build_config["database_name"]["value"] not in options:
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
             build_config["collection_name"]["advanced"] = True
