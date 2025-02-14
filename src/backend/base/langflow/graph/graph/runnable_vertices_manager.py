@@ -74,13 +74,13 @@ class RunnableVerticesManager:
             bool: True if all predecessor conditions are met, False otherwise
         """
         # Get pending predecessors, return True if none exist
-        if not (pending := self.run_predecessors.get(vertex_id, set())):
+        pending = self.run_predecessors.get(vertex_id)
+        if not pending:
             return True
 
         # For cycle vertices, check if any pending predecessors are also in cycle
-        # Using set intersection is faster than iteration
         if vertex_id in self.cycle_vertices:
-            return is_loop or not bool(pending.intersection(self.cycle_vertices))
+            return is_loop or pending.isdisjoint(self.cycle_vertices)
 
         return False
 
