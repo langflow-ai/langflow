@@ -58,7 +58,6 @@ test(
     await newPage.getByPlaceholder("Send a message...").fill("Hello");
     await newPage.getByTestId("button-send").click();
     await expect(newPage.getByText("Hello")).toBeVisible();
-    // redirect back to the original page
     await newPage.close();
     await page.bringToFront();
     // check if deactivate the publishworks
