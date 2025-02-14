@@ -981,9 +981,9 @@ class Component(CustomComponent):
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
+        """Process the raw result of the component."""
         if len(self.outputs) == 1:
             return self.status or self.extract_data(result)
-        """Process the raw result of the component."""
         return self.extract_data(result)
 
     def extract_data(self, result):
