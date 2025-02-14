@@ -92,6 +92,7 @@ export default function DragFilesComponent({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
+        data-testid="drag-files-component"
         role="button"
         tabIndex={0}
       >
