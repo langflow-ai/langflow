@@ -144,17 +144,18 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         models = component.get_models()
         assert models == ["grok-2-latest"]
 
-    def test_build_model_error(self, component_class, mocker):
+    def test_build_model_error(self, mocker):
         from openai import BadRequestError
 
-        component = component_class()
-        component.api_key = "invalid-key"
-        component.model_name = "grok-2-latest"
-        component.temperature = 0.7
-        component.max_tokens = 100
-        component.model_kwargs = {}
-        component.api_base = "https://api.x.ai/v1"
-        component.seed = 1
+        component = XAIModelComponent(
+            api_key="invalid-key",
+            model_name="grok-2-latest",
+            temperature=0.7,
+            max_tokens=100,
+            model_kwargs={},
+            api_base="https://api.x.ai/v1",
+            seed=1,
+        )
 
         mocker.patch(
             "langflow.components.models.xai.ChatOpenAI",
