@@ -65,8 +65,8 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         for input_name in expected_inputs:
             assert input_name in input_names
 
-    def test_inputs(self, component_class):
-        component = component_class()
+    def test_inputs(self):
+        component = XAIModelComponent()
         inputs = component.inputs
         expected_inputs = {
             "max_tokens": IntInput,
