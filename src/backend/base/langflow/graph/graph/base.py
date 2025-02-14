@@ -635,7 +635,7 @@ class Graph:
             raise ValueError(msg)
         return self._run_id
 
-    def set_session_id(self) -> None:
+    def set_tracing_session_id(self) -> None:
         """Sets the ID of the current session.
 
         Args:
@@ -656,7 +656,7 @@ class Graph:
         self._run_id = str(run_id)
         if self.tracing_service:
             self.tracing_service.set_run_id(run_id)
-        if self._session_id:
+        if self._session_id and self.tracing_service is not None:
             self.tracing_service.set_session_id(self.session_id)
 
     def set_run_name(self) -> None:
