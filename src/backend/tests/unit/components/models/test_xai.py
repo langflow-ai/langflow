@@ -115,8 +115,8 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         )
         assert model == mock_chat_openai.return_value
 
-    def test_get_models(self, component_class):
-        component = component_class()
+    def test_get_models(self):
+        component = XAIModelComponent()
         with patch("requests.get") as mock_get:
             mock_response = MagicMock()
             mock_response.json.return_value = {
