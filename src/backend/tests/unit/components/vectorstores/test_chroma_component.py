@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.vectorstores import ChromaVectorStoreComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
