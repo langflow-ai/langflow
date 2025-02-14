@@ -64,7 +64,6 @@ test(
     await page.getByTestId("publish-button").click();
     await page.getByTestId("publish-switch").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    // expect publish switch to be checked
     await expect(page.getByTestId("publish-switch")).toBeChecked({
       checked: false,
     });
