@@ -1,6 +1,16 @@
 import { expect, test } from "@playwright/test";
+import fs from "fs";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+// Function to generate random 10-character filename
+function generateRandomFilename() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from(
+    { length: 10 },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join("");
+}
 
 test(
   "should navigate to files page and show empty state",
@@ -40,6 +50,10 @@ test(
   "should upload file using upload button",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
+    const fileName = generateRandomFilename();
+    const testFilePath = path.join(__dirname, "../../assets/test-file.txt");
+    const fileContent = fs.readFileSync(testFilePath);
+
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Navigate to files page
@@ -55,17 +69,22 @@ test(
     });
 
     // Upload a test file
-    const testFilePath = path.join(__dirname, "../../assets/test-file.txt");
-    await fileInput.setInputFiles(testFilePath);
+    await fileInput.setInputFiles([
+      {
+        name: `${fileName}.txt`,
+        mimeType: "text/plain",
+        buffer: fileContent,
+      },
+    ]);
 
     // Wait for upload success message
     const successMessage = await page.getByText("File uploaded successfully");
     expect(successMessage).toBeTruthy();
 
     // Verify file appears in the list
-    const fileName = await page.getByText("test-file");
+    const uploadedFileName = await page.getByText(fileName + ".txt");
     const fileType = await page.getByText("TXT", { exact: true });
-    expect(await fileName.isVisible()).toBeTruthy();
+    expect(await uploadedFileName.isVisible()).toBeTruthy();
     expect(await fileType.isVisible()).toBeTruthy();
   },
 );
@@ -74,6 +93,8 @@ test(
   "should upload file using drag and drop",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
+    const fileName = generateRandomFilename();
+
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Navigate to files page
@@ -83,14 +104,14 @@ test(
     await page.getByText("My Files").first().click();
 
     // Create DataTransfer object and file
-    const dataTransfer = await page.evaluateHandle(() => {
+    const dataTransfer = await page.evaluateHandle((fileName) => {
       const data = new DataTransfer();
-      const file = new File(["test content"], "drag-test.txt", {
+      const file = new File(["test content"], `${fileName}.txt`, {
         type: "text/plain",
       });
       data.items.add(file);
       return data;
-    });
+    }, fileName);
 
     // Trigger drag events
     await page.dispatchEvent(
@@ -109,9 +130,9 @@ test(
     expect(successMessage).toBeTruthy();
 
     // Verify file appears in the list
-    const fileName = await page.getByText("drag-test");
+    const uploadedFileName = await page.getByText(fileName + ".txt");
     const fileType = await page.getByText("TXT", { exact: true }).last();
-    expect(await fileName.isVisible()).toBeTruthy();
+    expect(await uploadedFileName.isVisible()).toBeTruthy();
     expect(await fileType.isVisible()).toBeTruthy();
   },
 );
@@ -120,6 +141,20 @@ test(
   "should upload multiple files with different types",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
+    const fileNames = {
+      txt: generateRandomFilename(),
+      json: generateRandomFilename(),
+      py: generateRandomFilename(),
+    };
+
+    const testFiles = [
+      path.join(__dirname, "../../assets/test-file.txt"),
+      path.join(__dirname, "../../assets/test-file.json"),
+      path.join(__dirname, "../../assets/test-file.py"),
+    ];
+
+    const fileContents = testFiles.map((file) => fs.readFileSync(file));
+
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Navigate to files page
@@ -135,21 +170,33 @@ test(
     });
 
     // Upload multiple test files
-    const testFiles = [
-      path.join(__dirname, "../../assets/test-file.txt"),
-      path.join(__dirname, "../../assets/test-file.json"),
-      path.join(__dirname, "../../assets/test-file.py"),
-    ];
-    await fileInput.setInputFiles(testFiles);
+    await fileInput.setInputFiles([
+      {
+        name: `${fileNames.txt}.txt`,
+        mimeType: "text/plain",
+        buffer: fileContents[0],
+      },
+      {
+        name: `${fileNames.json}.json`,
+        mimeType: "application/json",
+        buffer: fileContents[1],
+      },
+      {
+        name: `${fileNames.py}.py`,
+        mimeType: "text/x-python",
+        buffer: fileContents[2],
+      },
+    ]);
 
     // Wait for upload success message
     const successMessage = await page.getByText("Files uploaded successfully");
     expect(successMessage).toBeTruthy();
 
     // Verify all files appear in the list
-    const file = await page.getByText("test-file").last();
-
-    expect(file).toBeTruthy();
+    for (const name of Object.values(fileNames)) {
+      const file = await page.getByText(name);
+      expect(await file.isVisible()).toBeTruthy();
+    }
 
     // Verify file types are displayed correctly
     const txtType = await page.getByText("TXT", { exact: true });
@@ -166,6 +213,20 @@ test(
   "should search uploaded files",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
+    const fileNames = {
+      txt: generateRandomFilename(),
+      json: generateRandomFilename(),
+      py: generateRandomFilename(),
+    };
+
+    const testFiles = [
+      path.join(__dirname, "../../assets/test-file.txt"),
+      path.join(__dirname, "../../assets/test-file.json"),
+      path.join(__dirname, "../../assets/test-file.py"),
+    ];
+
+    const fileContents = testFiles.map((file) => fs.readFileSync(file));
+
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Navigate to files page
@@ -179,52 +240,78 @@ test(
     const fileInput = await page.waitForSelector('input[type="file"]', {
       state: "attached",
     });
-    const testFiles = [
-      path.join(__dirname, "../../assets/test-file.txt"),
-      path.join(__dirname, "../../assets/test-file.json"),
-      path.join(__dirname, "../../assets/test-file.py"),
-    ];
-    await fileInput.setInputFiles(testFiles);
+
+    await fileInput.setInputFiles([
+      {
+        name: `${fileNames.txt}.txt`,
+        mimeType: "text/plain",
+        buffer: fileContents[0],
+      },
+      {
+        name: `${fileNames.json}.json`,
+        mimeType: "application/json",
+        buffer: fileContents[1],
+      },
+      {
+        name: `${fileNames.py}.py`,
+        mimeType: "text/x-python",
+        buffer: fileContents[2],
+      },
+    ]);
+
     const successMessage = await page.getByText("Files uploaded successfully");
     expect(successMessage).toBeTruthy();
 
     // Test search by file name
     const searchInput = await page.getByTestId("search-store-input");
-    await searchInput.fill("json");
+    await searchInput.fill(fileNames.json);
     await page.waitForTimeout(100);
 
-    let file = await page.getByText("test-file");
-
     // Verify only JSON file is visible
-    const jsonFile = await page.getByText("JSON", { exact: true }).last();
-    expect(await file.last().isVisible()).toBeTruthy();
-    expect(jsonFile).toBeTruthy();
+    expect(
+      await page.getByText(fileNames.json + ".json").isVisible(),
+    ).toBeTruthy();
+    expect(
+      await page.getByText("JSON", { exact: true }).isVisible(),
+    ).toBeTruthy();
 
     // Verify other files are not visible
-    const txtFile = await page.getByText("TXT", { exact: true }).last();
-    const pyFile = await page.getByText("PY", { exact: true }).last();
-    expect(await txtFile.isVisible()).toBeFalsy();
-    expect(await pyFile.isVisible()).toBeFalsy();
+    expect(
+      await page.getByText(fileNames.txt + ".txt").isVisible(),
+    ).toBeFalsy();
+    expect(await page.getByText(fileNames.py + ".py").isVisible()).toBeFalsy();
 
     // Test search by file type
     await searchInput.fill("py");
     await page.waitForTimeout(100);
-    file = await page.getByText("test-file");
 
     // Verify only Python file is visible
-    expect(await file.last().isVisible()).toBeTruthy();
-    expect(await pyFile.isVisible()).toBeTruthy();
-    expect(await jsonFile.isVisible()).toBeFalsy();
-    expect(await txtFile.isVisible()).toBeFalsy();
+    expect(await page.getByText(fileNames.py + ".py").isVisible()).toBeTruthy();
+    expect(
+      await page.getByText("PY", { exact: true }).isVisible(),
+    ).toBeTruthy();
+    expect(
+      await page.getByText(fileNames.json + ".json").isVisible(),
+    ).toBeFalsy();
+    expect(
+      await page.getByText(fileNames.txt + ".txt").isVisible(),
+    ).toBeFalsy();
 
     // Clear search and verify all files are visible again
     await searchInput.fill("");
     await page.waitForTimeout(100);
-    file = await page.getByText("test-file");
 
-    expect(await file.last().isVisible()).toBeTruthy();
-    expect(await txtFile.isVisible()).toBeTruthy();
-    expect(await jsonFile.isVisible()).toBeTruthy();
-    expect(await pyFile.isVisible()).toBeTruthy();
+    for (const name of Object.values(fileNames)) {
+      expect(await page.getByText(name).isVisible()).toBeTruthy();
+    }
+    expect(
+      await page.getByText("TXT", { exact: true }).isVisible(),
+    ).toBeTruthy();
+    expect(
+      await page.getByText("JSON", { exact: true }).isVisible(),
+    ).toBeTruthy();
+    expect(
+      await page.getByText("PY", { exact: true }).isVisible(),
+    ).toBeTruthy();
   },
 );
