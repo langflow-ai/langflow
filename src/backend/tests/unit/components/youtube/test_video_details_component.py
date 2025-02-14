@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.youtube import YouTubeVideoDetailsComponent
 from tests.base import ComponentTestBaseWithClient
 
