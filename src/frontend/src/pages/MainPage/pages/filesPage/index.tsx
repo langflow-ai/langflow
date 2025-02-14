@@ -89,8 +89,7 @@ export const FilesPage = () => {
                 )}
               />
             )}
-
-            {params.value}
+            {params.value}.{params.data.path.split(".")[1]?.toLowerCase()}
           </div>
         );
       }, //This column will be twice as wide as the others

@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { usePostUploadFileV2 } from "@/controllers/API/queries/file-management";
 import { FileType } from "@/types/file_management";
+import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
 import { useEffect, useState } from "react";
@@ -61,6 +62,7 @@ export default function FileRendererComponent({
             onClick={(e) => e.stopPropagation()}
           >
             <Checkbox
+              data-testid={`checkbox-${file.name}`}
               checked={selectedFiles?.includes(file.path)}
               onCheckedChange={() => handleFileSelect?.(file.path)}
             />
@@ -101,12 +103,13 @@ export default function FileRendererComponent({
                 }}
                 onClick={(e) => e.stopPropagation()}
                 className="h-6 py-1"
+                data-testid={`rename-input-${file.name}`}
               />
             </div>
           ) : (
             <span
               className={cn(
-                "cursor-text text-sm font-medium",
+                "flex cursor-text items-center gap-2 text-sm font-medium",
                 file.progress !== undefined &&
                   file.progress === -1 &&
                   "pointer-events-none text-placeholder-foreground",
@@ -118,7 +121,10 @@ export default function FileRendererComponent({
                 }
               }}
             >
-              {file.name}
+              {file.name}.{type}
+              <span className="text-xs font-normal text-muted-foreground">
+                {formatFileSize(file.size)}
+              </span>
             </span>
           )}
           {file.progress !== undefined && file.progress === -1 ? (
@@ -146,6 +152,7 @@ export default function FileRendererComponent({
           size="iconMd"
           variant="ghost"
           className="hover:bg-accent"
+          data-testid={`remove-file-button-${file.name}`}
           onClick={(e) => {
             e.stopPropagation();
             handleRemove?.(file.path);
@@ -164,6 +171,7 @@ export default function FileRendererComponent({
         >
           <Button
             size="iconMd"
+            data-testid={`context-menu-button-${file.name}`}
             variant="ghost"
             className="hover:bg-secondary-foreground/5"
             onClick={(e) => {
