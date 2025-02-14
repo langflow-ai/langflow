@@ -112,7 +112,7 @@ class ArXivComponent(Component):
 
             # Validate URL scheme and host
             parsed_url = urlparse(url)
-            if parsed_url.scheme not in ("http", "https"):
+            if parsed_url.scheme not in {"http", "https"}:
                 error_msg = f"Invalid URL scheme: {parsed_url.scheme}"
                 raise ValueError(error_msg)
             if parsed_url.hostname != "export.arxiv.org":
