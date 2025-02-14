@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.tools import YfinanceToolComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
