@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from sqlmodel import col, delete, select
@@ -10,6 +11,9 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
+
+if TYPE_CHECKING:
+    from langflow.services.storage.service import StorageService
 
 
 async def cleanup_orphaned_records() -> None:
@@ -39,7 +43,7 @@ async def cleanup_orphaned_records() -> None:
                     await session.exec(delete(table).where(col(table.flow_id).in_(orphaned_flow_ids)))
 
                     # Clean up any associated storage files
-                    storage_service = get_storage_service()
+                    storage_service: StorageService = get_storage_service()
                     for flow_id in orphaned_flow_ids:
                         try:
                             files = await storage_service.list_files(str(flow_id))
@@ -50,8 +54,8 @@ async def cleanup_orphaned_records() -> None:
                                     logger.error(f"Failed to delete file {file} for flow {flow_id}: {exc!s}")
                             # Delete the flow directory after all files are deleted
                             flow_dir = storage_service.data_dir / str(flow_id)
-                            if flow_dir.exists():
-                                flow_dir.rmdir()
+                            if await flow_dir.exists():
+                                await flow_dir.rmdir()
                         except Exception as exc:  # noqa: BLE001
                             logger.error(f"Failed to list files for flow {flow_id}: {exc!s}")
 
