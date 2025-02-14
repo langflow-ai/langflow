@@ -45,8 +45,8 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         assert component.icon == "xAI"
         assert component.name == "xAIModel"
 
-    def test_template(self, default_kwargs, component_class):
-        component = component_class(**default_kwargs)
+    def test_template(self, default_kwargs):
+        component = XAIModelComponent(**default_kwargs)
         comp = Component(_code=component._code)
         frontend_node, _ = build_custom_component_template(comp)
         assert isinstance(frontend_node, dict)
