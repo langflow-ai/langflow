@@ -190,8 +190,8 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         mock_instance.bind.assert_called_once_with(response_format={"type": "json_object"})
         assert model == mock_bound_instance
 
-    def test_update_build_config(self, component_class):
-        component = component_class()
+    def test_update_build_config(self):
+        component = XAIModelComponent()
         build_config = {"model_name": {"options": []}}
 
         updated_config = component.update_build_config(build_config, "test-key", "api_key")
