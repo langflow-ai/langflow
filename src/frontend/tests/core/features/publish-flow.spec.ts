@@ -46,7 +46,6 @@ test(
 
     await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    // check if we can active the publish without going to the shareable playground
     await page.getByTestId("publish-button").click();
     await page.getByTestId("publish-switch").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
