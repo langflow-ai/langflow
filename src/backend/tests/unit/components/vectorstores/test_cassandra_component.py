@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.vectorstores import CassandraVectorStoreComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
