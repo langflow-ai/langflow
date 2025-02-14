@@ -2,9 +2,9 @@ from collections import defaultdict
 
 
 class RunnableVerticesManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.run_map: dict[str, list[str]] = defaultdict(list)  # Tracks successors of each vertex
-        self.run_predecessors: dict[str, set[str]] = defaultdict(set)  # Tracks predecessors for each vertex
+        self.run_predecessors: dict[str, list[str]] = defaultdict(list)  # Tracks predecessors for each vertex
         self.vertices_to_run: set[str] = set()  # Set of vertices that are ready to run
         self.vertices_being_run: set[str] = set()  # Set of vertices that are currently running
         self.cycle_vertices: set[str] = set()  # Set of vertices that are in a cycle
@@ -74,13 +74,14 @@ class RunnableVerticesManager:
             bool: True if all predecessor conditions are met, False otherwise
         """
         # Get pending predecessors, return True if none exist
-        if not (pending := self.run_predecessors.get(vertex_id, set())):
+        pending = self.run_predecessors.get(vertex_id, [])
+        if not pending:
             return True
 
         # For cycle vertices, check if any pending predecessors are also in cycle
         # Using set intersection is faster than iteration
         if vertex_id in self.cycle_vertices:
-            return is_loop or not bool(pending.intersection(self.cycle_vertices))
+            return is_loop or not bool(set(pending) & self.cycle_vertices)
 
         return False
 
