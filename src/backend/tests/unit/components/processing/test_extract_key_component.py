@@ -1,7 +1,7 @@
 import pytest
-
 from langflow.components.processing import ExtractDataKeyComponent
 from langflow.schema import Data
+
 from tests.base import ComponentTestBaseWithClient
 
 
