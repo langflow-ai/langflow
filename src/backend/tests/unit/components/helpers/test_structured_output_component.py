@@ -5,8 +5,8 @@ import pytest
 from langflow.components.helpers.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-
 from pydantic import BaseModel
+
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -32,7 +32,6 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         """Return the file names mapping for version-specific files."""
-
 
     def test_successful_structured_output_generation_with_patch_with_config(self):
         def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
