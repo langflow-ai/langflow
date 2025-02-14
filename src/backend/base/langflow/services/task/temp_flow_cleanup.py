@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import datetime
+from datetime import timezone
 
 from loguru import logger
 from sqlmodel import col, delete, select
@@ -18,9 +19,7 @@ async def cleanup_expired_public_flows() -> None:
     from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 
     settings = get_settings_service().settings
-    expiration_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
-        seconds=settings.public_flow_expiration
-    )
+    expiration_time = datetime.datetime.now(timezone.utc) - datetime.timedelta(seconds=settings.public_flow_expiration)
 
     async with session_scope() as session:
         # Find all expired public flows
@@ -34,29 +33,26 @@ async def cleanup_expired_public_flows() -> None:
         ).all()
 
         if expired_flows:
-            logger.info(f"Found {len(expired_flows)} expired public flows")
+            logger.debug(f"Found {len(expired_flows)} expired public flows")
             for flow in expired_flows:
                 try:
-                    # Delete the flow and let the database cascade handle related records
-                    await session.delete(flow)
-
                     # Clean up any associated storage files
+                    storage_service = get_storage_service()
                     try:
-                        storage_service = get_storage_service()
                         files = await storage_service.list_files(str(flow.id))
                         for file in files:
-                            try:
-                                await storage_service.delete_file(str(flow.id), file)
-                            except Exception as exc:  # noqa: BLE001
-                                logger.error(f"Failed to delete file {file} for flow {flow.id}: {exc!s}")
+                            await storage_service.delete_file(str(flow.id), file)
+                        # Delete the flow directory after all files are deleted
+                        flow_dir = storage_service.data_dir / str(flow.id)
+                        if await flow_dir.exists():
+                            await flow_dir.rmdir()
                     except Exception as exc:  # noqa: BLE001
-                        logger.error(f"Failed to list files for flow {flow.id}: {exc!s}")
-                        continue
+                        logger.error(f"Failed to handle files for flow {flow.id}: {exc!s}")
+
                 except Exception as exc:  # noqa: BLE001
                     logger.error(f"Error cleaning up expired public flow {flow.id}: {exc!s}")
 
-            await session.commit()
-            logger.info("Successfully cleaned up expired public flows")
+            logger.debug("Successfully cleaned up expired public flows")
 
 
 async def cleanup_orphaned_records() -> None:
@@ -80,27 +76,30 @@ async def cleanup_orphaned_records() -> None:
                 ).all()
 
                 if orphaned_flow_ids:
-                    logger.info(f"Found {len(orphaned_flow_ids)} orphaned flow IDs in {table.__name__}")
+                    logger.debug(f"Found {len(orphaned_flow_ids)} orphaned flow IDs in {table.__name__}")
 
+                    # Delete all orphaned records in a single query
+                    await session.exec(delete(table).where(col(table.flow_id).in_(orphaned_flow_ids)))
+
+                    # Clean up any associated storage files
+                    storage_service = get_storage_service()
                     for flow_id in orphaned_flow_ids:
-                        # Clean up any associated storage files for this flow_id
                         try:
-                            storage_service = get_storage_service()
                             files = await storage_service.list_files(str(flow_id))
                             for file in files:
                                 try:
                                     await storage_service.delete_file(str(flow_id), file)
                                 except Exception as exc:  # noqa: BLE001
                                     logger.error(f"Failed to delete file {file} for flow {flow_id}: {exc!s}")
+                            # Delete the flow directory after all files are deleted
+                            flow_dir = storage_service.data_dir / str(flow_id)
+                            if await flow_dir.exists():
+                                await flow_dir.rmdir()
                         except Exception as exc:  # noqa: BLE001
                             logger.error(f"Failed to list files for flow {flow_id}: {exc!s}")
-                            continue
-
-                        # Bulk delete records for this orphaned flow_id in this table
-                        await session.exec(delete(table).where(col(table.flow_id) == flow_id))
 
                     await session.commit()
-                    logger.info(f"Successfully deleted orphaned records from {table.__name__}")
+                    logger.debug(f"Successfully deleted orphaned records from {table.__name__}")
 
             except Exception as exc:  # noqa: BLE001
                 logger.error(f"Error cleaning up orphaned records in {table.__name__}: {exc!s}")
@@ -119,7 +118,7 @@ class CleanupWorker:
             return
 
         self._task = asyncio.create_task(self._run())
-        logger.info("Started database cleanup worker")
+        logger.debug("Started database cleanup worker")
 
     async def stop(self):
         """Stop the cleanup worker gracefully."""
@@ -127,11 +126,11 @@ class CleanupWorker:
             logger.warning("Cleanup worker is not running")
             return
 
-        logger.info("Stopping database cleanup worker...")
+        logger.debug("Stopping database cleanup worker...")
         self._stop_event.set()
         await self._task
         self._task = None
-        logger.info("Database cleanup worker stopped")
+        logger.debug("Database cleanup worker stopped")
 
     async def _run(self):
         """Run the cleanup worker until stopped."""
