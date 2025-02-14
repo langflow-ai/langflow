@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.tools import WikidataAPIComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
