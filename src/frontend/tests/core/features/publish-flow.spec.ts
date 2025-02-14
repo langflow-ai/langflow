@@ -5,7 +5,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 test(
   "Publish feature test",
   { tag: ["@release", "@workspace", "@api"] },
-  async ({ page,context }) => {
+  async ({ page, context }) => {
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -27,9 +27,7 @@ test(
     await page.waitForSelector('[data-testid="inputsChat Input"]', {
       timeout: 3000,
     });
-    await page
-      .getByTestId("inputsChat Input")
-      .hover({ timeout: 3000 });
+    await page.getByTestId("inputsChat Input").hover({ timeout: 3000 });
     await page.getByTestId("add-component-button-chat-input").click();
 
     await adjustScreenView(page);
@@ -39,8 +37,12 @@ test(
       timeout: 3000,
     });
     // expect the save post request to be sent and resolved
-    await expect(page.waitForResponse(response => response.url().includes(flowId!) && response.status() === 200)).resolves.toBeTruthy();
-
+    await expect(
+      page.waitForResponse(
+        (response) =>
+          response.url().includes(flowId!) && response.status() === 200,
+      ),
+    ).resolves.toBeTruthy();
 
     await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
@@ -51,13 +53,13 @@ test(
     // expect publish switch to be checked
     await expect(page.getByTestId("publish-switch")).toBeChecked();
     // await for all post event to be resolved
-    const pagePromise = context.waitForEvent('page');
+    const pagePromise = context.waitForEvent("page");
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
     await newPage.waitForTimeout(3000);
     const newUrl = newPage.url();
     await newPage.getByPlaceholder("Send a message...").fill("Hello");
-    await newPage.getByTestId('button-send').click();
+    await newPage.getByTestId("button-send").click();
     await expect(newPage.getByText("Hello")).toBeVisible();
     // redirect back to the original page
     await newPage.close();
@@ -67,14 +69,13 @@ test(
     await page.getByTestId("publish-switch").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     // expect publish switch to be checked
-    await expect(page.getByTestId("publish-switch")).toBeChecked({checked: false});
+    await expect(page.getByTestId("publish-switch")).toBeChecked({
+      checked: false,
+    });
     await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     // navigate to the new page
     await page.goto(newUrl);
     await expect(page.getByTestId("mainpage_title")).toBeVisible();
-
-
-
   },
 );
