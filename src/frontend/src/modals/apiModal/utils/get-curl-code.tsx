@@ -80,7 +80,6 @@ export function getNewCurlCode({
   tweaksObject: any;
   activeTweaks: boolean;
 }): string {
-  // get the host from the window location
   const host = window.location.host;
   // get the protocol from the window location
   const protocol = window.location.protocol;

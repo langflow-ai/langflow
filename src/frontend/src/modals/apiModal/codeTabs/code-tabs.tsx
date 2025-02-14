@@ -125,7 +125,7 @@ export default function APITabsComponent() {
         <TabsContent
           value={idx.toString()}
           className="api-modal-tabs-content mt-4 overflow-hidden"
-          key={idx} // Remember to add a unique key prop
+          key={idx}
         >
           <div className="relative flex h-full w-full">
             <Button
