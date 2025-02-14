@@ -3,31 +3,44 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from nv_ingest_client.client import Ingestor
-from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
 
 from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, Output, StrInput
+from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, Output, MessageTextInput
 from langflow.schema import Data
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 class NVIDIAIngestComponent(Component):
     display_name = "NVIDIA Ingest"
-    description = (
-        "NVIDIA Ingest (nv-ingest) efficiently processes, transforms, and stores "
-        "large datasets for AI and ML integration."
-    )
+    try:
+        from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
+        description = (
+            "NVIDIA Ingest (nv-ingest) efficiently processes, transforms, and stores "
+            "large datasets for AI and ML integration."
+        )
+    except ImportError as e:
+        description = "Install nv-ingest to use this component."
+    
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
     name = "NVIDIAIngest"
     beta = True
 
-    file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
-    supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
+    try: 
+        from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
+
+        file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
+        supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
+    except ImportError as e:
+        msg = "Failed to import NVIDIA Ingest dependencies. Install it using `uv sync --extra nv-ingest`"
+        logger.warning(msg)
+        file_types = []
+        supported_file_types_info = msg
+
 
     inputs = [
-        StrInput(
+        MessageTextInput(
             name="base_url",
             display_name="NVIDIA Ingestion URL",
             info="The URL of the NVIDIA Ingestion API.",
@@ -117,6 +130,12 @@ class NVIDIAIngestComponent(Component):
     ]
 
     def load_file(self) -> list[Data]:
+        try:
+            from nv_ingest_client.client import Ingestor
+        except ImportError as e:
+            msg = "Failed to import NVIDIA Ingest dependencies. Install it using `uv sync --extra nv-ingest`"
+            raise ImportError(msg) from e
+
         if not self.path:
             err_msg = "Upload a file to use this component."
             self.log(err_msg, name="NVIDIAIngestComponent")

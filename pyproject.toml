@@ -111,20 +111,7 @@ dependencies = [
     "ag2>=0.1.0",
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
-<<<<<<< HEAD
     "smolagents>=1.8.0",
-=======
-
-    ##############################################################
-    # nv-ingest-client 2025.2.7.dev0 does not correctly install
-    # its dependencies, so we need to install them manually.
-    ##############################################################
-    "nv-ingest-client==2025.2.7.dev0",
-    "python-pptx==0.6.23",
-    "pymilvus[bulk_writer,model]==2.5.0",
-    "llama-index-embeddings-nvidia==0.1.5",
-    ##############################################################
->>>>>>> e31bf78327 (update deps)
 ]
 
 [tool.uv.sources]
