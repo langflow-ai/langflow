@@ -133,7 +133,6 @@ export function getNewPythonApiCode({
   activeTweaks: boolean;
 }): string {
   const host = window.location.host;
-  // get the protocol from the window location
   const protocol = window.location.protocol;
   // get the api url
   const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
