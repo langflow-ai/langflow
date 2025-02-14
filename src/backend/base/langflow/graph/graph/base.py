@@ -1692,7 +1692,7 @@ class Graph:
 
     def get_successors(self, vertex: Vertex) -> list[Vertex]:
         """Returns the successors of a vertex."""
-        return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, [])]
+        return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, set())]
 
     def get_vertex_neighbors(self, vertex: Vertex) -> dict[Vertex, int]:
         """Returns the neighbors of a vertex."""
@@ -1952,7 +1952,8 @@ class Graph:
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
         is_active = self.get_vertex(vertex_id).is_active()
-        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active)
+        is_loop = self.get_vertex(vertex_id).is_loop
+        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     def build_run_map(self) -> None:
         """Builds the run map for the graph.
@@ -1978,20 +1979,21 @@ class Graph:
         runnable_vertices = []
         visited = set()
 
-        def find_runnable_predecessors(predecessor: Vertex) -> None:
-            predecessor_id = predecessor.id
+        def find_runnable_predecessors(predecessor_id: str) -> None:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            is_active = self.get_vertex(predecessor_id).is_active()
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active):
+            predecessor_vertex = self.get_vertex(predecessor_id)
+            is_active = predecessor_vertex.is_active()
+            is_loop = predecessor_vertex.is_loop
+            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active, is_loop=is_loop):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
-                    find_runnable_predecessors(self.get_vertex(pred_pred_id))
+                    find_runnable_predecessors(pred_pred_id)
 
         for predecessor_id in self.run_manager.run_predecessors.get(vertex_id, []):
-            find_runnable_predecessors(self.get_vertex(predecessor_id))
+            find_runnable_predecessors(predecessor_id)
         return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
@@ -2021,7 +2023,10 @@ class Graph:
 
     def build_in_degree(self, edges: list[CycleEdge]) -> dict[str, int]:
         in_degree: dict[str, int] = defaultdict(int)
+
         for edge in edges:
+            # We don't need to count if a Component connects more than one
+            # time to the same vertex.
             in_degree[edge.target_id] += 1
         for vertex in self.vertices:
             if vertex.id not in in_degree:
