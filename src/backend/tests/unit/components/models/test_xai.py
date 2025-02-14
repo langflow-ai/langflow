@@ -91,15 +91,16 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
                 assert input_field.range_spec.min == 0
                 assert input_field.range_spec.max == 2
 
-    def test_build_model(self, component_class, default_kwargs, mocker):
-        component = component_class(**default_kwargs)
-        component.temperature = 0.7
-        component.max_tokens = 100
-        component.api_key = "test-key"
-        component.model_name = "grok-2-latest"
-        component.model_kwargs = {}
-        component.api_base = "https://api.x.ai/v1"
-        component.seed = 1
+    def test_build_model(self, mocker):
+        component = XAIModelComponent(
+            temperature = 0.7,
+            max_tokens = 100,
+            api_key = "test-key",
+            model_name = "grok-2-latest",
+            model_kwargs = {},
+            api_base = "https://api.x.ai/v1",
+            seed = 1,
+        )
 
         mock_chat_openai = mocker.patch("langflow.components.models.xai.ChatOpenAI", return_value=MagicMock())
         model = component.build_model()
