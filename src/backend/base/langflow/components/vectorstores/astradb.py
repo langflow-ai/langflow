@@ -546,9 +546,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]["options"] = ["Bring your own", "Nvidia", *[key for key in vectorize_providers if key != "Nvidia"]]
 
         # And allow the user to see the models based on a selected provider
-        embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"][
-            "template"
-        ]["embedding_generation_provider"]["value"]
+        embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+            "embedding_generation_provider"
+        ]["value"]
 
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "embedding_generation_model"
