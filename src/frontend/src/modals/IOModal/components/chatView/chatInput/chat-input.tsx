@@ -5,7 +5,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,
@@ -36,7 +36,7 @@ export default function ChatInput({
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { validateFileSize } = useFileSizeValidator(setErrorData);
+  const { validateFileSize } = useFileSizeValidator();
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
@@ -69,7 +69,14 @@ export default function ChatInput({
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
-      if (!validateFileSize(file)) {
+      try {
+        validateFileSize(file);
+      } catch (e) {
+        if (e instanceof Error) {
+          setErrorData({
+            title: e.message,
+          });
+        }
         return;
       }
 
