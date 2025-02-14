@@ -86,32 +86,56 @@
     "nodes": [
       {
         "data": {
-          "id": "note-u8dIb",
+          "id": "note-LzOM2",
           "node": {
-            "description": "## Get Your AgentQL API Key\n\n**Steps**:\n\n1. **Visit** [AgentQL's API Key Page](https://dev.agentql.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new AgentQL account.\n\n3. **Generate API Key**:\n   - Click \"+ Create a new API Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the AgentQL API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
+            "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
             "documentation": "",
             "template": {
-              "backgroundColor": "rose"
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "id": "note-LzOM2",
+        "measured": {
+          "height": 324,
+          "width": 324
+        },
+        "position": {
+          "x": 1170.377736042162,
+          "y": 143.70815416701694
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "note-u8dIb",
+          "node": {
+            "description": "### 💡 Add your AgentQL API key here",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
             }
           },
           "type": "note"
         },
         "dragging": false,
         "height": 346,
-        "id": "note-u8dIb",
+        "id": "note-zgc96",
         "measured": {
           "height": 346,
-          "width": 325
+          "width": 324
         },
         "position": {
-          "x": 749.2571029624023,
-          "y": -77.85315990648449
+          "x": 741.8464477206785,
+          "y": 270.1565987952192
         },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 324
+        "selected": true,
+        "type": "noteNode"
       },
       {
         "data": {
@@ -1666,7 +1690,7 @@
         "data": {
           "id": "note-16o52",
           "node": {
-            "description": "# News Aggregator\n\n## Quick Start\n\n1. **Enter** a URL/website and data that you want to scrape \n2. **AgentQL** extracts data from website/URL\n3. **Response** appears in Chat Output",
+            "description": "# News Aggregator\n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\nThe **Agent** component populates the **Agent QL** component's **URL** and **Query** fields, and returns a structured response to your question.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1678,12 +1702,12 @@
         "dragging": false,
         "id": "note-16o52",
         "measured": {
-          "height": 324,
-          "width": 325
+          "height": 581,
+          "width": 404
         },
         "position": {
-          "x": 313.6177440145301,
-          "y": 191.60480464308256
+          "x": 215.10951666579462,
+          "y": -25.20466668876412
         },
         "selected": true,
         "type": "noteNode"
