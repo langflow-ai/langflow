@@ -556,12 +556,20 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise e
 
         db_names = [db["name"] for db in database_options]
-        build_config["database_name"]["options"] = db_names
-        build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k != "name"} for db in database_options
+        options_metadata = [
+            {
+                "status": db["status"],
+                "collections": db["collections"],
+                "api_endpoint": db["api_endpoint"],
+                "icon": db["icon"],
+            }
+            for db in database_options
         ]
 
-        selected_db_name = build_config["database_name"]["value"]
+        build_config["database_name"]["options"] = db_names
+        build_config["database_name"]["options_metadata"] = options_metadata
+
+        selected_db_name = build_config["database_name"].get("value", "")
         if selected_db_name not in db_names:
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
