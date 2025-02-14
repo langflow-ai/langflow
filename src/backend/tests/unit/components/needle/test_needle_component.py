@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.needle import NeedleComponent
 from tests.base import ComponentTestBaseWithClient
 
