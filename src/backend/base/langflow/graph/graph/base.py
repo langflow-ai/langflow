@@ -339,6 +339,7 @@ class Graph:
         self,
         inputs: list[dict] | None = None,
         max_iterations: int | None = None,
+        config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
     ):
         if not self._prepared:
@@ -346,6 +347,8 @@ class Graph:
             raise ValueError(msg)
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
+        if config is not None:
+            self.__apply_config(config)
         for _input in inputs or []:
             for key, value in _input.items():
                 vertex = self.get_vertex(key)
