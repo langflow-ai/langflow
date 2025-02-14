@@ -4888,10 +4888,14 @@ wheels = [
 [[package]]
 name = "langchain-tests"
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "0.3.9"
 =======
 version = "0.3.11"
 >>>>>>> 8166a9deb7 (update deps)
+=======
+version = "0.3.12"
+>>>>>>> 5580569cdc (uv lock)
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -4903,6 +4907,7 @@ dependencies = [
     { name = "syrupy" },
 ]
 <<<<<<< HEAD
+<<<<<<< HEAD
 sdist = { url = "https://files.pythonhosted.org/packages/26/06/077fbd5b135bd5aedfc68495c60df8dd23012b79a932873bfb6d82101b52/langchain_tests-0.3.9.tar.gz", hash = "sha256:bfff9704adeea927150e3015fe0c103dff49de17f3a77163ab48f0717a29ebed", size = 30378 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ca/e1/a7325da35bc3fbc710274fdcdd0a558c6e3e95f0932e816541ee9f2ea041/langchain_tests-0.3.9-py3-none-any.whl", hash = "sha256:a667266819484723215bcdad682327ebea93d9ff30ac4c26b869b30a9cf78ea8", size = 36817 },
@@ -4911,6 +4916,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/ad/e6/a21a4de8588604679
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2b/13/1be1f92e24ea60bb03f2bf541ff7cd057bb5799506e8e1a50e9fd278c94e/langchain_tests-0.3.11-py3-none-any.whl", hash = "sha256:8cc84b544a521924f8081e8f3cb75643a3f009dc994328df5c9cce55ba3e9dda", size = 37742 },
 >>>>>>> 8166a9deb7 (update deps)
+=======
+sdist = { url = "https://files.pythonhosted.org/packages/15/28/dedf1ca4aaab41908b416b08931651b521748f6e10c3c0edd795795b9f46/langchain_tests-0.3.12.tar.gz", hash = "sha256:f841f67ed296835e5827a44742341bb94886b938d9d05b4d09fb8c0bb513a9a5", size = 34569 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/6c/681af16fd8c723fd1b596b6bb942163b8c1d0bfcabe4f4c1c201d1f36e36/langchain_tests-0.3.12-py3-none-any.whl", hash = "sha256:c5b8c658ac5fe021855d4714f9e04e3209977d4ddd86101130183ca0eaede9be", size = 37744 },
+>>>>>>> 5580569cdc (uv lock)
 ]
 
 [[package]]
@@ -8232,10 +8242,11 @@ wheels = [
 
 [[package]]
 name = "psutil"
-version = "6.1.1"
+version = "7.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1f/5a/07871137bb752428aa4b659f910b399ba6f291156bdea939be3e96cae7cb/psutil-6.1.1.tar.gz", hash = "sha256:cf8496728c18f2d0b45198f06895be52f36611711746b7f30c464b422b50e2f5", size = 508502 }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/80/336820c1ad9286a4ded7e845b2eccfcb27851ab8ac6abece774a6ff4d3de/psutil-7.0.0.tar.gz", hash = "sha256:7be9c3eba38beccb6495ea33afd982a44074b78f28c434a1f51cc07fd315c456", size = 497003 }
 wheels = [
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
     { url = "https://files.pythonhosted.org/packages/d2/d4/8095b53c4950f44dc99b8d983b796f405ae1f58d80978fcc0421491b4201/psutil-6.1.1-cp27-none-win32.whl", hash = "sha256:6d4281f5bbca041e2292be3380ec56a9413b790579b8e593b1784499d0005dac", size = 246855 },
@@ -8248,6 +8259,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/47/da/99f4345d4ddf2845cb5b5bd0d93d554e84542d116934fde07a0c50bd4e9f/psutil-6.1.1-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:33431e84fee02bc84ea36d9e2c4a6d395d479c9dd9bba2376c1f6ee8f3a4e0b3", size = 289017 },
     { url = "https://files.pythonhosted.org/packages/38/53/bd755c2896f4461fd4f36fa6a6dcb66a88a9e4b9fd4e5b66a77cf9d4a584/psutil-6.1.1-cp37-abi3-win32.whl", hash = "sha256:eaa912e0b11848c4d9279a93d7e2783df352b082f40111e078388701fd479e53", size = 250602 },
     { url = "https://files.pythonhosted.org/packages/7b/d7/7831438e6c3ebbfa6e01a927127a6cb42ad3ab844247f3c5b96bea25d73d/psutil-6.1.1-cp37-abi3-win_amd64.whl", hash = "sha256:f35cfccb065fff93529d2afb4a2e89e363fe63ca1e4a5da22b603a85833c2649", size = 254444 },
+=======
+    { url = "https://files.pythonhosted.org/packages/ed/e6/2d26234410f8b8abdbf891c9da62bee396583f713fb9f3325a4760875d22/psutil-7.0.0-cp36-abi3-macosx_10_9_x86_64.whl", hash = "sha256:101d71dc322e3cffd7cea0650b09b3d08b8e7c4109dd6809fe452dfd00e58b25", size = 238051 },
+    { url = "https://files.pythonhosted.org/packages/04/8b/30f930733afe425e3cbfc0e1468a30a18942350c1a8816acfade80c005c4/psutil-7.0.0-cp36-abi3-macosx_11_0_arm64.whl", hash = "sha256:39db632f6bb862eeccf56660871433e111b6ea58f2caea825571951d4b6aa3da", size = 239535 },
+    { url = "https://files.pythonhosted.org/packages/2a/ed/d362e84620dd22876b55389248e522338ed1bf134a5edd3b8231d7207f6d/psutil-7.0.0-cp36-abi3-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1fcee592b4c6f146991ca55919ea3d1f8926497a713ed7faaf8225e174581e91", size = 275004 },
+    { url = "https://files.pythonhosted.org/packages/bf/b9/b0eb3f3cbcb734d930fdf839431606844a825b23eaf9a6ab371edac8162c/psutil-7.0.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4b1388a4f6875d7e2aff5c4ca1cc16c545ed41dd8bb596cefea80111db353a34", size = 277986 },
+    { url = "https://files.pythonhosted.org/packages/eb/a2/709e0fe2f093556c17fbafda93ac032257242cabcc7ff3369e2cb76a97aa/psutil-7.0.0-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a5f098451abc2828f7dc6b58d44b532b22f2088f4999a937557b603ce72b1993", size = 279544 },
+    { url = "https://files.pythonhosted.org/packages/50/e6/eecf58810b9d12e6427369784efe814a1eec0f492084ce8eb8f4d89d6d61/psutil-7.0.0-cp37-abi3-win32.whl", hash = "sha256:ba3fcef7523064a6c9da440fc4d6bd07da93ac726b5733c29027d7dc95b39d99", size = 241053 },
+    { url = "https://files.pythonhosted.org/packages/50/1b/6921afe68c74868b4c9fa424dad3be35b095e16687989ebbb50ce4fceb7c/psutil-7.0.0-cp37-abi3-win_amd64.whl", hash = "sha256:4cf3d4eb1aa9b348dec30105c55cd9b7d4629285735a102beb4441e38db90553", size = 244885 },
+>>>>>>> 5580569cdc (uv lock)
 ]
 
 [[package]]
