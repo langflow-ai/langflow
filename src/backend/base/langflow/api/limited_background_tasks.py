@@ -4,7 +4,7 @@ from langflow.graph.utils import log_vertex_build
 from langflow.services.deps import get_settings_service
 
 
-class LimitedBackgroundTasks(BackgroundTasks):
+class LimitVertexBuildBackgroundTasks(BackgroundTasks):
     """A subclass of FastAPI BackgroundTasks that limits the number of tasks added per vertex_id.
 
     If more than max_vertex_builds_per_vertex tasks are added for a given vertex_id,

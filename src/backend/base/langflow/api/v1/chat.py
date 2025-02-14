@@ -13,7 +13,7 @@ from langflow.api.build import (
     get_flow_events_response,
     start_flow_build,
 )
-from langflow.api.limited_background_tasks import LimitedBackgroundTasks
+from langflow.api.limited_background_tasks import LimitVertexBuildBackgroundTasks
 from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
@@ -130,7 +130,7 @@ async def retrieve_vertices_order(
 async def build_flow(
     *,
     flow_id: uuid.UUID,
-    background_tasks: LimitedBackgroundTasks,
+    background_tasks: LimitVertexBuildBackgroundTasks,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
     files: list[str] | None = None,
