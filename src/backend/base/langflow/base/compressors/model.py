@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 from langflow.custom import Component
 from langflow.field_typing import BaseDocumentCompressor
-from langflow.io import DataInput, IntInput, MultilineInput, SecretStrInput
+from langflow.io import DataInput, IntInput, MultilineInput
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.template.field.base import Output
@@ -14,10 +14,6 @@ class LCCompressorComponent(Component):
             name="search_query",
             display_name="Search Query",
             tool_mode=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="API Key",
         ),
         DataInput(
             name="search_results",

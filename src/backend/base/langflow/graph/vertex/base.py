@@ -66,6 +66,7 @@ class Vertex:
         self.is_state = False
         self.is_input = any(input_component_name in self.id for input_component_name in INPUT_COMPONENTS)
         self.is_output = any(output_component_name in self.id for output_component_name in OUTPUT_COMPONENTS)
+        self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
         self.has_external_input = False
@@ -78,7 +79,7 @@ class Vertex:
         self.built_object: Any = UnbuiltObject()
         self.built_result: Any = None
         self.built = False
-        self._successors_ids: list[str] | None = None
+        self._successors_ids: set[str] | None = None
         self.artifacts: dict[str, Any] = {}
         self.artifacts_raw: dict[str, Any] = {}
         self.artifacts_type: dict[str, str] = {}
@@ -108,6 +109,13 @@ class Vertex:
         self.output_names: list[str] = [
             output["name"] for output in self.outputs if isinstance(output, dict) and "name" in output
         ]
+
+    @property
+    def is_loop(self) -> bool:
+        """Check if any output allows looping."""
+        if self._is_loop is None:
+            self._is_loop = any(output.get("allows_loop", False) for output in self.outputs)
+        return self._is_loop
 
     def set_input_value(self, name: str, value: Any) -> None:
         if self.custom_component is None:
@@ -199,8 +207,8 @@ class Vertex:
         return self.graph.get_successors(self)
 
     @property
-    def successors_ids(self) -> list[str]:
-        return self.graph.successor_map.get(self.id, [])
+    def successors_ids(self) -> set[str]:
+        return self.graph.successor_map.get(self.id, set())
 
     def __getstate__(self):
         state = self.__dict__.copy()

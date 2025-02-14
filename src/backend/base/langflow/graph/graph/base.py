@@ -116,10 +116,10 @@ class Graph:
 
         self.top_level_vertices: list[str] = []
         self.vertex_map: dict[str, Vertex] = {}
-        self.predecessor_map: dict[str, list[str]] = defaultdict(list)
-        self.successor_map: dict[str, list[str]] = defaultdict(list)
+        self.predecessor_map: dict[str, set[str]] = defaultdict(set)
+        self.successor_map: dict[str, set[str]] = defaultdict(set)
         self.in_degree_map: dict[str, int] = defaultdict(int)
-        self.parent_child_map: dict[str, list[str]] = defaultdict(list)
+        self.parent_child_map: dict[str, set[str]] = defaultdict(set)
         self._run_queue: deque[str] = deque()
         self._first_layer: list[str] = []
         self._lock = asyncio.Lock()
@@ -469,10 +469,10 @@ class Graph:
         self.add_edge(edge)
         source_id = edge["data"]["sourceHandle"]["id"]
         target_id = edge["data"]["targetHandle"]["id"]
-        self.predecessor_map[target_id].append(source_id)
-        self.successor_map[source_id].append(target_id)
+        self.predecessor_map[target_id].add(source_id)
+        self.successor_map[source_id].add(target_id)
         self.in_degree_map[target_id] += 1
-        self.parent_child_map[source_id].append(target_id)
+        self.parent_child_map[source_id].add(target_id)
 
     def add_node(self, node: NodeData) -> None:
         self._vertices.append(node)
@@ -1554,7 +1554,7 @@ class Graph:
         logger.debug("Graph processing complete")
         return self
 
-    def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
+    def find_next_runnable_vertices(self, vertex_successors_ids: set[str]) -> list[str]:
         next_runnable_vertices = set()
         for v_id in sorted(vertex_successors_ids):
             if not self.is_vertex_runnable(v_id):
@@ -1692,7 +1692,7 @@ class Graph:
 
     def get_successors(self, vertex: Vertex) -> list[Vertex]:
         """Returns the successors of a vertex."""
-        return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, [])]
+        return [self.get_vertex(target_id) for target_id in self.successor_map.get(vertex.id, set())]
 
     def get_vertex_neighbors(self, vertex: Vertex) -> dict[Vertex, int]:
         """Returns the neighbors of a vertex."""
@@ -1952,7 +1952,8 @@ class Graph:
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
         is_active = self.get_vertex(vertex_id).is_active()
-        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active)
+        is_loop = self.get_vertex(vertex_id).is_loop
+        return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     def build_run_map(self) -> None:
         """Builds the run map for the graph.
@@ -1978,20 +1979,21 @@ class Graph:
         runnable_vertices = []
         visited = set()
 
-        def find_runnable_predecessors(predecessor: Vertex) -> None:
-            predecessor_id = predecessor.id
+        def find_runnable_predecessors(predecessor_id: str) -> None:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            is_active = self.get_vertex(predecessor_id).is_active()
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active):
+            predecessor_vertex = self.get_vertex(predecessor_id)
+            is_active = predecessor_vertex.is_active()
+            is_loop = predecessor_vertex.is_loop
+            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active, is_loop=is_loop):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
-                    find_runnable_predecessors(self.get_vertex(pred_pred_id))
+                    find_runnable_predecessors(pred_pred_id)
 
         for predecessor_id in self.run_manager.run_predecessors.get(vertex_id, []):
-            find_runnable_predecessors(self.get_vertex(predecessor_id))
+            find_runnable_predecessors(predecessor_id)
         return runnable_vertices
 
     def remove_from_predecessors(self, vertex_id: str) -> None:
@@ -2029,13 +2031,13 @@ class Graph:
         return in_degree
 
     @staticmethod
-    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
         """Returns the adjacency maps for the graph."""
-        predecessor_map: dict[str, list[str]] = defaultdict(list)
-        successor_map: dict[str, list[str]] = defaultdict(list)
+        predecessor_map: dict[str, set[str]] = defaultdict(set)
+        successor_map: dict[str, set[str]] = defaultdict(set)
         for edge in edges:
-            predecessor_map[edge.target_id].append(edge.source_id)
-            successor_map[edge.source_id].append(edge.target_id)
+            predecessor_map[edge.target_id].add(edge.source_id)
+            successor_map[edge.source_id].add(edge.target_id)
         return predecessor_map, successor_map
 
     def __to_dict(self) -> dict[str, dict[str, list[str]]]:
