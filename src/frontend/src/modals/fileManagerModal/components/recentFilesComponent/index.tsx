@@ -21,6 +21,10 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
+  const filesWithType = files.map((file) => ({
+    ...file,
+    type: file.path.split(".").pop()?.toLowerCase(),
+  }));
   const [fuse, setFuse] = useState<Fuse<FileType>>(new Fuse([]));
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -30,24 +34,24 @@ export default function RecentFilesComponent({
     const filteredFiles = (
       searchQuery
         ? fuse.search(searchQuery).map(({ item }) => item)
-        : (files ?? [])
+        : (filesWithType ?? [])
     ).filter((file) => {
       const fileExtension = file.path.split(".").pop()?.toLowerCase();
       return fileExtension && (!types || types.includes(fileExtension));
     });
     return filteredFiles;
-  }, [searchQuery, files, selectedFiles, types]);
+  }, [searchQuery, filesWithType, selectedFiles, types]);
 
   useEffect(() => {
-    if (files) {
+    if (filesWithType) {
       setFuse(
-        new Fuse(files, {
-          keys: ["name"],
+        new Fuse(filesWithType, {
+          keys: ["name", "type"],
           threshold: 0.3,
         }),
       );
     }
-  }, [files]);
+  }, [filesWithType]);
 
   const handleFileSelect = (filePath: string) => {
     setSelectedFiles(
@@ -71,6 +75,7 @@ export default function RecentFilesComponent({
             icon="Search"
             placeholder="Search files..."
             inputClassName="h-8"
+            data-testid="search-files-input"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
