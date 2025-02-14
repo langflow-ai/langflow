@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.retrievers import MetalRetrieverComponent
 from tests.base import ComponentTestBaseWithClient
 
