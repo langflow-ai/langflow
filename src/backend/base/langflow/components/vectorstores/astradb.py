@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
+from functools import cache
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -441,25 +442,21 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         )
 
     def get_keyspace(self):
-        keyspace = self.keyspace
+        return self.keyspace.strip() if self.keyspace else None
 
-        if keyspace:
-            return keyspace.strip()
-
-        return None
-
+    @cache
     def get_database_object(self, api_endpoint: str | None = None):
         try:
-            client = DataAPIClient(token=self.token, environment=self.environment)
-
+            client = self._get_client(self.token, self.environment)
+            api_endpoint = api_endpoint or self.get_api_endpoint()
+            keyspace = self.get_keyspace()
             return client.get_database(
-                api_endpoint=api_endpoint or self.get_api_endpoint(),
+                api_endpoint=api_endpoint,
                 token=self.token,
-                keyspace=self.get_keyspace(),
+                keyspace=keyspace,
             )
         except Exception as e:
-            msg = f"Error fetching database object: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error fetching database object: {e}") from e
 
     def collection_data(self, collection_name: str, database: Database | None = None):
         try:
@@ -950,3 +947,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    @staticmethod
+    @cache
+    def _get_client(token, environment):
+        return DataAPIClient(token=token, environment=environment)
