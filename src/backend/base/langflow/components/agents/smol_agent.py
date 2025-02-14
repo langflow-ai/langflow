@@ -1,5 +1,7 @@
 from smolagents import CodeAgent, ToolCallingAgent
 
+from langflow.base.agents.callback import AgentAsyncHandler
+from langflow.base.agents.events import ExceptionWithMessageError, process_smol_agent_events
 from langflow.base.huggingface.model_bridge import LangChainHFModel
 from langflow.custom import Component
 from langflow.field_typing import (
@@ -8,14 +10,11 @@ from langflow.field_typing import (
 )
 from langflow.inputs.inputs import InputTypes
 from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output
-from langflow.schema.message import Message
-from langflow.schema.content_block import ContentBlock, TextContent
-from langflow.utils.constants import MESSAGE_SENDER_AI
-from langflow.base.agents.events import process_smol_agent_events
-from langflow.base.agents.callback import AgentAsyncHandler
-from langflow.memory import delete_message
 from langflow.logging import logger
-from langflow.base.agents.events import ExceptionWithMessageError
+from langflow.memory import delete_message
+from langflow.schema.content_block import ContentBlock, TextContent
+from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_AI
 
 
 class SmolAgentComponent(Component):
