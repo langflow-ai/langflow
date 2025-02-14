@@ -139,9 +139,8 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
                 timeout=10,
             )
 
-    def test_get_models_no_api_key(self, component_class):
-        component = component_class()
-        component.api_key = None
+    def test_get_models_no_api_key(self):
+        component = XAIModelComponent(api_key=None)
         models = component.get_models()
         assert models == ["grok-2-latest"]
 
