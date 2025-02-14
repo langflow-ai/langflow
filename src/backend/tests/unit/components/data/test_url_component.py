@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -6,7 +7,9 @@ from httpx import Response
 from langflow.components.data import URLComponent
 from langflow.schema import DataFrame, Message
 
-from tests.base import ComponentTestBaseWithoutClient
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient, VersionComponentMapping
+from tests.constants import SUPPORTED_VERSIONS
+from tests.integration.utils import build_component_instance_for_tests
 
 
 class TestURLComponent(ComponentTestBaseWithoutClient):
@@ -147,3 +150,50 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         result = component.fetch_content()
         assert len(result) == 1
         assert result[0].source == url
+
+    @pytest.mark.parametrize("version", SUPPORTED_VERSIONS)
+    def test_component_versions(
+        self,
+        version: str,
+        default_kwargs: dict[str, Any],
+        file_names_mapping: list[VersionComponentMapping],
+        mock_web_load,
+    ) -> None:
+        """Test if the component works across different versions."""
+        if not file_names_mapping:
+            pytest.skip("No file names mapping defined for this component.")
+        version_mappings = {mapping["version"]: mapping for mapping in file_names_mapping}
+
+        mapping = version_mappings[version]
+        if mapping["file_name"] is DID_NOT_EXIST:
+            pytest.skip(f"Skipping version {version} as it does not have a file name defined.")
+
+        # Set up mock response
+        mock_web_load.return_value = [Mock(page_content="test content", metadata={"source": "https://example.com"})]
+
+        try:
+            instance, component_code = build_component_instance_for_tests(
+                version, file_name=mapping["file_name"], module=mapping["module"], **default_kwargs
+            )
+        except Exception as e:
+            msg = (
+                f"Failed to build component instance for {self.__class__.__name__} "
+                f"version {version}:\n"
+                f"Module: {mapping['module']}\n"
+                f"File: {mapping['file_name']}\n"
+                f"Error: {e!s}"
+            )
+            raise AssertionError(msg) from e
+
+        try:
+            instance()
+        except Exception as e:
+            msg = (
+                f"Failed to execute component {self.__class__.__name__} "
+                f"for version {version}:\n"
+                f"Module: {mapping['module']}\n"
+                f"File: {mapping['file_name']}\n"
+                f"Error: {e!s}\n"
+                f"Component Code: {component_code}"
+            )
+            raise AssertionError(msg) from e
