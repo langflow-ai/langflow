@@ -36,6 +36,16 @@ class ComponentTestBase:
         # If we get here, all fixtures exist
 
     @pytest.fixture
+    def module(self) -> str | None:
+        """Return the module name for the component."""
+        return None
+
+    @pytest.fixture
+    def file_name(self) -> str | None:
+        """Return the file name for the component."""
+        return None
+
+    @pytest.fixture
     def component_class(self) -> type[Any]:
         """Return the component class to test."""
         msg = f"{self.__class__.__name__} must implement the component_class fixture"
@@ -69,38 +79,58 @@ class ComponentTestBase:
         result = await component_instance.run()
         assert result is not None, "Component returned None for the latest version."
 
-    def test_all_versions_have_a_file_name_defined(self, file_names_mapping: list[VersionComponentMapping]) -> None:
+    def test_all_versions_have_a_file_name_defined(
+        self, file_names_mapping: list[VersionComponentMapping], module: str | None, file_name: str | None
+    ) -> None:
         """Ensure all supported versions have a file name defined."""
-        if not file_names_mapping:
-            msg = f"file_names_mapping is empty for {self.__class__.__name__}. Skipping versions test."
+        if not file_names_mapping and module is None and file_name is None:
+            msg = (
+                f"No version mapping or module/file_name defined for {self.__class__.__name__}. Skipping versions test."
+            )
             pytest.skip(msg)
 
-        version_mappings = {mapping["version"]: mapping for mapping in file_names_mapping}
+        if file_names_mapping:
+            version_mappings = {mapping["version"]: mapping for mapping in file_names_mapping}
 
-        for version in SUPPORTED_VERSIONS:
-            if version not in version_mappings:
-                supported_versions = ", ".join(sorted(m["version"] for m in file_names_mapping))
-                msg = (
-                    f"Version {version} not found in file_names_mapping for {self.__class__.__name__}.\n"
-                    f"Currently defined versions: {supported_versions}\n"
-                    "Please add this version to your component's file_names_mapping."
-                )
-                raise AssertionError(msg)
+            for version in SUPPORTED_VERSIONS:
+                if version not in version_mappings:
+                    supported_versions = ", ".join(sorted(m["version"] for m in file_names_mapping))
+                    msg = (
+                        f"Version {version} not found in file_names_mapping for {self.__class__.__name__}.\n"
+                        f"Currently defined versions: {supported_versions}\n"
+                        "Please add this version to your component's file_names_mapping."
+                    )
+                    raise AssertionError(msg)
+                try:
+                    mapping = version_mappings[version]
+                except KeyError as e:
+                    supported_versions = ", ".join(sorted(m["version"] for m in file_names_mapping))
+                    msg = (
+                        f"Version {version} not found in file_names_mapping for {self.__class__.__name__}.\n"
+                        f"Currently defined versions: {supported_versions}\n"
+                        "Please add this version to your component's file_names_mapping."
+                    )
+                    raise AssertionError(msg) from e
+                if mapping["file_name"] is None:
+                    msg = (
+                        f"file_name is None for version {version} in {self.__class__.__name__}.\n"
+                        "Please provide a valid file_name in file_names_mapping or set it to DID_NOT_EXIST."
+                    )
+                    raise AssertionError(msg)
 
-            mapping = version_mappings[version]
-            if mapping["file_name"] is None:
-                msg = (
-                    f"file_name is None for version {version} in {self.__class__.__name__}.\n"
-                    "Please provide a valid file_name in file_names_mapping or set it to DID_NOT_EXIST."
-                )
-                raise AssertionError(msg)
-
-            if mapping["module"] is None:
-                msg = (
-                    f"module is None for version {version} in {self.__class__.__name__}.\n"
-                    "Please provide a valid module name in file_names_mapping or set it to DID_NOT_EXIST."
-                )
-                raise AssertionError(msg)
+                if mapping["module"] is None:
+                    msg = (
+                        f"module is None for version {version} in {self.__class__.__name__}.\n"
+                        "Please provide a valid module name in file_names_mapping or set it to DID_NOT_EXIST."
+                    )
+                    raise AssertionError(msg)
+        elif module is not None and file_name is not None:
+            # If no file_names_mapping but module and file_name fixtures exist,
+            # create a mapping for all supported versions using those fixtures
+            version_mappings = {
+                version: {"version": version, "module": module, "file_name": file_name}
+                for version in SUPPORTED_VERSIONS
+            }
 
     @pytest.mark.parametrize("version", SUPPORTED_VERSIONS)
     def test_component_versions(
@@ -108,11 +138,20 @@ class ComponentTestBase:
         version: str,
         default_kwargs: dict[str, Any],
         file_names_mapping: list[VersionComponentMapping],
+        module: str | None,
+        file_name: str | None,
     ) -> None:
         """Test if the component works across different versions."""
-        if not file_names_mapping:
-            pytest.skip("No file names mapping defined for this component.")
-        version_mappings = {mapping["version"]: mapping for mapping in file_names_mapping}
+        if not file_names_mapping and module is None and file_name is None:
+            pytest.skip("No file names mapping or module/file_name defined for this component.")
+
+        if file_names_mapping:
+            version_mappings = {mapping["version"]: mapping for mapping in file_names_mapping}
+        elif module is not None and file_name is not None:
+            version_mappings = {
+                version: {"version": version, "module": module, "file_name": file_name}
+                for version in SUPPORTED_VERSIONS
+            }
 
         mapping = version_mappings[version]
         if mapping["file_name"] is DID_NOT_EXIST:
