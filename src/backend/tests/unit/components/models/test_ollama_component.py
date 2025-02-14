@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.models import ChatOllamaComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
