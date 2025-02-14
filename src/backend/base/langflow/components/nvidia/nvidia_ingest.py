@@ -21,7 +21,7 @@ class NVIDIAIngestComponent(Component):
 
         file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
         supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
-    except ImportError as e:
+    except ImportError:
         msg = "NVIDIA Ingest dependencies missing."
         logger.warning(msg)
         file_types = [msg]
