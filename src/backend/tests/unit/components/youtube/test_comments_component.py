@@ -1,5 +1,4 @@
 import pytest
-
 from langflow.components.youtube import YouTubeCommentsComponent
 from tests.base import ComponentTestBaseWithClient
 
@@ -80,6 +79,6 @@ class TestYouTubeCommentsComponent(ComponentTestBaseWithClient):
         assert isinstance(result, pd.DataFrame), "Result should be a DataFrame."
         assert "error" in result.columns, "DataFrame should contain 'error' column."
         assert not result.empty, "Result DataFrame should not be empty."
-        assert (
-            result["error"].iloc[0] == "Comments are disabled for this video or API quota exceeded."
-        ), "Error message should indicate comments are disabled."
+        assert result["error"].iloc[0] == "Comments are disabled for this video or API quota exceeded.", (
+            "Error message should indicate comments are disabled."
+        )
