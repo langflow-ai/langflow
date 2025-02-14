@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.prototypes import PythonFunctionComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
