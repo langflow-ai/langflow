@@ -1,4 +1,8 @@
-import { BASE_URL_API } from "@/constants/constants";
+import {
+  BASE_URL_API,
+  POLLING_INTERVAL,
+  POLLING_MESSAGES,
+} from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { Edge, Node } from "@xyflow/react";
@@ -129,8 +133,8 @@ export async function buildFlowVerticesWithFallback(
     return await buildFlowVertices({ ...params });
   } catch (e: any) {
     if (
-      e.message === "Endpoint not available" ||
-      e.message === "Streaming not supported"
+      e.message === POLLING_MESSAGES.ENDPOINT_NOT_AVAILABLE ||
+      e.message === POLLING_MESSAGES.STREAMING_NOT_SUPPORTED
     ) {
       // Fallback to polling
       return await buildFlowVertices({ ...params, stream: false });
@@ -194,7 +198,7 @@ async function pollBuildEvents(
     }
 
     // Add a small delay between polls to avoid overwhelming the server
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, POLLING_INTERVAL));
   }
 }
 
