@@ -1,3 +1,4 @@
+import functools
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
@@ -433,30 +434,32 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return db.get("api_endpoint")
 
     def get_api_endpoint(self):
-        return self.get_api_endpoint_static(
-            token=self.token,
-            environment=self.environment,
-            api_endpoint=self.api_endpoint,
-            database_name=self.database_name,
-        )
+        if not self.api_endpoint_cache:
+            self.api_endpoint_cache = self.get_api_endpoint_static_cached(
+                token=self.token,
+                environment=self.environment,
+                api_endpoint=self.api_endpoint,
+                database_name=self.database_name,
+            )
+        return self.api_endpoint_cache
 
     def get_keyspace(self):
-        keyspace = self.keyspace
-
-        if keyspace:
-            return keyspace.strip()
-
+        if self.keyspace:
+            return self.strip_keyspace(self.keyspace)
         return None
 
     def get_database_object(self, api_endpoint: str | None = None):
+        if self.database_object_cache:
+            return self.database_object_cache
+
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
-
-            return client.get_database(
+            self.database_object_cache = client.get_database(
                 api_endpoint=api_endpoint or self.get_api_endpoint(),
                 token=self.token,
                 keyspace=self.get_keyspace(),
             )
+            return self.database_object_cache
         except Exception as e:
             msg = f"Error fetching database object: {e}"
             raise ValueError(msg) from e
@@ -946,3 +949,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.api_endpoint_cache = None
+        self.database_object_cache = None
+
+    @functools.lru_cache(maxsize=128)
+    def get_api_endpoint_static_cached(self, token, environment, api_endpoint, database_name):
+        return self.get_api_endpoint_static(
+            token=token,
+            environment=environment,
+            api_endpoint=api_endpoint,
+            database_name=database_name,
+        )
+
+    @staticmethod
+    @functools.lru_cache(maxsize=128)
+    def strip_keyspace(keyspace):
+        return keyspace.strip()
