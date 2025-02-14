@@ -480,6 +480,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _initialize_database_options(self):
         try:
+            database_list = self.get_database_list()
             return [
                 {
                     "name": name,
@@ -488,11 +489,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "api_endpoint": info["api_endpoint"],
                     "icon": "data",
                 }
-                for name, info in self.get_database_list().items()
+                for name, info in database_list.items()
             ]
         except Exception as e:
-            msg = f"Error fetching database options: {e}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error fetching database options: {e}") from e
 
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Nothing to generate if we don't have an API endpoint yet
@@ -550,22 +550,23 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def reset_database_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
-        database_options = self._initialize_database_options()
+        try:
+            database_options = self._initialize_database_options()
+        except ValueError as e:
+            raise e
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["database_name"]["options"] = [db["name"] for db in database_options]
+        db_names = [db["name"] for db in database_options]
+        build_config["database_name"]["options"] = db_names
         build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            {k: v for k, v in db.items() if k != "name"} for db in database_options
         ]
 
-        # Reset the selected database
-        if build_config["database_name"]["value"] not in build_config["database_name"]["options"]:
+        selected_db_name = build_config["database_name"]["value"]
+        if selected_db_name not in db_names:
             build_config["database_name"]["value"] = ""
             build_config["api_endpoint"]["value"] = ""
             build_config["collection_name"]["advanced"] = True
 
-        # If we have a token, database name should not be advanced
         build_config["database_name"]["advanced"] = not build_config["token"]["value"]
 
         return build_config
