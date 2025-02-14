@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.vectorstores import HCDVectorStoreComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
@@ -41,9 +41,9 @@ class TestHCDVectorStoreComponent(ComponentTestBaseWithClient):
         component.build_vector_store()  # Ensure vector store is built
         results = component.search_documents()
         assert isinstance(results, list), "Search documents should return a list."
-        assert (
-            len(results) <= default_kwargs["number_of_results"]
-        ), "Should return up to the specified number of results."
+        assert len(results) <= default_kwargs["number_of_results"], (
+            "Should return up to the specified number of results."
+        )
 
     async def test_invalid_setup_mode(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
