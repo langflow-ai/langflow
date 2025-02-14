@@ -486,6 +486,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "status": info["status"],
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
+                    "icon": "data",
                 }
                 for name, info in self.get_database_list().items()
             ]
@@ -513,7 +514,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "provider": (
                     col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
                 ),
-                "icon": "",
+                "icon": (
+                    "vectorstores" if not col.options.vector or not col.options.vector.service
+                    else "NVIDIA" if col.options.vector.service.provider == "nvidia"
+                    else "OpenAI" if col.options.vector.service.provider == "openai"  # TODO: Add more icons
+                    else col.options.vector.service.provider.title()
+                ),
                 "model": (
                     col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
                 ),
@@ -700,6 +706,35 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Hide embedding model option if opriona_metadata provider is not null
         if field_name == "collection_name" and field_value:
+            # Assume we will be autodetecting the collection:
+            build_config["autodetect_collection"]["value"] = True
+
+            # Reload the collection list
+            build_config = self.reset_collection_list(build_config)
+
+            # Set the options for collection name to be the field value if its a new collection
+            if field_value not in build_config["collection_name"]["options"]:
+                # Add the new collection to the list of options
+                build_config["collection_name"]["options"].append(field_value)
+                build_config["collection_name"]["options_metadata"].append(
+                    {"records": 0, "provider": None, "icon": "", "model": None}
+                )
+
+                # Ensure that autodetect collection is set to False, since its a new collection
+                build_config["autodetect_collection"]["value"] = False
+
+            # Find the position of the selected collection to align with metadata
+            index_of_name = build_config["collection_name"]["options"].index(field_value)
+            value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
+
+            # If we were able to determine the Vectorize provider, set it accordingly
+            if value_of_provider:
+                build_config["embedding_model"]["advanced"] = True
+                build_config["embedding_choice"]["value"] = "Astra Vectorize"
+            else:
+                build_config["embedding_model"]["advanced"] = False
+                build_config["embedding_choice"]["value"] = "Embedding Model"
+
             # For the final step, get the list of vectorize providers
             vectorize_providers = self.get_vectorize_providers(
                 token=self.token,
@@ -731,32 +766,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
                     "embedding_generation_model"
                 ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
-
-            # Assume we will be autodetecting the collection:
-            build_config["autodetect_collection"]["value"] = True
-
-            # Set the options for collection name to be the field value if its a new collection
-            if field_value not in build_config["collection_name"]["options"]:
-                # Add the new collection to the list of options
-                build_config["collection_name"]["options"].append(field_value)
-                build_config["collection_name"]["options_metadata"].append(
-                    {"records": 0, "provider": None, "icon": "", "model": None}
-                )
-
-                # Ensure that autodetect collection is set to False, since its a new collection
-                build_config["autodetect_collection"]["value"] = False
-
-            # Find the position of the selected collection to align with metadata
-            index_of_name = build_config["collection_name"]["options"].index(field_value)
-            value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
-
-            # If we were able to determine the Vectorize provider, set it accordingly
-            if value_of_provider:
-                build_config["embedding_model"]["advanced"] = True
-                build_config["embedding_choice"]["value"] = "Astra Vectorize"
-            else:
-                build_config["embedding_model"]["advanced"] = False
-                build_config["embedding_choice"]["value"] = "Embedding Model"
 
             return build_config
 
