@@ -52,9 +52,7 @@ class RunnableVerticesManager:
         """Determines if a vertex is runnable based on its active state and predecessor fulfillment."""
         if not is_active:
             return False
-        if vertex_id in self.vertices_being_run:
-            return False
-        if vertex_id not in self.vertices_to_run:
+        if vertex_id in self.vertices_being_run or vertex_id not in self.vertices_to_run:
             return False
 
         return self.are_all_predecessors_fulfilled(vertex_id, is_loop=is_loop)
@@ -73,14 +71,15 @@ class RunnableVerticesManager:
         Returns:
             bool: True if all predecessor conditions are met, False otherwise
         """
-        # Get pending predecessors, return True if none exist
-        if not (pending := self.run_predecessors.get(vertex_id, set())):
+        pending = self.run_predecessors.get(vertex_id)
+
+        # If there are no pending predecessors, the vertex is considered fulfilled
+        if not pending:
             return True
 
         # For cycle vertices, check if any pending predecessors are also in cycle
-        # Using set intersection is faster than iteration
         if vertex_id in self.cycle_vertices:
-            return is_loop or not bool(pending.intersection(self.cycle_vertices))
+            return is_loop or pending.isdisjoint(self.cycle_vertices)
 
         return False
 
