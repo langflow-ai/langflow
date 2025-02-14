@@ -2,17 +2,20 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import IOModal from "@/modals/IOModal/new-modal";
+import useFlowStore from "@/stores/flowStore";
 import { useStoreStore } from "@/stores/storeStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getComponent } from "../../controllers/API";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import cloneFLowWithParent from "../../utils/storeUtils";
+import cloneFLowWithParent, {
+  getInputsAndOutputs,
+} from "../../utils/storeUtils";
 
 export default function PlaygroundPage() {
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
-  const validApiKey = useStoreStore((state) => state.validApiKey);
+
   const { id } = useParams();
   const { mutateAsync: getFlow } = useGetFlow();
 
@@ -23,22 +26,11 @@ export default function PlaygroundPage() {
 
   async function getFlowData() {
     try {
-      const flow = await getFlow({ id: id! });
+      const flow = await getFlow({ id: id!, public: true });
       return flow;
     } catch (error: any) {
-      if (error?.response?.status === 404) {
-        if (!validApiKey) {
-          return null;
-        }
-        try {
-          const res = await getComponent(id!);
-          const newFlow = cloneFLowWithParent(res, res.id, false, true);
-          return newFlow;
-        } catch (componentError) {
-          return null;
-        }
-      }
-      return null;
+      console.log(error);
+      navigate("/");
     }
   }
 
@@ -57,16 +49,32 @@ export default function PlaygroundPage() {
 
     initializeFlow();
     setIsLoading(false);
-  }, [id, validApiKey]);
+  }, [id]);
 
   useEffect(() => {
     if (id) track("Playground Page Loaded", { flowId: id });
   }, []);
 
+  useEffect(() => {
+    document.title = currentSavedFlow?.name || "Langflow";
+    if (currentSavedFlow?.data) {
+      const { inputs, outputs } = getInputsAndOutputs(
+        currentSavedFlow?.data?.nodes || [],
+      );
+      if (
+        (inputs.length === 0 && outputs.length === 0) ||
+        currentSavedFlow?.access_type !== "public"
+      ) {
+        // redirect to the home page
+        navigate("/");
+      }
+    }
+  }, [currentSavedFlow]);
+
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
       {currentSavedFlow && (
-        <IOModal open={true} setOpen={() => {}} isPlayground>
+        <IOModal open={true} setOpen={() => {}} isPlayground playgroundPage>
           <></>
         </IOModal>
       )}

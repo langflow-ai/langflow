@@ -34,6 +34,7 @@ type BuildVerticesParams = {
   edges?: Edge[];
   logBuilds?: boolean;
   session?: string;
+  playgroundPage?: boolean;
 };
 
 function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
@@ -152,9 +153,11 @@ export async function buildFlowVertices({
   edges,
   logBuilds,
   session,
+  playgroundPage,
 }: BuildVerticesParams) {
   const inputs = {};
-  let url = `${BASE_URL_API}build/${flowId}/flow?`;
+
+  let url = `${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow?`;
   if (startNodeId) {
     url = `${url}&start_component_id=${startNodeId}`;
   }

@@ -41,11 +41,21 @@ const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
 const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
-// const PlaygroundPage = lazy(() => import("./pages/Playground"));
+const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 const router = createBrowserRouter(
   createRoutesFromElements([
+    <Route path="/playground/:id/">
+      <Route
+        path=""
+        element={
+          <ContextWrapper>
+            <PlaygroundPage />
+          </ContextWrapper>
+        }
+      />
+    </Route>,
     <Route
       path={ENABLE_CUSTOM_PARAM ? "/:customParam?" : "/"}
       element={
@@ -203,9 +213,6 @@ const router = createBrowserRouter(
                 </Route>
                 <Route path="view" element={<ViewPage />} />
               </Route>
-              {/* <Route path="playground/:id/">
-                <Route path="" element={<PlaygroundPage />} />
-              </Route> */}
             </Route>
           </Route>
           <Route

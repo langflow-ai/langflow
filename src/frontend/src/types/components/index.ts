@@ -573,7 +573,7 @@ export type iconsType = {
 
 export type modalHeaderType = {
   children: ReactNode;
-  description: string | JSX.Element | null;
+  description?: string | JSX.Element | null;
 };
 
 export type codeAreaModalPropsType = {
@@ -599,6 +599,7 @@ export type chatMessagePropsType = {
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type genericModalPropsType = {
@@ -655,6 +656,7 @@ export type IOModalPropsType = {
   isPlayground?: boolean;
   cleanOnClose?: boolean;
   canvasOpen?: boolean;
+  playgroundPage?: boolean;
 };
 
 export type buttonBoxPropsType = {
@@ -772,6 +774,7 @@ export type chatViewProps = {
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
+  playgroundPage?: boolean;
 };
 
 export type IOFileInputProps = {

@@ -39,11 +39,12 @@ from langflow.events.event_manager import EventManager, create_default_event_man
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service, session_scope
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
@@ -748,3 +749,34 @@ async def build_vertex_stream(
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
+
+
+@router.post("/build_public_tmp/{flow_id}/flow")
+async def build_public_tmp(
+    *,
+    background_tasks: BackgroundTasks,
+    flow_id: uuid.UUID,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool | None = True,
+    session: DbSession,
+):
+    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
+    if access_type is not AccessTypeEnum.PUBLIC:
+        raise HTTPException(status_code=403, detail="Flow is not public")
+
+    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    return await build_flow(
+        background_tasks=background_tasks,
+        flow_id=flow_id,
+        inputs=inputs,
+        data=data,
+        files=files,
+        stop_component_id=stop_component_id,
+        start_component_id=start_component_id,
+        log_builds=log_builds,
+        current_user=current_user,
+    )

@@ -249,13 +249,13 @@ pre code {
   display: inline-block;
   width: 100%;
   /* Background color */
-  background-color: hsl(var(--code-background)) !important;
+  background-color: hsl(var(--muted)) !important;
   color: hsl(var(--code-foreground)) !important;
 }
 
 pre {
   /* Background color */
-  background-color: hsl(var(--code-background)) !important;
+  background-color: hsl(var(--muted)) !important;
 }
 
 .prose li::marker {
