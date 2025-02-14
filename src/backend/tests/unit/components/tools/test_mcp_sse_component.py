@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.tools.mcp_sse import MCPSse
+
 from tests.base import ComponentTestBaseWithClient
 
 
