@@ -50,7 +50,6 @@ test(
     await page.getByTestId("publish-switch").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await expect(page.getByTestId("publish-switch")).toBeChecked();
-    // await for all post event to be resolved
     const pagePromise = context.waitForEvent("page");
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
