@@ -13,14 +13,15 @@ if TYPE_CHECKING:
     from langflow.field_typing.constants import LanguageModel
 
 
-class StructuredOutputComponent(Component):
-    display_name = "Structured Output"
+class StructuredOutputComponentLegacy(Component):
+    display_name = "Structured Output [Deprecated]"
     description = (
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
         "or creating consistent outputs."
     )
     name = "StructuredOutput"
     icon = "braces"
+    legacy = True
 
     inputs = [
         HandleInput(

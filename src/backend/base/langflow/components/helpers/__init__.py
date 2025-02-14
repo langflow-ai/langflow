@@ -5,6 +5,7 @@ from .memory import MemoryComponent
 from .output_parser import OutputParserComponent
 from .store_message import MessageStoreComponent
 from .structured_output import StructuredOutputComponent
+from .structured_output_legacy import StructuredOutputComponentLegacy
 
 __all__ = [
     "BatchRunComponent",
@@ -15,4 +16,5 @@ __all__ = [
     "MessageStoreComponent",
     "OutputParserComponent",
     "StructuredOutputComponent",
+    "StructuredOutputComponentLegacy",
 ]
