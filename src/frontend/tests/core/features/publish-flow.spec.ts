@@ -31,7 +31,6 @@ test(
     await page.getByTestId("add-component-button-chat-input").click();
 
     await adjustScreenView(page);
-    // check if clicking the publish without active it before will do nothing
     await page.getByTestId("publish-button").click();
     await page.waitForSelector('[data-testid="shareable-playground"]', {
       timeout: 3000,
