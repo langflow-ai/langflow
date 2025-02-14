@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.outputs import TextOutputComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
