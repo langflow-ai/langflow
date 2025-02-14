@@ -65,7 +65,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@uv sync --frozen
+	@uv sync --frozen $(EXTRA_ARGS)
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
