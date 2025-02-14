@@ -195,6 +195,7 @@ export default function ContentDisplay({
           return String(output);
         }
       };
+      console.log("output",content.output);
 
       contentData = (
         <div className="flex flex-col gap-2">
@@ -209,7 +210,7 @@ export default function ContentDisplay({
             language="json"
             code={JSON.stringify(content.tool_input, null, 2)}
           />
-          {content.output !== undefined && (
+          {content.output && (
             <>
               <Markdown
                 remarkPlugins={[remarkGfm]}
