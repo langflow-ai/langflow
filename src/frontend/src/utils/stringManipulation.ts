@@ -115,16 +115,22 @@ export function parseString(
 }
 
 export const getStatusColor = (status: string): string => {
-  switch (status?.toLowerCase()) {
-    case "initializing":
-      return "text-accent-amber-foreground";
-    case "pending":
-      return "text-accent-amber-foreground";
-    case "hibernating":
-      return "text-accent-amber-foreground";
-    case "terminating":
-      return "red-500";
-    default:
-      return "";
+  const amberStatuses = [
+    "initializing",
+    "pending",
+    "hibernating",
+    "hiberated",
+    "maintenance",
+    "parked",
+  ];
+
+  if (amberStatuses.includes(status?.toLowerCase())) {
+    return "text-accent-amber-foreground";
   }
+
+  if (status?.toLowerCase() === "terminating") {
+    return "red-500";
+  }
+
+  return "";
 };

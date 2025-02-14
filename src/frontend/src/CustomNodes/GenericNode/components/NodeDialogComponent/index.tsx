@@ -121,6 +121,10 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
       handleCloseDialog,
       nodeClass.tool_mode,
     );
+
+    setTimeout(() => {
+      handleCloseDialog();
+    }, 5000);
   };
 
   return (
