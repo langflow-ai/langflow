@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
-
 from langflow.components.processing.parse_dataframe import ParseDataFrameComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
