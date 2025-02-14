@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
+from functools import lru_cache
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
@@ -405,6 +406,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return self.get_database_list_static(token=self.token, environment=self.environment)
 
     @classmethod
+    @lru_cache(maxsize=128)  # Adding LRU cache to optimize repeated calls with same arguments
     def get_api_endpoint_static(
         cls,
         token: str,
@@ -425,7 +427,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return None
 
         # Grab the database object
-        db = cls.get_database_list_static(token=token, environment=environment).get(database_name)
+        db_info_dict = cls.get_database_list_static(token=token, environment=environment)
+        db = db_info_dict.get(database_name)
         if not db:
             return None
 
