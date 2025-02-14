@@ -1,43 +1,40 @@
-import logging
 from pathlib import Path
 from urllib.parse import urlparse
 
-from nv_ingest_client.client import Ingestor
+from loguru import logger
 
 from langflow.custom import Component
-from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, Output, MessageTextInput
+from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data
-
-from loguru import logger
 
 
 class NVIDIAIngestComponent(Component):
     display_name = "NVIDIA Ingest"
     try:
         from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
+
         description = (
             "NVIDIA Ingest (nv-ingest) efficiently processes, transforms, and stores "
             "large datasets for AI and ML integration."
         )
-    except ImportError as e:
+    except ImportError:
         description = "Install nv-ingest to use this component."
-    
+
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
     name = "NVIDIAIngest"
     beta = True
 
-    try: 
+    try:
         from nv_ingest_client.util.file_processing.extract import EXTENSION_TO_DOCUMENT_TYPE
 
         file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
         supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
-    except ImportError as e:
+    except ImportError:
         msg = "Failed to import NVIDIA Ingest dependencies. Install it using `uv sync --extra nv-ingest`"
         logger.warning(msg)
         file_types = []
         supported_file_types_info = msg
-
 
     inputs = [
         MessageTextInput(
@@ -217,7 +214,7 @@ class NVIDIAIngestComponent(Component):
                             description=content_metadata.get("description", ""),
                         )
                     )
-                # Both charts and tables are returned as "structured" document type, 
+                # Both charts and tables are returned as "structured" document type,
                 # with extracted text in "table_content"
                 elif document_type == document_type_structured:
                     table_metadata = metadata.get("table_metadata", {})
