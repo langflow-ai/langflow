@@ -59,9 +59,7 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
 
     def get_persist_directory(self) -> Path:
         """Returns the resolved persist directory path or the current directory if not set."""
-        if self.persist_directory:
-            return Path(self.resolve_path(self.persist_directory))
-        return Path()
+        return Path(self.resolve_path(self.persist_directory)) if self.persist_directory else Path()
 
     @check_cached_vector_store
     def build_vector_store(self) -> FAISS:
@@ -69,12 +67,9 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         path = self.get_persist_directory()
         path.mkdir(parents=True, exist_ok=True)
 
-        documents = []
-        for _input in self.ingest_data or []:
-            if isinstance(_input, Data):
-                documents.append(_input.to_lc_document())
-            else:
-                documents.append(_input)
+        documents = (
+            (_input.to_lc_document() if isinstance(_input, Data) else _input) for _input in self.ingest_data or []
+        )
 
         faiss = FAISS.from_documents(documents=documents, embedding=self.embedding)
         faiss.save_local(str(path), self.index_name)
