@@ -87,9 +87,6 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
-    copy_field: bool = False
-    """Specifies if the field should have copy button. Defaults to False."""
-
     def to_dict(self):
         return self.model_dump(exclude_none=True, by_alias=True)
 

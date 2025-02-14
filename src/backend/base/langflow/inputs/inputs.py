@@ -94,7 +94,6 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
-    copy_field: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
 
     @staticmethod
@@ -227,7 +226,7 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolMode
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     multiline: CoalesceBool = True
-
+    copy_field: CoalesceBool = False
 
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     """Represents a multiline input field.

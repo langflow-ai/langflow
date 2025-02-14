@@ -102,9 +102,6 @@ class Input(BaseModel):
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
-    copy_field: bool = False
-    """Specifies if the field should have copy button. Defaults to False."""
-
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)
 

@@ -19,6 +19,8 @@ const inputClasses = {
   password: "password",
 };
 
+const WEBHOOK_VALUE = "CURL_WEBHOOK";
+
 const externalLinkIconClasses = {
   gradient: ({
     disabled,
@@ -74,7 +76,7 @@ export default function TextAreaComponent({
   );
 
   useEffect(() => {
-    if (isWebhook && value === "CURL_WEBHOOK") {
+    if (isWebhook && value === WEBHOOK_VALUE) {
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
         isAuth: nodeInformationMetadata?.isAuth!,
