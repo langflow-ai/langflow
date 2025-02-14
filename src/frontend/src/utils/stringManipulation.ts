@@ -118,6 +118,8 @@ export const getStatusColor = (status: string): string => {
   switch (status?.toLowerCase()) {
     case "initializing":
       return "text-accent-amber-foreground";
+    case "pending":
+      return "text-accent-amber-foreground";
     case "hibernating":
       return "text-accent-amber-foreground";
     case "terminating":

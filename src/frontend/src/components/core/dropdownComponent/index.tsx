@@ -72,7 +72,7 @@ export default function Dropdown({
   // Utility functions
   const filterMetadataKeys = (
     metadata: Record<string, any> = {},
-    excludeKeys: string[] = ["api_endpoint", "icon"],
+    excludeKeys: string[] = ["api_endpoint", "icon", "status"],
   ) => {
     return Object.fromEntries(
       Object.entries(metadata).filter(([key]) => !excludeKeys.includes(key)),
@@ -316,7 +316,9 @@ export default function Dropdown({
                           )}`}
                         >
                           <LoadingTextComponent
-                            text={optionsMetaData?.[index]?.status}
+                            text={optionsMetaData?.[
+                              index
+                            ]?.status?.toLowerCase()}
                           />
                         </span>
                       </div>
