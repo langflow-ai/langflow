@@ -1,6 +1,6 @@
 import pytest
-
 from langflow.components.vectorstores import FaissVectorStoreComponent
+
 from tests.base import ComponentTestBaseWithClient
 
 
