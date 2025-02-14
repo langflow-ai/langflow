@@ -448,6 +448,7 @@ class Component(CustomComponent):
                 frontend_node["tool_mode"] = True
                 tools_metadata_input = await self._build_tools_metadata_input()
                 frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = tools_metadata_input.to_dict()
+                self._append_tool_to_outputs_map()
             elif "template" in frontend_node:
                 frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
         self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
@@ -928,7 +929,9 @@ class Component(CustomComponent):
             self._pre_run_setup()
 
     def _handle_tool_mode(self):
-        if hasattr(self, "outputs") and any(getattr(_input, "tool_mode", False) for _input in self.inputs):
+        if (
+            hasattr(self, "outputs") and any(getattr(_input, "tool_mode", False) for _input in self.inputs)
+        ) or self.add_tool_output:
             self._append_tool_to_outputs_map()
 
     def _should_process_output(self, output):
@@ -978,17 +981,23 @@ class Component(CustomComponent):
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
-        if len(self.outputs) == 1:
-            return self.status or self.extract_data(result)
+        """Process the raw result of the component."""
         return self.extract_data(result)
 
     def extract_data(self, result):
+        """Extract the data from the result. this is where the self.status is set."""
+        if isinstance(result, Message):
+            self.status = result.get_text()
+            return (
+                self.status if self.status is not None else "No text available"
+            )  # Provide a default message if .text_key is missing
         if hasattr(result, "data"):
             return result.data
         if hasattr(result, "model_dump"):
             return result.model_dump()
         if isinstance(result, Data | dict | str):
             return result.data if isinstance(result, Data) else result
+
         if self.status:
             return self.status
         return result
