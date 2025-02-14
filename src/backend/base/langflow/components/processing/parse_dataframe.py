@@ -4,8 +4,9 @@ from langflow.schema.message import Message
 
 
 class ParseDataFrameComponent(Component):
-    display_name = "Parse DataFrame"
+    display_name = "Parse DataFrame (Deprecated)"
     description = (
+        "[DEPRECATED] Please use the 'Parse' component instead, which supports both DataFrames and Data objects.\n\n"
         "Convert a DataFrame into plain text following a specified template. "
         "Each column in the DataFrame is treated as a possible template key, e.g. {col_name}."
     )

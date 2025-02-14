@@ -1,12 +1,10 @@
 import json
-from typing import Any
+from typing import Any, Union
 
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text, data_to_text_list
 from langflow.io import (
-    DataFrameInput,
-    DataInput,
-    DropdownInput,
+    HandleInput,
     MultilineInput,
     Output,
     StrInput,
@@ -14,8 +12,7 @@ from langflow.io import (
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
 
-DATAFRAME_ERROR = "Expected a DataFrame"
-DATA_ERROR = "Expected Data object(s)"
+INVALID_INPUT_ERROR = "Expected DataFrame or Data object(s)"
 
 
 class ParseComponent(Component):
@@ -27,29 +24,13 @@ class ParseComponent(Component):
     name = "Parse"
 
     inputs = [
-        DropdownInput(
-            name="parse_input_type",
-            display_name="Input Type",
-            options=["DataFrame", "Data"],
-            value="DataFrame",
-            info="Choose whether to parse a DataFrame or Data object(s).",
-            required=True,
-            real_time_refresh=True,
-        ),
-        DataFrameInput(
-            name="df",
-            display_name="DataFrame",
-            info="DataFrame to parse.",
+        HandleInput(
+            name="input_data",
+            display_name="Input",
+            info="DataFrame or Data object(s) to parse.",
+            input_types=["DataFrame", "Data"],
             dynamic=True,
             show=True,
-        ),
-        DataInput(
-            name="data",
-            display_name="Data",
-            info="Data object(s) to parse.",
-            dynamic=True,
-            show=False,
-            is_list=True,
         ),
         MultilineInput(
             name="template_to_parse",
@@ -81,29 +62,34 @@ class ParseComponent(Component):
         ),
     ]
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        """Update the build configuration based on the input type selection."""
-        if field_name == "parse_input_type":
-            build_config["df"]["show"] = field_value == "DataFrame"
-            build_config["data"]["show"] = field_value == "Data"
-        return build_config
+    def _detect_input_type(self) -> str:
+        """Detect whether the input is a DataFrame or Data object(s)."""
+        if isinstance(self.input_data, DataFrame):
+            return "DataFrame"
+        elif isinstance(self.input_data, (Data, list)) or self.input_data is None:
+            return "Data"
+        raise ValueError(INVALID_INPUT_ERROR)
 
-    def _clean_args(self) -> tuple[DataFrame | None, list[Data], str, str]:
-        """Validate and clean input arguments."""
-        if self.parse_input_type == "DataFrame":
-            if not isinstance(self.df, DataFrame):
-                raise ValueError(DATAFRAME_ERROR)
-            return self.df, [], self.template_to_parse, self.sep
+    def _handle_dataframe_input(self) -> DataFrame:
+        """Handle DataFrame input type."""
+        if not isinstance(self.input_data, DataFrame):
+            raise ValueError("Expected a DataFrame")
+        return self.input_data
 
+    def _handle_data_input(self) -> list[Data]:
+        """Handle Data input type."""
         # Convert single Data object or None to list
-        data_list = [] if self.data is None else (self.data if isinstance(self.data, list) else [self.data])
-
-        # Filter out None values and validate types
-        data_list = [d for d in data_list if d is not None]
-        if not all(isinstance(d, Data) for d in data_list):
-            raise ValueError(DATA_ERROR)
-
-        return None, data_list, self.template_to_parse, self.sep
+        if self.input_data is None:
+            return []
+        if isinstance(self.input_data, Data):
+            return [self.input_data]
+        if isinstance(self.input_data, list):
+            # Filter out None values and validate types
+            data_list = [d for d in self.input_data if d is not None]
+            if not all(isinstance(d, Data) for d in data_list):
+                raise ValueError("Expected Data object(s)")
+            return data_list
+        raise ValueError("Expected Data object(s)")
 
     def _format_dataframe_row(self, row: dict[str, Any]) -> str:
         """Format a DataFrame row using the template or default to JSON."""
@@ -117,49 +103,48 @@ class ParseComponent(Component):
     def _format_data_object(self, data_obj: Data) -> str:
         """Format a Data object using the template or default formatting."""
         if not self.template_to_parse:
-            # Create a dictionary of all available attributes
             data_dict = {
                 "text": data_obj.text,
                 "data": data_obj.data,
-                # Add any other relevant attributes you want to expose
             }
             return json.dumps(data_dict, ensure_ascii=False)
         try:
             return self.template_to_parse.format(
                 text=data_obj.text,
                 data=data_obj.data,
-                # Add other attributes as needed
             )
         except KeyError:
-            # Fallback to basic formatting if template fails
             return f"{data_obj.text}"
 
     def parse_combined_text(self) -> Message:
         """Parse input into a single combined text message."""
-        df, data, template_to_parse, sep = self._clean_args()
-
-        if df is not None:
+        input_type = self._detect_input_type()
+        
+        if input_type == "DataFrame":
+            df = self._handle_dataframe_input()
             lines = [self._format_dataframe_row(row.to_dict()) for _, row in df.iterrows()]
-        else:
-            if template_to_parse:
-                # data will never be None here due to _clean_args
-                return Message(text=data_to_text(template_to_parse, data, sep))
+        else:  # input_type == "Data"
+            data = self._handle_data_input()
+            if self.template_to_parse and data:
+                return Message(text=data_to_text(self.template_to_parse, data, self.sep))
             lines = [self._format_data_object(d) for d in data]
 
-        result = sep.join(lines)
+        result = self.sep.join(lines)
         self.status = result
         return Message(text=result)
 
     def parse_as_list(self) -> list[Data]:
         """Parse input into a list of Data objects."""
-        df, data, template_to_parse, _ = self._clean_args()
-
-        if df is not None:
+        input_type = self._detect_input_type()
+        
+        if input_type == "DataFrame":
+            df = self._handle_dataframe_input()
             return [Data(text=self._format_dataframe_row(row.to_dict())) for _, row in df.iterrows()]
-
-        if template_to_parse:
-            # data will never be None here due to _clean_args
-            texts, items = data_to_text_list(template_to_parse, data)
+        
+        # input_type == "Data"
+        data = self._handle_data_input()
+        if self.template_to_parse and data:
+            texts, items = data_to_text_list(self.template_to_parse, data)
             for item, text in zip(items, texts, strict=True):
                 item.set_text(text)
             return items
