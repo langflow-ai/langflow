@@ -7,6 +7,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import webrtcvad
+
 import websockets
 from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, BackgroundTasks
@@ -153,7 +154,7 @@ async def websocket_endpoint(
         )
     except (InvalidToken, ValueError):
         openai_key = os.getenv("OPENAI_API_KEY")
-        if not openai_key:
+        if not openai_key or openai_key == 'dummy':
             await client_websocket.send_json(
                 {
                     "type": "error",
@@ -228,93 +229,51 @@ async def websocket_endpoint(
 
         async def process_vad_audio() -> None:
             """Continuously process audio chunks from the vad_queue.
-            Accumulate audio into vad_audio_buffer, extract 20ms frames,
-            and run VAD on each frame. If speech is detected while the bot is speaking,
-            send a cancellation message to OpenAI.
+            Runs VAD detection in parallel with audio streaming.
+            If speech is detected while the bot is speaking, sends a cancellation message.
             """
             nonlocal vad_audio_buffer
             last_speech_time = datetime.now()
             last_queue_check = datetime.now()
-            disable_vad = False
-
+            
             while True:
-                # Monitor queue depth every second
-                #current_time = datetime.now()
-                #if (current_time - last_queue_check).total_seconds() >= 2.0:
-                #    queue_size = vad_queue.qsize()
-                #    print(f"VAD queue depth: {queue_size} chunks")
-                #    last_queue_check = current_time
-
                 base64_data = await vad_queue.get()
                 raw_chunk_24k = base64.b64decode(base64_data)
                 
-                # Check if any samples exceed amplitude threshold using memoryview for efficiency
-                view = memoryview(raw_chunk_24k)
-                # Process 2 bytes at a time without creating intermediate lists
-                for i in range(0, len(view), 2):
-                    # Convert bytes directly to int and normalize in one step
-                    sample = abs(int.from_bytes(view[i:i+2], byteorder='little', signed=True) / 32768.0)
-                    if sample > 0.01:
-                        print("&", end="")
-                        break
-
-                if disable_vad:
-                    await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
-                asyncio.create_task(write_audio_to_file(base64_data, "vad_disabled.raw"))
-
+                # Process audio for VAD
                 vad_audio_buffer.extend(raw_chunk_24k)
-
                 has_speech = False
+
                 while len(vad_audio_buffer) >= BYTES_PER_24K_FRAME:
                     frame_24k = vad_audio_buffer[:BYTES_PER_24K_FRAME]
                     del vad_audio_buffer[:BYTES_PER_24K_FRAME]
 
                     try:
                         frame_16k = resample_24k_to_16k(frame_24k)
-                    except ValueError as e:
-                        logger.error(f"[ERROR] Invalid frame during VAD resampling: {e}")
-                        continue
-
-                    try:
                         is_speech = vad.is_speech(frame_16k, VAD_SAMPLE_RATE_16K)
+                        
+                        if is_speech:
+                            has_speech = True
+                            logger.trace("!", end="")
+                            if bot_speaking_flag[0]:
+                                print("\nBarge-in detected!", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                                await openai_ws.send(json.dumps({"type": "response.cancel"}))
+                                print("bot speaking false")
+                                bot_speaking_flag[0] = False
+                                
                     except Exception as e:
                         logger.error(f"[ERROR] VAD processing failed: {e}")
                         continue
 
-                    if is_speech and bot_speaking_flag[0]:
-                        print("Barge-in detected!", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-                        await openai_ws.send(json.dumps({"type": "response.cancel"}))
-                        print("bot speaking false")
-                        bot_speaking_flag[0] = False
-                        # Optionally, clear the accumulated audio if desired.
-                        # vad_audio_buffer = bytearray()
-                    if is_speech:
-                        # send audio chunk over the websocket
-                        print("!", end="")
-                        has_speech = True
-
                 if has_speech:
-                    last_speech_time = datetime.now()  # Update timestamp when speech detected
-                time_since_speech = (datetime.now() - last_speech_time).total_seconds()
-                if time_since_speech < 1.0:
-                    print(".", end="")
-                    if not disable_vad:
-                        await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
-                    asyncio.create_task(write_audio_to_file(base64_data, "vad_enabled.raw"))
-                # Only send silence if it's been more than 1 second since last speech
+                    last_speech_time = datetime.now()
+                    logger.trace(".", end="")
                 else:
-                    print("_", end="")
-                    num_samples = len(raw_chunk_24k) // 2
-                    silence_chunk = bytes(num_samples * 2)  # 2 bytes per sample for PCM16
-                    silence_base64 = base64.b64encode(silence_chunk).decode("utf-8")
+                    time_since_speech = (datetime.now() - last_speech_time).total_seconds()
+                    if time_since_speech >= 1.0:
+                        logger.trace("_", end="")
 
-                    if not disable_vad:
-                        await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": silence_base64}))
-                    asyncio.create_task(write_audio_to_file(silence_base64, "vad_enabled.raw"))
-
-
-
-    # Shared state for event tracking
+        # Shared state for event tracking
         shared_state = {
             "last_event_type": None,
             "event_count": 0
@@ -344,14 +303,18 @@ async def websocket_endpoint(
                     log_event(event_type, "↑")
 
                     if msg.get("type") == "input_audio_buffer.append":
-                        print(f"buffer_id {msg.get("buffer_id", "")}")
+                        logger.trace(f"buffer_id {msg.get('buffer_id', '')}")
                         base64_data = msg.get("audio", "")
                         if not base64_data:
                             continue
-                        # Enqueue the raw audio chunk for background VAD processing.
+
+                        # Optional: Write audio to file for debugging
+                        asyncio.create_task(write_audio_to_file(base64_data))
+
+                        # Send audio directly to OpenAI while also queueing for VAD
+                        await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
                         await vad_queue.put(base64_data)
                     else:
-                        # we don't send audio events, vad does those
                         await openai_ws.send(message_text)
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                 pass
@@ -409,11 +372,10 @@ async def websocket_endpoint(
                             function_call_args = ""
                     elif event_type == "response.audio.delta":
                         audio_delta = event.get("delta", "")
-                        if audio_delta and True:
-                            asyncio.create_task(write_audio_to_file(audio_delta, "vad_enabled.raw"))
-                            asyncio.create_task(write_audio_to_file(audio_delta, "vad_disabled.raw"))
-            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
-                print("Websocket exception {e}")
+                        if audio_delta:
+                            asyncio.create_task(write_audio_to_file(audio_delta))
+            except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
+                print(f"Websocket exception: {e}")
 
         # Start the background VAD processing task.
         asyncio.create_task(process_vad_audio())
