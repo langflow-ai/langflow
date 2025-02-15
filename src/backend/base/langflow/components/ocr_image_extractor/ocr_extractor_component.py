@@ -1,7 +1,5 @@
 import base64
 from io import BytesIO
-
-import pytesseract
 from PIL import Image, UnidentifiedImageError
 
 from langflow.custom import Component
@@ -29,6 +27,7 @@ class ImageDataExtractor(Component):
 
     def extract_text(self) -> Message:
         """Decodes Base64 image and extracts text using OCR (Tesseract)."""
+        import pytesseract 
         if not self.base64_input:
             error_message = "No Base64 input provided. Please provide a valid Base64-encoded image."
             raise ValueError(error_message)
