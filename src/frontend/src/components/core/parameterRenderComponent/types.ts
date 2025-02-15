@@ -15,6 +15,7 @@ export type BaseInputProps<valueType = any> = {
   readonly?: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  tooltip?: string;
   metadata?: any;
   nodeId?: string;
 };
