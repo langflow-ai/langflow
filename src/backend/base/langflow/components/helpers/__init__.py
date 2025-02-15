@@ -4,8 +4,8 @@ from .id_generator import IDGeneratorComponent
 from .memory import MemoryComponent
 from .output_parser import OutputParserComponent
 from .store_message import MessageStoreComponent
-from .structured_output import StructuredOutputComponent
-from .structured_output_legacy import StructuredOutputComponentLegacy
+from .structured_output_legacy import StructuredOutputComponent
+from .structured_output import StructuredOutputComponentv2
 
 __all__ = [
     "BatchRunComponent",
@@ -16,5 +16,5 @@ __all__ = [
     "MessageStoreComponent",
     "OutputParserComponent",
     "StructuredOutputComponent",
-    "StructuredOutputComponentLegacy",
+    "StructuredOutputComponentv2",
 ]

@@ -2,11 +2,11 @@ import re
 from unittest.mock import patch
 
 import pytest
-from langflow.components.helpers.structured_output import StructuredOutputComponent
+from langflow.components.helpers.structured_output import StructuredOutputComponentv2 as StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-from pydantic import BaseModel
 
+from pydantic import BaseModel
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 

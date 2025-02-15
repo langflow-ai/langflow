@@ -12,13 +12,13 @@ if TYPE_CHECKING:
     from langflow.field_typing.constants import LanguageModel
 
 
-class StructuredOutputComponentLegacy(Component):
+class StructuredOutputComponent(Component):
     display_name = "Structured Output [Deprecated]"
     description = (
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
         "or creating consistent outputs."
     )
-    name = "StructuredOutput[Deprecated]"
+    name = "StructuredOutput"
     icon = "braces"
     legacy = True
 
