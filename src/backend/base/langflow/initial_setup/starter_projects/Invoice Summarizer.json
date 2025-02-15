@@ -1,0 +1,2645 @@
+{
+  "icon_bg_color": null,
+  "endpoint_name": null,
+  "id": "3bb84e6b-18b6-4c89-b867-1f5738517f15",
+  "user_id": "9518455b-8513-40e5-9379-294c40620153",
+  "tags": null,
+  "gradient": null,
+  "locked": false,
+  "folder_id": "86b38778-a03b-4f58-bd30-3391fd8b3ec5",
+  "is_component": false,
+  "data": {
+    "nodes": [
+      {
+        "data": {
+          "id": "CrewAIAgentComponent-9WbIo",
+          "node": {
+            "base_classes": [
+              "Agent"
+            ],
+            "beta": false,
+            "category": "crewai",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Represents an agent of CrewAI.",
+            "display_name": "CrewAI Agent",
+            "documentation": "https://docs.crewai.com/how-to/LLM-Connections/",
+            "edited": false,
+            "field_order": [
+              "role",
+              "goal",
+              "backstory",
+              "tools",
+              "llm",
+              "memory",
+              "verbose",
+              "allow_delegation",
+              "allow_code_execution",
+              "kwargs"
+            ],
+            "frozen": false,
+            "icon": "CrewAI",
+            "key": "CrewAIAgentComponent",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Agent",
+                "method": "build_output",
+                "name": "output",
+                "selected": "Agent",
+                "tool_mode": true,
+                "types": [
+                  "Agent"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.000007568328950209746,
+            "template": {
+              "_type": "Component",
+              "allow_code_execution": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Allow Code Execution",
+                "dynamic": false,
+                "info": "Whether the agent is allowed to execute code.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "allow_code_execution",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "allow_delegation": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Allow Delegation",
+                "dynamic": false,
+                "info": "Whether the agent is allowed to delegate tasks to other agents.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "allow_delegation",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "backstory": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Backstory",
+                "dynamic": false,
+                "info": "The backstory of the agent.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "backstory",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from crewai import Agent\n\nfrom langflow.base.agents.crewai.crew import convert_llm, convert_tools\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DictInput, HandleInput, MultilineInput, Output\n\n\nclass CrewAIAgentComponent(Component):\n    \"\"\"Component for creating a CrewAI agent.\n\n    This component allows you to create a CrewAI agent with the specified role, goal, backstory, tools,\n    and language model.\n\n    Args:\n        Component (Component): Base class for all components.\n\n    Returns:\n        Agent: CrewAI agent.\n    \"\"\"\n\n    display_name = \"CrewAI Agent\"\n    description = \"Represents an agent of CrewAI.\"\n    documentation: str = \"https://docs.crewai.com/how-to/LLM-Connections/\"\n    icon = \"CrewAI\"\n\n    inputs = [\n        MultilineInput(name=\"role\", display_name=\"Role\", info=\"The role of the agent.\"),\n        MultilineInput(name=\"goal\", display_name=\"Goal\", info=\"The objective of the agent.\"),\n        MultilineInput(name=\"backstory\", display_name=\"Backstory\", info=\"The backstory of the agent.\"),\n        HandleInput(\n            name=\"tools\",\n            display_name=\"Tools\",\n            input_types=[\"Tool\"],\n            is_list=True,\n            info=\"Tools at agents disposal\",\n            value=[],\n        ),\n        HandleInput(\n            name=\"llm\",\n            display_name=\"Language Model\",\n            info=\"Language model that will run the agent.\",\n            input_types=[\"LanguageModel\"],\n        ),\n        BoolInput(\n            name=\"memory\",\n            display_name=\"Memory\",\n            info=\"Whether the agent should have memory or not\",\n            advanced=True,\n            value=True,\n        ),\n        BoolInput(\n            name=\"verbose\",\n            display_name=\"Verbose\",\n            advanced=True,\n            value=False,\n        ),\n        BoolInput(\n            name=\"allow_delegation\",\n            display_name=\"Allow Delegation\",\n            info=\"Whether the agent is allowed to delegate tasks to other agents.\",\n            value=True,\n        ),\n        BoolInput(\n            name=\"allow_code_execution\",\n            display_name=\"Allow Code Execution\",\n            info=\"Whether the agent is allowed to execute code.\",\n            value=False,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"kwargs\",\n            display_name=\"kwargs\",\n            info=\"kwargs of agent.\",\n            is_list=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Agent:\n        kwargs = self.kwargs or {}\n\n        # Define the Agent\n        agent = Agent(\n            role=self.role,\n            goal=self.goal,\n            backstory=self.backstory,\n            llm=convert_llm(self.llm),\n            verbose=self.verbose,\n            memory=self.memory,\n            tools=convert_tools(self.tools),\n            allow_delegation=self.allow_delegation,\n            allow_code_execution=self.allow_code_execution,\n            **kwargs,\n        )\n\n        self.status = repr(agent)\n\n        return agent\n"
+              },
+              "goal": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Goal",
+                "dynamic": false,
+                "info": "The objective of the agent.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "goal",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "kwargs",
+                "dynamic": false,
+                "info": "kwargs of agent.",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "llm": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Language Model",
+                "dynamic": false,
+                "info": "Language model that will run the agent.",
+                "input_types": [
+                  "LanguageModel"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "llm",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "memory": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Memory",
+                "dynamic": false,
+                "info": "Whether the agent should have memory or not",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "memory",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "role": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Role",
+                "dynamic": false,
+                "info": "The role of the agent.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "role",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "tools": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Tools",
+                "dynamic": false,
+                "info": "Tools at agents disposal",
+                "input_types": [
+                  "Tool"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "tools",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": []
+              },
+              "verbose": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Verbose",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "verbose",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "CrewAIAgentComponent"
+        },
+        "dragging": false,
+        "id": "CrewAIAgentComponent-9WbIo",
+        "measured": {
+          "height": 526,
+          "width": 320
+        },
+        "position": {
+          "x": 1206.4289366166986,
+          "y": 122.32616204840484
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "SequentialTaskComponent-0G9eA",
+          "node": {
+            "base_classes": [
+              "SequentialTask"
+            ],
+            "beta": false,
+            "category": "crewai",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Each task must have a description, an expected output and an agent responsible for execution.",
+            "display_name": "Sequential Task",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "task_description",
+              "expected_output",
+              "tools",
+              "agent",
+              "task",
+              "async_execution"
+            ],
+            "frozen": false,
+            "icon": "CrewAI",
+            "key": "SequentialTaskComponent",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Task",
+                "method": "build_task",
+                "name": "task_output",
+                "selected": "SequentialTask",
+                "tool_mode": true,
+                "types": [
+                  "SequentialTask"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.001,
+            "template": {
+              "_type": "Component",
+              "agent": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Agent",
+                "dynamic": false,
+                "info": "CrewAI Agent that will perform the task",
+                "input_types": [
+                  "Agent"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "agent",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "async_execution": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Async Execution",
+                "dynamic": false,
+                "info": "Boolean flag indicating asynchronous task execution.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "async_execution",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.agents.crewai.tasks import SequentialTask\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, HandleInput, MultilineInput, Output\n\n\nclass SequentialTaskComponent(Component):\n    display_name: str = \"Sequential Task\"\n    description: str = \"Each task must have a description, an expected output and an agent responsible for execution.\"\n    icon = \"CrewAI\"\n    inputs = [\n        MultilineInput(\n            name=\"task_description\",\n            display_name=\"Description\",\n            info=\"Descriptive text detailing task's purpose and execution.\",\n        ),\n        MultilineInput(\n            name=\"expected_output\",\n            display_name=\"Expected Output\",\n            info=\"Clear definition of expected task outcome.\",\n        ),\n        HandleInput(\n            name=\"tools\",\n            display_name=\"Tools\",\n            input_types=[\"Tool\"],\n            is_list=True,\n            info=\"List of tools/resources limited for task execution. Uses the Agent tools by default.\",\n            required=False,\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"agent\",\n            display_name=\"Agent\",\n            input_types=[\"Agent\"],\n            info=\"CrewAI Agent that will perform the task\",\n            required=True,\n        ),\n        HandleInput(\n            name=\"task\",\n            display_name=\"Task\",\n            input_types=[\"SequentialTask\"],\n            info=\"CrewAI Task that will perform the task\",\n        ),\n        BoolInput(\n            name=\"async_execution\",\n            display_name=\"Async Execution\",\n            value=True,\n            advanced=True,\n            info=\"Boolean flag indicating asynchronous task execution.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Task\", name=\"task_output\", method=\"build_task\"),\n    ]\n\n    def build_task(self) -> list[SequentialTask]:\n        tasks: list[SequentialTask] = []\n        task = SequentialTask(\n            description=self.task_description,\n            expected_output=self.expected_output,\n            tools=self.agent.tools,\n            async_execution=False,\n            agent=self.agent,\n        )\n        tasks.append(task)\n        self.status = task\n        if self.task:\n            if isinstance(self.task, list) and all(isinstance(task, SequentialTask) for task in self.task):\n                tasks = self.task + tasks\n            elif isinstance(self.task, SequentialTask):\n                tasks = [self.task, *tasks]\n        return tasks\n"
+              },
+              "expected_output": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Expected Output",
+                "dynamic": false,
+                "info": "Clear definition of expected task outcome.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "expected_output",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "task": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Task",
+                "dynamic": false,
+                "info": "CrewAI Task that will perform the task",
+                "input_types": [
+                  "SequentialTask"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "task",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "task_description": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Description",
+                "dynamic": false,
+                "info": "Descriptive text detailing task's purpose and execution.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "task_description",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "tools": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "display_name": "Tools",
+                "dynamic": false,
+                "info": "List of tools/resources limited for task execution. Uses the Agent tools by default.",
+                "input_types": [
+                  "Tool"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "tools",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "SequentialTaskComponent"
+        },
+        "dragging": false,
+        "id": "SequentialTaskComponent-0G9eA",
+        "measured": {
+          "height": 441,
+          "width": 320
+        },
+        "position": {
+          "x": 1874.8820251063235,
+          "y": -218.9955689400061
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-srz0Y",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": []
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "You are a meticulous expense analyst with expertise in financial data analysis, cost categorization. You excel at breaking down expenses, identifying patterns, and providing actionable cost-saving insights."
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-srz0Y",
+        "measured": {
+          "height": 256,
+          "width": 320
+        },
+        "position": {
+          "x": 543.5111618751043,
+          "y": -190.93603246299926
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-BgBPt",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": []
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Create detailed expense analysis and categorization from invoice data"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-BgBPt",
+        "measured": {
+          "height": 256,
+          "width": 320
+        },
+        "position": {
+          "x": 542.9715865819137,
+          "y": -513.422938214476
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-KK4vf",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": []
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Expense Analyst"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-KK4vf",
+        "measured": {
+          "height": 256,
+          "width": 320
+        },
+        "position": {
+          "x": 542.6444345764226,
+          "y": -833.7325194067149
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "OpenAIModel-BOAmh",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "category": "models",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generates text using OpenAI LLMs.",
+            "display_name": "OpenAI",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "max_tokens",
+              "model_kwargs",
+              "json_mode",
+              "model_name",
+              "openai_api_base",
+              "api_key",
+              "temperature",
+              "seed",
+              "max_retries",
+              "timeout"
+            ],
+            "frozen": false,
+            "icon": "OpenAI",
+            "key": "OpenAIModel",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "text_response",
+                "name": "text_output",
+                "required_inputs": [],
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "method": "build_model",
+                "name": "model_output",
+                "required_inputs": [
+                  "api_key"
+                ],
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.001,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "YOUR_API_KEY"
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            info=\"The maximum number of retries to make when generating.\",\n            advanced=True,\n            value=5,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"The timeout for requests to OpenAI completion API.\",\n            advanced=True,\n            value=700,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n        max_retries = self.max_retries\n        timeout = self.timeout\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n            max_retries=max_retries,\n            request_timeout=timeout,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_tokens",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 128000,
+                  "min": 0,
+                  "step": 0.1,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "",
+                "name": "model_name",
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-3.5-turbo-0125"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "gpt-4o"
+              },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "temperature": {
+                "_input_type": "SliderInput",
+                "advanced": false,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "",
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "temperature",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 0.54
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "OpenAIModel"
+        },
+        "dragging": false,
+        "id": "OpenAIModel-BOAmh",
+        "measured": {
+          "height": 656,
+          "width": 320
+        },
+        "position": {
+          "x": 546.4277997794154,
+          "y": 547.0875962596028
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-0Kyqx",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": []
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "An expense analysis report with clear sections and recommendations for cost optimization. In markdown format.\n"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-0Kyqx",
+        "measured": {
+          "height": 256,
+          "width": 320
+        },
+        "position": {
+          "x": 1201.093621311798,
+          "y": -189.45392507770836
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Prompt-aRsIS",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": []
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "Search, find and analyze invoices and create a detailed expense drilldown report.\n        \nSteps to follow:\n1. Group expenses and calculate total spend by vendor\n2. Calculate the gross total spend \n3. Identify potential cost-saving opportunities\n        \nFormat the report with clear sections and include:\n- Executive summary\n- Vendor-wise breakdown\n- Recommendations for cost optimization"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-aRsIS",
+        "measured": {
+          "height": 256,
+          "width": 320
+        },
+        "position": {
+          "x": 1200.836477152667,
+          "y": -512.425843596224
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "SequentialCrewComponent-I19Bi",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Represents a group of agents with tasks that are executed sequentially.",
+            "display_name": "Sequential Crew",
+            "documentation": "https://docs.crewai.com/how-to/Sequential/",
+            "edited": false,
+            "field_order": [
+              "verbose",
+              "memory",
+              "use_cache",
+              "max_rpm",
+              "share_crew",
+              "function_calling_llm",
+              "tasks"
+            ],
+            "frozen": false,
+            "icon": "CrewAI",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output",
+                "method": "build_output",
+                "name": "output",
+                "required_inputs": [],
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from crewai import Agent, Crew, Process, Task\n\nfrom langflow.base.agents.crewai.crew import BaseCrewComponent\nfrom langflow.io import HandleInput\nfrom langflow.schema.message import Message\n\n\nclass SequentialCrewComponent(BaseCrewComponent):\n    display_name: str = \"Sequential Crew\"\n    description: str = \"Represents a group of agents with tasks that are executed sequentially.\"\n    documentation: str = \"https://docs.crewai.com/how-to/Sequential/\"\n    icon = \"CrewAI\"\n\n    inputs = [\n        *BaseCrewComponent._base_inputs,\n        HandleInput(name=\"tasks\", display_name=\"Tasks\", input_types=[\"SequentialTask\"], is_list=True),\n    ]\n\n    @property\n    def agents(self: \"SequentialCrewComponent\") -> list[Agent]:\n        # Derive agents directly from linked tasks\n        return [task.agent for task in self.tasks if hasattr(task, \"agent\")]\n\n    def get_tasks_and_agents(self, agents_list=None) -> tuple[list[Task], list[Agent]]:\n        # Use the agents property to derive agents\n        if not agents_list:\n            existing_agents = self.agents\n            agents_list = existing_agents + (agents_list or [])\n\n        return super().get_tasks_and_agents(agents_list=agents_list)\n\n    def build_crew(self) -> Message:\n        tasks, agents = self.get_tasks_and_agents()\n\n        return Crew(\n            agents=agents,\n            tasks=tasks,\n            process=Process.sequential,\n            verbose=self.verbose,\n            memory=self.memory,\n            cache=self.use_cache,\n            max_rpm=self.max_rpm,\n            share_crew=self.share_crew,\n            function_calling_llm=self.function_calling_llm,\n            step_callback=self.get_step_callback(),\n            task_callback=self.get_task_callback(),\n        )\n"
+              },
+              "function_calling_llm": {
+                "_input_type": "HandleInput",
+                "advanced": true,
+                "display_name": "Function Calling LLM",
+                "dynamic": false,
+                "info": "Turns the ReAct CrewAI agent into a function-calling agent",
+                "input_types": [
+                  "LanguageModel"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "function_calling_llm",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "max_rpm": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max RPM",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_rpm",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 100
+              },
+              "memory": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Memory",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "memory",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "share_crew": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Share Crew",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "share_crew",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "tasks": {
+                "_input_type": "HandleInput",
+                "advanced": false,
+                "display_name": "Tasks",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "SequentialTask"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "tasks",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "use_cache": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "use_cache",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "verbose": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Verbose",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "verbose",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 0
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "SequentialCrewComponent"
+        },
+        "dragging": false,
+        "id": "SequentialCrewComponent-I19Bi",
+        "measured": {
+          "height": 212,
+          "width": 320
+        },
+        "position": {
+          "x": 2293.3817198720844,
+          "y": -72.53220473574515
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-PE3G5",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "data_template",
+              "background_color",
+              "chat_icon",
+              "text_color"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "background_color": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Background Color",
+                "dynamic": false,
+                "info": "The background color of the icon.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "background_color",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "chat_icon": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Icon",
+                "dynamic": false,
+                "info": "The icon of the message.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "chat_icon",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            source_dict[\"source\"] = source\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Text",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "text_color": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Text Color",
+                "dynamic": false,
+                "info": "The text color of the name",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "text_color",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": false,
+          "type": "ChatOutput"
+        },
+        "dragging": false,
+        "id": "ChatOutput-PE3G5",
+        "measured": {
+          "height": 66,
+          "width": 192
+        },
+        "position": {
+          "x": 2684.788125303871,
+          "y": 16.461876759055535
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "TextOutput-hgkar",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a text output in the Playground.",
+            "display_name": "Text Output",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value"
+            ],
+            "frozen": false,
+            "icon": "type",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "text_response",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.io.text import TextComponent\nfrom langflow.io import MultilineInput, Output\nfrom langflow.schema.message import Message\n\n\nclass TextOutputComponent(TextComponent):\n    display_name = \"Text Output\"\n    description = \"Display a text output in the Playground.\"\n    icon = \"type\"\n    name = \"TextOutput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as output.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        self.status = self.input_value\n        return message\n"
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Text",
+                "dynamic": false,
+                "info": "Text to be passed as output.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "TextOutput"
+        },
+        "dragging": false,
+        "id": "TextOutput-hgkar",
+        "measured": {
+          "height": 230,
+          "width": 320
+        },
+        "position": {
+          "x": 2956.0170510118564,
+          "y": -61.96486234193664
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "NeedleKnowledgeBase-HBOh0",
+          "node": {
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "import json\nfrom typing import Any, List\n\nfrom langchain_community.retrievers.needle import NeedleRetriever\nfrom langchain_core.tools import StructuredTool, ToolException\nfrom pydantic import BaseModel\nfrom pydantic.v1 import Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass NeedleSearchKnowledgeBaseSchema(BaseModel):\n    \"\"\"Schema for the Needle Search Knowledge Base tool.\"\"\"\n    query: str = Field(..., description=\"The search query to find relevant information in the knowledge base\")\n    top_k: int = Field(20, description=\"Maximum number of search results to return (min: 20)\")\n\n\nclass NeedleKnowledgeBaseWrapper(BaseModel):\n    \"\"\"Wrapper around Needle Knowledge Base Search.\"\"\"\n    needle_api_key: str\n    collection_id: str\n    verbose: bool = False\n\n    def _prepare_retriever(self, top_k: int = 20) -> NeedleRetriever:\n        return NeedleRetriever(\n            needle_api_key=self.needle_api_key,\n            collection_id=self.collection_id,\n            top_k=top_k,\n        )\n\n    def results(self, query: str, top_k: int = 20) -> List[dict[str, Any]]:\n        # Enforce a minimum top_k value\n        top_k = max(20, top_k)\n        if self.verbose:\n            print(f\"Searching: '{query}' with top_k={top_k}\")\n\n        retriever = self._prepare_retriever(top_k=top_k)\n        results = retriever.get_relevant_documents(query)\n\n        if not results:\n            raise AssertionError(\"No results found\")\n\n        processed_results = []\n        for idx, doc in enumerate(results, 1):\n            metadata = getattr(doc, \"metadata\", {})\n            snippet_lines = [\n                f\"### Result {idx}\",\n                \"\",\n                doc.page_content,\n                \"\",\n            ]\n            if metadata:\n                snippet_lines.append(\"**Metadata:**\")\n                snippet_lines.extend(f\"- {key}: {value}\" for key, value in metadata.items())\n                snippet_lines.append(\"\")\n            content = \"\\n\".join(snippet_lines)\n            processed_results.append({\n                \"page_content\": doc.page_content,\n                \"metadata\": metadata,\n                \"snippets\": [{\"text\": content}],\n                \"formatted_content\": content,\n            })\n\n        summary_text = (\n            f\"### Search Results Summary\\n\\n\"\n            f\"Found {len(results)} relevant results for query: '{query}'\\n\"\n        )\n        summary = {\n            \"page_content\": f\"Found {len(results)} relevant results for query: {query}\",\n            \"metadata\": {\"type\": \"summary\"},\n            \"snippets\": [{\"text\": summary_text}],\n            \"formatted_content\": summary_text,\n        }\n        return [summary] + processed_results\n\n    def run(self, query: str, **kwargs: Any) -> List[dict[str, Any]]:\n        top_k = kwargs.get(\"top_k\", 20)\n        if self.verbose:\n            print(f\"Query: '{query}' with top_k={top_k}\")\n\n        try:\n            results = self.results(query, top_k=top_k)\n            if self.verbose:\n                print(f\"Found {len(results) - 1} documents\")\n            return results\n        except Exception as e:\n            raise ToolException(f\"Search failed: {e}\") from e\n\n\nclass NeedleSearchKnowledgeBaseComponent(LCToolComponent):\n    display_name = \"Needle Search KB\"\n    description = \"Search your knowledge base using Needle\"\n    name = \"NeedleKnowledgeBase\"\n    icon = \"Needle\"\n\n    # Only expose the configuration inputs in the UI\n    inputs = [\n        SecretStrInput(\n            name=\"needle_api_key\",\n            display_name=\"Needle API Key\",\n            required=True,\n        ),\n        StrInput(\n            name=\"collection_id\",\n            display_name=\"Collection ID\",\n            required=True,\n        ),\n    ]\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper(\n            needle_api_key=self.needle_api_key,\n            collection_id=self.collection_id,\n        )\n        tool = StructuredTool.from_function(\n            name=\"needle_search_knowledge_base\",\n            description=(\n                \"This tool retrieves information from your knowledge base containing unstructured data, \"\n                \"such as text, tables, invoices, reports, and emails.\\n\\n\"\n                \"Args:\\n\"\n                \"    query (str): The search query to find relevant information in the knowledge base\\n\"\n                \"    top_k (int): Number of top results to return (min: 20, max: 200)\"\n            ),\n            func=wrapper.run,\n            args_schema=NeedleSearchKnowledgeBaseSchema,\n        )\n        self.status = \"Needle Knowledge Base Search Tool\"\n        return tool\n\n    def run_model(self) -> list[Data]:\n        raise NotImplementedError(\"This tool is meant to be used by an agent, not called directly.\")\n\n    def _build_wrapper(self, needle_api_key: str, collection_id: str) -> NeedleKnowledgeBaseWrapper:\n        return NeedleKnowledgeBaseWrapper(\n            needle_api_key=needle_api_key,\n            collection_id=collection_id,\n        )\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "collection_id": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "collection_id",
+                "value": "YOUR_COLLECTION_ID",
+                "display_name": "Collection ID",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "needle_api_key": {
+                "load_from_db": false,
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "needle_api_key",
+                "value": "YOUR_API_KEY",
+                "display_name": "Needle API Key",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "password": true,
+                "type": "str",
+                "_input_type": "SecretStrInput"
+              }
+            },
+            "description": "Search your knowledge base using Needle",
+            "icon": "Needle",
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
+            "display_name": "Needle Search KB",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "api_run_model",
+                "hidden": null,
+                "display_name": "Data",
+                "method": "run_model",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [
+                  "collection_id",
+                  "needle_api_key"
+                ],
+                "allows_loop": false,
+                "tool_mode": true
+              },
+              {
+                "types": [
+                  "Tool"
+                ],
+                "selected": "Tool",
+                "name": "api_build_tool",
+                "hidden": null,
+                "display_name": "Tool",
+                "method": "build_tool",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [
+                  "collection_id",
+                  "needle_api_key"
+                ],
+                "allows_loop": false,
+                "tool_mode": true
+              }
+            ],
+            "field_order": [
+              "needle_api_key",
+              "collection_id"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "NeedleKnowledgeBase"
+        },
+        "dragging": false,
+        "id": "NeedleKnowledgeBase-HBOh0",
+        "measured": {
+          "height": 360,
+          "width": 320
+        },
+        "position": {
+          "x": 545.1708984428558,
+          "y": 121.82108102228275
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-WqgwC",
+          "node": {
+            "description": "# Invoice Summarizer\n\nWelcome to the **Invoice Summarizer**! This flow leverages the Needle Search API and CrewAI to gather and summarize your invoice data quickly and accurately.\n\n## Setup & Instructions\n\n\n1. **Set Up Your Needle Account**\n   - Set up your Needle account and load data into your connection.\n\n2. **Obtain Your Credentials**\n   - Get your **Connection ID** and **Needle API Key** from Needle.\n\n3. **Load Your Data Into Needle**\n   - Load your invoices manually into your Needle Collection. \n\n4. **Connect Your Data Sources**\n   - If you do not know where your invoices are, or if they are spread across different platforms, no problem.\n   - Just connect all the different data sources with **Needle** to your invoice collection. Needle takes care of the rest.\n\n5. **Configure the Tool**\n   - Enter your **Needle Collection ID** and **Needle API Key** into the tool.\n\n6. **Run the Flow**\n   - Get your **OpenAI Key** and just run the flow.\n\n7. **Customize for Desired Outcomes**\n   - You can adjust the flow to get different outcomes by changing the prompt in the sequential task description.\n   - **CrewAI** will then, based on your requirements, determine the right query and search size, while Needle takes care of the data retrieval across different data sources.\n\n**Happy Summarizing!**\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "emerald"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 970,
+        "id": "note-WqgwC",
+        "measured": {
+          "height": 970,
+          "width": 582
+        },
+        "position": {
+          "x": -209.36016877577754,
+          "y": -505.0421987168127
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 581
+      }
+    ],
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-BOAmh",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-BOAmh{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BOAmhœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-BOAmh",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BOAmhœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-srz0Y",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "backstory",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-srz0Y{œdataTypeœ:œPromptœ,œidœ:œPrompt-srz0Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-srz0Y",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-srz0Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-BgBPt",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "goal",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-BgBPt{œdataTypeœ:œPromptœ,œidœ:œPrompt-BgBPtœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-BgBPt",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-BgBPtœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-KK4vf",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "role",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-KK4vf{œdataTypeœ:œPromptœ,œidœ:œPrompt-KK4vfœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-KK4vf",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-KK4vfœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CrewAIAgentComponent",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "name": "output",
+            "output_types": [
+              "Agent"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "agent",
+            "id": "SequentialTaskComponent-0G9eA",
+            "inputTypes": [
+              "Agent"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CrewAIAgentComponent-9WbIo{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œagentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CrewAIAgentComponent-9WbIo",
+        "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
+        "target": "SequentialTaskComponent-0G9eA",
+        "targetHandle": "{œfieldNameœ:œagentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-0Kyqx",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "expected_output",
+            "id": "SequentialTaskComponent-0G9eA",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-0Kyqx{œdataTypeœ:œPromptœ,œidœ:œPrompt-0Kyqxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œexpected_outputœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-0Kyqx",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-0Kyqxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "SequentialTaskComponent-0G9eA",
+        "targetHandle": "{œfieldNameœ:œexpected_outputœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-aRsIS",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "task_description",
+            "id": "SequentialTaskComponent-0G9eA",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-aRsIS{œdataTypeœ:œPromptœ,œidœ:œPrompt-aRsISœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œtask_descriptionœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-aRsIS",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-aRsISœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "SequentialTaskComponent-0G9eA",
+        "targetHandle": "{œfieldNameœ:œtask_descriptionœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SequentialTaskComponent",
+            "id": "SequentialTaskComponent-0G9eA",
+            "name": "task_output",
+            "output_types": [
+              "SequentialTask"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tasks",
+            "id": "SequentialCrewComponent-I19Bi",
+            "inputTypes": [
+              "SequentialTask"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SequentialTaskComponent-0G9eA{œdataTypeœ:œSequentialTaskComponentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œnameœ:œtask_outputœ,œoutput_typesœ:[œSequentialTaskœ]}-SequentialCrewComponent-I19Bi{œfieldNameœ:œtasksœ,œidœ:œSequentialCrewComponent-I19Biœ,œinputTypesœ:[œSequentialTaskœ],œtypeœ:œotherœ}",
+        "source": "SequentialTaskComponent-0G9eA",
+        "sourceHandle": "{œdataTypeœ:œSequentialTaskComponentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œnameœ:œtask_outputœ,œoutput_typesœ:[œSequentialTaskœ]}",
+        "target": "SequentialCrewComponent-I19Bi",
+        "targetHandle": "{œfieldNameœ:œtasksœ,œidœ:œSequentialCrewComponent-I19Biœ,œinputTypesœ:[œSequentialTaskœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SequentialCrewComponent",
+            "id": "SequentialCrewComponent-I19Bi",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-PE3G5",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-SequentialCrewComponent-I19Bi{œdataTypeœ:œSequentialCrewComponentœ,œidœ:œSequentialCrewComponent-I19Biœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PE3G5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PE3G5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "SequentialCrewComponent-I19Bi",
+        "sourceHandle": "{œdataTypeœ:œSequentialCrewComponentœ,œidœ:œSequentialCrewComponent-I19Biœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-PE3G5",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PE3G5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatOutput",
+            "id": "ChatOutput-PE3G5",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "TextOutput-hgkar",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatOutput-PE3G5{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PE3G5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-TextOutput-hgkar{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-hgkarœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatOutput-PE3G5",
+        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PE3G5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "TextOutput-hgkar",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-hgkarœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "NeedleKnowledgeBase",
+            "id": "NeedleKnowledgeBase-HBOh0",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-NeedleKnowledgeBase-HBOh0{œdataTypeœ:œNeedleKnowledgeBaseœ,œidœ:œNeedleKnowledgeBase-HBOh0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "NeedleKnowledgeBase-HBOh0",
+        "sourceHandle": "{œdataTypeœ:œNeedleKnowledgeBaseœ,œidœ:œNeedleKnowledgeBase-HBOh0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+      }
+    ],
+    "viewport": {
+      "x": 436.7332436417008,
+      "y": 347.88332209990824,
+      "zoom": 0.8024304299438211
+    }
+  },
+  "updated_at": "2025-02-15T17:49:36+00:00",
+  "icon": null,
+  "name": "Invoice Summarizer",
+  "webhook": false,
+  "description": "Unified invoice summaries with Needle"
+}
