@@ -44,11 +44,9 @@ class StructuredOutputComponentv2(Component):
             value=(
                 "You are an AI system designed to extract structured information from unstructured text."
                 "Given the input_text, return a JSON object with predefined keys based on the expected structure."
-                "Extract values accurately and format them according to the specified type "
-                "(e.g., string, integer, float, date)."
-                "If a value is missing or cannot be determined, return a default (e.g., null, 0, or 'N/A')"
-                "If multiple instances of the expected structure exist within the input_text, "
-                "stream each as a separate JSON object."
+                "Extract values accurately and format them according to the specified type (e.g., string, integer, float, date)."
+                "If a value is missing or cannot be determined, return a default (e.g., null, 0, or 'N/A')."
+                "If multiple instances of the expected structure exist within the input_text, stream each as a separate JSON object."
             ),
             required=True,
             advanced=True,
