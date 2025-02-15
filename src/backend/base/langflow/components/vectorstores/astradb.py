@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
 from astrapy import AstraDBAdmin, DataAPIClient, Database
+from astrapy.info import CollectionDescriptor
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
@@ -102,12 +103,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 display_name="Embedding model",
                                 info="Model to use for generating embeddings.",
                                 required=True,
-                                options=["Bring your own", "NV-Embed-QA"],
+                                options=[],
                             ),
                             "dimension": IntInput(
                                 name="dimension",
-                                display_name="Dimensions",
-                                info="Dimension of the embeddings to generate.",
+                                display_name="Dimensions (Required only for `Bring your own`)",
+                                info="Dimensions of the embeddings to generate.",
                                 required=False,
                                 value=1024,
                             ),
@@ -250,6 +251,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     @classmethod
     def map_cloud_providers(cls):
+        # TODO: Programmatically fetch the regions for each cloud provider
         return {
             "Amazon Web Services": {
                 "id": "aws",
@@ -278,10 +280,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             vectorize_providers_mapping = {}
             # Map the provider display name to the provider key and models
             for provider_key, provider_data in embedding_providers["embeddingProviders"].items():
+                # Get the provider display name and models
                 display_name = provider_data["displayName"]
                 models = [model["name"] for model in provider_data["models"]]
 
-                # Ref: https://astra.datastax.com/api/v2/graphql
+                # Build our mapping
                 vectorize_providers_mapping[display_name] = [provider_key, models]
 
             # Sort the resulting dictionary
@@ -325,8 +328,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         dimension: int | None = None,
         embedding_generation_provider: str | None = None,
         embedding_generation_model: str | None = None,
-        authentication: dict | None = None,
-        parameters: dict | None = None,
     ):
         # Create the data API client
         client = DataAPIClient(token=token)
@@ -342,8 +343,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     token=token, environment=environment, api_endpoint=api_endpoint
                 ).get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
-                authentication=authentication,
-                parameters=parameters,
             )
 
         # Create the collection
@@ -496,6 +495,29 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Error fetching database options: {e}"
             raise ValueError(msg) from e
 
+    @classmethod
+    def get_provider_icon(cls, collection: CollectionDescriptor | None = None, provider_name: str | None = None) -> str:
+        # Get the provider name from the collection
+        provider_name = provider_name or (
+            collection.options.vector.service.provider
+            if collection and collection.options and collection.options.vector and collection.options.vector.service
+            else None
+        )
+
+        # If there is no provider, use the vector store icon
+        if not provider_name or provider_name == "bring your own":
+            return "vectorstores"
+
+        # Special case for certain models
+        # TODO: Add more icons
+        if provider_name == "nvidia":
+            return "NVIDIA"
+        if provider_name == "openai":
+            return "OpenAI"
+
+        # Title case on the provider for the icon if no special case
+        return provider_name.title()
+
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Nothing to generate if we don't have an API endpoint yet
         api_endpoint = api_endpoint or self.get_api_endpoint()
@@ -516,15 +538,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "provider": (
                     col.options.vector.service.provider if col.options.vector and col.options.vector.service else None
                 ),
-                "icon": (
-                    "vectorstores"
-                    if not col.options.vector or not col.options.vector.service
-                    else "NVIDIA"
-                    if col.options.vector.service.provider == "nvidia"
-                    else "OpenAI"
-                    if col.options.vector.service.provider == "openai"  # TODO: Add more icons
-                    else col.options.vector.service.provider.title()
-                ),
+                "icon": self.get_provider_icon(collection=col),
                 "model": (
                     col.options.vector.service.model_name if col.options.vector and col.options.vector.service else None
                 ),
@@ -545,11 +559,31 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "embedding_generation_provider"
         ]["options"] = ["Bring your own", "Nvidia", *[key for key in vectorize_providers if key != "Nvidia"]]
 
+        # For all not Bring your own or Nvidia providers, add metadata saying configure in Astra DB Portal
+        provider_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+            "embedding_generation_provider"
+        ]["options"]
+
+        # Go over each possible provider and add metadata to configure in Astra DB Portal
+        for provider in provider_options:
+            # Skip Bring your own and Nvidia, automatically configured
+            if provider in ["Bring your own", "Nvidia"]:
+                build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+                    "embedding_generation_provider"
+                ]["options_metadata"].append({"icon": self.get_provider_icon(provider_name=provider.lower())})
+                continue
+
+            # Add metadata to configure in Astra DB Portal
+            build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+                "embedding_generation_provider"
+            ]["options_metadata"].append({" ": "Configure in Astra DB Portal"})
+
         # And allow the user to see the models based on a selected provider
         embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "embedding_generation_provider"
         ]["value"]
 
+        # Set the options for the embedding model based on the provider
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "embedding_generation_model"
         ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
