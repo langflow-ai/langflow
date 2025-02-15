@@ -1,9 +1,9 @@
 import pytest
 from langflow.components.outputs import ChatOutput
-from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
 
 from tests.base import ComponentTestBaseWithClient
 
@@ -79,11 +79,7 @@ class TestChatOutput(ComponentTestBaseWithClient):
     async def test_process_list_input(self, component_class, default_kwargs):
         """Test processing a list of inputs."""
         component = component_class(**default_kwargs)
-        input_list = [
-            "First message",
-            Data(text="Second message"),
-            Message(text="Third message")
-        ]
+        input_list = ["First message", Data(text="Second message"), Message(text="Third message")]
         component.input_value = input_list
         result = await component.message_response()
         assert "First message" in result.text
@@ -100,4 +96,3 @@ class TestChatOutput(ComponentTestBaseWithClient):
         component.input_value = 123  # Invalid type
         with pytest.raises(TypeError, match="Expected Data or DataFrame or Message or str"):
             await component.message_response()
-
