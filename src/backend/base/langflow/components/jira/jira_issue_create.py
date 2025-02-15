@@ -1,7 +1,10 @@
 import json
+
 from langchain_community.utilities.jira import JiraAPIWrapper
+
 from langflow.custom import Component
-from langflow.io import StrInput, SecretStrInput, BoolInput, Output, DropdownInput
+from langflow.io import BoolInput, Output, SecretStrInput, StrInput
+
 
 class JiraIssueCreateComponent(Component):
     display_name = "JIRA Component"
@@ -59,7 +62,7 @@ class JiraIssueCreateComponent(Component):
             display_name="Description",
             required=False,
             info="Required for create and update operations",
-        )
+        ),
     ]
 
     outputs = [
@@ -71,21 +74,17 @@ class JiraIssueCreateComponent(Component):
             jira_username=self.username,
             jira_api_token=self.api_token,
             jira_instance_url=self.instance_url,
-            jira_cloud=str(self.cloud)
+            jira_cloud=str(self.cloud),
         )
 
     def create_issue(self) -> dict:
         jira = self.build_jira()
 
-        fields = {
-            "summary": self.summary,
-            "project": {"key": self.project_key},
-            "issuetype": {"name": self.issue_type}
-        }
+        fields = {"summary": self.summary, "project": {"key": self.project_key}, "issuetype": {"name": self.issue_type}}
 
         if self.description:  # description değeri dolu ise
             fields["description"] = self.description
 
-        issue_data=json.dumps(fields)
+        issue_data = json.dumps(fields)
         issue = jira.issue_create(issue_data)
         return issue

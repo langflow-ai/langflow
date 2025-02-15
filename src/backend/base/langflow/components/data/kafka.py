@@ -1,9 +1,9 @@
-from kafka import KafkaProducer, KafkaConsumer
 import json
-import time
+
+from kafka import KafkaConsumer, KafkaProducer
 
 from langflow.custom import Component
-from langflow.io import StrInput, MultilineInput, DropdownInput, IntInput, Output
+from langflow.io import DropdownInput, IntInput, MultilineInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -57,7 +57,9 @@ class KafkaComponent(Component):
     def execute_kafka(self) -> Data | list[Data]:
         if self.mode == "Produce":
             try:
-                producer = KafkaProducer(bootstrap_servers=self.broker, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+                producer = KafkaProducer(
+                    bootstrap_servers=self.broker, value_serializer=lambda v: json.dumps(v).encode("utf-8")
+                )
                 if self.message:
                     payload = self.message
                     future = producer.send(self.topic, {"message": payload})
@@ -79,7 +81,7 @@ class KafkaComponent(Component):
                     group_id=self.group_id,
                     auto_offset_reset="earliest",
                     consumer_timeout_ms=self.timeout * 1000,
-                    value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+                    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
                 )
                 messages = []
                 for msg in consumer:

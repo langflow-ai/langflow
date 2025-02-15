@@ -1,7 +1,8 @@
-import json
 from langchain_community.utilities.jira import JiraAPIWrapper
+
 from langflow.custom import Component
-from langflow.io import StrInput, SecretStrInput, BoolInput, Output, DropdownInput
+from langflow.io import BoolInput, DropdownInput, Output, SecretStrInput, StrInput
+
 
 class JiraIssueSearchComponent(Component):
     display_name = "JIRA Component"
@@ -85,15 +86,14 @@ class JiraIssueSearchComponent(Component):
             jira_username=self.username,
             jira_api_token=self.api_token,
             jira_instance_url=self.instance_url,
-            jira_cloud=str(self.cloud)
+            jira_cloud=str(self.cloud),
         )
-
 
     def search_issues(self) -> dict:
         jira = self.build_jira()
         jql = self.jql_query or ""
         conditions = []
-        
+
         if self.issue_key:
             conditions.append(f'key="{self.issue_key}"')
         if self.project_key:
@@ -102,7 +102,7 @@ class JiraIssueSearchComponent(Component):
             conditions.append(f'summary~"{self.summary}"')
         if self.issue_type:
             conditions.append(f'issuetype="{self.issue_type}"')
-        
+
         if conditions:
             dynamic_jql = " AND ".join(conditions)
             if jql:
