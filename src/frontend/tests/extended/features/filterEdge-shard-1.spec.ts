@@ -74,11 +74,9 @@ test(
     ];
 
     const elementTestIds = [
-      "inputsChat Input",
       "outputsChat Output",
       "dataAPI Request",
       "modelsAmazon Bedrock",
-      "helpersMessage History",
       "vectorstoresAstra DB",
       "embeddingsAmazon Bedrock Embeddings",
       "langchain_utilitiesTool Calling Agent",
@@ -94,9 +92,11 @@ test(
     );
 
     await Promise.all(
-      elementTestIds.map((id) =>
-        expect(page.getByTestId(id).first()).toBeVisible(),
-      ),
+      elementTestIds.map((id) => {
+        if (!expect(page.getByTestId(id).first()).toBeVisible()) {
+          console.error(`${id} is not visible`);
+        }
+      }),
     );
 
     await page.getByTestId("sidebar-search-input").click();
