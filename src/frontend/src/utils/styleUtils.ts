@@ -8,6 +8,7 @@ import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
+import { ThoughtSpotIcon } from "@/icons/ThoughtSpot";
 import { UnstructuredIcon } from "@/icons/Unstructured";
 import { WikipediaIcon } from "@/icons/Wikipedia";
 import YouTubeIcon from "@/icons/Youtube/youtube";
@@ -541,6 +542,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Youtube", name: "youtube", icon: "YouTube" },
   { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
+  { display_name: "ThoughtSpot", name: "thoughtspot", icon: "ThoughtSpot" },
 ];
 
 export const categoryIcons = {
@@ -731,6 +733,7 @@ export const nodeIconsLucide: iconsType = {
   GleanAPI: GleanIcon,
   SerpSearch: SerpSearchIcon,
   SearchAPI: SearchAPIIcon,
+  ThoughtSpot: ThoughtSpotIcon,
   Wikipedia: WikipediaIcon,
   Arize: ArizeIcon,
 
