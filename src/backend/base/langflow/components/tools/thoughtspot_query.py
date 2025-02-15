@@ -17,21 +17,9 @@ class ThoughtSpotQueryComponent(Component):
     icon = "ThougtSpot"
 
     inputs = [
-        StrInput(
-            name="instance_url",
-            display_name="ThoughtSpot Instance endpoint",
-            info="Enter your ThoughtSpot URL"
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="ThoughtSpot API Key",
-            info="Enter your API Key"
-        ),
-        StrInput(
-            name="model_id",
-            display_name="Data Model to query",
-            info="ThoughtSpot Model Id"
-        ),
+        StrInput(name="instance_url", display_name="ThoughtSpot Instance endpoint", info="Enter your ThoughtSpot URL"),
+        SecretStrInput(name="api_key", display_name="ThoughtSpot API Key", info="Enter your API Key"),
+        StrInput(name="model_id", display_name="Data Model to query", info="ThoughtSpot Model Id"),
         MessageTextInput(
             name="query",
             display_name="Query",
@@ -54,14 +42,8 @@ class ThoughtSpotQueryComponent(Component):
             url = urljoin(self.instance_url, "/api/rest/2.0/ai/answer/create")
             csv_url = urljoin(self.instance_url, "/api/rest/2.0/report/answer")
 
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + self.api_key
-            }
-            query_payload = {
-                "query": self.query,
-                "metadata_identifier": self.model_id
-            }
+            headers = { "Content-Type": "application/json", "Authorization": "Bearer " + self.api_key }
+            query_payload = { "query": self.query, "metadata_identifier": self.model_id }
 
             async with httpx.AsyncClient() as client:
                 # First POST to create the answer
@@ -72,7 +54,7 @@ class ThoughtSpotQueryComponent(Component):
                 session_payload = {
                     "file_format": "CSV",
                     "session_identifier": response_data["session_identifier"],
-                    "generation_number": response_data["generation_number"]
+                    "generation_number": response_data["generation_number"],
                 }
 
                 # Second POST to retrieve the CSV

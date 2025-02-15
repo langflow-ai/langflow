@@ -1,5 +1,5 @@
 const SvgThoughtSpot = (props) => (
-  <svg
+  <svg 
     focusable="false"
     width="512"
     height="512"
