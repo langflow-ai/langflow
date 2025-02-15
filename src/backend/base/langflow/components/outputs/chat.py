@@ -104,7 +104,13 @@ class ChatOutput(ChatComponent):
         if display_name:
             source_dict["display_name"] = display_name
         if source:
-            source_dict["source"] = source
+            # Handle case where source is a ChatOpenAI object
+            if hasattr(source, "model_name"):
+                source_dict["source"] = source.model_name
+            elif hasattr(source, "model"):
+                source_dict["source"] = str(source.model)
+            else:
+                source_dict["source"] = str(source)
         return Source(**source_dict)
 
     async def message_response(self) -> Message:
@@ -162,10 +168,10 @@ class ChatOutput(ChatComponent):
             if isinstance(data, Message):
                 return data.get_text()
             if isinstance(data, Data):
-                if data.text is None:
+                if data.get_text() is None:
                     msg = "Empty Data object"
                     raise ValueError(msg)
-                return data.text
+                return data.get_text()
             if isinstance(data, DataFrame):
                 if self.clean_data:
                     # Remove empty rows
