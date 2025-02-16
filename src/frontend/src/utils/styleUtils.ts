@@ -310,6 +310,7 @@ import { VertexAIIcon } from "../icons/VertexAI";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
+import { WoolBallIcon } from "../icons/WoolBall";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
@@ -689,6 +690,7 @@ export const nodeIconsLucide: iconsType = {
   ElasticsearchStore: ElasticsearchIcon,
   Weaviate: WeaviateIcon,
   SambaNova: SambaNovaIcon,
+  WoolBall: WoolBallIcon,
   Searx: SearxIcon,
   SlackDirectoryLoader: SvgSlackIcon,
   SpiderTool: SpiderIcon,
