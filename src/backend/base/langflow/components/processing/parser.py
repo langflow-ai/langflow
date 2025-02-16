@@ -83,7 +83,9 @@ class ParserComponent(Component):
     def _clean_args(self):
         """Prepare arguments based on input type."""
         input_data = self.input_data
-
+        if isinstance(input_data, list) and all(isinstance(item, Data) for item in input_data):
+            msg = "List of Data objects is not supported."
+            raise ValueError(msg)
         if isinstance(input_data, DataFrame):
             return input_data, None, self.template, self.sep, self.stringify
         if isinstance(input_data, Data):
