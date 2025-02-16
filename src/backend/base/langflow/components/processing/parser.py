@@ -76,8 +76,8 @@ class ParserComponent(Component):
         if field_name == "stringify":
             build_config["template"]["show"] = not field_value
             build_config["template"]["required"] = not field_value
-            build_config["clean_data"]["show"] =  field_value
-            build_config["clean_data"]["required"] =  field_value
+            build_config["clean_data"]["show"] = field_value
+            build_config["clean_data"]["required"] = field_value
         return build_config
 
     def _clean_args(self):
