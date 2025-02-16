@@ -1,8 +1,8 @@
-from loguru import logger
 from typing import Any
 
 from langchain_community.retrievers.needle import NeedleRetriever
 from langchain_core.tools import StructuredTool, ToolException
+from loguru import logger
 from pydantic import BaseModel
 from pydantic.v1 import Field
 
@@ -89,7 +89,6 @@ class NeedleKnowledgeBaseWrapper(BaseModel):
         except Exception as e:
             error_msg = f"Search failed: {e}"
             raise ToolException(error_msg) from e
-        
         return results
 
     def _log_search_start(self, query: str, top_k: int) -> None:
