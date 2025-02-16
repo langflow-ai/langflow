@@ -11,6 +11,7 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_USER,
 )
+from typing import Any
 
 
 class ChatOutput(ChatComponent):
@@ -160,7 +161,7 @@ class ChatOutput(ChatComponent):
             msg = f"Expected Data or DataFrame or Message or str, got {type(self.input_value).__name__}"
             raise TypeError(msg)
 
-    def _safe_convert(self, data: Data | DataFrame | Message | str) -> str:
+    def _safe_convert(self, data: Any) -> str:
         """Safely convert input data to string."""
         try:
             if isinstance(data, str):
@@ -186,7 +187,7 @@ class ChatOutput(ChatComponent):
             msg = f"Error converting data: {e!s}"
             raise ValueError(msg) from e
 
-    def convert_to_string(self) -> Message:
+    def convert_to_string(self) -> str:
         """Convert input data to string with proper error handling."""
         self._validate_input()
         if isinstance(self.input_value, list):
