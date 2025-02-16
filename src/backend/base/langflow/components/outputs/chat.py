@@ -1,3 +1,5 @@
+from typing import Any
+
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs import BoolInput
 from langflow.inputs.inputs import HandleInput
@@ -11,7 +13,6 @@ from langflow.utils.constants import (
     MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_USER,
 )
-from typing import Any
 
 
 class ChatOutput(ChatComponent):
