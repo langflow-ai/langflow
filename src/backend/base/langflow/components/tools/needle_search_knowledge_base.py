@@ -1,3 +1,4 @@
+from loguru import logger
 from typing import Any
 
 from langchain_community.retrievers.needle import NeedleRetriever
@@ -85,25 +86,26 @@ class NeedleKnowledgeBaseWrapper(BaseModel):
             results = self.results(query, top_k=top_k)
             if self.verbose:
                 self._log_results_found(len(results) - 1)
-            return results
         except Exception as e:
             error_msg = f"Search failed: {e}"
             raise ToolException(error_msg) from e
+        
+        return results
 
     def _log_search_start(self, query: str, top_k: int) -> None:
         """Log the start of a search operation."""
         if self.verbose:
-            print(f"Searching: '{query}' with top_k={top_k}")
+            logger.info("Searching: '%s' with top_k=%d", query, top_k)
 
     def _log_query_start(self, query: str, top_k: int) -> None:
         """Log the start of a query operation."""
         if self.verbose:
-            print(f"Query: '{query}' with top_k={top_k}")
+            logger.info("Query: '%s' with top_k=%d", query, top_k)
 
     def _log_results_found(self, count: int) -> None:
         """Log the number of results found."""
         if self.verbose:
-            print(f"Found {count} documents")
+            logger.info("Found %d documents", count)
 
 
 class NeedleSearchKnowledgeBaseComponent(LCToolComponent):
