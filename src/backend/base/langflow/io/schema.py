@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, Field, create_model
 
-from langflow.inputs.inputs import FieldTypes
+from langflow.inputs.inputs import FieldTypes, InputTypes
 from langflow.schema.dotdict import dotdict
 
 _convert_field_type_to_type: dict[FieldTypes, type] = {
@@ -23,44 +25,36 @@ if TYPE_CHECKING:
     from langflow.inputs.inputs import InputTypes
 
 
-def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
+def create_input_schema(inputs: list[InputTypes]) -> type[BaseModel]:
     if not isinstance(inputs, list):
-        msg = "inputs must be a list of Inputs"
-        raise TypeError(msg)
-    fields = {}
-    for input_model in inputs:
-        # Create a Pydantic Field for each input field
-        field_type = input_model.field_type
-        if isinstance(field_type, FieldTypes):
-            field_type = _convert_field_type_to_type[field_type]
-        else:
-            msg = f"Invalid field type: {field_type}"
-            raise TypeError(msg)
-        if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
-            literal_string = f"Literal{input_model.options}"
-            # validate that the literal_string is a valid literal
+        raise TypeError("inputs must be a list of Inputs")
 
-            field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
-        if hasattr(input_model, "is_list") and input_model.is_list:
-            field_type = list[field_type]  # type: ignore[valid-type]
-        if input_model.name:
-            name = input_model.name.replace("_", " ").title()
-        elif input_model.display_name:
-            name = input_model.display_name
-        else:
-            msg = "Input name or display_name is required"
-            raise ValueError(msg)
-        field_dict = {
-            "title": name,
-            "description": input_model.info or "",
-        }
-        if input_model.required is False:
-            field_dict["default"] = input_model.value  # type: ignore[assignment]
-        pydantic_field = Field(**field_dict)
+    fields = {
+        inp.name: (
+            (
+                list[field_type] if getattr(inp, "is_list", False) else field_type,
+                Field(
+                    title=(inp.name.replace("_", " ").title() if inp.name else inp.display_name),
+                    description=(inp.info or ""),
+                    default=(inp.value if not inp.required else ...),
+                ),
+            )
+            if (
+                (
+                    field_type := _convert_field_type_to_type[inp.field_type]
+                    if isinstance(inp.field_type, FieldTypes)
+                    else inp.field_type
+                )
+                and hasattr(inp, "options")
+                and isinstance(inp.options, list)
+                and inp.options
+                and not (field_type := eval(f"Literal{inp.options}", {"Literal": Literal}))
+            )
+            else TypeError(f"Invalid field type: {field_type}")
+        )
+        for inp in inputs
+    }
 
-        fields[input_model.name] = (field_type, pydantic_field)
-
-    # Create and return the InputSchema model
     model = create_model("InputSchema", **fields)
     model.model_rebuild()
     return model
@@ -68,47 +62,32 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
 
 def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None = None) -> type[BaseModel]:
     if not isinstance(inputs, list):
-        msg = "inputs must be a list of Inputs"
-        raise TypeError(msg)
-    fields = {}
-    for input_model in inputs:
-        # Create a Pydantic Field for each input field
-        field_type = input_model.type
-        if hasattr(input_model, "options") and isinstance(input_model.options, list) and input_model.options:
-            literal_string = f"Literal{input_model.options}"
-            # validate that the literal_string is a valid literal
+        raise TypeError("inputs must be a list of Inputs")
 
-            field_type = eval(literal_string, {"Literal": Literal})  # noqa: S307
-        if hasattr(input_model, "is_list") and input_model.is_list:
-            field_type = list[field_type]  # type: ignore[valid-type]
-        if input_model.name:
-            name = input_model.name.replace("_", " ").title()
-        elif input_model.display_name:
-            name = input_model.display_name
-        else:
-            msg = "Input name or display_name is required"
-            raise ValueError(msg)
-        field_dict = {
-            "title": name,
-            "description": input_model.info or "",
-        }
-        if input_model.required is False:
-            field_dict["default"] = input_model.value  # type: ignore[assignment]
-        pydantic_field = Field(**field_dict)
+    fields = {
+        inp.name: (
+            (
+                list[field_type] if getattr(inp, "is_list", False) else field_type,
+                Field(
+                    title=(inp.name.replace("_", " ").title() if inp.name else inp.display_name),
+                    description=(inp.info or ""),
+                    default=(inp.value if not inp.required else ...),
+                ),
+            )
+            if (
+                (field_type := inp.type)
+                and hasattr(inp, "options")
+                and isinstance(inp.options, list)
+                and inp.options
+                and not (field_type := eval(f"Literal{inp.options}", {"Literal": Literal}))
+            )
+            else TypeError(f"Invalid field type: {field_type}")
+        )
+        for inp in inputs
+    }
 
-        fields[input_model.name] = (field_type, pydantic_field)
-
-    # Wrap fields in a dictionary with the key as param_key
-    if param_key is not None:
-        # Create an inner model with the fields
-        inner_model = create_model("InnerModel", **fields)
-
-        # Ensure the model is wrapped correctly in a dictionary
-        # model = create_model("InputSchema", **{param_key: (inner_model, Field(default=..., description=description))})
-        model = create_model("InputSchema", **{param_key: (inner_model, ...)})
-    else:
-        # Create and return the InputSchema model
-        model = create_model("InputSchema", **fields)
-
+    model = create_model(
+        "InputSchema", **{param_key: (create_model("InnerModel", **fields), ...)} if param_key else fields
+    )
     model.model_rebuild()
     return model
