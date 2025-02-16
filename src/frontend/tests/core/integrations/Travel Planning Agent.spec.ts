@@ -11,7 +11,7 @@ import { updateOldComponents } from "../../utils/update-old-components";
 
 test(
   "Travel Planning Agent",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

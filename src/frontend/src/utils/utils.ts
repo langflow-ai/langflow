@@ -266,6 +266,7 @@ export function groupByFamily(
     return (
       template?.type &&
       template?.show &&
+      !template?.advanced &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template?.input_types &&
@@ -524,7 +525,7 @@ export function brokenEdgeMessage({
 export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
-  const colDefs = columns.map((col, index) => {
+  const colDefs = columns.map((col) => {
     let newCol: ColDef = {
       headerName: col.display_name,
       field: col.name,
@@ -532,6 +533,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       filter: col.filterable,
       context: col.description ? { info: col.description } : {},
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
+      hide: col.hidden,
       valueParser: (params: ValueParserParams) => {
         const { context, newValue, colDef, oldValue } = params;
         if (
@@ -595,6 +597,7 @@ export function generateBackendColumnsFromValue(
       sortable: !tableOptions?.block_sort,
       filterable: !tableOptions?.block_filter,
       default: null, // Initialize default to null or appropriate value
+      hidden: false,
     };
 
     // Attempt to infer the default value from the data, if possible
@@ -738,7 +741,7 @@ export const formatName = (name) => {
     .join(" ");
 
   const firstWord =
-    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].charAt(0) +
     formattedName.split(" ")[0].slice(1);
 
   return { formattedName, firstWord };
