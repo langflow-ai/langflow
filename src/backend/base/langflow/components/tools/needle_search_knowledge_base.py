@@ -14,12 +14,14 @@ from langflow.schema import Data
 
 class NeedleSearchKnowledgeBaseSchema(BaseModel):
     """Schema for the Needle Search Knowledge Base tool."""
+
     query: str = Field(..., description="The search query to find relevant information in the knowledge base")
     top_k: int = Field(20, description="Maximum number of search results to return (min: 20)")
 
 
 class NeedleKnowledgeBaseWrapper(BaseModel):
     """Wrapper around Needle Knowledge Base Search."""
+
     needle_api_key: str
     collection_id: str
     verbose: bool = False
@@ -58,17 +60,16 @@ class NeedleKnowledgeBaseWrapper(BaseModel):
                 snippet_lines.extend(f"- {key}: {value}" for key, value in metadata.items())
                 snippet_lines.append("")
             content = "\n".join(snippet_lines)
-            processed_results.append({
-                "page_content": doc.page_content,
-                "metadata": metadata,
-                "snippets": [{"text": content}],
-                "formatted_content": content,
-            })
+            processed_results.append(
+                {
+                    "page_content": doc.page_content,
+                    "metadata": metadata,
+                    "snippets": [{"text": content}],
+                    "formatted_content": content,
+                }
+            )
 
-        summary_text = (
-            f"### Search Results Summary\n\n"
-            f"Found {len(results)} relevant results for query: '{query}'\n"
-        )
+        summary_text = f"### Search Results Summary\n\nFound {len(results)} relevant results for query: '{query}'\n"
         summary = {
             "page_content": f"Found {len(results)} relevant results for query: {query}",
             "metadata": {"type": "summary"},
