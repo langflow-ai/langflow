@@ -1,5 +1,4 @@
-import json
-from typing import Any, List
+from typing import Any
 
 from langchain_community.retrievers.needle import NeedleRetriever
 from langchain_core.tools import StructuredTool, ToolException
@@ -31,17 +30,18 @@ class NeedleKnowledgeBaseWrapper(BaseModel):
             top_k=top_k,
         )
 
-    def results(self, query: str, top_k: int = 20) -> List[dict[str, Any]]:
+    def results(self, query: str, top_k: int = 20) -> list[dict[str, Any]]:
         # Enforce a minimum top_k value
         top_k = max(20, top_k)
         if self.verbose:
-            print(f"Searching: '{query}' with top_k={top_k}")
+            self._log_search_start(query, top_k)
 
         retriever = self._prepare_retriever(top_k=top_k)
         results = retriever.get_relevant_documents(query)
 
         if not results:
-            raise AssertionError("No results found")
+            error_msg = "No results found"
+            raise AssertionError(error_msg)
 
         processed_results = []
         for idx, doc in enumerate(results, 1):
@@ -74,20 +74,36 @@ class NeedleKnowledgeBaseWrapper(BaseModel):
             "snippets": [{"text": summary_text}],
             "formatted_content": summary_text,
         }
-        return [summary] + processed_results
+        return [summary, *processed_results]
 
-    def run(self, query: str, **kwargs: Any) -> List[dict[str, Any]]:
+    def run(self, query: str, **kwargs: Any) -> list[dict[str, Any]]:
         top_k = kwargs.get("top_k", 20)
         if self.verbose:
-            print(f"Query: '{query}' with top_k={top_k}")
+            self._log_query_start(query, top_k)
 
         try:
             results = self.results(query, top_k=top_k)
             if self.verbose:
-                print(f"Found {len(results) - 1} documents")
+                self._log_results_found(len(results) - 1)
             return results
         except Exception as e:
-            raise ToolException(f"Search failed: {e}") from e
+            error_msg = f"Search failed: {e}"
+            raise ToolException(error_msg) from e
+
+    def _log_search_start(self, query: str, top_k: int) -> None:
+        """Log the start of a search operation."""
+        if self.verbose:
+            print(f"Searching: '{query}' with top_k={top_k}")
+
+    def _log_query_start(self, query: str, top_k: int) -> None:
+        """Log the start of a query operation."""
+        if self.verbose:
+            print(f"Query: '{query}' with top_k={top_k}")
+
+    def _log_results_found(self, count: int) -> None:
+        """Log the number of results found."""
+        if self.verbose:
+            print(f"Found {count} documents")
 
 
 class NeedleSearchKnowledgeBaseComponent(LCToolComponent):
@@ -131,7 +147,8 @@ class NeedleSearchKnowledgeBaseComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
-        raise NotImplementedError("This tool is meant to be used by an agent, not called directly.")
+        error_msg = "This tool is meant to be used by an agent, not called directly."
+        raise NotImplementedError(error_msg)
 
     def _build_wrapper(self, needle_api_key: str, collection_id: str) -> NeedleKnowledgeBaseWrapper:
         return NeedleKnowledgeBaseWrapper(

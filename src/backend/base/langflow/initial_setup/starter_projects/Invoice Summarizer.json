@@ -1,14 +1,311 @@
 {
-  "icon_bg_color": null,
-  "endpoint_name": null,
-  "id": "3bb84e6b-18b6-4c89-b867-1f5738517f15",
-  "user_id": "9518455b-8513-40e5-9379-294c40620153",
-  "tags": null,
-  "gradient": null,
-  "locked": false,
-  "folder_id": "86b38778-a03b-4f58-bd30-3391fd8b3ec5",
-  "is_component": false,
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-BOAmh",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-BOAmh{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BOAmhœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "OpenAIModel-BOAmh",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-BOAmhœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œCrewAIAgentComponent-9WbIoœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-srz0Y",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "backstory",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-srz0Y{œdataTypeœ:œPromptœ,œidœ:œPrompt-srz0Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-srz0Y",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-srz0Yœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ: œbackstoryœ, œidœ: œCrewAIAgentComponent-9WbIoœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-BgBPt",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "goal",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-BgBPt{œdataTypeœ:œPromptœ,œidœ:œPrompt-BgBPtœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-BgBPt",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-BgBPtœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ: œgoalœ, œidœ: œCrewAIAgentComponent-9WbIoœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-KK4vf",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "role",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-KK4vf{œdataTypeœ:œPromptœ,œidœ:œPrompt-KK4vfœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-KK4vf",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KK4vfœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ: œroleœ, œidœ: œCrewAIAgentComponent-9WbIoœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "CrewAIAgentComponent",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "name": "output",
+            "output_types": [
+              "Agent"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "agent",
+            "id": "SequentialTaskComponent-0G9eA",
+            "inputTypes": [
+              "Agent"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-CrewAIAgentComponent-9WbIo{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œagentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "CrewAIAgentComponent-9WbIo",
+        "sourceHandle": "{œdataTypeœ: œCrewAIAgentComponentœ, œidœ: œCrewAIAgentComponent-9WbIoœ, œnameœ: œoutputœ, œoutput_typesœ: [œAgentœ]}",
+        "target": "SequentialTaskComponent-0G9eA",
+        "targetHandle": "{œfieldNameœ: œagentœ, œidœ: œSequentialTaskComponent-0G9eAœ, œinputTypesœ: [œAgentœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-0Kyqx",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "expected_output",
+            "id": "SequentialTaskComponent-0G9eA",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-0Kyqx{œdataTypeœ:œPromptœ,œidœ:œPrompt-0Kyqxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œexpected_outputœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-0Kyqx",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-0Kyqxœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SequentialTaskComponent-0G9eA",
+        "targetHandle": "{œfieldNameœ: œexpected_outputœ, œidœ: œSequentialTaskComponent-0G9eAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-aRsIS",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "task_description",
+            "id": "SequentialTaskComponent-0G9eA",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-aRsIS{œdataTypeœ:œPromptœ,œidœ:œPrompt-aRsISœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œtask_descriptionœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-aRsIS",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-aRsISœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SequentialTaskComponent-0G9eA",
+        "targetHandle": "{œfieldNameœ: œtask_descriptionœ, œidœ: œSequentialTaskComponent-0G9eAœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SequentialTaskComponent",
+            "id": "SequentialTaskComponent-0G9eA",
+            "name": "task_output",
+            "output_types": [
+              "SequentialTask"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tasks",
+            "id": "SequentialCrewComponent-I19Bi",
+            "inputTypes": [
+              "SequentialTask"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SequentialTaskComponent-0G9eA{œdataTypeœ:œSequentialTaskComponentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œnameœ:œtask_outputœ,œoutput_typesœ:[œSequentialTaskœ]}-SequentialCrewComponent-I19Bi{œfieldNameœ:œtasksœ,œidœ:œSequentialCrewComponent-I19Biœ,œinputTypesœ:[œSequentialTaskœ],œtypeœ:œotherœ}",
+        "source": "SequentialTaskComponent-0G9eA",
+        "sourceHandle": "{œdataTypeœ: œSequentialTaskComponentœ, œidœ: œSequentialTaskComponent-0G9eAœ, œnameœ: œtask_outputœ, œoutput_typesœ: [œSequentialTaskœ]}",
+        "target": "SequentialCrewComponent-I19Bi",
+        "targetHandle": "{œfieldNameœ: œtasksœ, œidœ: œSequentialCrewComponent-I19Biœ, œinputTypesœ: [œSequentialTaskœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SequentialCrewComponent",
+            "id": "SequentialCrewComponent-I19Bi",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-PE3G5",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-SequentialCrewComponent-I19Bi{œdataTypeœ:œSequentialCrewComponentœ,œidœ:œSequentialCrewComponent-I19Biœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PE3G5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PE3G5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "SequentialCrewComponent-I19Bi",
+        "sourceHandle": "{œdataTypeœ: œSequentialCrewComponentœ, œidœ: œSequentialCrewComponent-I19Biœ, œnameœ: œoutputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-PE3G5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-PE3G5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatOutput",
+            "id": "ChatOutput-PE3G5",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "TextOutput-hgkar",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatOutput-PE3G5{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PE3G5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-TextOutput-hgkar{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-hgkarœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatOutput-PE3G5",
+        "sourceHandle": "{œdataTypeœ: œChatOutputœ, œidœ: œChatOutput-PE3G5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "TextOutput-hgkar",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œTextOutput-hgkarœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "NeedleKnowledgeBase",
+            "id": "NeedleKnowledgeBase-HBOh0",
+            "name": "api_build_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "CrewAIAgentComponent-9WbIo",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-NeedleKnowledgeBase-HBOh0{œdataTypeœ:œNeedleKnowledgeBaseœ,œidœ:œNeedleKnowledgeBase-HBOh0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "NeedleKnowledgeBase-HBOh0",
+        "sourceHandle": "{œdataTypeœ: œNeedleKnowledgeBaseœ, œidœ: œNeedleKnowledgeBase-HBOh0œ, œnameœ: œapi_build_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "CrewAIAgentComponent-9WbIo",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œCrewAIAgentComponent-9WbIoœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -61,7 +358,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.000007568328950209746,
+            "score": 7.568328950209746e-6,
             "template": {
               "_type": "Component",
               "allow_code_execution": {
@@ -2158,125 +2455,125 @@
         "data": {
           "id": "NeedleKnowledgeBase-HBOh0",
           "node": {
-            "template": {
-              "_type": "Component",
-              "code": {
-                "type": "code",
-                "required": true,
-                "placeholder": "",
-                "list": false,
-                "show": true,
-                "multiline": true,
-                "value": "import json\nfrom typing import Any, List\n\nfrom langchain_community.retrievers.needle import NeedleRetriever\nfrom langchain_core.tools import StructuredTool, ToolException\nfrom pydantic import BaseModel\nfrom pydantic.v1 import Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass NeedleSearchKnowledgeBaseSchema(BaseModel):\n    \"\"\"Schema for the Needle Search Knowledge Base tool.\"\"\"\n    query: str = Field(..., description=\"The search query to find relevant information in the knowledge base\")\n    top_k: int = Field(20, description=\"Maximum number of search results to return (min: 20)\")\n\n\nclass NeedleKnowledgeBaseWrapper(BaseModel):\n    \"\"\"Wrapper around Needle Knowledge Base Search.\"\"\"\n    needle_api_key: str\n    collection_id: str\n    verbose: bool = False\n\n    def _prepare_retriever(self, top_k: int = 20) -> NeedleRetriever:\n        return NeedleRetriever(\n            needle_api_key=self.needle_api_key,\n            collection_id=self.collection_id,\n            top_k=top_k,\n        )\n\n    def results(self, query: str, top_k: int = 20) -> List[dict[str, Any]]:\n        # Enforce a minimum top_k value\n        top_k = max(20, top_k)\n        if self.verbose:\n            print(f\"Searching: '{query}' with top_k={top_k}\")\n\n        retriever = self._prepare_retriever(top_k=top_k)\n        results = retriever.get_relevant_documents(query)\n\n        if not results:\n            raise AssertionError(\"No results found\")\n\n        processed_results = []\n        for idx, doc in enumerate(results, 1):\n            metadata = getattr(doc, \"metadata\", {})\n            snippet_lines = [\n                f\"### Result {idx}\",\n                \"\",\n                doc.page_content,\n                \"\",\n            ]\n            if metadata:\n                snippet_lines.append(\"**Metadata:**\")\n                snippet_lines.extend(f\"- {key}: {value}\" for key, value in metadata.items())\n                snippet_lines.append(\"\")\n            content = \"\\n\".join(snippet_lines)\n            processed_results.append({\n                \"page_content\": doc.page_content,\n                \"metadata\": metadata,\n                \"snippets\": [{\"text\": content}],\n                \"formatted_content\": content,\n            })\n\n        summary_text = (\n            f\"### Search Results Summary\\n\\n\"\n            f\"Found {len(results)} relevant results for query: '{query}'\\n\"\n        )\n        summary = {\n            \"page_content\": f\"Found {len(results)} relevant results for query: {query}\",\n            \"metadata\": {\"type\": \"summary\"},\n            \"snippets\": [{\"text\": summary_text}],\n            \"formatted_content\": summary_text,\n        }\n        return [summary] + processed_results\n\n    def run(self, query: str, **kwargs: Any) -> List[dict[str, Any]]:\n        top_k = kwargs.get(\"top_k\", 20)\n        if self.verbose:\n            print(f\"Query: '{query}' with top_k={top_k}\")\n\n        try:\n            results = self.results(query, top_k=top_k)\n            if self.verbose:\n                print(f\"Found {len(results) - 1} documents\")\n            return results\n        except Exception as e:\n            raise ToolException(f\"Search failed: {e}\") from e\n\n\nclass NeedleSearchKnowledgeBaseComponent(LCToolComponent):\n    display_name = \"Needle Search KB\"\n    description = \"Search your knowledge base using Needle\"\n    name = \"NeedleKnowledgeBase\"\n    icon = \"Needle\"\n\n    # Only expose the configuration inputs in the UI\n    inputs = [\n        SecretStrInput(\n            name=\"needle_api_key\",\n            display_name=\"Needle API Key\",\n            required=True,\n        ),\n        StrInput(\n            name=\"collection_id\",\n            display_name=\"Collection ID\",\n            required=True,\n        ),\n    ]\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper(\n            needle_api_key=self.needle_api_key,\n            collection_id=self.collection_id,\n        )\n        tool = StructuredTool.from_function(\n            name=\"needle_search_knowledge_base\",\n            description=(\n                \"This tool retrieves information from your knowledge base containing unstructured data, \"\n                \"such as text, tables, invoices, reports, and emails.\\n\\n\"\n                \"Args:\\n\"\n                \"    query (str): The search query to find relevant information in the knowledge base\\n\"\n                \"    top_k (int): Number of top results to return (min: 20, max: 200)\"\n            ),\n            func=wrapper.run,\n            args_schema=NeedleSearchKnowledgeBaseSchema,\n        )\n        self.status = \"Needle Knowledge Base Search Tool\"\n        return tool\n\n    def run_model(self) -> list[Data]:\n        raise NotImplementedError(\"This tool is meant to be used by an agent, not called directly.\")\n\n    def _build_wrapper(self, needle_api_key: str, collection_id: str) -> NeedleKnowledgeBaseWrapper:\n        return NeedleKnowledgeBaseWrapper(\n            needle_api_key=needle_api_key,\n            collection_id=collection_id,\n        )\n",
-                "fileTypes": [],
-                "file_path": "",
-                "password": false,
-                "name": "code",
-                "advanced": true,
-                "dynamic": true,
-                "info": "",
-                "load_from_db": false,
-                "title_case": false
-              },
-              "collection_id": {
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "load_from_db": false,
-                "list": false,
-                "list_add_label": "Add More",
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "collection_id",
-                "value": "YOUR_COLLECTION_ID",
-                "display_name": "Collection ID",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "type": "str",
-                "_input_type": "StrInput"
-              },
-              "needle_api_key": {
-                "load_from_db": false,
-                "required": true,
-                "placeholder": "",
-                "show": true,
-                "name": "needle_api_key",
-                "value": "YOUR_API_KEY",
-                "display_name": "Needle API Key",
-                "advanced": false,
-                "input_types": [
-                  "Message"
-                ],
-                "dynamic": false,
-                "info": "",
-                "title_case": false,
-                "password": true,
-                "type": "str",
-                "_input_type": "SecretStrInput"
-              }
-            },
-            "description": "Search your knowledge base using Needle",
-            "icon": "Needle",
             "base_classes": [
               "Data",
               "Tool"
             ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Search your knowledge base using Needle",
             "display_name": "Needle Search KB",
             "documentation": "",
-            "minimized": false,
-            "custom_fields": {},
-            "output_types": [],
-            "pinned": false,
-            "conditional_paths": [],
-            "frozen": false,
-            "outputs": [
-              {
-                "types": [
-                  "Data"
-                ],
-                "selected": "Data",
-                "name": "api_run_model",
-                "hidden": null,
-                "display_name": "Data",
-                "method": "run_model",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": [
-                  "collection_id",
-                  "needle_api_key"
-                ],
-                "allows_loop": false,
-                "tool_mode": true
-              },
-              {
-                "types": [
-                  "Tool"
-                ],
-                "selected": "Tool",
-                "name": "api_build_tool",
-                "hidden": null,
-                "display_name": "Tool",
-                "method": "build_tool",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": [
-                  "collection_id",
-                  "needle_api_key"
-                ],
-                "allows_loop": false,
-                "tool_mode": true
-              }
-            ],
+            "edited": false,
             "field_order": [
               "needle_api_key",
               "collection_id"
             ],
-            "beta": false,
+            "frozen": false,
+            "icon": "Needle",
             "legacy": false,
-            "edited": false,
             "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data",
+                "hidden": null,
+                "method": "run_model",
+                "name": "api_run_model",
+                "required_inputs": [
+                  "collection_id",
+                  "needle_api_key"
+                ],
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Tool",
+                "hidden": null,
+                "method": "build_tool",
+                "name": "api_build_tool",
+                "required_inputs": [
+                  "collection_id",
+                  "needle_api_key"
+                ],
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import json\nfrom typing import Any, List\n\nfrom langchain_community.retrievers.needle import NeedleRetriever\nfrom langchain_core.tools import StructuredTool, ToolException\nfrom pydantic import BaseModel\nfrom pydantic.v1 import Field\n\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.field_typing import Tool\nfrom langflow.inputs import SecretStrInput, StrInput\nfrom langflow.schema import Data\n\n\nclass NeedleSearchKnowledgeBaseSchema(BaseModel):\n    \"\"\"Schema for the Needle Search Knowledge Base tool.\"\"\"\n    query: str = Field(..., description=\"The search query to find relevant information in the knowledge base\")\n    top_k: int = Field(20, description=\"Maximum number of search results to return (min: 20)\")\n\n\nclass NeedleKnowledgeBaseWrapper(BaseModel):\n    \"\"\"Wrapper around Needle Knowledge Base Search.\"\"\"\n    needle_api_key: str\n    collection_id: str\n    verbose: bool = False\n\n    def _prepare_retriever(self, top_k: int = 20) -> NeedleRetriever:\n        return NeedleRetriever(\n            needle_api_key=self.needle_api_key,\n            collection_id=self.collection_id,\n            top_k=top_k,\n        )\n\n    def results(self, query: str, top_k: int = 20) -> List[dict[str, Any]]:\n        # Enforce a minimum top_k value\n        top_k = max(20, top_k)\n        if self.verbose:\n            print(f\"Searching: '{query}' with top_k={top_k}\")\n\n        retriever = self._prepare_retriever(top_k=top_k)\n        results = retriever.get_relevant_documents(query)\n\n        if not results:\n            raise AssertionError(\"No results found\")\n\n        processed_results = []\n        for idx, doc in enumerate(results, 1):\n            metadata = getattr(doc, \"metadata\", {})\n            snippet_lines = [\n                f\"### Result {idx}\",\n                \"\",\n                doc.page_content,\n                \"\",\n            ]\n            if metadata:\n                snippet_lines.append(\"**Metadata:**\")\n                snippet_lines.extend(f\"- {key}: {value}\" for key, value in metadata.items())\n                snippet_lines.append(\"\")\n            content = \"\\n\".join(snippet_lines)\n            processed_results.append({\n                \"page_content\": doc.page_content,\n                \"metadata\": metadata,\n                \"snippets\": [{\"text\": content}],\n                \"formatted_content\": content,\n            })\n\n        summary_text = (\n            f\"### Search Results Summary\\n\\n\"\n            f\"Found {len(results)} relevant results for query: '{query}'\\n\"\n        )\n        summary = {\n            \"page_content\": f\"Found {len(results)} relevant results for query: {query}\",\n            \"metadata\": {\"type\": \"summary\"},\n            \"snippets\": [{\"text\": summary_text}],\n            \"formatted_content\": summary_text,\n        }\n        return [summary] + processed_results\n\n    def run(self, query: str, **kwargs: Any) -> List[dict[str, Any]]:\n        top_k = kwargs.get(\"top_k\", 20)\n        if self.verbose:\n            print(f\"Query: '{query}' with top_k={top_k}\")\n\n        try:\n            results = self.results(query, top_k=top_k)\n            if self.verbose:\n                print(f\"Found {len(results) - 1} documents\")\n            return results\n        except Exception as e:\n            raise ToolException(f\"Search failed: {e}\") from e\n\n\nclass NeedleSearchKnowledgeBaseComponent(LCToolComponent):\n    display_name = \"Needle Search KB\"\n    description = \"Search your knowledge base using Needle\"\n    name = \"NeedleKnowledgeBase\"\n    icon = \"Needle\"\n\n    # Only expose the configuration inputs in the UI\n    inputs = [\n        SecretStrInput(\n            name=\"needle_api_key\",\n            display_name=\"Needle API Key\",\n            required=True,\n        ),\n        StrInput(\n            name=\"collection_id\",\n            display_name=\"Collection ID\",\n            required=True,\n        ),\n    ]\n\n    def build_tool(self) -> Tool:\n        wrapper = self._build_wrapper(\n            needle_api_key=self.needle_api_key,\n            collection_id=self.collection_id,\n        )\n        tool = StructuredTool.from_function(\n            name=\"needle_search_knowledge_base\",\n            description=(\n                \"This tool retrieves information from your knowledge base containing unstructured data, \"\n                \"such as text, tables, invoices, reports, and emails.\\n\\n\"\n                \"Args:\\n\"\n                \"    query (str): The search query to find relevant information in the knowledge base\\n\"\n                \"    top_k (int): Number of top results to return (min: 20, max: 200)\"\n            ),\n            func=wrapper.run,\n            args_schema=NeedleSearchKnowledgeBaseSchema,\n        )\n        self.status = \"Needle Knowledge Base Search Tool\"\n        return tool\n\n    def run_model(self) -> list[Data]:\n        raise NotImplementedError(\"This tool is meant to be used by an agent, not called directly.\")\n\n    def _build_wrapper(self, needle_api_key: str, collection_id: str) -> NeedleKnowledgeBaseWrapper:\n        return NeedleKnowledgeBaseWrapper(\n            needle_api_key=needle_api_key,\n            collection_id=collection_id,\n        )\n"
+              },
+              "collection_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Collection ID",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "collection_id",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "YOUR_COLLECTION_ID"
+              },
+              "needle_api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Needle API Key",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "needle_api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": "YOUR_API_KEY"
+              }
+            },
             "tool_mode": false
           },
           "showNode": true,
@@ -2325,321 +2622,24 @@
         "width": 581
       }
     ],
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-BOAmh",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "CrewAIAgentComponent-9WbIo",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-BOAmh{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BOAmhœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "OpenAIModel-BOAmh",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BOAmhœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "CrewAIAgentComponent-9WbIo",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-srz0Y",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "backstory",
-            "id": "CrewAIAgentComponent-9WbIo",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-srz0Y{œdataTypeœ:œPromptœ,œidœ:œPrompt-srz0Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-srz0Y",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-srz0Yœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "CrewAIAgentComponent-9WbIo",
-        "targetHandle": "{œfieldNameœ:œbackstoryœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-BgBPt",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "goal",
-            "id": "CrewAIAgentComponent-9WbIo",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-BgBPt{œdataTypeœ:œPromptœ,œidœ:œPrompt-BgBPtœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-BgBPt",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-BgBPtœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "CrewAIAgentComponent-9WbIo",
-        "targetHandle": "{œfieldNameœ:œgoalœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-KK4vf",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "role",
-            "id": "CrewAIAgentComponent-9WbIo",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-KK4vf{œdataTypeœ:œPromptœ,œidœ:œPrompt-KK4vfœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-KK4vf",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-KK4vfœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "CrewAIAgentComponent-9WbIo",
-        "targetHandle": "{œfieldNameœ:œroleœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CrewAIAgentComponent",
-            "id": "CrewAIAgentComponent-9WbIo",
-            "name": "output",
-            "output_types": [
-              "Agent"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "agent",
-            "id": "SequentialTaskComponent-0G9eA",
-            "inputTypes": [
-              "Agent"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-CrewAIAgentComponent-9WbIo{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œagentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "CrewAIAgentComponent-9WbIo",
-        "sourceHandle": "{œdataTypeœ:œCrewAIAgentComponentœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œnameœ:œoutputœ,œoutput_typesœ:[œAgentœ]}",
-        "target": "SequentialTaskComponent-0G9eA",
-        "targetHandle": "{œfieldNameœ:œagentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œAgentœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-0Kyqx",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "expected_output",
-            "id": "SequentialTaskComponent-0G9eA",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-0Kyqx{œdataTypeœ:œPromptœ,œidœ:œPrompt-0Kyqxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œexpected_outputœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-0Kyqx",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-0Kyqxœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "SequentialTaskComponent-0G9eA",
-        "targetHandle": "{œfieldNameœ:œexpected_outputœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-aRsIS",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "task_description",
-            "id": "SequentialTaskComponent-0G9eA",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-aRsIS{œdataTypeœ:œPromptœ,œidœ:œPrompt-aRsISœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-SequentialTaskComponent-0G9eA{œfieldNameœ:œtask_descriptionœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Prompt-aRsIS",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-aRsISœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "SequentialTaskComponent-0G9eA",
-        "targetHandle": "{œfieldNameœ:œtask_descriptionœ,œidœ:œSequentialTaskComponent-0G9eAœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "SequentialTaskComponent",
-            "id": "SequentialTaskComponent-0G9eA",
-            "name": "task_output",
-            "output_types": [
-              "SequentialTask"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tasks",
-            "id": "SequentialCrewComponent-I19Bi",
-            "inputTypes": [
-              "SequentialTask"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-SequentialTaskComponent-0G9eA{œdataTypeœ:œSequentialTaskComponentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œnameœ:œtask_outputœ,œoutput_typesœ:[œSequentialTaskœ]}-SequentialCrewComponent-I19Bi{œfieldNameœ:œtasksœ,œidœ:œSequentialCrewComponent-I19Biœ,œinputTypesœ:[œSequentialTaskœ],œtypeœ:œotherœ}",
-        "source": "SequentialTaskComponent-0G9eA",
-        "sourceHandle": "{œdataTypeœ:œSequentialTaskComponentœ,œidœ:œSequentialTaskComponent-0G9eAœ,œnameœ:œtask_outputœ,œoutput_typesœ:[œSequentialTaskœ]}",
-        "target": "SequentialCrewComponent-I19Bi",
-        "targetHandle": "{œfieldNameœ:œtasksœ,œidœ:œSequentialCrewComponent-I19Biœ,œinputTypesœ:[œSequentialTaskœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "SequentialCrewComponent",
-            "id": "SequentialCrewComponent-I19Bi",
-            "name": "output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-PE3G5",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-SequentialCrewComponent-I19Bi{œdataTypeœ:œSequentialCrewComponentœ,œidœ:œSequentialCrewComponent-I19Biœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-PE3G5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PE3G5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "SequentialCrewComponent-I19Bi",
-        "sourceHandle": "{œdataTypeœ:œSequentialCrewComponentœ,œidœ:œSequentialCrewComponent-I19Biœ,œnameœ:œoutputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-PE3G5",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-PE3G5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatOutput",
-            "id": "ChatOutput-PE3G5",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "TextOutput-hgkar",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatOutput-PE3G5{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PE3G5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-TextOutput-hgkar{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-hgkarœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatOutput-PE3G5",
-        "sourceHandle": "{œdataTypeœ:œChatOutputœ,œidœ:œChatOutput-PE3G5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "TextOutput-hgkar",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-hgkarœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "NeedleKnowledgeBase",
-            "id": "NeedleKnowledgeBase-HBOh0",
-            "name": "api_build_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "CrewAIAgentComponent-9WbIo",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-NeedleKnowledgeBase-HBOh0{œdataTypeœ:œNeedleKnowledgeBaseœ,œidœ:œNeedleKnowledgeBase-HBOh0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}-CrewAIAgentComponent-9WbIo{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "NeedleKnowledgeBase-HBOh0",
-        "sourceHandle": "{œdataTypeœ:œNeedleKnowledgeBaseœ,œidœ:œNeedleKnowledgeBase-HBOh0œ,œnameœ:œapi_build_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "CrewAIAgentComponent-9WbIo",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œCrewAIAgentComponent-9WbIoœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      }
-    ],
     "viewport": {
       "x": 436.7332436417008,
       "y": 347.88332209990824,
       "zoom": 0.8024304299438211
     }
   },
-  "updated_at": "2025-02-15T17:49:36+00:00",
+  "description": "Unified invoice summaries with Needle",
+  "endpoint_name": null,
+  "folder_id": "86b38778-a03b-4f58-bd30-3391fd8b3ec5",
+  "gradient": null,
   "icon": null,
+  "icon_bg_color": null,
+  "id": "3bb84e6b-18b6-4c89-b867-1f5738517f15",
+  "is_component": false,
+  "locked": false,
   "name": "Invoice Summarizer",
-  "webhook": false,
-  "description": "Unified invoice summaries with Needle"
+  "tags": null,
+  "updated_at": "2025-02-15T17:49:36+00:00",
+  "user_id": "9518455b-8513-40e5-9379-294c40620153",
+  "webhook": false
 }
