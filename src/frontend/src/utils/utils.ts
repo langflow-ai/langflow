@@ -742,7 +742,7 @@ export const formatName = (name) => {
     .join(" ");
 
   const firstWord =
-    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].charAt(0) +
     formattedName.split(" ")[0].slice(1);
 
   return { formattedName, firstWord };
