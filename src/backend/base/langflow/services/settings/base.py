@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
     """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
-    database_connection_retry: bool = True
+    database_connection_retry: bool = False
     """If True, Langflow will retry to connect to the database if it fails."""
     pool_size: int = 20
     """The number of connections to keep open in the connection pool.
