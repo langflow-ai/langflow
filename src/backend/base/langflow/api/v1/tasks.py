@@ -1,14 +1,13 @@
-import contextlib
+"""LangFlow Task API endpoints."""
+
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
-from sqlmodel import select
-from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.task.model import Task, TaskCreate, TaskRead, TaskUpdate
-from langflow.services.deps import get_session, get_task_orchestration_service
+from langflow.services.database.models.task.model import TaskCreate, TaskRead, TaskUpdate
+from langflow.services.deps import get_task_orchestration_service
 from langflow.services.task_orchestration.service import TaskOrchestrationService
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -17,7 +16,6 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 @router.post("/", response_model=TaskRead, status_code=201)
 async def create_task(
     task_create: TaskCreate,
-    session: Annotated[AsyncSession, Depends(get_session)],
     task_orchestration_service: Annotated[TaskOrchestrationService, Depends(get_task_orchestration_service)],
 ):
     """Create a new task.
@@ -28,65 +26,66 @@ async def create_task(
     try:
         return await task_orchestration_service.create_task(task_create)
     except Exception as e:
-        await session.rollback()
         logger.error(f"Error creating task: {e!s}")
         raise HTTPException(status_code=400, detail=f"Error creating task: {e!s}") from e
 
 
 @router.get("/", response_model=list[TaskRead])
 async def read_tasks(
-    session: Annotated[AsyncSession, Depends(get_session)],
+    task_orchestration_service: Annotated[TaskOrchestrationService, Depends(get_task_orchestration_service)],
     skip: int = 0,
     limit: int = 100,
 ):
-    return (await session.exec(select(Task).offset(skip).limit(limit))).all()
+    """Get all tasks with pagination."""
+    try:
+        tasks = list(task_orchestration_service._tasks.values())
+        return tasks[skip : skip + limit]
+    except Exception as e:
+        logger.error(f"Error reading tasks: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Error reading tasks: {e!s}") from e
 
 
 @router.get("/{task_id}", response_model=TaskRead)
 async def read_task(
     task_id: UUID,
-    session: Annotated[AsyncSession, Depends(get_session)],
+    task_orchestration_service: Annotated[TaskOrchestrationService, Depends(get_task_orchestration_service)],
 ):
-    result = await session.get(Task, task_id)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return result
+    """Get a specific task by ID."""
+    try:
+        return await task_orchestration_service.get_task(task_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Task not found") from e
+    except Exception as e:
+        logger.error(f"Error reading task: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Error reading task: {e!s}") from e
 
 
 @router.put("/{task_id}", response_model=TaskRead)
 async def update_task(
     task_id: UUID,
     task_update: TaskUpdate,
-    session: Annotated[AsyncSession, Depends(get_session)],
     task_orchestration_service: Annotated[TaskOrchestrationService, Depends(get_task_orchestration_service)],
 ):
-    task = await session.get(Task, task_id)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    task_data = task_update.model_dump(exclude_unset=True)
-    for key, value in task_data.items():
-        setattr(task, key, value)
-
-    session.add(task)
-    await session.commit()
-    await session.refresh(task)
-
-    # Attempt to re-orchestrate the task after update, but continue if it fails
-    with contextlib.suppress(Exception):
-        await task_orchestration_service.update_task(task)
-
-    return task
+    """Update a specific task by ID."""
+    try:
+        return await task_orchestration_service.update_task(task_id, task_update)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Task not found") from e
+    except Exception as e:
+        logger.error(f"Error updating task: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Error updating task: {e!s}") from e
 
 
 @router.delete("/{task_id}", response_model=TaskRead)
 async def delete_task(
     task_id: UUID,
-    session: Annotated[AsyncSession, Depends(get_session)],
+    task_orchestration_service: Annotated[TaskOrchestrationService, Depends(get_task_orchestration_service)],
 ):
-    task = await session.get(Task, task_id)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    await session.delete(task)
-    await session.commit()
-    return task
+    """Delete a specific task by ID."""
+    try:
+        task = await task_orchestration_service.get_task(task_id)
+        await task_orchestration_service.delete_task(task_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Task not found") from e
+    else:
+        return task
