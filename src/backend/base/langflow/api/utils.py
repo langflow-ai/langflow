@@ -14,11 +14,11 @@ from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.message import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
-from langflow.services.database.models.message import MessageTable
 
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
