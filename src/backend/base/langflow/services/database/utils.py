@@ -17,10 +17,43 @@ if TYPE_CHECKING:
 
 
 def truncate_json(data, *, max_size: int = constants.MAX_TEXT_LENGTH):
+    """Truncate JSON data to fit within a maximum size limit while preserving structure.
+
+    This function intelligently truncates JSON data (dictionaries, lists, and strings) to ensure
+    the serialized result fits within a specified maximum size. It maintains data structure
+    integrity while reducing content where necessary.
+
+    Args:
+        data: The data to truncate. Can be a dict, list, string, or any JSON-serializable type.
+        max_size (int): Maximum allowed size in characters for the serialized JSON output.
+
+    Returns:
+        The truncated data that can be serialized to JSON within the size limit.
+        For dictionaries: Truncates values and/or removes key-value pairs
+        For lists: Truncates items and/or removes elements
+        For strings: Truncates with an ellipsis if necessary
+        For other types: Returns unchanged
+
+    Example:
+        >>> data = {"key": "very long string", "list": [1, 2, 3]}
+        >>> truncated = truncate_json(data, max_size=20)
+        >>> # Result might be something like: {"key": "very l…"}
+    """
+
     def calculate_size(data):
+        """Calculate the size of data when serialized to JSON."""
         return len(json.dumps(data))
 
     def shrink_to_size(data, remaining_size):
+        """Recursively shrink data to fit within remaining_size bytes.
+
+        Args:
+            data: The data to shrink (dict, list, string, or other JSON-serializable type)
+            remaining_size: Number of characters remaining in the size budget
+
+        Returns:
+            Truncated version of the input data that fits in remaining_size
+        """
         if isinstance(data, dict):
             truncated = {}
             for key, value in data.items():
@@ -42,7 +75,11 @@ def truncate_json(data, *, max_size: int = constants.MAX_TEXT_LENGTH):
 
         if isinstance(data, str):
             max_string_length = max(remaining_size - 2, 0)
-            return data[:max_string_length] + "…" if max_string_length > 0 else "…"
+            # Return empty string when no meaningful data can be shown
+            if max_string_length == 0:
+                return ""
+            # Only add ellipsis if we actually truncated the string
+            return (data[:max_string_length] + "…") if len(data) > max_string_length else data
 
         return data
 
