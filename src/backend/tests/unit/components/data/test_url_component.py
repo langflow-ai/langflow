@@ -19,7 +19,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "urls": ["https://example.com"],
+            "urls": ["https://google.com"],
             "format": "Text",
         }
 
