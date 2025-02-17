@@ -18,6 +18,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
 from langflow.services.store.utils import get_lf_version_from_pypi
+from langflow.services.database.models.message import MessageTable
 
 if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
@@ -281,16 +282,16 @@ def parse_value(value: Any, input_type: str) -> Any:
 
 async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None:
     try:
-        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
-        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         # TODO: Verify if deleting messages is safe in terms of session id relevance
         # If we delete messages directly, rather than setting flow_id to null,
         # it might cause unexpected behaviors because the session id could still be
         # used elsewhere to search for these messages.
-        # await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
+        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
-        msg = f"Unable to cascade delete flow: ${flow_id}"
+        msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
 
 
