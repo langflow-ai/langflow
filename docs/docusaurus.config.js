@@ -5,7 +5,7 @@ const lightCodeTheme = require("prism-react-renderer/themes/github");
 const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 const { remarkCodeHike } = require("@code-hike/mdx");
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -33,15 +33,15 @@ const config = {
     ? [
         // Ketch consent management script
         {
-          tagName: 'script',
+          tagName: "script",
           attributes: {},
           innerHTML: `!function(){window.semaphore=window.semaphore||[],window.ketch=function(){window.semaphore.push(arguments)};var e=document.createElement("script");e.type="text/javascript",e.src="https://global.ketchcdn.com/web/v3/config/datastax/langflow_org_web/boot.js",e.defer=e.async=!0,document.getElementsByTagName("head")[0].appendChild(e)}();`,
         },
         // Ketch geographically dynamic link text
         {
-          tagName: 'script',
+          tagName: "script",
           attributes: {
-            defer: "true"
+            defer: "true",
           },
           innerHTML: `
             window.addEventListener('load', function() {
@@ -91,7 +91,7 @@ const config = {
           lastmod: "datetime",
           changefreq: null,
           priority: null,
-          ignorePatterns: ['/preferences'],
+          ignorePatterns: ["/preferences"],
         },
         gtag: {
           trackingID: "G-XHC7G628ZP",
@@ -128,7 +128,7 @@ const config = {
               "/whats-new-a-new-chapter-langflow",
               "/👋 Welcome-to-Langflow",
               "/getting-started-welcome-to-langflow",
-              "/guides-new-to-llms"
+              "/guides-new-to-llms",
             ],
           },
           {
@@ -161,11 +161,8 @@ const config = {
           },
           {
             to: "/concepts-components",
-            from: [
-              "/components",
-              "/components-overview"
-            ],
-            },
+            from: ["/components", "/components-overview"],
+          },
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
@@ -180,10 +177,7 @@ const config = {
           },
           {
             to: "/concepts-objects",
-            from: [
-              "/guides-data-message",
-              "/configuration-objects",
-            ]
+            from: ["/guides-data-message", "/configuration-objects"],
           },
           {
             to: "/tutorials-sequential-agent",
@@ -293,18 +287,23 @@ const config = {
         },
       },
       footer: {
-        style: 'dark',
+        style: "dark",
+        logo: {
+          alt: "Langflow",
+          src: "img/langflow-logo-black.svg",
+          srcDark: "img/langflow-logo-white.svg",
+          width: 160,
+          height: 40,
+        },
         links: [
           {
             title: null,
             items: [
               {
-                html: `<div class="footer-content">
-                  <span class="footer__copyright">© ${new Date().getFullYear()} Langflow</span>
-                  <div class="footer-links">
+                html: `<div class="footer-links">
+                  <span>© ${new Date().getFullYear()} Langflow</span> ·
                     <a href="/cookies">Manage Privacy Choices</a>
-                  </div>
-                </div>`
+                  </div>`,
               },
             ],
           },

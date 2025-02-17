@@ -226,7 +226,7 @@ body {
     max-width: 100%;
     max-height: 400px;
   }
-  
+
   .resized-image {
     width: 100%;
     max-width: 250px;
@@ -298,6 +298,12 @@ body {
   color: var(--ifm-navbar-link-color);
 }
 
+.footer-links {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
 .footer-links a {
   color: var(--ifm-navbar-link-color);
   text-decoration: none;
@@ -305,4 +311,12 @@ body {
 
 .footer-links a:hover {
   text-decoration: underline;
+}
+
+.footer .container {
+  padding: 0 5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row-reverse;
 }
