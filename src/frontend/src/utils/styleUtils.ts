@@ -5,6 +5,7 @@ import { GleanIcon } from "@/icons/Glean";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
+import { PotpieIcon } from "@/icons/Potpie";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
 import { TavilyIcon } from "@/icons/Tavily";
@@ -530,6 +531,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Vectara", name: "vectara", icon: "Vectara" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
   { display_name: "Google", name: "google", icon: "Google" },
+  { display_name: "Potpie", name: "potpie", icon: "Potpie" },
   { display_name: "CrewAI", name: "crewai", icon: "CrewAI" },
   { display_name: "NotDiamond", name: "notdiamond", icon: "NotDiamond" },
   { display_name: "Composio", name: "composio", icon: "Composio" },
@@ -666,6 +668,7 @@ export const nodeIconsLucide: iconsType = {
   CrewAI: CrewAiIcon,
   NotDiamond: NotDiamondIcon,
   Composio: ComposioIcon,
+  Potpie: PotpieIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,
   MongoDBAtlasVectorSearch: MongoDBIcon,
