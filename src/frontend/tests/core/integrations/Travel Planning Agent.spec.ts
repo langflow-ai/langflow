@@ -7,7 +7,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Travel Planning Agent",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

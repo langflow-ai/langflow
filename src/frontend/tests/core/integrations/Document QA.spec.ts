@@ -7,7 +7,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Document Q&A",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
