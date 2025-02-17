@@ -360,17 +360,13 @@ async def generate_flow_events(
         Args:
             vertex_id: The ID of the vertex to build
             graph: The graph instance
-            client_consumed_queue: Queue for tracking client consumption
             event_manager: Manager for handling events
         """
-        build_task = asyncio.create_task(_build_vertex(vertex_id, graph, event_manager))
         try:
-            await build_task
-            vertex_build_response: VertexBuildResponse = build_task.result()
-        except asyncio.CancelledError:
-            logger.debug("Build task cancelled")
-            build_task.cancel()
-            return
+            vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
+        except asyncio.CancelledError as exc:
+            logger.exception(exc)
+            raise
 
         # send built event or error event
         try:
@@ -393,12 +389,7 @@ async def generate_flow_events(
                     )
                 )
                 tasks.append(task)
-            try:
-                await asyncio.gather(*tasks)
-            except asyncio.CancelledError:
-                for task in tasks:
-                    task.cancel()
-                return
+            await asyncio.gather(*tasks)
 
     try:
         ids, vertices_to_run, graph = await build_graph_and_get_order()
@@ -420,9 +411,7 @@ async def generate_flow_events(
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
         background_tasks.add_task(graph.end_all_traces)
-        for task in tasks:
-            task.cancel()
-        return
+        raise
     except Exception as e:
         logger.error(f"Error building vertices: {e}")
         custom_component = graph.get_vertex(vertex_id).custom_component
