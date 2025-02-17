@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import os
 import platform
-import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -53,7 +52,7 @@ class TelemetryService(Service):
             try:
                 await func(payload, path)
             except Exception:  # noqa: BLE001
-                logger.exception("Error sending telemetry data")
+                logger.error("Error sending telemetry data")
             finally:
                 self.telemetry_queue.task_done()
 
@@ -73,11 +72,11 @@ class TelemetryService(Service):
             else:
                 logger.debug("Telemetry data sent successfully.")
         except httpx.HTTPStatusError:
-            logger.exception("HTTP error occurred")
+            logger.error("HTTP error occurred")
         except httpx.RequestError:
-            logger.exception("Request error occurred")
+            logger.error("Request error occurred")
         except Exception:  # noqa: BLE001
-            logger.exception("Unexpected error occurred")
+            logger.error("Unexpected error occurred")
 
     async def log_package_run(self, payload: RunPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "run"))
@@ -133,17 +132,14 @@ class TelemetryService(Service):
         except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
-    async def _cancel_task(self, task: asyncio.Task, cancel_msg: str) -> None:
+    @staticmethod
+    async def _cancel_task(task: asyncio.Task, cancel_msg: str) -> None:
         task.cancel(cancel_msg)
-        try:
-            await task
-        except asyncio.CancelledError:
-            current_task = asyncio.current_task()
-            if sys.version_info >= (3, 11):
-                if current_task and current_task.cancelling() > 0:
-                    raise
-            elif current_task and hasattr(current_task, "_must_cancel") and current_task._must_cancel:
-                raise
+        await asyncio.wait([task])
+        if not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                raise exc
 
     async def stop(self) -> None:
         if self.do_not_track or self._stopping:

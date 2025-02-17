@@ -43,7 +43,7 @@ from langflow.schema import Data
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
 
@@ -83,11 +83,11 @@ class CustomComponent(Component):
 
     await page.getByText("Check & Save").last().click();
 
-    await page.waitForSelector('text="Open Table"', {
+    await page.waitForSelector('text="Open table"', {
       timeout: 3000,
     });
 
-    await page.getByText("Open Table").click();
+    await page.getByText("Open table").click();
 
     await page.waitForSelector(".ag-cell-value", {
       timeout: 3000,
@@ -166,11 +166,11 @@ class CustomComponent(Component):
 
     await page.getByText("Close").last().click();
 
-    await page.waitForSelector("text=Open Table", {
+    await page.waitForSelector("text=Open table", {
       timeout: 3000,
     });
 
-    await page.getByText("Open Table").click();
+    await page.getByText("Open table").click();
 
     await page.waitForSelector(".ag-cell-value", {
       timeout: 3000,

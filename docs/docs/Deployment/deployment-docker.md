@@ -1,7 +1,6 @@
 ---
 title: Docker
-sidebar_position: 2
-slug: /deployment-docker
+lug: /deployment-docker
 ---
 
 
@@ -38,7 +37,7 @@ This guide will help you get LangFlow up and running using Docker and Docker Com
 	`docker compose up`
 
 
-LangFlow will now be accessible at [http://localhost:7860/](http://localhost:7860/).
+LangFlow will now be accessible at `http://localhost:7860/`.
 
 
 ### Docker Compose configuration {#02226209cad24185a6ec5b69bd820d0f}
@@ -60,7 +59,7 @@ Environment variables:
 
 Volumes:
 
-- `langflow-data`: This volume is mapped to `/var/lib/langflow` in the container.
+- `langflow-data`: This volume is mapped to `/app/langflow` in the container.
 
 ### PostgreSQL service {#121140decbfe4997b12213bdd2c4da7e}
 

@@ -4,7 +4,7 @@ from typing import Any
 
 import requests
 from langchain.pydantic_v1 import BaseModel, Field, create_model
-from langchain_core.tools import StructuredTool
+from langchain_core.tools import StructuredTool, Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import DictInput, IntInput, SecretStrInput, StrInput
@@ -94,15 +94,9 @@ class AstraDBCQLToolComponent(LCToolComponent):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
         astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
         key = []
+
         # Partition keys are mandatory
-        for k in self.partition_keys:
-            if k in args:
-                key.append(args[k])
-            elif self.static_filters[k] is not None:
-                key.append(self.static_filters[k])
-            else:
-                # TO-DO: Raise error - Missing information
-                key.append("none")
+        key = [self.partition_keys[k] for k in self.partition_keys]
 
         # Clustering keys are optional
         for k in self.clustering_keys:
@@ -146,7 +140,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
 
-    def build_tool(self) -> StructuredTool:
+    def build_tool(self) -> Tool:
         """Builds a Astra DB CQL Table tool.
 
         Args:

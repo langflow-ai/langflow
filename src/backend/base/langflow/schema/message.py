@@ -22,7 +22,7 @@ from langflow.schema.content_types import ErrorContent
 from langflow.schema.data import Data
 from langflow.schema.image import Image, get_file_paths, is_image_file
 from langflow.schema.properties import Properties, Source
-from langflow.schema.validators import timestamp_to_str_validator
+from langflow.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
@@ -40,7 +40,7 @@ class Message(Data):
     sender: str | None = None
     sender_name: str | None = None
     files: list[str | Image] | None = Field(default=[])
-    session_id: str | None = Field(default="")
+    session_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
     )
@@ -91,7 +91,7 @@ class Message(Data):
     def serialize_timestamp(self, value):
         try:
             # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").astimezone(timezone.utc)
+            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
         except ValueError:
             # Try parsing without timezone
             return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
@@ -311,6 +311,24 @@ class MessageResponse(DefaultModel):
     category: str | None = None
     content_blocks: list[ContentBlock] | None = None
 
+    @field_validator("content_blocks", mode="before")
+    @classmethod
+    def validate_content_blocks(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        if isinstance(v, list):
+            return [cls.validate_content_blocks(block) for block in v]
+        if isinstance(v, dict):
+            return ContentBlock.model_validate(v)
+        return v
+
+    @field_validator("properties", mode="before")
+    @classmethod
+    def validate_properties(cls, v):
+        if isinstance(v, str):
+            v = json.loads(v)
+        return v
+
     @field_validator("files", mode="before")
     @classmethod
     def validate_files(cls, v):
@@ -321,8 +339,7 @@ class MessageResponse(DefaultModel):
     @field_serializer("timestamp")
     @classmethod
     def serialize_timestamp(cls, v):
-        v = v.replace(microsecond=0)
-        return v.strftime("%Y-%m-%d %H:%M:%S %Z")
+        return timestamp_to_str(v)
 
     @field_serializer("files")
     @classmethod
@@ -351,20 +368,11 @@ class MessageResponse(DefaultModel):
 class ErrorMessage(Message):
     """A message class specifically for error messages with predefined error-specific attributes."""
 
-    def __init__(
-        self,
-        exception: BaseException,
-        session_id: str,
-        source: Source,
-        trace_name: str | None = None,
-        flow_id: str | None = None,
-    ) -> None:
-        # This is done to avoid circular imports
-        if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
-            exception = exception.__cause__
-        # Get the error reason
+    @staticmethod
+    def _format_markdown_reason(exception: BaseException) -> str:
+        """Format the error reason with markdown formatting."""
         reason = f"**{exception.__class__.__name__}**\n"
-        if hasattr(exception, "body") and "message" in exception.body:
+        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
             reason += f" - **{exception.body.get('message')}**\n"
         elif hasattr(exception, "code"):
             reason += f" - **Code: {exception.code}**\n"
@@ -374,7 +382,37 @@ class ErrorMessage(Message):
             reason += f" - **Details:**\n\n```python\n{exception!s}\n```\n"
         else:
             reason += " - **An unknown error occurred.**\n"
+        return reason
 
+    @staticmethod
+    def _format_plain_reason(exception: BaseException) -> str:
+        """Format the error reason without markdown."""
+        if hasattr(exception, "body") and isinstance(exception.body, dict) and "message" in exception.body:
+            reason = f"{exception.body.get('message')}\n"
+        elif hasattr(exception, "code"):
+            reason = f"Code: {exception.code}\n"
+        elif hasattr(exception, "args") and exception.args:
+            reason = f"{exception.args[0]}\n"
+        elif isinstance(exception, ValidationError):
+            reason = f"{exception!s}\n"
+        else:
+            reason = "An unknown error occurred.\n"
+        return reason
+
+    def __init__(
+        self,
+        exception: BaseException,
+        session_id: str | None = None,
+        source: Source | None = None,
+        trace_name: str | None = None,
+        flow_id: UUID | str | None = None,
+    ) -> None:
+        # This is done to avoid circular imports
+        if exception.__class__.__name__ == "ExceptionWithMessageError" and exception.__cause__ is not None:
+            exception = exception.__cause__
+
+        plain_reason = self._format_plain_reason(exception)
+        markdown_reason = self._format_markdown_reason(exception)
         # Get the sender ID
         if trace_name:
             match = re.search(r"\((.*?)\)", trace_name)
@@ -383,9 +421,9 @@ class ErrorMessage(Message):
 
         super().__init__(
             session_id=session_id,
-            sender=source.display_name,
-            sender_name=source.display_name,
-            text=reason,
+            sender=source.display_name if source else None,
+            sender_name=source.display_name if source else None,
+            text=plain_reason,
             properties=Properties(
                 text_color="red",
                 background_color="red",
@@ -403,9 +441,9 @@ class ErrorMessage(Message):
                     contents=[
                         ErrorContent(
                             type="error",
-                            component=source.display_name,
+                            component=source.display_name if source else None,
                             field=str(exception.field) if hasattr(exception, "field") else None,
-                            reason=reason,
+                            reason=markdown_reason,
                             solution=str(exception.solution) if hasattr(exception, "solution") else None,
                             traceback=traceback.format_exc(),
                         )

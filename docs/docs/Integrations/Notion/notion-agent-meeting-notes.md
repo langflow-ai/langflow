@@ -1,6 +1,5 @@
 ---
 title: Notion Meeting Notes Agent
-sidebar_position: 1
 slug: /integrations/notion/notion-agent-meeting-notes
 ---
 

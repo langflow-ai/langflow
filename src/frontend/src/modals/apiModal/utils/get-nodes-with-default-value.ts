@@ -1,9 +1,9 @@
-import { NodeType } from "@/types/flow";
+import { AllNodeType } from "@/types/flow";
 import { cloneDeep } from "lodash";
 import { LANGFLOW_SUPPORTED_TYPES } from "../../../constants/constants";
 
-export const getNodesWithDefaultValue = (nodes: NodeType[]) => {
-  const filteredNodes: NodeType[] = [];
+export const getNodesWithDefaultValue = (nodes: AllNodeType[]) => {
+  const filteredNodes: AllNodeType[] = [];
 
   nodes.forEach((node) => {
     if (node?.data?.node?.template && node?.type === "genericNode") {

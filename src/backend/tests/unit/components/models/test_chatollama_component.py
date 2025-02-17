@@ -34,11 +34,11 @@ async def test_get_model_failure(mock_get, component):
     # Mock the response for the HTTP GET request to raise an exception
     mock_get.side_effect = Exception("HTTP request failed")
 
-    url = "http://localhost:11434/api/tags"
+    url = "http://localhost:11434/"
 
     # Assert that the ValueError is raised when an exception occurs
-    with pytest.raises(ValueError, match="Could not retrieve models"):
-        await component.get_model(url)
+    with pytest.raises(ValueError, match="Could not get model names from Ollama."):
+        await component.get_model(base_url_value=url)
 
 
 async def test_update_build_config_mirostat_disabled(component):
@@ -49,7 +49,7 @@ async def test_update_build_config_mirostat_disabled(component):
     field_value = "Disabled"
     field_name = "mirostat"
 
-    updated_config = await component.aupdate_build_config(build_config, field_value, field_name)
+    updated_config = await component.update_build_config(build_config, field_value, field_name)
 
     assert updated_config["mirostat_eta"]["advanced"] is True
     assert updated_config["mirostat_tau"]["advanced"] is True
@@ -65,7 +65,7 @@ async def test_update_build_config_mirostat_enabled(component):
     field_value = "Mirostat 2.0"
     field_name = "mirostat"
 
-    updated_config = await component.aupdate_build_config(build_config, field_value, field_name)
+    updated_config = await component.update_build_config(build_config, field_value, field_name)
 
     assert updated_config["mirostat_eta"]["advanced"] is False
     assert updated_config["mirostat_tau"]["advanced"] is False
@@ -88,9 +88,8 @@ async def test_update_build_config_model_name(mock_get, component):
     field_value = None
     field_name = "model_name"
 
-    updated_config = await component.aupdate_build_config(build_config, field_value, field_name)
-
-    assert updated_config["model_name"]["options"] == ["model1", "model2"]
+    with pytest.raises(ValueError, match="No valid Ollama URL found"):
+        await component.update_build_config(build_config, field_value, field_name)
 
 
 async def test_update_build_config_keep_alive(component):
@@ -98,12 +97,12 @@ async def test_update_build_config_keep_alive(component):
     field_value = "Keep"
     field_name = "keep_alive_flag"
 
-    updated_config = await component.aupdate_build_config(build_config, field_value, field_name)
+    updated_config = await component.update_build_config(build_config, field_value, field_name)
     assert updated_config["keep_alive"]["value"] == "-1"
     assert updated_config["keep_alive"]["advanced"] is True
 
     field_value = "Immediately"
-    updated_config = await component.aupdate_build_config(build_config, field_value, field_name)
+    updated_config = await component.update_build_config(build_config, field_value, field_name)
     assert updated_config["keep_alive"]["value"] == "0"
     assert updated_config["keep_alive"]["advanced"] is True
 

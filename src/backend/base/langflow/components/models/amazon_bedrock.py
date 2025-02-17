@@ -2,7 +2,6 @@ from langflow.base.models.aws_constants import AWS_REGIONS, AWS_MODEL_IDs
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs import MessageTextInput, SecretStrInput
-from langflow.inputs.inputs import HandleInput
 from langflow.io import DictInput, DropdownInput
 
 
@@ -27,6 +26,7 @@ class AmazonBedrockComponent(LCModelComponent):
             info="The access key for your AWS account."
             "Usually set in Python code as the environment variable 'AWS_ACCESS_KEY_ID'.",
             value="AWS_ACCESS_KEY_ID",
+            required=True,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
@@ -34,6 +34,7 @@ class AmazonBedrockComponent(LCModelComponent):
             info="The secret key for your AWS account. "
             "Usually set in Python code as the environment variable 'AWS_SECRET_ACCESS_KEY'.",
             value="AWS_SECRET_ACCESS_KEY",
+            required=True,
         ),
         SecretStrInput(
             name="aws_session_token",
@@ -72,13 +73,6 @@ class AmazonBedrockComponent(LCModelComponent):
             display_name="Endpoint URL",
             advanced=True,
             info="The URL of the Bedrock endpoint to use.",
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 

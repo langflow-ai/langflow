@@ -1,9 +1,12 @@
+# noqa: INP001
+import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool, text
+from sqlalchemy.event import listen
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from langflow.services.database.models import *
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -52,6 +55,49 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def _sqlite_do_connect(
+    dbapi_connection,
+    connection_record,  # noqa: ARG001
+):
+    # disable pysqlite's emitting of the BEGIN statement entirely.
+    # also stops it from emitting COMMIT before any DDL.
+    dbapi_connection.isolation_level = None
+
+
+def _sqlite_do_begin(conn):
+    # emit our own BEGIN
+    conn.exec_driver_sql("PRAGMA busy_timeout = 60000")
+    conn.exec_driver_sql("BEGIN EXCLUSIVE")
+
+
+def _do_run_migrations(connection):
+    context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+
+    with context.begin_transaction():
+        if connection.dialect.name == "postgresql":
+            connection.execute(text("SET LOCAL lock_timeout = '60s';"))
+            connection.execute(text("SELECT pg_advisory_xact_lock(112233);"))
+        context.run_migrations()
+
+
+async def _run_async_migrations() -> None:
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    if connectable.dialect.name == "sqlite":
+        # See https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
+        listen(connectable.sync_engine, "connect", _sqlite_do_connect)
+        listen(connectable.sync_engine, "begin", _sqlite_do_begin)
+
+    async with connectable.connect() as connection:
+        await connection.run_sync(_do_run_migrations)
+
+    await connectable.dispose()
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -59,17 +105,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
-
-        with context.begin_transaction():
-            context.run_migrations()
+    asyncio.run(_run_async_migrations())
 
 
 if context.is_offline_mode():

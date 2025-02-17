@@ -11,12 +11,12 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
-    await page.waitForSelector('[data-testid="flow_name"]', {
+    await page.waitForSelector('[data-testid="input-flow-name"]', {
       timeout: 3000,
     });
 
-    await page.getByTestId("flow_name").click();
-    await page.getByText("Flow Settings").first().click();
+    await page.getByTestId("flow_menu_trigger").click();
+    await page.getByText("Edit Details").first().click();
     await page
       .getByPlaceholder("Flow name")
       .fill(
@@ -39,8 +39,8 @@ test(
 
     await page.getByText("Changes saved successfully").isVisible();
 
-    await page.getByTestId("flow_name").click();
-    await page.getByText("Flow Settings").first().click();
+    await page.getByTestId("flow_menu_trigger").click();
+    await page.getByText("Edit Details").first().click();
 
     const flowName = await page.getByPlaceholder("Flow name").inputValue();
     const flowDescription = await page

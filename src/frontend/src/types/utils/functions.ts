@@ -1,3 +1,5 @@
+import { FieldParserType, FieldValidatorType } from "../api";
+
 export type getCodesObjProps = {
   runCurlCode: string;
   webhookCurlCode: string;
@@ -23,5 +25,8 @@ export interface ColumnField {
   filterable: boolean;
   formatter?: FormatterType;
   description?: string;
-  default?: any; // Add this line
+  disable_edit?: boolean;
+  default?: any;
+  edit_mode?: "modal" | "inline" | "popover";
+  hidden?: boolean;
 }

@@ -1,6 +1,7 @@
-import httpx
+from importlib import metadata
 
-from langflow.logging.logger import logger
+import httpx
+from packaging import version as pkg_version
 
 
 def _compute_non_prerelease_version(prerelease_version: str) -> str:
@@ -22,8 +23,6 @@ def _get_version_info():
     Raises:
         ValueError: If the package is not found from the list of package names.
     """
-    from importlib import metadata
-
     package_options = [
         ("langflow", "Langflow"),
         ("langflow-base", "Langflow Base"),
@@ -57,8 +56,9 @@ VERSION_INFO = _get_version_info()
 def is_pre_release(v: str) -> bool:
     """Whether the version is a pre-release version.
 
-    Returns a boolean indicating whether the version is a pre-release version,
-    as per the definition of a pre-release segment from PEP 440.
+    Returns:
+        Whether the version is a pre-release version,
+        as per the definition of a pre-release segment from PEP 440.
     """
     return any(label in v for label in ["a", "b", "rc"])
 
@@ -66,15 +66,14 @@ def is_pre_release(v: str) -> bool:
 def is_nightly(v: str) -> bool:
     """Whether the version is a dev (nightly) version.
 
-    Returns a boolean indicating whether the version is a dev (nightly) version,
-    as per the definition of a dev segment from PEP 440.
+    Returns:
+         Whether the version is a dev (nightly) version,
+         as per the definition of a dev segment from PEP 440.
     """
     return "dev" in v
 
 
 def fetch_latest_version(package_name: str, *, include_prerelease: bool) -> str | None:
-    from packaging import version as pkg_version
-
     package_name = package_name.replace(" ", "-").lower()
     try:
         response = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
@@ -85,7 +84,6 @@ def fetch_latest_version(package_name: str, *, include_prerelease: bool) -> str 
         return max(valid_versions, key=pkg_version.parse)
 
     except Exception:  # noqa: BLE001
-        logger.exception("Error fetching latest version")
         return None
 
 

@@ -2,9 +2,9 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent, {
   TableComponentProps,
 } from "@/components/core/parameterRenderComponent/components/tableComponent";
-import { Button } from "@/components/ui/button";
-import { DialogClose } from "@radix-ui/react-dialog";
-import { ElementRef, forwardRef, useState } from "react";
+import { TableOptionsTypeAPI } from "@/types/api";
+import { AgGridReact } from "ag-grid-react";
+import { ForwardedRef, forwardRef } from "react";
 import BaseModal from "../baseModal";
 
 interface TableModalProps extends TableComponentProps {
@@ -12,22 +12,45 @@ interface TableModalProps extends TableComponentProps {
   description: string;
   disabled?: boolean;
   children: React.ReactNode;
+  tableOptions?: TableOptionsTypeAPI;
+  hideColumns?: boolean | string[];
+  tableIcon?: string;
 }
 
-const TableModal = forwardRef<
-  ElementRef<typeof TableComponent>,
-  TableModalProps
->(
+const TableModal = forwardRef<AgGridReact, TableModalProps>(
   (
-    { tableTitle, description, children, disabled, ...props }: TableModalProps,
-    ref,
+    {
+      tableTitle,
+      description,
+      children,
+      disabled,
+      tableIcon,
+      ...props
+    }: TableModalProps,
+    ref: ForwardedRef<AgGridReact>,
   ) => {
     return (
-      <BaseModal disable={disabled}>
+      <BaseModal
+        onEscapeKeyDown={(e) => {
+          if (
+            (
+              ref as React.RefObject<AgGridReact>
+            )?.current?.api.getEditingCells().length
+          ) {
+            e.preventDefault();
+          }
+        }}
+        disable={disabled}
+      >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
-        <BaseModal.Header description={description}>
+        <BaseModal.Header
+          description={props.tableOptions?.description ?? description}
+        >
           <span className="pr-2">{tableTitle}</span>
-          <ForwardedIconComponent name="Table" className="mr-2 h-4 w-4" />
+          <ForwardedIconComponent
+            name={tableIcon ?? "Table"}
+            className="mr-2 h-4 w-4"
+          />
         </BaseModal.Header>
         <BaseModal.Content>
           <TableComponent

@@ -1,13 +1,16 @@
-import { useEffect, useRef } from "react";
-
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import _ from "lodash";
-import { classNames, cn } from "../../../../../utils/utils";
-import IconComponent from "../../../../common/genericIconComponent";
-import { Button } from "../../../../ui/button";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import { Input } from "../../../../ui/input";
+import { ButtonInputList } from "./components/button-input-list";
+import { DropdownMenuInputList } from "./components/dropdown-menu";
+
+import { GRADIENT_CLASS } from "@/constants/constants";
+import { cn } from "../../../../../utils/utils";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import { InputListComponentType, InputProps } from "../../types";
+import { DeleteButtonInputList } from "./components/delete-button-input-list";
 
 export default function InputListComponent({
   value = [""],
@@ -17,152 +20,152 @@ export default function InputListComponent({
   componentName,
   id,
   placeholder,
+  listAddLabel,
 }: InputProps<string[], InputListComponentType>): JSX.Element {
+  const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (disabled && value.length > 0 && value[0] !== "") {
       handleOnNewValue({ value: [""] }, { skipSnapshot: true });
     }
-  }, [disabled]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  }, [disabled, handleOnNewValue, value]);
 
-  // @TODO Recursive Character Text Splitter - the value might be in string format, whereas the InputListComponent specifically requires an array format. To ensure smooth operation and prevent potential errors, it's crucial that we handle the conversion from a string to an array with the string as its element.
   if (typeof value === "string") {
     value = [value];
   }
-
   if (!value?.length) value = [""];
 
-  const handleInputChange = (index, newValue) => {
-    const newInputList = _.cloneDeep(value);
-    newInputList[index] = newValue;
-    handleOnNewValue({ value: newInputList });
-  };
+  const handleInputChange = useCallback(
+    (index: number, newValue: string) => {
+      const newInputList = _.cloneDeep(value);
+      newInputList[index] = newValue;
+      handleOnNewValue({ value: newInputList });
+    },
+    [value, handleOnNewValue],
+  );
 
-  const addNewInput = (e) => {
-    e.preventDefault();
-    const newInputList = _.cloneDeep(value);
-    newInputList.push("");
-    handleOnNewValue({ value: newInputList });
-  };
+  const addNewInput = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const newInputList = _.cloneDeep(value);
+      newInputList.push("");
+      handleOnNewValue({ value: newInputList });
+    },
+    [value, handleOnNewValue],
+  );
 
-  const removeInput = (index, e) => {
-    e.preventDefault();
-    const newInputList = _.cloneDeep(value);
-    newInputList.splice(index, 1);
-    handleOnNewValue({ value: newInputList });
-  };
+  const removeInput = useCallback(
+    (index: number, e: React.MouseEvent | KeyboardEvent) => {
+      e.preventDefault();
+      const newInputList = _.cloneDeep(value);
+      newInputList.splice(index, 1);
+      handleOnNewValue({ value: newInputList });
+      setDropdownOpen(null);
+    },
+    [value, handleOnNewValue],
+  );
 
-  const getButtonClassName = () =>
-    classNames(disabled ? "text-hard-zinc" : "text-placeholder-foreground");
-
-  const getTestId = (type, index) =>
-    `input-list-${type}-btn${editNode ? "-edit" : ""}_${componentName}-${index}`;
+  // const handleDuplicateInput = useCallback(
+  //   (index: number, e: React.MouseEvent | KeyboardEvent) => {
+  //     e.preventDefault();
+  //     const newInputList = _.cloneDeep(value);
+  //     newInputList.splice(index, 0, newInputList[index]);
+  //     handleOnNewValue({ value: newInputList });
+  //     setDropdownOpen(null);
+  //   },
+  //   [value, handleOnNewValue],
+  // );
 
   return (
-    <div
-      className={classNames(
-        value.length > 1 && editNode ? "my-1" : "",
-        "flex w-full flex-col gap-3",
+    <div className={cn("w-full", editNode && "max-h-52")}>
+      {!editNode && !disabled && (
+        <ButtonInputList
+          index={0}
+          addNewInput={addNewInput}
+          disabled={disabled}
+          editNode={editNode}
+          componentName={componentName || ""}
+          listAddLabel={listAddLabel || "Add More"}
+        />
       )}
-    >
-      {value.map((singleValue, index) => (
-        <div key={index} className="flex w-full items-center gap-3">
-          <Input
-            disabled={disabled}
-            type="text"
-            value={singleValue}
-            ref={index === 0 ? inputRef : null}
-            className={cn(
-              editNode ? "input-edit-node" : "",
-              disabled ? "disabled-state" : "",
-              "peer relative",
-              index === 0 && value.length > 1 && "pr-7 focus:pr-3",
-            )}
-            placeholder={getPlaceholder(disabled, placeholder)}
-            onChange={(event) => handleInputChange(index, event.target.value)}
-            data-testid={`${id}_${index}`}
-          />
-          {index === 0 && value.length > 1 && (
-            <div className="absolute right-[65px] flex items-center peer-focus:pointer-events-none peer-focus:hidden">
+
+      <div className="mt-2 flex w-full flex-col gap-3">
+        {value.map((singleValue, index) => (
+          <div key={index} className="flex w-full items-center">
+            {focusedIndex !== index && !disabled && (
               <div
-                onClick={addNewInput}
                 className={cn(
-                  "hit-area-icon group flex !h-9 items-center justify-center text-center",
-                  disabled
-                    ? "pointer-events-none bg-background hover:bg-background"
-                    : "",
-                  index === 0
-                    ? "bg-background hover:bg-muted"
-                    : "hover:bg-smooth-red",
+                  "absolute z-50 h-6 w-16",
+                  editNode ? "translate-x-[12rem]" : "translate-x-[11.1rem]",
                 )}
-              >
-                <Button
-                  unstyled
-                  size="icon"
-                  className={cn(
-                    "hit-area-icon flex items-center justify-center",
-                    getButtonClassName(),
-                  )}
-                  data-testid={getTestId("plus", index)}
-                  disabled={disabled}
-                >
-                  <IconComponent
-                    name={"Plus"}
-                    className={cn(
-                      "icon-size justify-self-center text-muted-foreground",
-                      !disabled && "hover:cursor-pointer hover:text-foreground",
-                      "group-hover:text-foreground",
-                    )}
-                    strokeWidth={ICON_STROKE_WIDTH}
-                  />
-                </Button>
-              </div>
-            </div>
-          )}
-          <div
-            onClick={
-              index === 0 && value.length <= 1
-                ? addNewInput
-                : (e) => removeInput(index, e)
-            }
-            className={cn(
-              "hit-area-icon group flex items-center justify-center text-center",
-              disabled
-                ? "pointer-events-none bg-background hover:bg-background"
-                : "",
-              index === 0 && value.length <= 1
-                ? "bg-background hover:bg-muted"
-                : "hover:bg-smooth-red",
-            )}
-          >
-            <Button
-              unstyled
-              size="icon"
-              className={cn(
-                "hit-area-icon flex items-center justify-center",
-                getButtonClassName(),
-              )}
-              data-testid={getTestId(
-                index === 0 && value.length <= 1 ? "plus" : "minus",
-                index,
-              )}
-              disabled={disabled}
-            >
-              <IconComponent
-                name={index === 0 && value.length <= 1 ? "Plus" : "Trash2"}
-                className={cn(
-                  "icon-size justify-self-center text-muted-foreground",
-                  !disabled && "hover:cursor-pointer hover:text-foreground",
-                  index === 0 && value.length <= 1
-                    ? "group-hover:text-foreground"
-                    : "group-hover:text-destructive",
-                )}
-                strokeWidth={ICON_STROKE_WIDTH}
+                style={{
+                  pointerEvents: "none",
+                  background: GRADIENT_CLASS,
+                }}
+                aria-hidden="true"
               />
-            </Button>
+            )}
+            <div className="group relative flex-1">
+              <Input
+                ref={index === 0 ? inputRef : null}
+                disabled={disabled}
+                type="text"
+                value={singleValue}
+                className={cn(
+                  "w-full pr-10 text-primary",
+                  editNode ? "input-edit-node" : "",
+                  disabled ? "disabled-state" : "",
+                )}
+                placeholder={getPlaceholder(disabled, placeholder)}
+                onChange={(event) =>
+                  handleInputChange(index, event.target.value)
+                }
+                data-testid={`${id}_${index}`}
+                onFocus={() => setFocusedIndex(index)}
+                onBlur={() => setFocusedIndex(null)}
+              />
+
+              {value.length > 1 && (
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <DeleteButtonInputList
+                    index={index}
+                    removeInput={(e) => removeInput(index, e)}
+                    disabled={disabled}
+                    editNode={editNode}
+                    componentName={componentName || ""}
+                  />
+                </div>
+              )}
+
+              {/* 
+              We will add this back in a future release
+              {!disabled && (
+                <DropdownMenuInputList
+                  index={index}
+                  dropdownOpen={dropdownOpen!}
+                  setDropdownOpen={setDropdownOpen}
+                  editNode={editNode}
+                  handleDuplicateInput={handleDuplicateInput}
+                  removeInput={removeInput}
+                  canDelete={value.length > 1}
+                />
+              )} */}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+        {editNode && !disabled && (
+          <Button
+            unstyled
+            onClick={addNewInput}
+            className="btn-add-input-list"
+            data-testid={`input-list-add-more-${editNode ? "edit" : "view"}`}
+          >
+            <span className="mr-2 text-lg">+</span> {listAddLabel || "Add More"}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

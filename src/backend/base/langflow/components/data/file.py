@@ -30,7 +30,7 @@ class FileComponent(BaseFileComponent):
         IntInput(
             name="concurrency_multithreading",
             display_name="Processing Concurrency",
-            advanced=False,
+            advanced=True,
             info="When multiple files are being processed, the number of files to process concurrently.",
             value=1,
         ),
@@ -68,8 +68,8 @@ class FileComponent(BaseFileComponent):
                 return None
 
         if not file_list:
-            self.log("No files to process.")
-            return file_list
+            msg = "No files to process."
+            raise ValueError(msg)
 
         concurrency = 1 if not self.use_multithreading else max(1, self.concurrency_multithreading)
         file_count = len(file_list)

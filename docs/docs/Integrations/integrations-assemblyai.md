@@ -1,6 +1,5 @@
 ---
 title: AssemblyAI
-sidebar_position: 1
 slug: /integrations-assemblyai
 ---
 
@@ -57,7 +56,7 @@ This component allows you to submit an audio or video file for transcription.
     - Transcript ID: The id of the transcript
 
 
-### AssebmlyAI Poll Transcript
+### AssemblyAI Poll Transcript
 
 This components allows you to poll the transcripts. It checks the status of the transcript every few seconds until the transcription is completed.
 
@@ -69,7 +68,7 @@ This components allows you to poll the transcripts. It checks the status of the 
     - Transcription Result: The AssemblyAI JSON response of a completed transcript. Contains the text and other info.
 
 
-### AssebmlyAI Get Subtitles
+### AssemblyAI Get Subtitles
 
 This component allows you to generate subtitles in SRT or VTT format.
 
@@ -83,7 +82,7 @@ This component allows you to generate subtitles in SRT or VTT format.
     - Subtitles: A JSON response with the `subtitles` field containing the captions in SRT or VTT format.
 
 
-### AssebmlyAI LeMUR
+### AssemblyAI LeMUR
 
 This component allows you to apply Large Language Models to spoken data using the [AssemblyAI LeMUR framework](https://www.assemblyai.com/docs/lemur).
 

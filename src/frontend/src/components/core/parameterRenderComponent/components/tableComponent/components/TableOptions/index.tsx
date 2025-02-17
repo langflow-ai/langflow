@@ -1,6 +1,7 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
+import { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
 
 export default function TableOptions({
@@ -10,6 +11,7 @@ export default function TableOptions({
   hasSelection,
   stateChange,
   addRow,
+  tableOptions,
 }: {
   resetGrid: () => void;
   duplicateRow?: () => void;
@@ -17,11 +19,12 @@ export default function TableOptions({
   addRow?: () => void;
   hasSelection: boolean;
   stateChange: boolean;
+  tableOptions?: TableOptionsTypeAPI;
 }): JSX.Element {
   return (
     <div className={cn("absolute bottom-3 left-6")}>
       <div className="flex items-center gap-3">
-        {addRow && (
+        {addRow && !tableOptions?.block_add && (
           <div>
             <ShadTooltip content={"Add a new row"}>
               <Button data-testid="add-row-button" unstyled onClick={addRow}>
@@ -54,7 +57,9 @@ export default function TableOptions({
                   name="Copy"
                   className={cn(
                     "h-5 w-5 transition-all",
-                    hasSelection ? "text-primary" : "text-muted-foreground",
+                    hasSelection
+                      ? "text-primary"
+                      : "cursor-not-allowed text-placeholder-foreground",
                   )}
                 />
               </Button>
@@ -83,7 +88,7 @@ export default function TableOptions({
                   className={cn(
                     "h-5 w-5 transition-all",
                     !hasSelection
-                      ? "text-muted-foreground"
+                      ? "cursor-not-allowed text-placeholder-foreground"
                       : "text-primary hover:text-status-red",
                   )}
                 />
@@ -106,7 +111,9 @@ export default function TableOptions({
                 strokeWidth={2}
                 className={cn(
                   "h-5 w-5 transition-all",
-                  !stateChange ? "text-muted-foreground" : "text-primary",
+                  !stateChange
+                    ? "cursor-not-allowed text-placeholder-foreground"
+                    : "text-primary",
                 )}
               />
             </Button>

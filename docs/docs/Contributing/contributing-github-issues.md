@@ -1,6 +1,5 @@
 ---
 title: Request an enhancement or report a bug
-sidebar_position: 2
 slug: /contributing-github-issues
 ---
 

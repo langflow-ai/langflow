@@ -13,6 +13,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")
@@ -324,7 +325,8 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
             "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
         )
         assert response.status_code == 200
-        assert response.json() == []
+        json_response = response.json()
+        assert json_response["items"] == []
 
     for flow_id in flow_ids:
         response = await client.request(
@@ -358,11 +360,15 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
 
     class VertexTuple(NamedTuple):
         id: str
+        params: dict
 
     # Create a transaction for each flow
     for flow_id in flow_ids:
         await log_transaction(
-            str(flow_id), source=VertexTuple(id="vid"), target=VertexTuple(id="tid"), status="success"
+            str(flow_id),
+            source=VertexTuple(id="vid", params={}),
+            target=VertexTuple(id="tid", params={}),
+            status="success",
         )
 
     # Create a build for each flow
@@ -391,8 +397,9 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
         response = await client.request(
             "GET", "api/v1/monitor/transactions", params={"flow_id": flow_id}, headers=logged_in_headers
         )
-        assert response.status_code == 200
-        assert response.json() == []
+        assert response.status_code == 200, response.json()
+        json_response = response.json()
+        assert json_response["items"] == []
 
     for flow_id in flow_ids:
         response = await client.request(
@@ -609,14 +616,12 @@ async def test_read_only_starter_projects(client: AsyncClient, logged_in_headers
     assert len(response.json()) == len(starter_projects)
 
 
-def test_sqlite_pragmas():
+async def test_sqlite_pragmas():
     db_service = get_db_service()
 
-    with db_service.with_session() as session:
-        from sqlalchemy import text
-
-        assert session.exec(text("PRAGMA journal_mode;")).scalar() == "wal"
-        assert session.exec(text("PRAGMA synchronous;")).scalar() == 1
+    async with db_service.with_session() as session:
+        assert (await session.exec(text("PRAGMA journal_mode;"))).scalar() == "wal"
+        assert (await session.exec(text("PRAGMA synchronous;"))).scalar() == 1
 
 
 @pytest.mark.usefixtures("active_user")

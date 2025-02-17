@@ -1,6 +1,5 @@
 ---
 title: Install Langflow
-sidebar_position: 1
 slug: /get-started-installation
 ---
 
@@ -8,13 +7,13 @@ You can deploy Langflow either locally or as a hosted service with [**Datastax L
 
 ## Install Langflow locally
 
-Install Langflow locally with [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
+Install Langflow locally with [uv (recommended)](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/).
 
 ### Prerequisites
 
-* [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
-* [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
-* Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
+- [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
+- Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
 
 ### Install Langflow with pip or pipx
 
@@ -50,7 +49,7 @@ uv run langflow run
 python -m langflow run
 ```
 
-2. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
+3. Confirm that a local Langflow instance starts by visiting `http://127.0.0.1:7860` in a Chromium-based browser.
 
 Now that Langflow is running, follow the [Quickstart](/get-started-quickstart) to create your first flow.
 
@@ -91,9 +90,11 @@ This is a list of possible issues that you may encounter when installing and run
 ### No `langflow.__main__` module
 
 When you try to run Langflow with the command `langflow run`, you encounter the following error:
+
 ```bash
 > No module named 'langflow.__main__'
 ```
+
 1. Run `python -m langflow run` instead of `langflow run`.
 2. If that doesn't work, reinstall the latest Langflow version with `python -m pip install langflow -U`.
 3. If that doesn't work, reinstall Langflow and its dependencies with `python -m pip install langflow --pre -U --force-reinstall`.
@@ -128,6 +129,22 @@ This error can occur during Langflow upgrades when the new version can't overrid
 
 If you wish to retain your files, back them up before clearing the folder.
 
+### Langflow installation freezes at pip dependency resolution
 
+Installing Langflow with `pip install langflow` slowly fails with this error message:
 
+```plain
+pip is looking at multiple versions of <<library>> to determine which version is compatible with other requirements. This could take a while.
+```
 
+To work around this issue, install Langflow with [`uv`](https://docs.astral.sh/uv/getting-started/installation/) instead of `pip`.
+
+```plain
+uv pip install langflow
+```
+
+To run Langflow with uv:
+
+```plain
+uv run langflow run
+```

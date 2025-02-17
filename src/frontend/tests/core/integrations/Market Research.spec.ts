@@ -8,7 +8,7 @@ import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 
 test(
   "Market Research",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
@@ -34,8 +34,8 @@ test(
     });
 
     await initialGPTsetup(page);
-
     await page
+      .getByTestId(/rf__node-TavilySearchComponent-[A-Za-z0-9]{5}/)
       .getByTestId("popover-anchor-input-api_key")
       .nth(0)
       .fill(process.env.TAVILY_API_KEY ?? "");

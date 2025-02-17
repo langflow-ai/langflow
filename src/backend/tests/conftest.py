@@ -17,8 +17,10 @@ from blockbuster import blockbuster_ctx
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from langflow.components.inputs import ChatInput
 from langflow.graph import Graph
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
@@ -52,13 +54,38 @@ def blockbuster(request):
                 "io.BufferedWriter.write",
                 "io.TextIOWrapper.read",
                 "io.TextIOWrapper.write",
+                "os.mkdir",
+                "os.stat",
+                "os.path.abspath",
             ]:
-                bb.functions[func].can_block_functions.append(("settings/service.py", {"initialize"}))
+                bb.functions[func].can_block_in("settings/service.py", "initialize")
             for func in [
                 "io.BufferedReader.read",
                 "io.TextIOWrapper.read",
             ]:
-                bb.functions[func].can_block_functions.append(("importlib_metadata/__init__.py", {"metadata"}))
+                bb.functions[func].can_block_in("importlib_metadata/__init__.py", "metadata")
+
+            (
+                bb.functions["os.stat"]
+                # TODO: make set_class_code async
+                .can_block_in("langflow/custom/custom_component/component.py", "set_class_code")
+                # TODO: follow discussion in https://github.com/encode/httpx/discussions/3456
+                .can_block_in("httpx/_client.py", "_init_transport")
+                .can_block_in("rich/traceback.py", "_render_stack")
+                .can_block_in("langchain_core/_api/internal.py", "is_caller_internal")
+            )
+
+            for func in ["os.stat", "os.path.abspath", "os.scandir"]:
+                bb.functions[func].can_block_in("alembic/util/pyfiles.py", "load_python_file")
+
+            for func in ["os.path.abspath", "os.scandir"]:
+                bb.functions[func].can_block_in("alembic/script/base.py", "_load_revisions")
+
+            (
+                bb.functions["os.path.abspath"]
+                .can_block_in("loguru/_better_exceptions.py", {"_get_lib_dirs", "_format_exception"})
+                .can_block_in("sqlalchemy/dialects/sqlite/pysqlite.py", "create_connect_args")
+            )
             yield bb
 
 
@@ -82,6 +109,8 @@ def pytest_configure(config):
     pytest.VECTOR_STORE_PATH = data_path / "Vector_store.json"
     pytest.SIMPLE_API_TEST = data_path / "SimpleAPITest.json"
     pytest.MEMORY_CHATBOT_NO_LLM = data_path / "MemoryChatbotNoLLM.json"
+    pytest.ENV_VARIABLE_TEST = data_path / "env_variable_test.json"
+    pytest.LOOP_TEST = data_path / "LoopTest.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
     retun "Hello World"
@@ -100,6 +129,7 @@ def get_text():
         pytest.TWO_OUTPUTS,
         pytest.VECTOR_STORE_PATH,
         pytest.MEMORY_CHATBOT_NO_LLM,
+        pytest.LOOP_TEST,
     ]:
         assert path.exists(), f"File {path} does not exist. Available files: {list(data_path.iterdir())}"
 
@@ -136,8 +166,6 @@ def caplog(caplog: pytest.LogCaptureFixture):
 
 @pytest.fixture
 async def async_client() -> AsyncGenerator:
-    from langflow.main import create_app
-
     app = create_app()
     async with AsyncClient(app=app, base_url="http://testserver", http2=True) as client:
         yield client
@@ -208,8 +236,6 @@ def distributed_client_fixture(
 
         # def get_session_override():
         #     return session
-
-        from langflow.main import create_app
 
         app = create_app()
 
@@ -307,6 +333,11 @@ def json_memory_chatbot_no_llm():
     return pytest.MEMORY_CHATBOT_NO_LLM.read_text(encoding="utf-8")
 
 
+@pytest.fixture
+def json_loop_test():
+    return pytest.LOOP_TEST.read_text(encoding="utf-8")
+
+
 @pytest.fixture(autouse=True)
 def deactivate_tracing(monkeypatch):
     monkeypatch.setenv("LANGFLOW_DEACTIVATE_TRACING", "true")
@@ -337,9 +368,11 @@ async def client_fixture(
                 )
                 monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
+            # Clear the services cache
+            from langflow.services.manager import service_manager
 
-            from langflow.main import create_app
-
+            service_manager.factories.clear()
+            service_manager.services.clear()  # Clear the services cache
             app = create_app()
             db_service = get_db_service()
             db_service.database_url = f"sqlite:///{db_path}"
@@ -382,7 +415,7 @@ async def test_user(client):
 @pytest.fixture
 async def active_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -400,7 +433,7 @@ async def active_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
@@ -421,7 +454,7 @@ async def logged_in_headers(client, active_user):
 @pytest.fixture
 async def active_super_user(client):  # noqa: ARG001
     db_manager = get_db_service()
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = User(
             username="activeuser",
             password=get_password_hash("testpassword"),
@@ -439,7 +472,7 @@ async def active_super_user(client):  # noqa: ARG001
     yield user
     # Clean up
     # Now cleanup transactions, vertex_build
-    async with db_manager.with_async_session() as session:
+    async with db_manager.with_session() as session:
         user = await session.get(User, user.id, options=[selectinload(User.flows)])
         await _delete_transactions_and_vertex_builds(session, user.flows)
         await session.delete(user)
@@ -463,8 +496,6 @@ async def flow(
     json_flow: str,
     active_user,
 ):
-    from langflow.services.database.models.flow.model import FlowCreate
-
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
@@ -558,8 +589,6 @@ async def added_webhook_test(client, json_webhook_test, logged_in_headers):
 
 @pytest.fixture
 async def flow_component(client: AsyncClient, logged_in_headers):
-    from langflow.components.inputs import ChatInput
-
     chat_input = ChatInput()
     graph = Graph(start=chat_input, end=chat_input)
     graph_dict = graph.dump(name="Chat Input Component")

@@ -1,16 +1,15 @@
 import numpy as np
-from langchain_pinecone import Pinecone
+from langchain_core.vectorstores import VectorStore
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
-from langflow.io import DataInput, DropdownInput, HandleInput, IntInput, MultilineInput, SecretStrInput, StrInput
+from langflow.io import DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
 from langflow.schema import Data
 
 
 class PineconeVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Pinecone"
     description = "Pinecone Vector Store with search capabilities"
-    documentation = "https://python.langchain.com/v0.2/docs/integrations/vectorstores/pinecone/"
     name = "Pinecone"
     icon = "Pinecone"
     inputs = [
@@ -31,12 +30,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             value="text",
             advanced=True,
         ),
-        MultilineInput(name="search_query", display_name="Search Query"),
-        DataInput(
-            name="ingest_data",
-            display_name="Ingest Data",
-            is_list=True,
-        ),
+        *LCVectorStoreComponent.inputs,
         HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
@@ -48,8 +42,14 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> Pinecone:
+    def build_vector_store(self) -> VectorStore:
         """Build and return a Pinecone vector store instance."""
+        try:
+            from langchain_pinecone import PineconeVectorStore
+        except ImportError as e:
+            msg = "langchain-pinecone is not installed. Please install it with `pip install langchain-pinecone`."
+            raise ValueError(msg) from e
+
         try:
             from langchain_pinecone._utilities import DistanceStrategy
 
@@ -61,7 +61,7 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             distance_strategy = DistanceStrategy[distance_strategy]
 
             # Initialize Pinecone instance with wrapped embeddings
-            pinecone = Pinecone(
+            pinecone = PineconeVectorStore(
                 index_name=self.index_name,
                 embedding=wrapped_embeddings,  # Use wrapped embeddings
                 text_key=self.text_key,

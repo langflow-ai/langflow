@@ -1,17 +1,40 @@
+from langflow.schema.table import EditMode
+
 TOOL_OUTPUT_NAME = "component_as_tool"
 TOOL_OUTPUT_DISPLAY_NAME = "Toolset"
 TOOLS_METADATA_INPUT_NAME = "tools_metadata"
 TOOL_TABLE_SCHEMA = [
     {
         "name": "name",
-        "display_name": "Name",
+        "display_name": "Tool Name",
         "type": "str",
-        "description": "Specify the name of the output field.",
+        "description": "Specify the name of the tool.",
+        "sortable": False,
+        "filterable": False,
+        "edit_mode": EditMode.INLINE,
+        "hidden": False,
     },
     {
         "name": "description",
-        "display_name": "Description",
+        "display_name": "Tool Description",
         "type": "str",
-        "description": "Describe the purpose of the output field.",
+        "description": "Describe the purpose of the tool.",
+        "sortable": False,
+        "filterable": False,
+        "edit_mode": EditMode.POPOVER,
+        "hidden": False,
+    },
+    {
+        "name": "tags",
+        "display_name": "Tool Identifiers",
+        "type": "str",
+        "description": ("The default identifiers for the tools and cannot be changed."),
+        "disable_edit": True,
+        "sortable": False,
+        "filterable": False,
+        "edit_mode": EditMode.INLINE,
+        "hidden": True,
     },
 ]
+
+TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."

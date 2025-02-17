@@ -2,13 +2,14 @@
 from collections.abc import Sequence
 from typing import Any
 
+import requests
+
 # Third-party imports
 from composio.client.collections import AppAuthScheme
 from composio.client.exceptions import NoItemsFound
-from composio_langchain import Action, App, ComposioToolSet
+from composio_langchain import Action, ComposioToolSet
 from langchain_core.tools import Tool
 from loguru import logger
-from typing_extensions import override
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
@@ -30,16 +31,17 @@ class ComposioAPIComponent(LCToolComponent):
             name="api_key",
             display_name="Composio API Key",
             required=True,
-            # refresh_button=True,
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
+            real_time_refresh=True,
         ),
         DropdownInput(
             name="app_names",
             display_name="App Name",
-            options=list(App.__annotations__),
+            options=[],
             value="",
             info="The app name to use. Please refresh after selecting app name",
             refresh_button=True,
+            required=True,
         ),
         # Authentication-related inputs (initially hidden)
         SecretStrInput(
@@ -49,6 +51,7 @@ class ComposioAPIComponent(LCToolComponent):
             dynamic=True,
             show=False,
             info="Credentials for app authentication (API Key, Password, etc)",
+            load_from_db=False,
         ),
         MessageTextInput(
             name="username",
@@ -130,6 +133,39 @@ class ComposioAPIComponent(LCToolComponent):
         except Exception:  # noqa: BLE001
             logger.exception(f"Error getting auth scheme for {app_name}")
             return None
+
+    def _get_oauth_apps(self, api_key: str) -> list[str]:
+        """Fetch OAuth-enabled apps from Composio API.
+
+        Args:
+            api_key (str): The Composio API key.
+
+        Returns:
+            list[str]: A list containing OAuth-enabled app names.
+        """
+        oauth_apps = []
+        try:
+            url = "https://backend.composio.dev/api/v1/apps"
+            headers = {"x-api-key": api_key}
+            params = {
+                "includeLocal": "true",
+                "additionalFields": "auth_schemes",
+                "sortBy": "alphabet",
+            }
+
+            response = requests.get(url, headers=headers, params=params, timeout=20)
+            data = response.json()
+
+            for item in data.get("items", []):
+                for auth_scheme in item.get("auth_schemes", []):
+                    if auth_scheme.get("mode") in ["OAUTH1", "OAUTH2"]:
+                        oauth_apps.append(item["key"].upper())
+                        break
+        except requests.RequestException as e:
+            logger.error(f"Error fetching OAuth apps: {e}")
+            return []
+        else:
+            return oauth_apps
 
     def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:
         """Handle authentication based on the auth scheme.
@@ -220,18 +256,28 @@ class ComposioAPIComponent(LCToolComponent):
         """
         return self.app_names.replace(" ✅", "").replace("_connected", "")
 
-    @override
-    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002
+        # Update the available apps options from the API
+        if hasattr(self, "api_key") and self.api_key != "":
+            toolset = self._build_wrapper()
+            build_config["app_names"]["options"] = self._get_oauth_apps(api_key=self.api_key)
+
         # First, ensure all dynamic fields are hidden by default
         dynamic_fields = ["app_credentials", "username", "auth_link", "auth_status", "action_names"]
         for field in dynamic_fields:
             if field in build_config:
                 if build_config[field]["value"] is None or build_config[field]["value"] == "":
                     build_config[field]["show"] = False
-                    build_config[field]["advanced"] = True  # Hide from main view
+                    build_config[field]["advanced"] = True
+                    build_config[field]["load_from_db"] = False
                 else:
                     build_config[field]["show"] = True
                     build_config[field]["advanced"] = False
+
+        if field_name == "app_names" and (not hasattr(self, "app_names") or not self.app_names):
+            build_config["auth_status"]["show"] = True
+            build_config["auth_status"]["value"] = "Please select an app first"
+            return build_config
 
         if field_name == "app_names" and hasattr(self, "api_key") and self.api_key != "":
             # app_name = self._get_normalized_app_name()
@@ -285,7 +331,7 @@ class ComposioAPIComponent(LCToolComponent):
 
                 # Update action names if connected
                 if build_config["auth_status"]["value"] == "✅":
-                    all_action_names = list(Action.__annotations__)
+                    all_action_names = [str(action).replace("Action.", "") for action in Action.all()]
                     app_action_names = [
                         action_name
                         for action_name in all_action_names

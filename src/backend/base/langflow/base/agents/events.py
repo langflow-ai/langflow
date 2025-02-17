@@ -14,9 +14,17 @@ from langflow.schema.message import Message
 
 
 class ExceptionWithMessageError(Exception):
-    def __init__(self, agent_message: Message):
+    def __init__(self, agent_message: Message, message: str):
         self.agent_message = agent_message
-        super().__init__()
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return (
+            f"Agent message: {self.agent_message.text} \nError: {self.message}."
+            if self.agent_message.error or self.agent_message.text
+            else f"{self.message}."
+        )
 
 
 class InputDict(TypedDict):
@@ -25,16 +33,8 @@ class InputDict(TypedDict):
 
 
 def _build_agent_input_text_content(agent_input_dict: InputDict) -> str:
-    chat_history = agent_input_dict.get("chat_history", [])
-    messages = [
-        f"**{message.type.upper()}**: {message.content}"
-        for message in chat_history
-        if isinstance(message, BaseMessage) and message.content
-    ]
     final_input = agent_input_dict.get("input", "")
-    if messages and final_input not in messages[-1]:
-        messages.append(f"**HUMAN**: {final_input}")
-    return "  \n".join(messages)
+    return f"**Input**: {final_input}"
 
 
 def _calculate_duration(start_time: float) -> int:
@@ -149,7 +149,8 @@ async def handle_on_tool_start(
     agent_message.content_blocks[0].contents.append(tool_content)
 
     agent_message = await send_message_method(message=agent_message)
-    tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
+    if agent_message.content_blocks and agent_message.content_blocks[0].contents:
+        tool_blocks_map[tool_key] = agent_message.content_blocks[0].contents[-1]
     return agent_message, new_start_time
 
 
@@ -280,6 +281,5 @@ async def process_agent_events(
                 agent_message, start_time = await chain_handler(event, agent_message, send_message_method, start_time)
         agent_message.properties.state = "complete"
     except Exception as e:
-        raise ExceptionWithMessageError(agent_message) from e
-
+        raise ExceptionWithMessageError(agent_message, str(e)) from e
     return await Message.create(**agent_message.model_dump())

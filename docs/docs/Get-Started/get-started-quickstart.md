@@ -1,8 +1,9 @@
 ---
 title: Quickstart
-sidebar_position: 2
 slug: /get-started-quickstart
 ---
+
+import Icon from "@site/src/components/icon";
 
 Get to know Langflow by building an OpenAI-powered chatbot application. After you've constructed a chatbot, add Retrieval Augmented Generation (RAG) to chat with your own data.
 
@@ -10,8 +11,7 @@ Get to know Langflow by building an OpenAI-powered chatbot application. After yo
 
 * [An OpenAI API key](https://platform.openai.com/)
 * [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
-	* AstraDB application token
-	* API endpoint
+	* An AstraDB application token
 	* [A collection in Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection)
 
 ## Open Langflow and start a new project
@@ -49,10 +49,10 @@ You should now have a flow that looks like this:
 ![](/img/quickstart-basic-prompt-no-connections.png)
 
 With no connections between them, the components won't interact with each other.
-You want data to flow from **Chat Input** to **Chat Output** via the connectors between the components.
+You want data to flow from **Chat Input** to **Chat Output** through the connections between the components.
 Each component accepts inputs on its left side, and sends outputs on its right side.
 Hover over the connection ports to see the data types that the component accepts.
-For more on component inputs and outputs, see [Components overview](/components-overview).
+For more on component inputs and outputs, see [Components overview](/concepts-components).
 
 5. To connect the **Chat Input** component to the OpenAI model component, click and drag a line from the blue **Message** port to the OpenAI model component's **Input** port.
 6. To connect the **Prompt** component to the OpenAI model component, click and drag a line from the blue **Prompt Message** port to the OpenAI model component's **System Message** port.
@@ -68,7 +68,7 @@ Add your OpenAI API key to the OpenAI model component, and add a prompt to the P
 
 1. Add your credentials to the OpenAI component. The fastest way to complete these fields is with Langflow’s [Global Variables](/configuration-global-variables).
 
-	1. In the OpenAI component’s OpenAI API Key field, click the language Globe icon, and then click **Add New Variable**. 
+	1. In the OpenAI component’s OpenAI API Key field, click the <Icon name="Globe" aria-label="Globe" /> **Globe** button, and then click **Add New Variable**. 
 	Alternatively, click your username in the top right corner, and then click **Settings**, **Global Variables**, and then **Add New**.
 	2. Name your variable. Paste your OpenAI API key (sk-…​) in the Value field.
 	3. In the **Apply To Fields** field, select the OpenAI API Key field to apply this variable to all OpenAI Embeddings components.
@@ -121,9 +121,9 @@ The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) com
 3. Click **Data**, select the **File** component, and then drag it to the canvas.
 The [File](/components-data#file) component loads files from your local machine.
 3. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
-The [Split Text](/components-helpers#split-text) component splits the loaded text into smaller chunks.
+The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
 4. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
-The [Parse Data](/components-helpers#parse-data) component converts the data from the **Astra DB** component into plain text.
+The [Data to Message](/components-processing#data-to-message) component converts the data from the **Astra DB** component into plain text.
 5. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
 6. Connect the new components into the existing flow, so your flow looks like this:
@@ -132,9 +132,12 @@ The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) componen
 
 8. Configure the **Astra DB** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
-	2. In the **API Endpoint** field, add your **Astra DB** API endpoint. This value is found in your [Astra DB deployment](https://astra.datastax.com) and looks similar to `https://ASTRA_DB_ID-ASTRA_DB_REGION.apps.astra.datastax.com`.
-	3. In the **Collection** field, enter your Astra DB collection's name. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data. The collection’s **Dimensions** value must match the dimensions of the **OpenAI Embeddings Model**. If you’re unsure, enter `1536` and select the `text-embedding-ada-002` model in the OpenAI Embeddings component. For more on collections, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection).
+	The component connects to your database and populates the menus with existing databases and collections.
+	2. Select your **Database**.
+	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
+	If you don't have a collection, see the [DataStax Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection).
 	4. Select **Embedding Model** to bring your own embeddings model, which is the connected **OpenAI Embeddings** component.
+	The **Dimensions** value must match the dimensions of your collection. This value can be found in your **Collection** in your [Astra DB deployment](https://astra.datastax.com).
 
 If you used Langflow's **Global Variables** feature, the RAG application flow components are already configured with the necessary credentials.
 
@@ -170,6 +173,6 @@ This example used movie data, but the RAG pattern can be used with any data you 
 
 Make the **Astra DB** database the brain that [Agents](/agents-overview) use to make decisions.
 
-Expose this flow as an [API](/workspace-api) and call it from your external applications.
+Expose this flow as an [API](/concepts-api) and call it from your external applications.
 
 For more on the **Astra DB** component, see [Astra DB vector store](/components-vector-stores#astra-db-vector-store).

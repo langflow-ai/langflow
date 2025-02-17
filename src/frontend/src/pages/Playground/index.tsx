@@ -1,7 +1,7 @@
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
-import IOModal from "@/modals/IOModal/newModal";
+import IOModal from "@/modals/IOModal/new-modal";
 import { useStoreStore } from "@/stores/storeStore";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";

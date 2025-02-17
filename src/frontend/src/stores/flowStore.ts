@@ -2,35 +2,41 @@ import {
   BROKEN_EDGES_WARNING,
   componentsToIgnoreUpdate,
 } from "@/constants/constants";
-import { track } from "@/customization/utils/analytics";
-import { brokenEdgeMessage } from "@/utils/utils";
-import { cloneDeep, zip } from "lodash";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import {
-  Edge,
+  track,
+  trackDataLoaded,
+  trackFlowBuild,
+} from "@/customization/utils/analytics";
+import { brokenEdgeMessage } from "@/utils/utils";
+import {
   EdgeChange,
   Node,
   NodeChange,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
-} from "reactflow";
+} from "@xyflow/react";
+import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import {
   FLOW_BUILD_SUCCESS_ALERT,
   MISSED_ERROR_ALERT,
 } from "../constants/alerts_constants";
 import { BuildStatus } from "../constants/enums";
-import { VertexBuildTypeAPI } from "../types/api";
+import { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import { ChatInputType, ChatOutputType } from "../types/chat";
 import {
+  AllNodeType,
+  EdgeType,
   NodeDataType,
-  NodeType,
   sourceHandleType,
   targetHandleType,
 } from "../types/flow";
 import { FlowStoreType, VertexLayerElementType } from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
+  buildPositionDictionary,
   checkChatInput,
   cleanEdges,
   detectBrokenEdgesEdges,
@@ -40,17 +46,31 @@ import {
   scapedJSONStringfy,
   unselectAllNodesEdges,
   updateGroupRecursion,
+  validateEdge,
   validateNodes,
 } from "../utils/reactflowUtils";
 import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
-import { useMessagesStore } from "./messagesStore";
+import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
 import { useTypesStore } from "./typesStore";
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
+  positionDictionary: {},
+  setPositionDictionary: (positionDictionary) => {
+    set({ positionDictionary });
+  },
+  isPositionAvailable: (position: { x: number; y: number }) => {
+    if (
+      get().positionDictionary[position.x] &&
+      get().positionDictionary[position.x] === position.y
+    ) {
+      return false;
+    }
+    return true;
+  },
   fitViewNode: (nodeId) => {
     if (get().reactFlowInstance && get().nodes.find((n) => n.id === nodeId)) {
       get().reactFlowInstance?.fitView({ nodes: [{ id: nodeId }] });
@@ -67,26 +87,24 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let outdatedNodes: string[] = [];
     const templates = useTypesStore.getState().templates;
     for (let i = 0; i < nodes.length; i++) {
-      const currentCode = templates[nodes[i].data?.type]?.template?.code?.value;
-      const thisNodesCode = nodes[i].data?.node!.template?.code?.value;
-      if (
-        currentCode &&
-        thisNodesCode &&
-        currentCode !== thisNodesCode &&
-        !nodes[i].data?.node?.edited &&
-        !componentsToIgnoreUpdate.includes(nodes[i].data?.type)
-      ) {
-        outdatedNodes.push(nodes[i].id);
+      let node = nodes[i];
+      if (node.type === "genericNode") {
+        const currentCode = templates[node.data?.type]?.template?.code?.value;
+        const thisNodesCode = node.data?.node!.template?.code?.value;
+        if (
+          currentCode &&
+          thisNodesCode &&
+          currentCode !== thisNodesCode &&
+          !node.data?.node?.edited &&
+          !componentsToIgnoreUpdate.includes(node.data?.type)
+        ) {
+          outdatedNodes.push(node.id);
+        }
       }
     }
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
-  lockChat: false,
-  setLockChat: (lockChat) => {
-    useMessagesStore.setState({ displayLoadingMessage: lockChat });
-    set({ lockChat });
-  },
   setOnFlowPage: (FlowPage) => set({ onFlowPage: FlowPage }),
   flowState: undefined,
   flowBuildStatus: {},
@@ -100,6 +118,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       false,
     );
     set({ isBuilding: false });
+    get().revertBuiltStatusFromBuilding();
+    useAlertStore.getState().setErrorData({
+      title: "Build stopped",
+    });
   },
   isPending: true,
   setHasIO: (hasIO) => {
@@ -121,10 +143,13 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ flowPool });
   },
   updateToolMode: (nodeId: string, toolMode: boolean) => {
-    get().setNode(nodeId, (node) => ({
-      ...node,
-      data: { ...node.data, node: { ...node.data.node, tool_mode: toolMode } },
-    }));
+    get().setNode(nodeId, (node) => {
+      let newNode = cloneDeep(node);
+      if (newNode.type === "genericNode") {
+        newNode.data.node!.tool_mode = toolMode;
+      }
+      return newNode;
+    });
   },
   updateFreezeStatus: (nodeIds: string[], freeze: boolean) => {
     get().setNodes((oldNodes) => {
@@ -204,6 +229,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       hasIO: inputs.length > 0 || outputs.length > 0,
       flowPool: {},
       currentFlow: flow,
+      positionDictionary: {},
     });
   },
   setIsBuilding: (isBuilding) => {
@@ -222,12 +248,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setReactFlowInstance: (newState) => {
     set({ reactFlowInstance: newState });
   },
-  onNodesChange: (changes: NodeChange[]) => {
+  onNodesChange: (changes: NodeChange<AllNodeType>[]) => {
     set({
       nodes: applyNodeChanges(changes, get().nodes),
     });
   },
-  onEdgesChange: (changes: EdgeChange[]) => {
+  onEdgesChange: (changes: EdgeChange<EdgeType>[]) => {
     set({
       edges: applyEdgeChanges(changes, get().edges),
     });
@@ -263,7 +289,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   setNode: (
     id: string,
-    change: Node | ((oldState: Node) => Node),
+    change: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange: boolean = true,
     callback?: () => void,
   ) => {
@@ -272,40 +298,43 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         ? change(get().nodes.find((node) => node.id === id)!)
         : change;
 
-    set((state) => {
-      const newNodes = state.nodes.map((node) => {
-        if (node.id === id) {
-          if (isUserChange) {
-            if ((node.data as NodeDataType).node?.frozen) {
-              (newChange.data as NodeDataType).node!.frozen = false;
-            }
+    const newNodes = get().nodes.map((node) => {
+      if (node.id === id) {
+        if (isUserChange) {
+          if ((node.data as NodeDataType).node?.frozen) {
+            (newChange.data as NodeDataType).node!.frozen = false;
           }
-          return newChange;
         }
-        return node;
-      });
+        return newChange;
+      }
+      return node;
+    });
 
-      const newEdges = cleanEdges(newNodes, get().edges);
+    const newEdges = cleanEdges(newNodes, get().edges);
 
+    set((state) => {
       if (callback) {
         // Defer the callback execution to ensure it runs after state updates are fully applied.
         queueMicrotask(callback);
       }
-
       return {
         ...state,
         nodes: newNodes,
         edges: newEdges,
       };
     });
+    get().updateCurrentFlow({ nodes: newNodes, edges: newEdges });
+    if (get().autoSaveFlow) {
+      get().autoSaveFlow!();
+    }
   },
   getNode: (id: string) => {
     return get().nodes.find((node) => node.id === id);
   },
   deleteNode: (nodeId) => {
     const { filteredNodes, deletedNode } = get().nodes.reduce<{
-      filteredNodes: Node[];
-      deletedNode: Node | null;
+      filteredNodes: AllNodeType[];
+      deletedNode: AllNodeType | null;
     }>(
       (acc, node) => {
         const isMatch =
@@ -361,7 +390,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     let minimumX = Infinity;
     let minimumY = Infinity;
     let idsMap = {};
-    let newNodes: Node<NodeDataType>[] = get().nodes;
+    let newNodes: AllNodeType[] = get().nodes;
     let newEdges = get().edges;
     selection.nodes.forEach((node: Node) => {
       if (node.position.y < minimumY) {
@@ -379,15 +408,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           y: position.y,
         });
 
-    selection.nodes.forEach((node: NodeType) => {
+    let internalPostionDictionary = get().positionDictionary;
+    if (Object.keys(internalPostionDictionary).length === 0) {
+      internalPostionDictionary = buildPositionDictionary(get().nodes);
+    }
+    while (!get().isPositionAvailable(insidePosition)) {
+      insidePosition.x += 10;
+      insidePosition.y += 10;
+    }
+    internalPostionDictionary[insidePosition.x] = insidePosition.y;
+    get().setPositionDictionary(internalPostionDictionary);
+
+    selection.nodes.forEach((node: AllNodeType) => {
       // Generate a unique node ID
       let newId = getNodeId(node.data.type);
       idsMap[node.id] = newId;
 
-      // Create a new node object
-      const newNode: NodeType = {
+      // Create a new node object with the correct type
+      const newNode = {
         id: newId,
-        type: node.type,
+        type: node.type as "genericNode" | "noteNode",
         position: {
           x: insidePosition.x + node.position!.x - minimumX,
           y: insidePosition.y + node.position!.y - minimumY,
@@ -396,8 +436,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...cloneDeep(node.data),
           id: newId,
         },
-      };
-      updateGroupRecursion(newNode, selection.edges);
+      } as AllNodeType;
+
+      updateGroupRecursion(
+        newNode,
+        selection.edges,
+        useGlobalVariablesStore.getState().unavailableFields,
+        useGlobalVariablesStore.getState().globalVariablesEntries,
+      );
 
       // Add the new node to the list of nodes in state
       newNodes = newNodes
@@ -406,7 +452,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
     get().setNodes(newNodes);
 
-    selection.edges.forEach((edge: Edge) => {
+    selection.edges.forEach((edge: EdgeType) => {
       let source = idsMap[edge.source];
       let target = idsMap[edge.target];
       const sourceHandleObject: sourceHandleType = scapeJSONParse(
@@ -418,7 +464,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
       sourceHandleObject.id = source;
 
-      edge.data.sourceHandle = sourceHandleObject;
       const targetHandleObject: targetHandleType = scapeJSONParse(
         edge.targetHandle!,
       );
@@ -427,7 +472,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         id: target,
       });
       targetHandleObject.id = target;
-      edge.data.targetHandle = targetHandleObject;
+
+      edge.data = {
+        sourceHandle: sourceHandleObject,
+        targetHandle: targetHandleObject,
+      };
+
       let id = getHandleId(source, sourceHandle, target, targetHandle);
       newEdges = addEdge(
         {
@@ -510,7 +560,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     //   isIoOut = outputTypes.has(sourceType);
     // }
 
-    let newEdges: Edge[] = [];
+    let newEdges: EdgeType[] = [];
     get().setEdges((oldEdges) => {
       newEdges = addEdge(
         {
@@ -543,7 +593,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value,
     files,
     silent,
-    setLockChat,
     session,
   }: {
     startNodeId?: string;
@@ -551,15 +600,31 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     input_value?: string;
     files?: string[];
     silent?: boolean;
-    setLockChat?: (lock: boolean) => void;
     session?: string;
   }) => {
     get().setIsBuilding(true);
-    get().setLockChat(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
     const setSuccessData = useAlertStore.getState().setSuccessData;
     const setErrorData = useAlertStore.getState().setErrorData;
     const setNoticeData = useAlertStore.getState().setNoticeData;
+
+    const edges = get().edges;
+    let error = false;
+    for (const edge of edges) {
+      const errors = validateEdge(edge, get().nodes, edges);
+      if (errors.length > 0) {
+        error = true;
+        setErrorData({
+          title: MISSED_ERROR_ALERT,
+          list: errors,
+        });
+      }
+    }
+    if (error) {
+      get().setIsBuilding(false);
+      throw new Error("Invalid components");
+    }
+
     function validateSubgraph(nodes: string[]) {
       const errorsObjs = validateNodes(
         get().nodes.filter((node) => nodes.includes(node.id)),
@@ -639,6 +704,28 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           ...get().verticesBuild!.verticesIds,
           ...next_vertices_ids,
         ];
+        if (
+          ENABLE_DATASTAX_LANGFLOW &&
+          vertexBuildData?.id?.includes("AstraDB")
+        ) {
+          const search_results: LogsLogType[] = Object.values(
+            vertexBuildData?.data?.logs?.search_results,
+          );
+          search_results.forEach((log) => {
+            if (
+              log.message.includes("Adding") &&
+              log.message.includes("documents") &&
+              log.message.includes("Vector Store")
+            ) {
+              trackDataLoaded(
+                get().currentFlow?.id,
+                get().currentFlow?.name,
+                "AstraDB Vector Store",
+                vertexBuildData?.id,
+              );
+            }
+          });
+        }
         get().updateVerticesBuild({
           verticesIds: newIds,
           verticesLayers: newLayers,
@@ -663,7 +750,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowId: currentFlow!.id,
       startNodeId,
       stopNodeId,
-      setLockChat,
       onGetOrderSuccess: () => {
         if (!silent) {
           setNoticeData({ title: "Running components" });
@@ -688,17 +774,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setIsBuilding(false);
-        get().setLockChat(false);
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
+          flowId: get().currentFlow?.id,
+        });
       },
       onBuildUpdate: handleBuildUpdate,
-      onBuildStopped: () => {
-        get().setIsBuilding(false);
-        setErrorData({
-          title: "Build stopped",
-        });
-        get().revertBuiltStatusFromBuilding();
-        get().setLockChat(false);
-      },
       onBuildError: (title: string, list: string[], elementList) => {
         const idList =
           (elementList
@@ -716,7 +796,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         );
         setErrorData({ list, title });
         get().setIsBuilding(false);
-        get().setLockChat(false);
+        get().buildController.abort();
+        trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
+          flowId: get().currentFlow?.id,
+          error: list,
+        });
       },
       onBuildStart: (elementList) => {
         const idList = elementList
@@ -727,7 +811,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
         const edges = get().edges;
         const newEdges = edges.map((edge) => {
-          if (idList.includes(edge.data.targetHandle.id)) {
+          if (
+            edge.data?.targetHandle &&
+            idList.includes(edge.data.targetHandle.id ?? "")
+          ) {
             edge.className = "ran";
           }
           return edge;
@@ -740,7 +827,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       logBuilds: get().onFlowPage,
     });
     get().setIsBuilding(false);
-    get().setLockChat(false);
     get().revertBuiltStatusFromBuilding();
   },
   getFlow: () => {
@@ -753,7 +839,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateEdgesRunningByNodes: (ids: string[], running: boolean) => {
     const edges = get().edges;
     const newEdges = edges.map((edge) => {
-      if (ids.includes(edge.data.sourceHandle.id)) {
+      if (
+        edge.data?.sourceHandle &&
+        ids.includes(edge.data.sourceHandle.id ?? "")
+      ) {
         edge.animated = running;
         edge.className = running ? "running" : "";
       } else {

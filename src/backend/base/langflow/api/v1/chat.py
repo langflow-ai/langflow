@@ -22,7 +22,6 @@ from langflow.api.utils import (
     build_and_cache_graph_from_data,
     build_graph_from_data,
     build_graph_from_db,
-    build_graph_from_db_no_cache,
     format_elapsed_time,
     format_exception_message,
     get_top_level_vertices,
@@ -40,15 +39,16 @@ from langflow.events.event_manager import EventManager, create_default_event_man
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
+from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import async_session_scope, get_chat_service, get_session, get_telemetry_service
+from langflow.services.deps import get_chat_service, get_session, get_telemetry_service, session_scope
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
-    from langflow.graph.vertex.types import InterfaceVertex
+    from langflow.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
 
@@ -69,7 +69,7 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.post("/build/{flow_id}/vertices")
+@router.post("/build/{flow_id}/vertices", deprecated=True)
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
@@ -100,13 +100,12 @@ async def retrieve_vertices_order(
     start_time = time.perf_counter()
     components_count = None
     try:
-        flow_id_str = str(flow_id)
         # First, we need to check if the flow_id is in the cache
         if not data:
-            graph = await build_graph_from_db(flow_id=flow_id_str, session=session, chat_service=chat_service)
+            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
             graph = await build_and_cache_graph_from_data(
-                flow_id=flow_id_str, graph_data=data.model_dump(), chat_service=chat_service
+                flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
             )
         graph = graph.prepare(stop_component_id, start_component_id)
 
@@ -153,7 +152,6 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     current_user: CurrentActiveUser,
-    session: DbSession,
 ):
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -162,27 +160,16 @@ async def build_flow(
 
     async def build_graph_and_get_order() -> tuple[list[str], list[str], Graph]:
         start_time = time.perf_counter()
-        components_count = None
+        components_count = 0
+        graph = None
         try:
             flow_id_str = str(flow_id)
-            if not data:
-                graph = await build_graph_from_db_no_cache(flow_id=flow_id_str, session=session)
-            else:
-                async with async_session_scope() as new_session:
-                    result = await new_session.exec(select(Flow.name).where(Flow.id == flow_id_str))
-                    flow_name = result.first()
-                graph = await build_graph_from_data(
-                    flow_id_str, data.model_dump(), user_id=str(current_user.id), flow_name=flow_name
-                )
+            # Create a fresh session for database operations
+            async with session_scope() as fresh_session:
+                graph = await create_graph(fresh_session, flow_id_str)
+
             graph.validate_stream()
-            if stop_component_id or start_component_id:
-                try:
-                    first_layer = graph.sort_vertices(stop_component_id, start_component_id)
-                except Exception:  # noqa: BLE001
-                    logger.exception("Error sorting vertices")
-                    first_layer = graph.sort_vertices()
-            else:
-                first_layer = graph.sort_vertices()
+            first_layer = sort_vertices(graph)
 
             if inputs is not None and hasattr(inputs, "session") and inputs.session is not None:
                 graph.session_id = inputs.session
@@ -195,34 +182,55 @@ async def build_flow(
             # and return the same structure but only with the ids
             components_count = len(graph.vertices)
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
-            background_tasks.add_task(
-                telemetry_service.log_package_playground,
-                PlaygroundPayload(
-                    playground_seconds=int(time.perf_counter() - start_time),
-                    playground_component_count=components_count,
-                    playground_success=True,
-                ),
-            )
+
+            await chat_service.set_cache(flow_id_str, graph)
+            await log_telemetry(start_time, components_count, success=True)
+
         except Exception as exc:
-            background_tasks.add_task(
-                telemetry_service.log_package_playground,
-                PlaygroundPayload(
-                    playground_seconds=int(time.perf_counter() - start_time),
-                    playground_component_count=components_count,
-                    playground_success=False,
-                    playground_error_message=str(exc),
-                ),
-            )
+            await log_telemetry(start_time, components_count, success=False, error_message=str(exc))
+
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
             logger.exception("Error checking build status")
             raise HTTPException(status_code=500, detail=str(exc)) from exc
-
         return first_layer, vertices_to_run, graph
+
+    async def log_telemetry(
+        start_time: float, components_count: int, *, success: bool, error_message: str | None = None
+    ):
+        background_tasks.add_task(
+            telemetry_service.log_package_playground,
+            PlaygroundPayload(
+                playground_seconds=int(time.perf_counter() - start_time),
+                playground_component_count=components_count,
+                playground_success=success,
+                playground_error_message=str(error_message) if error_message else "",
+            ),
+        )
+
+    async def create_graph(fresh_session, flow_id_str: str) -> Graph:
+        if not data:
+            return await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
+
+        result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+        flow_name = result.first()
+
+        return await build_graph_from_data(
+            flow_id=flow_id_str,
+            payload=data.model_dump(),
+            user_id=str(current_user.id),
+            flow_name=flow_name,
+        )
+
+    def sort_vertices(graph: Graph) -> list[str]:
+        try:
+            return graph.sort_vertices(stop_component_id, start_component_id)
+        except Exception:  # noqa: BLE001
+            logger.exception("Error sorting vertices")
+            return graph.sort_vertices()
 
     async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
-
         next_runnable_vertices = []
         top_level_vertices = []
         start_time = time.perf_counter()
@@ -342,12 +350,12 @@ async def build_flow(
         build_task = asyncio.create_task(_build_vertex(vertex_id, graph, event_manager))
         try:
             await build_task
+            vertex_build_response: VertexBuildResponse = build_task.result()
         except asyncio.CancelledError as exc:
             logger.exception(exc)
             build_task.cancel()
             return
 
-        vertex_build_response: VertexBuildResponse = build_task.result()
         # send built event or error event
         try:
             vertex_build_response_json = vertex_build_response.model_dump_json()
@@ -370,34 +378,17 @@ async def build_flow(
                 return
 
     async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
-        if not data:
-            # using another task since the build_graph_and_get_order is now an async function
-            vertices_task = asyncio.create_task(build_graph_and_get_order())
-            try:
-                await vertices_task
-            except asyncio.CancelledError:
-                vertices_task.cancel()
-                return
-            except Exception as e:
-                if isinstance(e, HTTPException):
-                    event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
-                    raise
-                event_manager.on_error(data={"error": str(e)})
-                raise
-
-            ids, vertices_to_run, graph = vertices_task.result()
-        else:
-            try:
-                ids, vertices_to_run, graph = await build_graph_and_get_order()
-            except Exception as e:
-                if isinstance(e, HTTPException):
-                    event_manager.on_error(data={"error": str(e.detail), "statusCode": e.status_code})
-                    raise
-                event_manager.on_error(data={"error": str(e)})
-                raise
+        try:
+            ids, vertices_to_run, graph = await build_graph_and_get_order()
+        except Exception as e:
+            error_message = ErrorMessage(
+                flow_id=flow_id,
+                exception=e,
+            )
+            event_manager.on_error(data=error_message.data)
+            raise
         event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
-
         tasks = []
         for vertex_id in ids:
             task = asyncio.create_task(build_vertices(vertex_id, graph, client_consumed_queue, event_manager))
@@ -411,7 +402,15 @@ async def build_flow(
             return
         except Exception as e:
             logger.error(f"Error building vertices: {e}")
-            event_manager.on_error(data={"error": str(e)})
+            custom_component = graph.get_vertex(vertex_id).custom_component
+            trace_name = getattr(custom_component, "trace_name", None)
+            error_message = ErrorMessage(
+                flow_id=flow_id,
+                exception=e,
+                session_id=graph.session_id,
+                trace_name=trace_name,
+            )
+            event_manager.on_error(data=error_message.data)
             raise
         event_manager.on_end(data={})
         await event_manager.queue.put((None, None, time.time))
@@ -471,7 +470,7 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
                 break
 
 
-@router.post("/build/{flow_id}/vertices/{vertex_id}")
+@router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
 async def build_vertex(
     *,
     flow_id: uuid.UUID,
@@ -507,12 +506,17 @@ async def build_vertex(
     start_time = time.perf_counter()
     error_message = None
     try:
+        graph: Graph = await chat_service.get_cache(flow_id_str)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Graph not found") from exc
+
+    try:
         cache = await chat_service.get_cache(flow_id_str)
         if isinstance(cache, CacheMiss):
             # If there's no cache
             logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            graph: Graph = await build_graph_from_db(
-                flow_id=flow_id_str, session=await anext(get_session()), chat_service=chat_service
+            graph = await build_graph_from_db(
+                flow_id=flow_id, session=await anext(get_session()), chat_service=chat_service
             )
         else:
             graph = cache.get("result")
@@ -708,7 +712,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
-@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
+@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse, deprecated=True)
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,

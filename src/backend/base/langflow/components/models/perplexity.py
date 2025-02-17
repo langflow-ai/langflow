@@ -3,8 +3,8 @@ from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langflow.inputs.inputs import HandleInput
-from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput
 
 
 class PerplexityComponent(LCModelComponent):
@@ -39,8 +39,11 @@ class PerplexityComponent(LCModelComponent):
             display_name="Perplexity API Key",
             info="The Perplexity API Key to use for the Perplexity model.",
             advanced=False,
+            required=True,
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.75),
+        SliderInput(
+            name="temperature", display_name="Temperature", value=0.75, range_spec=RangeSpec(min=0, max=2, step=0.05)
+        ),
         FloatInput(
             name="top_p",
             display_name="Top P",
@@ -59,13 +62,6 @@ class PerplexityComponent(LCModelComponent):
             display_name="Top K",
             info="Decode using top-k sampling: consider the set of top_k most probable tokens. Must be positive.",
             advanced=True,
-        ),
-        HandleInput(
-            name="output_parser",
-            display_name="Output Parser",
-            info="The parser to use to parse the output of the model",
-            advanced=True,
-            input_types=["OutputParser"],
         ),
     ]
 

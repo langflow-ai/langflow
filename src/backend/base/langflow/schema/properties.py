@@ -19,6 +19,7 @@ class Properties(BaseModel):
     source: Source = Field(default_factory=Source)
     icon: str | None = None
     allow_markdown: bool = False
+    positive_feedback: bool | None = None
     state: Literal["partial", "complete"] = "complete"
     targets: list = []
 
@@ -27,6 +28,8 @@ class Properties(BaseModel):
     def validate_source(cls, v):
         if isinstance(v, str):
             return Source(id=v, display_name=v, source=v)
+        if v is None:
+            return Source()
         return v
 
     @field_serializer("source")

@@ -64,7 +64,7 @@ class TestInput:
         # Empty lists and edge cases
         assert set(post_process_type(list)) == {list}
         assert set(post_process_type(Union[int, None])) == {int, NoneType}  # noqa: UP007
-        assert set(post_process_type(Union[None, list[None]])) == {None, NoneType}  # noqa: UP007
+        assert set(post_process_type(Union[list[None], None])) == {None, NoneType}  # noqa: UP007
 
         # Handling complex nested structures
         assert set(post_process_type(Union[SequenceABC[int | str], list[float]])) == {int, str, float}  # noqa: UP007
@@ -133,11 +133,13 @@ class TestOutput:
     def test_output_to_dict(self):
         output_obj = Output(name="test_output")
         assert output_obj.to_dict() == {
+            "allows_loop": False,
             "types": [],
             "name": "test_output",
             "display_name": "test_output",
             "cache": True,
             "value": "__UNDEFINED__",
+            "tool_mode": True,
         }
 
     def test_output_validate_display_name(self):

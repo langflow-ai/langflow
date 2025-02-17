@@ -4,7 +4,7 @@ import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.skip(
-  "should like and add components and flows",
+  "should like and add components and flows (requires store API key)",
   { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
@@ -20,7 +20,9 @@ test.skip(
     await page.waitForTimeout(1000);
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
-    await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click({
+      timeout: 200000,
+    });
     await page
       .getByPlaceholder("Insert your API Key")
       .fill(process.env.STORE_API_KEY ?? "");
@@ -82,7 +84,7 @@ test.skip(
 );
 
 test.skip(
-  "should find a searched Component on Store",
+  "should find a searched Component on Store (requires store API key)",
   { tag: ["@release"] },
   async ({ page }) => {
     test.skip(
@@ -100,7 +102,9 @@ test.skip(
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
 
-    await page.getByTestId("api-key-button-store").click();
+    await page.getByTestId("api-key-button-store").click({
+      timeout: 200000,
+    });
 
     await page
       .getByPlaceholder("Insert your API Key")

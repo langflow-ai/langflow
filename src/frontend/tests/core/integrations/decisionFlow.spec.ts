@@ -1,17 +1,12 @@
-import { Page, test } from "@playwright/test";
+import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-async function zoomOut(page: Page, times: number = 4) {
-  for (let i = 0; i < times; i++) {
-    await page.getByTestId("zoom_out").click();
-  }
-}
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
-  { tag: ["@release", "@components"] },
+  { tag: ["@release", "@components", "@workflow"] },
 
   async ({ page }) => {
     test.skip(
@@ -57,6 +52,11 @@ test(
         targetPosition: { x: 100, y: 100 },
       });
 
+    await page.waitForSelector('[data-testid="input-list-plus-btn_texts-0"]', {
+      timeout: 3000,
+      state: "attached",
+    });
+
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();
     await page.getByTestId("input-list-plus-btn_texts-0").first().click();
@@ -91,18 +91,18 @@ test(
     await page.getByTestId("inputlist_str_texts_2").last().fill("not cool..");
     //---------------------------------- PARSE DATA
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector('[data-testid="processingParse Data"]', {
+    await page.getByTestId("sidebar-search-input").fill("data to message");
+    await page.waitForSelector('[data-testid="processingData to Message"]', {
       timeout: 500,
     });
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 100 },
       });
     await zoomOut(page, 1);
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
@@ -247,7 +247,7 @@ test(
       .nth(1)
       .click();
     await page
-      .getByTestId("handle-chatinput-shownode-message-right")
+      .getByTestId("handle-chatinput-noshownode-message-source")
       .nth(0)
       .click();
     await page
@@ -255,7 +255,7 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0)
       .click();
     //quebrando aqui
@@ -264,7 +264,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(2)
       .click();
     await page
@@ -288,7 +288,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-text-right")
+      .getByTestId("handle-openaimodel-shownode-message-right")
       .nth(0)
       .click();
     await page
@@ -333,7 +333,7 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(0)
       .click();
     await page
@@ -341,7 +341,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-chatoutput-shownode-text-left")
+      .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(1)
       .click();
     const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");

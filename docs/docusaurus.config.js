@@ -15,6 +15,7 @@ const config = {
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
+  onBrokenAnchors: "warn",
   organizationName: "langflow-ai",
   projectName: "langflow",
   trailingSlash: false,
@@ -92,7 +93,8 @@ const config = {
             from: [
               "/whats-new-a-new-chapter-langflow",
               "/👋 Welcome-to-Langflow",
-              "/getting-started-welcome-to-langflow"
+              "/getting-started-welcome-to-langflow",
+              "/guides-new-to-llms"
             ],
           },
           {
@@ -107,12 +109,16 @@ const config = {
             from: "/getting-started-quickstart",
           },
           {
-            to: "/starter-projects-travel-planning-agent",
-            from: "/starter-projects-dynamic-agent/",
+            to: "/tutorials-travel-planning-agent",
+            from: [
+              "/starter-projects-dynamic-agent/",
+              "/starter-projects-travel-planning-agent",
+            ],
           },
           {
-            to: "/workspace-overview",
+            to: "concepts-overview",
             from: [
+              "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
               "/My-Collection",
               "/workspace",
@@ -120,12 +126,58 @@ const config = {
             ],
           },
           {
-            to: "/components-overview",
-            from: "/components",
-          },
+            to: "/concepts-components",
+            from: [
+              "/components",
+              "/components-overview"
+            ],
+            },
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
+          },
+          {
+            to: "/concepts-playground",
+            from: [
+              "/workspace-playground",
+              "/workspace-logs",
+              "/guides-chat-memory",
+            ],
+          },
+          {
+            to: "/concepts-objects",
+            from: [
+              "/guides-data-message",
+              "/configuration-objects",
+            ]
+          },
+          {
+            to: "/tutorials-sequential-agent",
+            from: "/starter-projects-sequential-agent",
+          },
+          {
+            to: "/tutorials-blog-writer",
+            from: "/starter-projects-blog-writer",
+          },
+          {
+            to: "/tutorials-memory-chatbot",
+            from: "/starter-projects-memory-chatbot",
+          },
+          {
+            to: "/tutorials-document-qa",
+            from: "/starter-projects-document-qa",
+          },
+          {
+            to: "/components-vector-stores",
+            from: "/components-rag",
+          },
+          {
+            to: "/concepts-api",
+            from: "/workspace-api",
+          },
+          {
+            to: "/components-custom-components",
+            from: "/components/custom",
           },
           // add more redirects like this
           // {
@@ -203,7 +255,7 @@ const config = {
       },
       docs: {
         sidebar: {
-          hideable: true,
+          hideable: false,
         },
       },
     }),
