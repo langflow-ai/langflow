@@ -54,7 +54,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
                 "- A single dictionary (will become a one-row table)\n"
                 "- A Data object (Langflow's internal data structure)\n"
             )
-            raise TypeError(msg)
+            raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
         # Ensure each item in the list is either a dict or a Data instance.
         for i, item in enumerate(v):
             if not isinstance(item, dict | Data):
@@ -64,7 +64,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
                     "- A Data object (Langflow's internal data structure for passing data between components)\n"
                     f"Instead, got a {type(item).__name__}. Please check the format of your input data."
                 )
-                raise TypeError(msg)
+                raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
         return v
 
 
