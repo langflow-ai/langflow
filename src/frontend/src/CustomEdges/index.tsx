@@ -42,15 +42,18 @@ export function DefaultEdge({
     200 * (1 - zeroOnNegative) +
     0.3 * Math.abs(sourceY - targetY) * zeroOnNegative;
 
-  const edgePathLoop = `M ${sourceXNew} ${sourceY} C ${sourceXNew + distance} ${sourceY + sourceDistanceY}, ${targetXNew - distance} ${targetY + distanceY}, ${targetXNew} ${targetY}`;
+  const targetYNew = targetY + 1;
+  const sourceYNew = sourceY + 1;
+
+  const edgePathLoop = `M ${sourceXNew} ${sourceYNew} C ${sourceXNew + distance} ${sourceYNew + sourceDistanceY}, ${targetXNew - distance} ${targetYNew + distanceY}, ${targetXNew} ${targetYNew}`;
 
   const [edgePath] = getBezierPath({
     sourceX: sourceXNew,
-    sourceY: sourceY + 1,
+    sourceY: sourceYNew,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
     targetX: targetXNew,
-    targetY: targetY + 1,
+    targetY: targetYNew,
   });
 
   return (
