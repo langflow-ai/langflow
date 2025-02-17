@@ -30,6 +30,7 @@ import {
   Binary,
   Blocks,
   BookMarked,
+  BookOpenText,
   BookmarkPlus,
   Bot,
   BotMessageSquare,
@@ -69,6 +70,7 @@ import {
   Database,
   DatabaseZap,
   Delete,
+  DollarSign,
   Dot,
   Download,
   DownloadCloud,
@@ -959,4 +961,6 @@ export const nodeIconsLucide: iconsType = {
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
+  DollarSign,
+  BookOpenText,
 };
