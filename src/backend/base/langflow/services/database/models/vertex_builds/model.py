@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
@@ -43,15 +44,15 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("data")
     def serialize_data(self, data) -> dict:
-        return serialize(data)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        return serialize(data)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
-        return serialize(data)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
 
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore[call-arg]

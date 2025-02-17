@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
@@ -36,11 +37,11 @@ class TransactionBase(SQLModel):
 
     @field_serializer("inputs")
     def serialize_inputs(self, data) -> dict:
-        return serialize(data)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        return serialize(data)
+        return serialize(data, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
