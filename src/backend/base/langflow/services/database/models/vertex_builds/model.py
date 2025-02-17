@@ -2,15 +2,14 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from langflow.serialization.serialization import serialize
 from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+from langflow.serialization.serialization import serialize
+
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
-
-from langflow.utils.util_strings import truncate_long_strings
 
 
 class VertexBuildBase(SQLModel):
