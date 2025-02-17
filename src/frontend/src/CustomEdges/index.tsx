@@ -21,8 +21,8 @@ export function DefaultEdge({
   const targetHandleObject = scapeJSONParse(targetHandleId!);
 
   const sourceXNew =
-    (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 0);
-  const targetXNew = targetNode?.position.x ?? 0;
+    (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 0) + 7;
+  const targetXNew = (targetNode?.position.x ?? 0) - 7;
 
   const distance = 200 + 0.1 * ((sourceXNew - targetXNew) / 2);
 
@@ -46,11 +46,11 @@ export function DefaultEdge({
 
   const [edgePath] = getBezierPath({
     sourceX: sourceXNew,
-    sourceY,
+    sourceY: sourceY + 1,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
     targetX: targetXNew,
-    targetY,
+    targetY: targetY + 1,
   });
 
   return (
