@@ -1,28 +1,25 @@
-import json
 from typing import Any
 
+import pandas as pd
 import requests
-from langchain.tools import StructuredTool
 from loguru import logger
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
-from langflow.inputs import MultilineInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.custom import Component
+from langflow.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.schema import DataFrame, dotdict
+from langflow.template import Output
 
 
-class NotionListPages(LCToolComponent):
-    display_name: str = "List Pages "
-    description: str = (
-        "Query a Notion database with filtering and sorting. "
-        "The input should be a JSON string containing the 'filter' and 'sorts' objects. "
-        "Example input:\n"
-        '{"filter": {"property": "Status", "select": {"equals": "Done"}}, '
-        '"sorts": [{"timestamp": "created_time", "direction": "descending"}]}'
-    )
+class NotionListPages(Component):
+    """A component that lists and queries pages from a Notion database."""
+
+    display_name: str = "List Pages"
+    description: str = "Query a Notion database with filtering and sorting options."
     documentation: str = "https://docs.langflow.org/integrations/notion/list-pages"
-    icon = "NotionDirectoryLoader"
+    icon: str = "NotionDirectoryLoader"
+
+    # Store database properties globally
+    _database_properties = {}
 
     inputs = [
         SecretStrInput(
@@ -30,93 +27,345 @@ class NotionListPages(LCToolComponent):
             display_name="Notion Secret",
             info="The Notion integration token.",
             required=True,
+            real_time_refresh=True,
         ),
-        StrInput(
+        DropdownInput(
             name="database_id",
-            display_name="Database ID",
-            info="The ID of the Notion database to query.",
+            display_name="Database",
+            info="Select a database",
+            options=["Loading databases..."],
+            value="Loading databases...",
+            real_time_refresh=True,
+            required=True,
         ),
-        MultilineInput(
-            name="query_json",
-            display_name="Database query (JSON)",
-            info="A JSON string containing the filters and sorts that will be used for querying the database. "
-            "Leave empty for no filters or sorts.",
+        DropdownInput(
+            name="filter_property",
+            display_name="Filter Property",
+            info="Property to filter by",
+            options=[],
+            value="",
+            real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="filter_operator",
+            display_name="Filter Operator",
+            info="Operator to use for filtering",
+            options=[],
+            value="",
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="filter_value",
+            display_name="Filter Value",
+            info="Value to filter by",
+        ),
+        DropdownInput(
+            name="sort_property",
+            display_name="Sort Property",
+            info="Property to sort by",
+            options=[],
+            value="",
+            real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="sort_direction",
+            display_name="Sort Direction",
+            info="Direction to sort",
+            options=["ascending", "descending"],
+            value="ascending",
+        ),
+        IntInput(
+            name="page_size",
+            display_name="Page Size",
+            info="Maximum number of pages to return",
+            value=100,
+            advanced=True,
         ),
     ]
 
-    class NotionListPagesSchema(BaseModel):
-        database_id: str = Field(..., description="The ID of the Notion database to query.")
-        query_json: str | None = Field(
-            default="",
-            description="A JSON string containing the filters and sorts for querying the database. "
-            "Leave empty for no filters or sorts.",
-        )
+    outputs = [
+        Output(name="pages", display_name="Pages", method="list_pages"),
+    ]
 
-    def run_model(self) -> list[Data]:
-        result = self._query_notion_database(self.database_id, self.query_json)
-
-        if isinstance(result, str):
-            # An error occurred, return it as a single record
-            return [Data(text=result)]
-
-        records = []
-        combined_text = f"Pages found: {len(result)}\n\n"
-
-        for page in result:
-            page_data = {
-                "id": page["id"],
-                "url": page["url"],
-                "created_time": page["created_time"],
-                "last_edited_time": page["last_edited_time"],
-                "properties": page["properties"],
-            }
-
-            text = (
-                f"id: {page['id']}\n"
-                f"url: {page['url']}\n"
-                f"created_time: {page['created_time']}\n"
-                f"last_edited_time: {page['last_edited_time']}\n"
-                f"properties: {json.dumps(page['properties'], indent=2)}\n\n"
-            )
-
-            combined_text += text
-            records.append(Data(text=text, **page_data))
-
-        self.status = records
-        return records
-
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="notion_list_pages",
-            description=self.description,
-            func=self._query_notion_database,
-            args_schema=self.NotionListPagesSchema,
-        )
-
-    def _query_notion_database(self, database_id: str, query_json: str | None = None) -> list[dict[str, Any]] | str:
-        url = f"https://api.notion.com/v1/databases/{database_id}/query"
+    def fetch_databases(self) -> list[dict[str, Any]]:
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Content-Type": "application/json",
             "Notion-Version": "2022-06-28",
         }
 
-        query_payload = {}
-        if query_json and query_json.strip():
-            try:
-                query_payload = json.loads(query_json)
-            except json.JSONDecodeError as e:
-                return f"Invalid JSON format for query: {e}"
+        try:
+            response = requests.post(
+                "https://api.notion.com/v1/search",
+                headers=headers,
+                json={"filter": {"value": "database", "property": "object"}},
+                timeout=10,
+            )
+            response.raise_for_status()
+            return response.json().get("results", [])
+        except requests.exceptions.RequestException as e:
+            self.log(f"Error fetching databases: {e!s}")
+            return []
+
+    def fetch_database_properties(self, database_id: str) -> dict[str, Any]:
+        if not database_id or database_id == "Loading databases...":
+            return {}
+
+        headers = {
+            "Authorization": f"Bearer {self.notion_secret}",
+            "Notion-Version": "2022-06-28",
+        }
 
         try:
-            response = requests.post(url, headers=headers, json=query_payload, timeout=10)
+            response = requests.get(f"https://api.notion.com/v1/databases/{database_id}", headers=headers, timeout=10)
             response.raise_for_status()
-            results = response.json()
-            return results["results"]
+            return response.json().get("properties", {})
         except requests.exceptions.RequestException as e:
-            return f"Error querying Notion database: {e}"
-        except KeyError:
-            return "Unexpected response format from Notion API"
-        except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error querying Notion database")
-            return f"An unexpected error occurred: {e}"
+            self.log(f"Error fetching database properties: {e!s}")
+            return {}
+
+    def build_filter_condition(
+        self, property_name: str, property_type: str, operator: str, value: str
+    ) -> dict[str, Any]:
+        if not value.strip():
+            return {}
+
+        if property_type in {"title", "rich_text"}:
+            return {"property": property_name, property_type: {operator: value}}
+        if property_type == "number":
+            try:
+                num_value = float(value)
+            except ValueError:
+                return {}
+            else:
+                return {"property": property_name, property_type: {operator: num_value}}
+        elif property_type in {"select", "status"}:
+            return {"property": property_name, property_type: {operator: value}}
+        elif property_type == "multi_select":
+            values = [v.strip() for v in value.split(",")]
+            if operator == "contains":
+                return {"property": property_name, property_type: {operator: values[0] if values else ""}}
+            return {"property": property_name, property_type: {operator: value}}
+        elif property_type == "date":
+            return {"property": property_name, property_type: {operator: value}}
+        elif property_type == "checkbox":
+            return {"property": property_name, property_type: {operator: value.lower() in ("true", "1", "yes", "y")}}
+        else:
+            return {"property": property_name, "rich_text": {operator: value}}
+
+    def list_pages(self) -> DataFrame:
+        if not self.database_id or self.database_id == "Loading databases...":
+            return DataFrame(pd.DataFrame({"error": ["Please select a valid database."]}))
+
+        # Ensure we have database properties
+        if not self._database_properties:
+            self._database_properties = self.fetch_database_properties(self.database_id)
+
+        # Build query payload
+        query_payload = {"page_size": self.page_size}
+
+        # Add filter if provided
+        if self.filter_property and self.filter_operator and self.filter_value:
+            prop_info = self._database_properties.get(self.filter_property, {})
+            prop_type = prop_info.get("type", "text")
+
+            condition = self.build_filter_condition(
+                self.filter_property, prop_type, self.filter_operator, self.filter_value
+            )
+            if condition:
+                query_payload["filter"] = condition
+
+        # Add sort if provided
+        if self.sort_property:
+            query_payload["sorts"] = [{"property": self.sort_property, "direction": self.sort_direction}]
+
+        # Make the request
+        try:
+            response = requests.post(
+                f"https://api.notion.com/v1/databases/{self.database_id}/query",
+                headers={
+                    "Authorization": f"Bearer {self.notion_secret}",
+                    "Content-Type": "application/json",
+                    "Notion-Version": "2022-06-28",
+                },
+                json=query_payload,
+                timeout=10,
+            )
+            response.raise_for_status()
+            results = response.json()["results"]
+
+            # Transform results
+            pages_data = []
+            for page in results:
+                page_data = {
+                    "id": page["id"],
+                    "url": page["url"],
+                    "created_time": page["created_time"],
+                    "last_edited_time": page["last_edited_time"],
+                }
+
+                # Add properties as columns with formatted values
+                for prop_name, prop_value in page["properties"].items():
+                    value = self.format_property_value(prop_value)
+                    page_data[prop_name] = value
+
+                pages_data.append(page_data)
+
+            # Convert to DataFrame
+            pages_df = pd.DataFrame(pages_data)
+
+            # Reorder columns
+            main_cols = ["id", "url", "created_time", "last_edited_time"]
+            other_cols = [col for col in pages_df.columns if col not in main_cols]
+            pages_df = pages_df[main_cols + sorted(other_cols)]
+
+            return DataFrame(pages_df)
+
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error querying Notion database: {e}"
+            return DataFrame(pd.DataFrame({"error": [error_msg]}))
+        except (ValueError, KeyError, TypeError) as e:
+            logger.opt(exception=True).debug("Error processing Notion database response")
+            return DataFrame(pd.DataFrame({"error": [f"Error processing database response: {e}"]}))
+
+    def format_property_value(self, prop_value: dict[str, Any]) -> str:
+        prop_type = prop_value["type"]
+
+        if prop_type in ("title", "rich_text"):
+            texts = prop_value.get(prop_type, [])
+            return " ".join(text.get("plain_text", "") for text in texts)
+
+        if prop_type == "select":
+            select_value = prop_value.get("select")
+            return select_value.get("name", "") if select_value else ""
+
+        if prop_type == "multi_select":
+            values = prop_value.get("multi_select", [])
+            return ", ".join(value.get("name", "") for value in values)
+
+        if prop_type == "date":
+            date = prop_value.get("date")
+            if not date:
+                return ""
+            start = date.get("start", "")
+            end = date.get("end", "")
+            return f"{start} to {end}" if end else start
+
+        if prop_type == "checkbox":
+            return str(prop_value.get("checkbox", False))
+
+        if prop_type == "number":
+            return str(prop_value.get("number", 0))
+
+        if prop_type == "url":
+            return prop_value.get("url", "")
+
+        if prop_type == "email":
+            return prop_value.get("email", "")
+
+        if prop_type == "phone_number":
+            return prop_value.get("phone_number", "")
+
+        if prop_type == "files":
+            files = prop_value.get("files", [])
+            return ", ".join(f.get("name", "") for f in files)
+
+        return str(prop_value.get(prop_type, ""))
+
+    def get_operators_for_type(self, prop_type: str) -> list[str]:
+        base_operators = {
+            "title": ["equals", "does_not_equal", "contains", "does_not_contain", "starts_with", "ends_with"],
+            "rich_text": ["equals", "does_not_equal", "contains", "does_not_contain", "starts_with", "ends_with"],
+            "number": [
+                "equals",
+                "does_not_equal",
+                "greater_than",
+                "less_than",
+                "greater_than_or_equal_to",
+                "less_than_or_equal_to",
+            ],
+            "select": ["equals", "does_not_equal", "is_empty", "is_not_empty"],
+            "multi_select": ["contains", "does_not_contain", "is_empty", "is_not_empty"],
+            "date": ["equals", "before", "after", "on_or_before", "on_or_after", "is_empty", "is_not_empty"],
+            "checkbox": ["equals"],
+            "files": ["is_empty", "is_not_empty"],
+            "url": ["equals", "does_not_equal", "contains", "does_not_contain", "starts_with", "ends_with"],
+            "email": ["equals", "does_not_equal", "contains", "does_not_contain", "starts_with", "ends_with"],
+            "phone_number": ["equals", "does_not_equal", "contains", "does_not_contain", "starts_with", "ends_with"],
+            "status": ["equals", "does_not_equal"],
+        }
+
+        return base_operators.get(prop_type, ["equals", "does_not_equal", "contains", "does_not_contain"])
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+        try:
+            # When notion_secret is updated or initially loaded
+            if field_name is None or field_name == "notion_secret":
+                databases = self.fetch_databases()
+                build_config["database_id"]["options"] = [db["id"] for db in databases]
+                if databases:
+                    build_config["database_id"]["value"] = databases[0]["id"]
+
+                # Add tooltips with database titles
+                tooltips = {
+                    db["id"]: db.get("title", [{}])[0].get("text", {}).get("content", "Untitled") for db in databases
+                }
+                build_config["database_id"]["tooltips"] = tooltips
+
+            # When database_id changes
+            if field_name == "database_id":
+                if field_value and field_value != "Loading databases...":
+                    self._database_properties = self.fetch_database_properties(field_value)
+
+                    # Update property options for filter and sort
+                    property_options = list(self._database_properties.keys())
+
+                    build_config["filter_property"]["options"] = property_options
+                    build_config["sort_property"]["options"] = property_options
+
+                    if property_options:
+                        build_config["filter_property"]["value"] = property_options[0]
+                        build_config["sort_property"]["value"] = property_options[0]
+
+                        # Set initial operators based on first property type
+                        first_prop = self._database_properties[property_options[0]]
+                        operators = self.get_operators_for_type(first_prop["type"])
+                        build_config["filter_operator"]["options"] = operators
+                        build_config["filter_operator"]["value"] = operators[0] if operators else ""
+                else:
+                    self._database_properties = {}
+                    build_config["filter_property"]["options"] = []
+                    build_config["sort_property"]["options"] = []
+
+            # When filter_property changes
+            if field_name == "filter_property" and field_value:
+                prop_info = self._database_properties.get(field_value, {})
+                prop_type = prop_info.get("type", "text")
+                operators = self.get_operators_for_type(prop_type)
+
+                build_config["filter_operator"]["options"] = operators
+                build_config["filter_operator"]["value"] = operators[0] if operators else ""
+
+                # Update value field info based on property type
+                value_info = "Enter value"
+                if prop_type == "select":
+                    options = prop_info.get("select", {}).get("options", [])
+                    value_info = f"Valid options: {', '.join(opt['name'] for opt in options)}"
+                elif prop_type == "multi_select":
+                    options = prop_info.get("multi_select", {}).get("options", [])
+                    value_info = f"Valid options (comma separated): {', '.join(opt['name'] for opt in options)}"
+                elif prop_type == "date":
+                    value_info = "Enter date in YYYY-MM-DD format"
+                elif prop_type == "number":
+                    value_info = "Enter a number"
+                elif prop_type == "checkbox":
+                    value_info = "Enter 'true' or 'false'"
+
+                build_config["filter_value"]["info"] = value_info
+
+        except (KeyError, TypeError, ValueError) as e:
+            self.log(f"Error updating build config: {e!s}")
+            build_config["database_id"]["options"] = ["Error loading databases"]
+            build_config["database_id"]["value"] = "Error loading databases"
+
+        return build_config

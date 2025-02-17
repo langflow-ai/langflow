@@ -1,25 +1,25 @@
 import requests
-from langchain.tools import StructuredTool
 from loguru import logger
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
-from langflow.inputs import SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput, SecretStrInput
+from langflow.template import Output
 
 
-class NotionPageContent(LCToolComponent):
-    display_name = "Page Content Viewer "
-    description = "Retrieve the content of a Notion page as plain text."
-    documentation = "https://docs.langflow.org/integrations/notion/page-content-viewer"
-    icon = "NotionDirectoryLoader"
+class NotionPageContent(Component):
+    """A component that retrieves the content of a Notion page as plain text."""
+
+    display_name: str = "Page Content Viewer"
+    description: str = "Retrieve the content of a Notion page as plain text."
+    documentation: str = "https://docs.langflow.org/integrations/notion/page-content-viewer"
+    icon: str = "NotionDirectoryLoader"
 
     inputs = [
-        StrInput(
+        MessageTextInput(
             name="page_id",
             display_name="Page ID",
             info="The ID of the Notion page to retrieve.",
+            tool_mode=True,
         ),
         SecretStrInput(
             name="notion_secret",
@@ -29,27 +29,13 @@ class NotionPageContent(LCToolComponent):
         ),
     ]
 
-    class NotionPageContentSchema(BaseModel):
-        page_id: str = Field(..., description="The ID of the Notion page to retrieve.")
+    outputs = [
+        Output(name="message", display_name="Page Content", method="get_page_content"),
+    ]
 
-    def run_model(self) -> Data:
-        result = self._retrieve_page_content(self.page_id)
-        if isinstance(result, str) and result.startswith("Error:"):
-            # An error occurred, return it as text
-            return Data(text=result)
-        # Success, return the content
-        return Data(text=result, data={"content": result})
-
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="notion_page_content",
-            description="Retrieve the content of a Notion page as plain text.",
-            func=self._retrieve_page_content,
-            args_schema=self.NotionPageContentSchema,
-        )
-
-    def _retrieve_page_content(self, page_id: str) -> str:
-        blocks_url = f"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100"
+    def get_page_content(self) -> str:
+        """Retrieve the content of a Notion page as plain text."""
+        blocks_url = f"https://api.notion.com/v1/blocks/{self.page_id}/children?page_size=100"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Notion-Version": "2022-06-28",
@@ -88,6 +74,3 @@ class NotionPageContent(LCToolComponent):
 
     def parse_rich_text(self, rich_text: list) -> str:
         return "".join(segment.get("plain_text", "") for segment in rich_text)
-
-    def __call__(self, *args, **kwargs):
-        return self._retrieve_page_content(*args, **kwargs)

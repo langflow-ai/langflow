@@ -1,33 +1,34 @@
 import json
-from typing import Any
 
 import requests
-from langchain.tools import StructuredTool
 from loguru import logger
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
-from langflow.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
+from langflow.template import Output
 
 
-class NotionPageUpdate(LCToolComponent):
-    display_name: str = "Update Page Property "
+class NotionPageUpdate(Component):
+    """A component that updates properties of a Notion page."""
+
+    display_name: str = "Update Page Property"
     description: str = "Update the properties of a Notion page."
     documentation: str = "https://docs.langflow.org/integrations/notion/page-update"
-    icon = "NotionDirectoryLoader"
+    icon: str = "NotionDirectoryLoader"
 
     inputs = [
-        StrInput(
+        MessageTextInput(
             name="page_id",
             display_name="Page ID",
             info="The ID of the Notion page to update.",
+            tool_mode=True,
         ),
         MultilineInput(
             name="properties",
             display_name="Properties",
             info="The properties to update on the page (as a JSON string or a dictionary).",
+            tool_mode=True,
         ),
         SecretStrInput(
             name="notion_secret",
@@ -37,51 +38,34 @@ class NotionPageUpdate(LCToolComponent):
         ),
     ]
 
-    class NotionPageUpdateSchema(BaseModel):
-        page_id: str = Field(..., description="The ID of the Notion page to update.")
-        properties: str | dict[str, Any] = Field(
-            ..., description="The properties to update on the page (as a JSON string or a dictionary)."
-        )
+    outputs = [
+        Output(name="data", display_name="Updated Page", method="update_page"),
+    ]
 
-    def run_model(self) -> Data:
-        result = self._update_notion_page(self.page_id, self.properties)
-        if isinstance(result, str):
-            # An error occurred, return it as text
-            return Data(text=result)
-        # Success, return the updated page data
-        output = "Updated page properties:\n"
-        for prop_name, prop_value in result.get("properties", {}).items():
-            output += f"{prop_name}: {prop_value}\n"
-        return Data(text=output, data=result)
+    def update_page(self) -> Data:
+        """Update properties of a Notion page."""
+        if not self.page_id:
+            return Data(data={"error": "Page ID is required"})
 
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="update_notion_page",
-            description="Update the properties of a Notion page. "
-            "IMPORTANT: Use the tool to check the Database properties for more details before using this tool.",
-            func=self._update_notion_page,
-            args_schema=self.NotionPageUpdateSchema,
-        )
+        if not self.properties or not self.properties.strip():
+            return Data(data={"error": "Properties cannot be empty"})
 
-    def _update_notion_page(self, page_id: str, properties: str | dict[str, Any]) -> dict[str, Any] | str:
-        url = f"https://api.notion.com/v1/pages/{page_id}"
+        url = f"https://api.notion.com/v1/pages/{self.page_id}"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Content-Type": "application/json",
-            "Notion-Version": "2022-06-28",  # Use the latest supported version
+            "Notion-Version": "2022-06-28",
         }
 
         # Parse properties if it's a string
-        if isinstance(properties, str):
-            try:
-                parsed_properties = json.loads(properties)
-            except json.JSONDecodeError as e:
-                error_message = f"Invalid JSON format for properties: {e}"
-                logger.exception(error_message)
-                return error_message
-
-        else:
-            parsed_properties = properties
+        try:
+            parsed_properties = json.loads(self.properties)
+            if not isinstance(parsed_properties, dict):
+                return Data(data={"error": "Properties must be a valid JSON object"})
+        except json.JSONDecodeError as e:
+            error_message = f"Invalid JSON format for properties: {e}"
+            logger.exception(error_message)
+            return Data(data={"error": error_message})
 
         data = {"properties": parsed_properties}
 
@@ -92,23 +76,22 @@ class NotionPageUpdate(LCToolComponent):
             updated_page = response.json()
 
             logger.info(f"Successfully updated Notion page. Response: {json.dumps(updated_page)}")
+            return Data(data=updated_page)
+
         except requests.exceptions.HTTPError as e:
             error_message = f"HTTP Error occurred: {e}"
             if e.response is not None:
                 error_message += f"\nStatus code: {e.response.status_code}"
                 error_message += f"\nResponse body: {e.response.text}"
             logger.exception(error_message)
-            return error_message
+            return Data(data={"error": error_message})
+
         except requests.exceptions.RequestException as e:
             error_message = f"An error occurred while making the request: {e}"
             logger.exception(error_message)
-            return error_message
+            return Data(data={"error": error_message})
+
         except Exception as e:  # noqa: BLE001
             error_message = f"An unexpected error occurred: {e}"
             logger.exception(error_message)
-            return error_message
-
-        return updated_page
-
-    def __call__(self, *args, **kwargs):
-        return self._update_notion_page(*args, **kwargs)
+            return Data(data={"error": error_message})
