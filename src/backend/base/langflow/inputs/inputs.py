@@ -40,6 +40,12 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
         # Check if value is a list of dicts
         if isinstance(v, DataFrame):
             v = v.to_dict(orient="records")
+            
+        #check the solution here
+        elif isinstance(v, Data):
+            v = [{"key": k, "value": str(val)} for k, val in v.data.items()] if isinstance(v.data, dict) else [{"key": "data", "value": str(v.data)}]
+
+    
         if not isinstance(v, list):
             msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
             raise ValueError(msg)  # noqa: TRY004

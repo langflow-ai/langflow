@@ -96,7 +96,7 @@ class APIRequestComponent(Component):
                 },
             ],
             value=[],
-            input_types=["Data"],
+            input_types=["DataFrame"],
             advanced=True,
         ),
         TableInput(
@@ -119,7 +119,7 @@ class APIRequestComponent(Component):
             ],
             value=[],
             advanced=True,
-            input_types=["Data"],
+            input_types=["DataFrame"],
         ),
         IntInput(
             name="timeout",
