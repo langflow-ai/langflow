@@ -17,6 +17,15 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      STORE_API_KEY:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      TAVILY_API_KEY:
+        required: false
   workflow_dispatch:
     inputs:
       python-versions:
