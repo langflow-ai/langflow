@@ -58,7 +58,9 @@ def _serialize_uuid(obj: UUID, *_) -> str:
     return str(obj)
 
 
-def _serialize_document(obj: Document, max_length: int | None, max_items: int | None) -> Any:
+def _serialize_document(
+    obj: Document, max_length: int | None, max_items: int | None
+) -> Any:
     """Serialize Langchain Document recursively."""
     return serialize(obj.to_json(), max_length, max_items)
 
@@ -68,13 +70,17 @@ def _serialize_iterator(_: AsyncIterator | Generator | Iterator, *__) -> str:
     return "Unconsumed Stream"
 
 
-def _serialize_pydantic(obj: BaseModel, max_length: int | None, max_items: int | None) -> Any:
+def _serialize_pydantic(
+    obj: BaseModel, max_length: int | None, max_items: int | None
+) -> Any:
     """Handle modern Pydantic models."""
     serialized = obj.model_dump()
     return {k: serialize(v, max_length, max_items) for k, v in serialized.items()}
 
 
-def _serialize_pydantic_v1(obj: BaseModelV1, max_length: int | None, max_items: int | None) -> Any:
+def _serialize_pydantic_v1(
+    obj: BaseModelV1, max_length: int | None, max_items: int | None
+) -> Any:
     """Backwards-compatible handling for Pydantic v1 models."""
     if hasattr(obj, "to_json"):
         return serialize(obj.to_json(), max_length, max_items)
@@ -86,7 +92,9 @@ def _serialize_dict(obj: dict, max_length: int | None, max_items: int | None) ->
     return {k: serialize(v, max_length, max_items) for k, v in obj.items()}
 
 
-def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: int | None) -> list:
+def _serialize_list_tuple(
+    obj: list | tuple, max_length: int | None, max_items: int | None
+) -> list:
     """Truncate long lists and process items recursively."""
     if max_items is not None and len(obj) > max_items:
         truncated = list(obj)[:max_items]
@@ -111,12 +119,18 @@ def _truncate_value(value: Any, max_length: int | None, max_items: int | None) -
     """Truncate value based on its type and provided limits."""
     if max_length is not None and isinstance(value, str) and len(value) > max_length:
         return value[:max_length]
-    if max_items is not None and isinstance(value, list | tuple) and len(value) > max_items:
+    if (
+        max_items is not None
+        and isinstance(value, list | tuple)
+        and len(value) > max_items
+    ):
         return value[:max_items]
     return value
 
 
-def _serialize_dataframe(obj: pd.DataFrame, max_length: int | None, max_items: int | None) -> list[dict]:
+def _serialize_dataframe(
+    obj: pd.DataFrame, max_length: int | None, max_items: int | None
+) -> list[dict]:
     """Serialize pandas DataFrame to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
@@ -126,11 +140,16 @@ def _serialize_dataframe(obj: pd.DataFrame, max_length: int | None, max_items: i
     return serialize(data, max_length, max_items)
 
 
-def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | None) -> dict:
+def _serialize_series(
+    obj: pd.Series, max_length: int | None, max_items: int | None
+) -> dict:
     """Serialize pandas Series to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    return {index: _truncate_value(value, max_length, max_items) for index, value in obj.items()}
+    return {
+        index: _truncate_value(value, max_length, max_items)
+        for index, value in obj.items()
+    }
 
 
 def _is_numpy_type(obj: Any) -> bool:
@@ -138,7 +157,9 @@ def _is_numpy_type(obj: Any) -> bool:
     return hasattr(type(obj), "__module__") and type(obj).__module__ == np.__name__
 
 
-def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | None) -> Any:
+def _serialize_numpy_type(
+    obj: Any, max_length: int | None, max_items: int | None
+) -> Any:
     """Serialize numpy types."""
     if np.issubdtype(obj.dtype, np.number) and hasattr(obj, "item"):
         return obj.item()
@@ -155,7 +176,9 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
     return UNSERIALIZABLE_SENTINEL
 
 
-def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | _UnserializableSentinel:
+def _serialize_dispatcher(
+    obj: Any, max_length: int | None, max_items: int | None
+) -> Any | _UnserializableSentinel:
     """Dispatch object to appropriate serializer."""
     # Handle primitive types first
     if obj is None:
@@ -193,13 +216,19 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
             return _serialize_list_tuple(obj, max_length, max_items)
         case object() if _is_numpy_type(obj):
             return _serialize_numpy_type(obj, max_length, max_items)
-        case object() if not isinstance(obj, type):  # Match any instance that's not a class
+        case object() if not isinstance(
+            obj, type
+        ):  # Match any instance that's not a class
             return _serialize_instance(obj, max_length, max_items)
         case object() if hasattr(obj, "_name_"):  # Enum case
             return f"{obj.__class__.__name__}.{obj._name_}"
-        case object() if hasattr(obj, "__name__") and hasattr(obj, "__bound__"):  # TypeVar case
+        case object() if hasattr(obj, "__name__") and hasattr(
+            obj, "__bound__"
+        ):  # TypeVar case
             return repr(obj)
-        case object() if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):  # Type alias/generic case
+        case object() if hasattr(obj, "__origin__") or hasattr(
+            obj, "__parameters__"
+        ):  # Type alias/generic case
             return repr(obj)
         case _:
             # Handle numpy numeric types (int, float, bool, complex)
@@ -221,8 +250,8 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
 
 def serialize(
     obj: Any,
-    max_length: int | None = MAX_TEXT_LENGTH,
-    max_items: int | None = MAX_ITEMS_LENGTH,
+    max_length: int | None,
+    max_items: int | None,
     *,
     to_str: bool = False,
 ) -> Any:
@@ -242,7 +271,9 @@ def serialize(
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
-        if result is not UNSERIALIZABLE_SENTINEL:  # Special check for None since it's a valid result
+        if (
+            result is not UNSERIALIZABLE_SENTINEL
+        ):  # Special check for None since it's a valid result
             return result
 
         # Handle class-based Pydantic types and other types
@@ -252,7 +283,9 @@ def serialize(
             return str(obj)  # Handle other class types
 
         # Handle type aliases and generic types
-        if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):  # Type alias or generic type check
+        if hasattr(obj, "__origin__") or hasattr(
+            obj, "__parameters__"
+        ):  # Type alias or generic type check
             try:
                 return repr(obj)
             except Exception as e:  # noqa: BLE001
@@ -275,7 +308,9 @@ def serialize(
 
 
 def serialize_or_str(
-    obj: Any, max_length: int | None = MAX_TEXT_LENGTH, max_items: int | None = MAX_ITEMS_LENGTH
+    obj: Any,
+    max_length: int | None = MAX_TEXT_LENGTH,
+    max_items: int | None = MAX_ITEMS_LENGTH,
 ) -> Any:
     """Calls serialize() and if it fails, returns a string representation of the object.
 
