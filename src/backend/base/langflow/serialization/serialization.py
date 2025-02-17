@@ -221,8 +221,8 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
 
 def serialize(
     obj: Any,
-    max_length: int | None,
-    max_items: int | None,
+    max_length: int | None = None,
+    max_items: int | None = None,
     *,
     to_str: bool = False,
 ) -> Any:
