@@ -2129,5 +2129,9 @@
   "id": "ab091b94-13c1-42af-9f9b-3689e99fb0bf",
   "is_component": false,
   "last_tested_version": "1.1.5",
+  "tags": [
+    "web-scraping",
+    "agents"
+  ],
   "name": "Price Deal Finder"
 }
