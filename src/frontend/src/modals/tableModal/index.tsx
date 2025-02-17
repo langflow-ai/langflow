@@ -15,6 +15,10 @@ interface TableModalProps extends TableComponentProps {
   tableOptions?: TableOptionsTypeAPI;
   hideColumns?: boolean | string[];
   tableIcon?: string;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+  onSave?: () => void;
+  onCancel?: () => void;
 }
 
 const TableModal = forwardRef<AgGridReact, TableModalProps>(
@@ -25,6 +29,10 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
       children,
       disabled,
       tableIcon,
+      open,
+      setOpen,
+      onSave,
+      onCancel,
       ...props
     }: TableModalProps,
     ref: ForwardedRef<AgGridReact>,
@@ -41,6 +49,15 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
           }
         }}
         disable={disabled}
+        open={open}
+        setOpen={(newOpen) => {
+          if (!newOpen && onCancel) {
+            onCancel();
+          }
+          if (setOpen) {
+            setOpen(newOpen);
+          }
+        }}
       >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
@@ -59,6 +76,9 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
             {...props}
           ></TableComponent>
         </BaseModal.Content>
+        <BaseModal.Footer
+          submit={onSave ? { label: "Save", onClick: onSave } : undefined}
+        ></BaseModal.Footer>
       </BaseModal>
     );
   },
