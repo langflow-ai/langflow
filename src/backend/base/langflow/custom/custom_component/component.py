@@ -101,6 +101,7 @@ class Component(CustomComponent):
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
+
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
@@ -408,6 +409,8 @@ class Component(CustomComponent):
             # Deepcopy is required to avoid modifying the original component;
             # allows each instance of each component to modify its own output
             self._outputs_map[output.name] = deepcopy(output)
+        if TOOL_OUTPUT_NAME not in self._outputs_map:
+            self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
 
     def map_inputs(self, inputs: list[InputTypes]) -> None:
         """Maps the given inputs to the component.
