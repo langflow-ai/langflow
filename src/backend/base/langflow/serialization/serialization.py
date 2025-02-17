@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -7,7 +8,6 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 from langchain_core.documents import Document
-from loguru import logger
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
@@ -226,39 +226,16 @@ def serialize(
     *,
     to_str: bool = False,
 ) -> Any:
-    """Unified serialization with optional truncation support.
-
-    Coordinates specialized serializers through a dispatcher pattern.
-    Maintains recursive processing for nested structures.
-
-    Args:
-        obj: Object to serialize
-        max_length: Maximum length for string values, None for no truncation
-        max_items: Maximum items in list-like structures, None for no truncation
-        to_str: If True, return a string representation of the object if serialization fails
-    """
+    """Unified serialization with optional truncation support."""
     if obj is None:
         return None
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
-        if result is not UNSERIALIZABLE_SENTINEL:  # Special check for None since it's a valid result
+        if result is not UNSERIALIZABLE_SENTINEL:
             return result
 
-        # Handle class-based Pydantic types and other types
-        if isinstance(obj, type):
-            if issubclass(obj, BaseModel | BaseModelV1):
-                return repr(obj)
-            return str(obj)  # Handle other class types
-
-        # Handle type aliases and generic types
-        if hasattr(obj, "__origin__") or hasattr(obj, "__parameters__"):  # Type alias or generic type check
-            try:
-                return repr(obj)
-            except Exception as e:  # noqa: BLE001
-                logger.debug(f"Cannot serialize object {obj}: {e!s}")
-
-        # Fallback to common serialization patterns
+        # Fallback common serialization patterns
         if hasattr(obj, "model_dump"):
             return serialize(obj.model_dump(), max_length, max_items)
         if hasattr(obj, "dict") and not isinstance(obj, type):
@@ -267,9 +244,8 @@ def serialize(
         # Final fallback to string conversion only if explicitly requested
         if to_str:
             return str(obj)
-
-    except Exception as e:  # noqa: BLE001
-        logger.debug(f"Cannot serialize object {obj}: {e!s}")
+    except Exception as e:
+        logging.debug(f"Cannot serialize object {obj}: {e!s}")
         return "[Unserializable Object]"
     return obj
 
