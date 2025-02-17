@@ -2,11 +2,10 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from langflow.serialization.serialization import serialize
 from pydantic import BaseModel, field_serializer, field_validator
 from sqlalchemy import Text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
-
-from langflow.services.database.utils import truncate_json
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -45,15 +44,15 @@ class VertexBuildBase(SQLModel):
 
     @field_serializer("data")
     def serialize_data(self, data) -> dict:
-        return truncate_json(data)
+        return serialize(data)
 
     @field_serializer("artifacts")
     def serialize_artifacts(self, data) -> dict:
-        return truncate_json(data)
+        return serialize(data)
 
     @field_serializer("params")
     def serialize_params(self, data) -> str:
-        return truncate_long_strings(data)
+        return serialize(data)
 
 
 class VertexBuildTable(VertexBuildBase, table=True):  # type: ignore[call-arg]

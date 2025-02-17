@@ -2,10 +2,9 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from langflow.serialization.serialization import serialize
 from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
-
-from langflow.services.database.utils import truncate_json
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -36,11 +35,11 @@ class TransactionBase(SQLModel):
 
     @field_serializer("inputs")
     def serialize_inputs(self, data) -> dict:
-        return truncate_json(data)
+        return serialize(data)
 
     @field_serializer("outputs")
     def serialize_outputs(self, data) -> dict:
-        return truncate_json(data)
+        return serialize(data)
 
 
 class TransactionTable(TransactionBase, table=True):  # type: ignore[call-arg]
