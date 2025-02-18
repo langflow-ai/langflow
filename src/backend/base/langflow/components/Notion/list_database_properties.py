@@ -59,15 +59,15 @@ class NotionDatabaseProperties(Component):
 
             databases = []
             for db in response.json().get("results", []):
-                # Extrai o título do array de title
+                # Extracts the title from the title array
                 title_array = db.get("title", [])
                 title = ""
                 for title_part in title_array:
-                    # Usar plain_text que já vem formatado corretamente
+                    # Use plain_text that already comes correctly formatted
                     if "plain_text" in title_part:
                         title += title_part["plain_text"]
 
-                # Se não encontrou título, usa um padrão
+                # If no title is found, use a default
                 if not title:
                     title = "Untitled Database"
 
@@ -84,15 +84,15 @@ class NotionDatabaseProperties(Component):
         try:
             # When notion_secret is updated or initially loaded
             if field_name is None or field_name == "notion_secret":
-                # Buscar as databases
+                # Fetch the databases
                 databases = self.fetch_databases()
 
-                # Preparar as opções do dropdown usando os títulos
+                # Prepare the dropdown options using the titles
                 options = [db["title"] for db in databases]
-                # Criar mapeamento de título para ID
+                # Create mapping of title to ID
                 id_map = {db["title"]: db["id"] for db in databases}
 
-                # Atualizar o dropdown
+                # Update the dropdown
                 build_config["database_id"] = {
                     "name": "database_id",
                     "type": "str",
@@ -101,7 +101,7 @@ class NotionDatabaseProperties(Component):
                     "display_name": "Database",
                     "options": options,
                     "value": options[0] if options else "",
-                    "id_map": id_map,  # Guarda o mapeamento para uso posterior
+                    "id_map": id_map,  # Stores the mapping for later use
                 }
 
         except (requests.exceptions.RequestException, KeyError) as e:
@@ -124,11 +124,11 @@ class NotionDatabaseProperties(Component):
             return Data(data={"error": "Please select a valid database."})
 
         try:
-            # Buscar databases novamente para ter o mapeamento atualizado
+            # Fetch databases again to have the updated mapping
             databases = self.fetch_databases()
             title_to_id = {db["title"]: db["id"] for db in databases}
 
-            # Usar o título selecionado para obter o ID
+            # Use the selected title to get the ID
             database_id = title_to_id.get(self.database_id)
 
             if not database_id:
@@ -143,13 +143,13 @@ class NotionDatabaseProperties(Component):
             response.raise_for_status()
             data = response.json()
 
-            # Transformar as propriedades em um formato mais amigável
+            # Transform the properties into a friendlier format
             properties = {}
             for prop_name, prop_info in data.get("properties", {}).items():
                 prop_type = prop_info["type"]
                 prop_data = {"type": prop_type, "name": prop_name}
 
-                # Adicionar informações específicas do tipo
+                # Add specific type information
                 if prop_type == "select":
                     prop_data["options"] = [opt["name"] for opt in prop_info.get("select", {}).get("options", [])]
                 elif prop_type == "multi_select":

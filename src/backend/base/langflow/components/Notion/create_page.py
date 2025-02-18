@@ -109,16 +109,16 @@ class NotionPageCreator(Component):
                 return {"rich_text": [{"type": "text", "text": {"content": str(value)}}]}
 
             if prop_type == "select":
-                # Select deve ser um objeto único, não um array
+                # Select should be a single object, not an array
                 return {"select": {"name": str(value)}}
 
             if prop_type == "multi_select":
-                # Multi-select é um array de objetos com "name"
+                # Multi-select is an array of objects with "name"
                 values = [v.strip() for v in str(value).split(",")]
                 return {"multi_select": [{"name": v} for v in values if v]}
 
             if prop_type == "date":
-                # Tenta interpretar se é um range de datas
+                # Tries to interpret if it is a date range
                 if " to " in value:
                     start, end = value.split(" to ")
                     return {"date": {"start": start.strip(), "end": end.strip()}}
@@ -126,7 +126,7 @@ class NotionPageCreator(Component):
 
             if prop_type == "number":
                 try:
-                    # Converte para float para aceitar decimais
+                    # Converts to float to accept decimals
                     return {"number": float(value)}
                 except ValueError:
                     return {"number": 0}
@@ -144,7 +144,7 @@ class NotionPageCreator(Component):
                 return {"phone_number": str(value)}
 
             elif prop_type == "files":
-                # Se for URL, cria como arquivo externo
+                # If it is a URL, create as external file
                 if value.startswith(("http://", "https://")):
                     return {"files": [{"name": value.split("/")[-1], "type": "external", "external": {"url": value}}]}
                 return {"files": []}
@@ -153,13 +153,13 @@ class NotionPageCreator(Component):
                 return {"status": {"name": str(value)}}
 
             else:
-                # Para tipos desconhecidos, usa rich_text
+                # For unknown types, use rich_text
                 self.log(f"Unknown property type {prop_type}, defaulting to rich_text")
                 return {"rich_text": [{"type": "text", "text": {"content": str(value)}}]}
 
         except (ValueError, TypeError) as e:
             self.log(f"Error formatting property {prop_name}: {e!s}")
-            # Retorna valor vazio apropriado para o tipo
+            # Returns empty value appropriate for the type
             empty_values = {
                 "title": {"title": []},
                 "rich_text": {"rich_text": []},
