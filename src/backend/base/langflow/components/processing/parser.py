@@ -4,9 +4,9 @@ from langflow.custom import Component
 from langflow.io import (
     BoolInput,
     HandleInput,
+    MessageTextInput,
     MultilineInput,
     Output,
-    StrInput,
 )
 from langflow.schema import Data, DataFrame
 from langflow.schema.message import Message
@@ -32,8 +32,8 @@ class ParserComponent(Component):
         MultilineInput(
             name="template",
             display_name="Template",
-            info="Use placeholders like '{Name}', '{Age}' for DataFrames or '{text}' for Data.",
-            value="Name: {Name}, Age: {Age}, Country: {Country}",  # Example default
+            info="Use variables within curly brackets to extract column values for DataFrames or key values for Data. For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+            value="Text: {text}",  # Example default
             dynamic=True,
             show=True,
             required=True,
@@ -45,20 +45,12 @@ class ParserComponent(Component):
             info="Accepts either a DataFrame or a Data object.",
             required=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="sep",
             display_name="Separator",
             advanced=True,
             value="\n",
             info="String used to separate rows/items.",
-        ),
-        BoolInput(
-            name="clean_data",
-            display_name="Clean Data",
-            info="Enable to clean the data by removing empty rows and lines in each cell.",
-            value=False,
-            show=False,
-            required=False,
         ),
     ]
 
@@ -76,8 +68,22 @@ class ParserComponent(Component):
         if field_name == "stringify":
             build_config["template"]["show"] = not field_value
             build_config["template"]["required"] = not field_value
-            build_config["clean_data"]["show"] = field_value
-            build_config["clean_data"]["required"] = field_value
+            if field_value:
+                clean_data = BoolInput(
+                    name="clean_data",
+                    display_name="Clean Data",
+                    info=(
+                        "Enable to clean the data by removing empty rows and lines "
+                        "in each cell of the DataFrame/ Data object."
+                    ),
+                    value=True,
+                    advanced=True,
+                    required=False,
+                )
+                build_config["clean_data"] = clean_data.to_dict()
+            else:
+                build_config.pop("clean_data", None)
+
         return build_config
 
     def _clean_args(self):
