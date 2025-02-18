@@ -54,7 +54,7 @@ class LoopComponent(Component):
         """Evaluate whether to stop item or done output."""
         current_index = self.ctx.get(f"{self._id}_index", 0)
         data_length = len(self.ctx.get(f"{self._id}_data", []))
-        return current_index > data_length
+        return current_index > max(data_length - 1, 0)
 
     def item_output(self) -> Data:
         """Output the next item in the list or stop if done."""
