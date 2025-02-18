@@ -148,7 +148,7 @@ class DataFrame(pandas_DataFrame):
         documents = []
         for row in list_of_dicts:
             data_copy = row.copy()
-            text = data_copy.pop(self.text_key, self.default_value)
+            text = data_copy.pop(self._text_key, self._default_value)
             if isinstance(text, str):
                 documents.append(Document(page_content=text, metadata=data_copy))
             else:
