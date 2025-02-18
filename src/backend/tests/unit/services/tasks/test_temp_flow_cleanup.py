@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from datetime import timedelta, timezone
+from datetime import timezone
 from uuid import uuid4
 
 import pytest
@@ -10,74 +10,8 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.services.task.temp_flow_cleanup import (
     CleanupWorker,
-    cleanup_expired_public_flows,
     cleanup_orphaned_records,
 )
-
-
-@pytest.mark.asyncio
-async def test_cleanup_expired_public_flows_no_expired():
-    """Test cleanup when there are no expired flows."""
-    storage_service = get_storage_service()
-    flow_id = uuid4()
-
-    async with session_scope() as session:
-        # Create a non-expired public flow
-        flow = FlowTable(
-            id=flow_id,
-            name="Test Flow",
-            data="null",
-            updated_at=datetime.datetime.now(timezone.utc) + timedelta(days=1),
-            access_type="public",
-        )
-        session.add(flow)
-        await session.commit()
-
-    # Write a file for the flow
-    await storage_service.save_file(str(flow_id), "test.json", b"test data")
-
-    # Run cleanup
-    async with session_scope() as session:
-        await cleanup_expired_public_flows()
-
-    # Verify flow still exists
-    async with session_scope() as session:
-        flow = await session.get(FlowTable, flow_id)
-        assert flow is not None
-        assert "test.json" in await storage_service.list_files(str(flow_id))
-
-
-@pytest.mark.asyncio
-async def test_cleanup_expired_public_flows_with_expired():
-    """Test cleanup when there are expired flows."""
-    storage_service = get_storage_service()
-    flow_id = uuid4()
-
-    async with session_scope() as session:
-        # Create an expired public flow
-        flow = FlowTable(
-            id=flow_id,
-            name="Expired Flow",
-            data="null",
-            updated_at=datetime.datetime.now(timezone.utc) - timedelta(days=2),
-            access_type="public",
-        )
-        session.add(flow)
-        await session.commit()
-
-    # Write a file for the flow
-    await storage_service.save_file(str(flow_id), "test.json", b"test data")
-
-    # Run cleanup
-    async with session_scope() as session:
-        await cleanup_expired_public_flows()
-
-    # Verify flow still exists but files are deleted
-    async with session_scope() as session:
-        flow = await session.get(FlowTable, flow_id)
-        assert flow is not None
-        with pytest.raises(FileNotFoundError):
-            await storage_service.list_files(str(flow_id))
 
 
 @pytest.mark.asyncio
