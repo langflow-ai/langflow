@@ -1479,7 +1479,7 @@
     webpack "^5.95.0"
     webpackbar "^6.0.1"
 
-"@docusaurus/core@^2.0.0-beta || ^3.0.0-alpha", "@docusaurus/core@^3.7.0", "@docusaurus/core@3.7.0":
+"@docusaurus/core@^2.0.0-beta || ^3.0.0-alpha", "@docusaurus/core@3.7.0":
   version "3.7.0"
   resolved "https://registry.npmjs.org/@docusaurus/core/-/core-3.7.0.tgz"
   integrity sha512-b0fUmaL+JbzDIQaamzpAFpTviiaU4cX3Qz8cuo14+HGBCwa0evEK0UYCBFY3n4cLzL8Op1BueeroUD2LYAIHbQ==
@@ -1736,7 +1736,7 @@
     tslib "^2.6.0"
     webpack "^5.88.1"
 
-"@docusaurus/preset-classic@^3.6.0", "@docusaurus/preset-classic@^3.7.0":
+"@docusaurus/preset-classic@^3.6.0", "@docusaurus/preset-classic@3.7.0":
   version "3.7.0"
   resolved "https://registry.npmjs.org/@docusaurus/preset-classic/-/preset-classic-3.7.0.tgz"
   integrity sha512-nPHj8AxDLAaQXs+O6+BwILFuhiWbjfQWrdw2tifOClQoNfuXDjfjogee6zfx6NGHWqshR23LrcN115DmkHC91Q==
