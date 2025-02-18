@@ -51,14 +51,20 @@ export function getCurlWebhookCode({
   flowId,
   isAuth,
   endpointName,
-}: GetCodeType) {
+  format = "multiline",
+}: GetCodeType & { format?: "multiline" | "singleline" }) {
+  const baseUrl = `${window.location.protocol}//${window.location.host}/api/v1/webhook/${endpointName || flowId}`;
+  const authHeader = !isAuth ? `-H 'x-api-key: <your api key>'` : "";
+
+  if (format === "singleline") {
+    return `curl -X POST "${baseUrl}" -H 'Content-Type: application/json' ${authHeader} -d '{"any": "data"}'`.trim();
+  }
+
   return `curl -X POST \\
-  "${window.location.protocol}//${window.location.host}/api/v1/webhook/${
-    endpointName || flowId
-  }" \\
+  "${baseUrl}" \\
   -H 'Content-Type: application/json'\\${
     !isAuth ? `\n  -H 'x-api-key: <your api key>'\\` : ""
   }
   -d '{"any": "data"}'
-  `;
+  `.trim();
 }
