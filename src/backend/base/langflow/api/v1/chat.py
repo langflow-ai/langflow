@@ -69,7 +69,7 @@ async def try_running_celery_task(vertex, user_id):
     return vertex
 
 
-@router.post("/build/{flow_id}/vertices")
+@router.post("/build/{flow_id}/vertices", deprecated=True)
 async def retrieve_vertices_order(
     *,
     flow_id: uuid.UUID,
@@ -347,14 +347,11 @@ async def build_flow(
         client_consumed_queue: asyncio.Queue,
         event_manager: EventManager,
     ) -> None:
-        build_task = asyncio.create_task(_build_vertex(vertex_id, graph, event_manager))
         try:
-            await build_task
-            vertex_build_response: VertexBuildResponse = build_task.result()
+            vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
             logger.exception(exc)
-            build_task.cancel()
-            return
+            raise
 
         # send built event or error event
         try:
@@ -370,12 +367,7 @@ async def build_flow(
             for next_vertex_id in vertex_build_response.next_vertices_ids:
                 task = asyncio.create_task(build_vertices(next_vertex_id, graph, client_consumed_queue, event_manager))
                 tasks.append(task)
-            try:
                 await asyncio.gather(*tasks)
-            except asyncio.CancelledError:
-                for task in tasks:
-                    task.cancel()
-                return
 
     async def event_generator(event_manager: EventManager, client_consumed_queue: asyncio.Queue) -> None:
         try:
@@ -389,7 +381,6 @@ async def build_flow(
             raise
         event_manager.on_vertices_sorted(data={"ids": ids, "to_run": vertices_to_run})
         await client_consumed_queue.get()
-
         tasks = []
         for vertex_id in ids:
             task = asyncio.create_task(build_vertices(vertex_id, graph, client_consumed_queue, event_manager))
@@ -398,9 +389,8 @@ async def build_flow(
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             background_tasks.add_task(graph.end_all_traces)
-            for task in tasks:
-                task.cancel()
-            return
+            raise
+
         except Exception as e:
             logger.error(f"Error building vertices: {e}")
             custom_component = graph.get_vertex(vertex_id).custom_component
@@ -471,7 +461,7 @@ class DisconnectHandlerStreamingResponse(StreamingResponse):
                 break
 
 
-@router.post("/build/{flow_id}/vertices/{vertex_id}")
+@router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
 async def build_vertex(
     *,
     flow_id: uuid.UUID,
@@ -713,7 +703,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
-@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse)
+@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse, deprecated=True)
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
