@@ -32,7 +32,11 @@ class ParserComponent(Component):
         MultilineInput(
             name="template",
             display_name="Template",
-            info="Use variables within curly brackets to extract column values for DataFrames or key values for Data. For example: `Name: {Name}, Age: {Age}, Country: {Country}`",
+            info=(
+                "Use variables within curly brackets to extract column values for DataFrames "
+                "or key values for Data."
+                "For example: `Name: {Name}, Age: {Age}, Country: {Country}`"
+            ),
             value="Text: {text}",  # Example default
             dynamic=True,
             show=True,
