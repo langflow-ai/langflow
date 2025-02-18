@@ -82,6 +82,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                             "new_collection_name",
                             "embedding_generation_provider",
                             "embedding_generation_model",
+                            "dimension",
                         ],
                         "template": {
                             "new_collection_name": StrInput(
