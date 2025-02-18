@@ -7,12 +7,12 @@ This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/)
-- [Docker Compose](https://docs.docker.com/compose/)
+* [Docker](https://docs.docker.com/)
+* [Docker Compose](https://docs.docker.com/compose/)
 
 ## Clone the repo and build the Langflow Docker container
 
-1. Clone the LangFlow repository:
+1. Clone the Langflow repository:
 
 	`git clone https://github.com/langflow-ai/langflow.git`
 
@@ -27,10 +27,22 @@ This guide demonstrates deploying Langflow with Docker and Docker Compose.
 
 Langflow is now accessible at `http://localhost:7860/`.
 
-
-## Configure Docker Compose
+## Configure Docker services
 
 The Docker Compose configuration spins up two services: `langflow` and `postgres`.
+
+To configure values for these services at container startup, include them in your `.env` file.
+
+An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+
+To pass the `.env` values at container startup, include the flag in your `docker run` command:
+
+```
+docker run -it --rm \
+    -p 7860:7860 \
+    --env-file .env \
+    langflowai/langflow:latest
+```
 
 ### Langflow service
 
@@ -38,36 +50,36 @@ The `langflow` service uses the `langflowai/langflow:latest` Docker image and ex
 
 Environment variables:
 
-- `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
-- `LANGFLOW_CONFIG_DIR`: The directory where LangFlow stores logs, file storage, monitor data, and secret keys.
+* `LANGFLOW_DATABASE_URL`: The connection string for the PostgreSQL database.
+* `LANGFLOW_CONFIG_DIR`: The directory where Langflow stores logs, file storage, monitor data, and secret keys.
 
 Volumes:
 
-- `langflow-data`: This volume is mapped to `/app/langflow` in the container.
+* `langflow-data`: This volume is mapped to `/app/langflow` in the container.
 
 ### PostgreSQL service
 
-
 The `postgres` service uses the `postgres:16` Docker image and exposes port 5432.
-
 
 Environment variables:
 
-- `POSTGRES_USER`: The username for the PostgreSQL database.
-- `POSTGRES_PASSWORD`: The password for the PostgreSQL database.
-- `POSTGRES_DB`: The name of the PostgreSQL database.
+* `POSTGRES_USER`: The username for the PostgreSQL database.
+* `POSTGRES_PASSWORD`: The password for the PostgreSQL database.
+* `POSTGRES_DB`: The name of the PostgreSQL database.
 
 Volumes:
 
-- `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
+* `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
 
+### Deploy a specific Langflow version
 
-### Deploy a specific Langflow version with Docker Compose
-
-
-If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
+If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
 
 ## Package your flow as a Docker image
+
+You can include your Langflow flow with the application image.
+When you build the image, your saved flow `.JSON` flow is included.
+This enables you to serve a flow from a container, push the image to Docker Hub, and deploy on Kubernetes.
 
 An example flow is available in the [Langflow Helm Charts](https://github.com/langflow-ai/langflow-helm-charts/tree/main/examples/flows) repository, or you can provide your own `JSON` file.
 
@@ -76,7 +88,7 @@ An example flow is available in the [Langflow Helm Charts](https://github.com/la
 mkdir langflow-custom && cd langflow-custom
 ```
 
-2. Download the example flow or provide your own `.JSON` file.
+2. Download the example flow or include your flow's `.JSON` file in the `langflow-custom` directory.
 
 ```shell
 wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json
@@ -88,8 +100,7 @@ FROM langflowai/langflow:latest
 RUN mkdir /app/flows
 COPY ./*json /app/flows/.
 ```
-The `COPY ./*json` command copies all JSON files in your current directory to the flows folder.
-
+The `COPY ./*json` command copies all JSON files in your current directory to the `/flows` folder.
 
 4. Build and run the image locally.
 ```shell
@@ -104,5 +115,5 @@ docker build -t myuser/langflow-hello-world:1.0.0 .
 docker push myuser/langflow-hello-world:1.0.0
 ```
 
-To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#install-the-langflow-runtime-helm-chart).
+To deploy the image with Helm, see [Langflow runtime deployment](/deployment-kubernetes#langflow-runtime-deployment).
 

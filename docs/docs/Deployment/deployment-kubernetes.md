@@ -176,10 +176,6 @@ langflow:
       #   memory: 512Mi
 ```
 
-### Deploy on AWS EKS, Google GKE, or Azure AKS and other examples
-
-For more information, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts).
-
 ## Langflow Runtime deployment
 
 The runtime chart is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation, and security to ensure that applications run reliably and efficiently.
@@ -203,14 +199,14 @@ helm repo update
 
 2. Install the Langflow app with the default options in the `langflow` namespace.
 
-If you have a created a [custom image with packaged flows](/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file with the `-set` flag.
+If you have a created a [custom image with packaged flows](/deployment-docker#package-your-flow-as-a-docker-image), you can deploy Langflow by overriding the default [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file with the `--set` flag.
 
 * Use a custom image with bundled flows:
 ```shell
 helm install my-langflow-app langflow/langflow-runtime -n langflow --create-namespace --set image.repository=myuser/langflow-hello-world --set image.tag=1.0.0
 ```
 
-* Alternatively, install the chart and download the flows from a URL with the `-set` flag:
+* Alternatively, install the chart and download the flows from a URL with the `--set` flag:
 ```shell
 helm install my-langflow-app-with-flow langflow/langflow-runtime \
   -n langflow \
@@ -347,5 +343,9 @@ resources:
     memory: "2Gi"
     cpu: "1000m"
 ```
+
+## Deploy on AWS EKS, Google GKE, or Azure AKS and other examples
+
+For more information, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts).
 
 
