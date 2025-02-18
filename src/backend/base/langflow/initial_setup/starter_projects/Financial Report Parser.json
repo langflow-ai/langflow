@@ -1598,5 +1598,10 @@
   "id": "9626912a-abb9-4630-b926-83a094a75f1f",
   "is_component": false,
   "last_tested_version": "1.1.5",
-  "name": "Financial Report Parser"
+  "name": "Financial Report Parser",
+  "icon": "receipt",
+  "tags": [
+    "chatbots",
+    "content-generation"
+  ]
 }
