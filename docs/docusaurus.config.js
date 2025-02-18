@@ -20,9 +20,6 @@ const config = {
   projectName: "langflow",
   trailingSlash: false,
   staticDirectories: ["static"],
-  customFields: {
-    mendableAnonKey: "b7f52734-297c-41dc-8737-edbd13196394", // Mendable Anon Client-side key, safe to expose to the public
-  },
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
