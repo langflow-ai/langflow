@@ -35,7 +35,7 @@ def ingestion_graph():
     vector_store.set_on_output(name="dataframe", value=DataFrame(data=[Data(text="This is a test file.")]), cache=True)
     vector_store.set(
         embedding_model=openai_embeddings.build_embeddings,
-        ingest_data=text_splitter.split_text,
+        ingest_data=text_splitter.as_data,
         api_endpoint="https://astra.example.com",
         token="token",  # noqa: S106
     )
