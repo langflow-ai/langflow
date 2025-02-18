@@ -108,6 +108,7 @@ class Component(CustomComponent):
         self._ctx: dict = {}
         self._code: str | None = None
         self._logs: list[Log] = []
+        self._append_tool_output()
 
         # Initialize component-specific collections
         self._inputs: dict[str, InputTypes] = {}
@@ -513,28 +514,8 @@ class Component(CustomComponent):
             output.required_inputs = sorted(visitor.required_inputs)
 
     def get_output_by_method(self, method: Callable):
-        """Get the output associated with a given method.
-
-        This method finds and returns the Output object that corresponds to the provided method.
-        For the special case of 'to_toolkit' method, it returns a tool output. Otherwise,
-        it searches through the component's output map to find an output with a matching method name.
-
-        Args:
-            method (Callable): The method to find the corresponding output for.
-
-        Returns:
-            Output: The output object associated with the method.
-
-        Raises:
-            ValueError: If no output is found for the given method.
-
-        Examples:
-            >>> output = component.get_output_by_method(component.some_method)
-            >>> print(output.name)
-            'some_output'
-        """
-        if method.__name__ == "to_toolkit":
-            return self._build_tool_output()
+        # method is a callable and output.method is a string
+        # we need to find the output that has the same method
         output = next((output for output in self._outputs_map.values() if output.method == method.__name__), None)
         if output is None:
             method_name = method.__name__ if hasattr(method, "__name__") else str(method)
