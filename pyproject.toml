@@ -112,6 +112,7 @@ dependencies = [
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
+    "twelvelabs>=0.4.4",
 ]
 
 [tool.uv.sources]
