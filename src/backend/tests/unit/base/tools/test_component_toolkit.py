@@ -44,15 +44,13 @@ async def test_component_tool_with_api_key():
 
     tool_calling_agent.set(
         llm=openai_llm.build_model,
-        tools=[chat_output],
+        tools=[chat_output.to_toolkit],
         input_value="Which tools are available? Please tell its name.",
     )
 
     g = Graph(start=tool_calling_agent, end=tool_calling_agent)
     g.session_id = "test"
     assert g is not None
-
     results = [result async for result in g.async_start()]
-    vertex_results = [result.vertex.id for result in results if hasattr(result, "vertex")]
-    assert len(results) == 4, vertex_results
+    assert len(results) == 4
     assert "message_response" in tool_calling_agent._outputs_map["response"].value.get_text()
