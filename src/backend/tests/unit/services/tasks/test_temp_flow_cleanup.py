@@ -14,7 +14,7 @@ from langflow.services.task.temp_flow_cleanup import (
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.usefixtures("client")
 async def test_cleanup_orphaned_records_no_orphans():
     """Test cleanup when there are no orphaned records."""
     storage_service = get_storage_service()
