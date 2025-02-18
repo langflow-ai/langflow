@@ -35,7 +35,7 @@ class RegexExtractorComponent(Component):
 
     def extract_matches(self) -> list[Data]:
         if not self.pattern or not self.input_text:
-            result = [Data(data={"matches": []})]
+            result = []  # Empty list for no input
             self.status = result
             return result
 
@@ -46,15 +46,11 @@ class RegexExtractorComponent(Component):
             # Find all matches in the input text
             matches = pattern.findall(self.input_text)
 
-            # Process matches and prepare result
-            if not matches:
-                result = [Data(data={"matches": []})]
-            else:
-                filtered_matches = [match for match in matches if match]  # Remove empty matches
-                if not filtered_matches:
-                    result = [Data(data={"matches": []})]
-                else:
-                    result = [Data(data={"match": match}) for match in filtered_matches]
+            # Filter out empty matches
+            filtered_matches = [match for match in matches if match]  # Remove empty matches
+
+            # Return empty list for no matches, or list of matches if found
+            result = [] if not filtered_matches else [Data(data={"match": match}) for match in filtered_matches]
 
         except re.error as e:
             error_message = f"Invalid regex pattern: {e!s}"
@@ -80,12 +76,7 @@ class RegexExtractorComponent(Component):
             self.status = message
             return message
 
-        if "matches" in matches[0].data and not matches[0].data["matches"]:
-            message = Message(text="No matches found")
-            self.status = message
-            return message
-
-        result = "\n".join(match.data.get("match", "") for match in matches if "match" in match.data)
+        result = "\n".join(match.data["match"] for match in matches)
         message = Message(text=result)
         self.status = message
         return message
