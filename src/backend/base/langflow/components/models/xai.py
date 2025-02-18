@@ -45,6 +45,7 @@ class XAIModelComponent(LCModelComponent):
             options=XAI_DEFAULT_MODELS,
             value=XAI_DEFAULT_MODELS[0],
             refresh_button=True,
+            combobox=True,
             info="The xAI model to use",
         ),
         MessageTextInput(
