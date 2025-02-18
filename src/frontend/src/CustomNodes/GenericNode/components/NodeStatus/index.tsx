@@ -6,7 +6,8 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
-import { BuildStatus } from "@/constants/enums";
+import { BuildStatus, EventDeliveryType } from "@/constants/enums";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { track } from "@/customization/utils/analytics";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
@@ -69,11 +70,16 @@ export default function NodeStatus({
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
   const version = useDarkStore((state) => state.version);
+  const config = useGetConfig();
+  const shouldStreamEvents = () => {
+    // Get from useGetConfig store
+    return config.data?.event_delivery === EventDeliveryType.STREAMING;
+  };
 
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
     setValidationStatus(null);
-    buildFlow({ stopNodeId: nodeId });
+    buildFlow({ stopNodeId: nodeId, stream: shouldStreamEvents() });
   }
 
   const play = useShortcutsStore((state) => state.play);
@@ -164,7 +170,7 @@ export default function NodeStatus({
       return;
     }
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
-    buildFlow({ stopNodeId: nodeId });
+    buildFlow({ stopNodeId: nodeId, stream: shouldStreamEvents() });
     track("Flow Build - Clicked", { stopNodeId: nodeId });
   };
 

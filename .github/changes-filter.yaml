@@ -25,6 +25,7 @@ starter-projects:
   - "src/backend/base/langflow/components/**"
   - "src/backend/base/langflow/services/**"
   - "src/backend/base/langflow/custom/**"
+  - "src/backend/base/langflow/api/v1/chat.py"
   - "src/frontend/src/pages/MainPage/**"
   - "src/frontend/src/utils/reactflowUtils.ts"
   - "src/frontend/tests/extended/features/**"

@@ -44,7 +44,7 @@ from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_session_service, get_settings_service, get_task_service, get_telemetry_service
+from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -599,29 +599,16 @@ async def process() -> None:
     )
 
 
-@router.get("/task/{task_id}")
-async def get_task_status(task_id: str) -> TaskStatusResponse:
-    task_service = get_task_service()
-    task = task_service.get_task(task_id)
-    result = None
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task.ready():
-        result = task.result
-        # If result isinstance of Exception, can we get the traceback?
-        if isinstance(result, Exception):
-            logger.exception(task.traceback)
+@router.get("/task/{_task_id}", deprecated=True)
+async def get_task_status(_task_id: str) -> TaskStatusResponse:
+    """Get the status of a task by ID (Deprecated).
 
-        if isinstance(result, dict) and "result" in result:
-            result = result["result"]
-        elif hasattr(result, "result"):
-            result = result.result
-
-    if task.status == "FAILURE":
-        result = str(task.result)
-        logger.error(f"Task {task_id} failed: {task.traceback}")
-
-    return TaskStatusResponse(status=task.status, result=result)
+    This endpoint is deprecated and will be removed in a future version.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="The /task endpoint is deprecated and will be removed in a future version. Please use /run instead.",
+    )
 
 
 @router.post(

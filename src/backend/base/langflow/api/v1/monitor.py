@@ -35,6 +35,7 @@ async def get_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSessio
 async def delete_vertex_builds(flow_id: Annotated[UUID, Query()], session: DbSession) -> None:
     try:
         await delete_vertex_builds_by_flow_id(session, flow_id)
+        await session.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
