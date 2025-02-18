@@ -717,7 +717,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             generation_provider = field_value["embedding_generation_provider"]
             provider = generation_provider if generation_provider != "Bring your own" else None
             generation_model = field_value["embedding_generation_model"]
-            model = generation_model if generation_model else None
+            model = generation_model if generation_model and generation_model != "Bring your own" else None
+
+            # Set the embedding choice
+            build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
+            build_config["embedding_model"]["advanced"] = bool(provider)
 
             # Add the new collection to the list of options
             icon = "NVIDIA" if provider == "Nvidia" else "vectorstores"
