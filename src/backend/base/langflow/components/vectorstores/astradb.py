@@ -82,6 +82,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                             "new_collection_name",
                             "embedding_generation_provider",
                             "embedding_generation_model",
+                            "dimension",
                         ],
                         "template": {
                             "new_collection_name": StrInput(
@@ -330,7 +331,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         embedding_generation_model: str | None = None,
     ):
         # Create the data API client
-        client = DataAPIClient(token=token)
+        client = DataAPIClient(token=token, environment=environment)
 
         # Get the database object
         database = client.get_async_database(api_endpoint=api_endpoint, token=token)
@@ -554,6 +555,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
+        # Append a special case for Bring your own
+        vectorize_providers["Bring your own"] = [None, ["Bring your own"]]
+
         # If the collection is set, allow user to see embedding options
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "embedding_generation_provider"
@@ -714,7 +718,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             generation_provider = field_value["embedding_generation_provider"]
             provider = generation_provider if generation_provider != "Bring your own" else None
             generation_model = field_value["embedding_generation_model"]
-            model = generation_model if generation_model else None
+            model = generation_model if generation_model and generation_model != "Bring your own" else None
+
+            # Set the embedding choice
+            build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
+            build_config["embedding_model"]["advanced"] = bool(provider)
 
             # Add the new collection to the list of options
             icon = "NVIDIA" if provider == "Nvidia" else "vectorstores"
@@ -787,6 +795,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
                 # Ensure that autodetect collection is set to False, since its a new collection
                 build_config["autodetect_collection"]["value"] = False
+
+            # If nothing is selected, can't detect provider - return
+            if not field_value:
+                return build_config
 
             # Find the position of the selected collection to align with metadata
             index_of_name = build_config["collection_name"]["options"].index(field_value)
