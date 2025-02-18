@@ -22,8 +22,10 @@ class NVIDIAIngestComponent(Component):
         file_types = list(EXTENSION_TO_DOCUMENT_TYPE.keys())
         supported_file_types_info = f"Supported file types: {', '.join(file_types)}"
     except ImportError:
-        msg = "NVIDIA Ingest dependencies missing. " \
-              "Please install them using your package manager. (e.g. uv sync --extra nv-ingest)"
+        msg = (
+            "NVIDIA Ingest dependencies missing. "
+            "Please install them using your package manager. (e.g. uv sync --extra nv-ingest)"
+        )
         logger.warning(msg)
         file_types = [msg]
         supported_file_types_info = msg
@@ -122,8 +124,10 @@ class NVIDIAIngestComponent(Component):
         try:
             from nv_ingest_client.client import Ingestor
         except ImportError as e:
-            msg = "NVIDIA Ingest dependencies missing. " \
-                  "Please install them using your package manager. (e.g. uv sync --extra nv-ingest)"
+            msg = (
+                "NVIDIA Ingest dependencies missing. "
+                "Please install them using your package manager. (e.g. uv sync --extra nv-ingest)"
+            )
             raise ImportError(msg) from e
 
         if not self.path:
