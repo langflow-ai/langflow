@@ -330,7 +330,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         embedding_generation_model: str | None = None,
     ):
         # Create the data API client
-        client = DataAPIClient(token=token)
+        client = DataAPIClient(token=token, environment=environment)
 
         # Get the database object
         database = client.get_async_database(api_endpoint=api_endpoint, token=token)
@@ -787,6 +787,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
                 # Ensure that autodetect collection is set to False, since its a new collection
                 build_config["autodetect_collection"]["value"] = False
+
+            # If nothing is selected, can't detect provider - return
+            if not field_value:
+                return build_config
 
             # Find the position of the selected collection to align with metadata
             index_of_name = build_config["collection_name"]["options"].index(field_value)
