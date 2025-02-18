@@ -9,8 +9,6 @@ The authentication and authorization components in Langflow are designed to secu
 
 They handle critical security tasks like verifying tokens, confirming permissions, and managing access control, ensuring smooth and secure operations within your workflows.
 
----
-
 ## **JWT Validator**
 
 This component verifies JSON Web Tokens (JWT) using JSON Web Key Sets (JWKs) and extracts the user's identifier. It performs a thorough validation process, including signature checks, expiration date verification, and key validation via the specified JWKs endpoint.
@@ -31,8 +29,6 @@ To optimize performance, the component automatically fetches and caches the JWKs
 | Name       | Display Name | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
 | user_id    | User ID      | The extracted user ID from the validated token (`sub` claim).               |
-
----
 
 ## **Permissions Check**
 
@@ -59,8 +55,6 @@ It supports context-aware authorization by optionally including tenant informati
 |------------|--------------|-----------------------------------------------------------------------------|
 | allowed    | Allowed      | A boolean value indicating whether the action is permitted (`true` or `false`). |
 
----
-
 ## **Data Protection**
 
 This component retrieves and filters the list of resources a user is allowed to access. It can either fetch all permissions for a given resource type or filter a specific set of resource IDs based on the user's permissions.
@@ -85,8 +79,6 @@ The component supports bulk permission checks and uses caching to enhance perfor
 | Name          | Display Name | Description                                                                 |
 |---------------|--------------|-----------------------------------------------------------------------------|
 | allowed_ids   | Allowed IDs  | A list of resource IDs that the user is authorized to access for the specified action. |
-
----
 
 ## How These Components Work Together
 
