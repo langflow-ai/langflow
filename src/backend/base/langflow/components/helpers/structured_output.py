@@ -14,13 +14,13 @@ if TYPE_CHECKING:
     from langflow.field_typing.constants import LanguageModel
 
 
-class StructuredOutputComponentv2(Component):
+class StructuredOutputComponent(Component):
     display_name = "Structured Output"
     description = (
         "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information "
         "or creating consistent outputs."
     )
-    name = "StructuredOutputv2"
+    name = "StructuredOutput"
     icon = "braces"
 
     inputs = [
@@ -108,11 +108,11 @@ class StructuredOutputComponentv2(Component):
     ]
 
     outputs = [
-        Output(name="structured_output_data", display_name="Data", method="as_data"),
+        Output(name="structured_output", display_name="Structured Output", method="build_structured_output"),
         Output(name="structured_output_dataframe", display_name="DataFrame", method="as_dataframe"),
     ]
 
-    def build_structured_output(self) -> Data:
+    def build_structured_output_base(self) -> Data:
         schema_name = self.schema_name or "OutputModel"
 
         if not hasattr(self.llm, "with_structured_output"):
@@ -152,13 +152,13 @@ class StructuredOutputComponentv2(Component):
             return result["objects"]
         return result
 
-    def as_data(self) -> Data:
-        output = self.build_structured_output()
+    def build_structured_output(self) -> Data:
+        output = self.build_structured_output_base()
 
         return Data(results=output)
 
     def as_dataframe(self) -> DataFrame:
-        output = self.build_structured_output()
+        output = self.build_structured_output_base()
         if isinstance(output, list):
             return DataFrame(data=output)
         return DataFrame(data=[output])

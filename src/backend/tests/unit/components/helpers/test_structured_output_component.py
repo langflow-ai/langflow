@@ -2,11 +2,11 @@ import re
 from unittest.mock import patch
 
 import pytest
-from langflow.components.helpers.structured_output import StructuredOutputComponentv2 as StructuredOutputComponent
+from langflow.components.helpers.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-from pydantic import BaseModel
 
+from pydantic import BaseModel
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
@@ -51,7 +51,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         )
 
         with patch("langflow.components.helpers.structured_output.get_chat_result", mock_get_chat_result):
-            result = component.build_structured_output()
+            result = component.build_structured_output_base()
             assert isinstance(result, list)
             assert result == [{"field": "value"}]
 
@@ -201,7 +201,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        result = component.build_structured_output()
+        result = component.build_structured_output_base()
         assert isinstance(result, list)
         assert result == [{"parent": {"child": "value"}}]
 
@@ -226,7 +226,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             system_prompt="Test system prompt",
         )
 
-        result = component.build_structured_output()
+        result = component.build_structured_output_base()
         assert isinstance(result, list)
         assert result == [{"field": "value"}]
         mock_get_chat_result.assert_called_once()
