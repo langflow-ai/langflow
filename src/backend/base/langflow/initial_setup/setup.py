@@ -62,8 +62,8 @@ def update_projects_components_with_latest_component_versions(project_data, all_
 
         # Skip nodes with outputs of the specified format
         # NOTE: to account for the fact that the Simple Agent has dynamic outputs
-        if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
-            continue
+        # if any(output.get("types") == ["Tool"] for output in node_data.get("outputs", [])):
+        #     continue
 
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
