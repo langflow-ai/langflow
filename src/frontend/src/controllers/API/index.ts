@@ -3,13 +3,11 @@ import { AxiosRequestConfig, AxiosResponse } from "axios";
 import { BASE_URL_API } from "../../constants/constants";
 import { api } from "../../controllers/API/api";
 import {
-  Component,
   VertexBuildTypeAPI,
   VerticesOrderTypeAPI,
 } from "../../types/api/index";
 import { FlowStyleType, FlowType } from "../../types/flow";
 import { StoreComponentResponse } from "../../types/store";
-import { FlowPoolType } from "../../types/zustand/flow";
 
 const GITHUB_API_URL = "https://api.github.com";
 

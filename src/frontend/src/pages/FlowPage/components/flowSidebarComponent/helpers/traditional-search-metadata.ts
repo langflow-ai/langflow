@@ -1,5 +1,4 @@
 import { APIDataType } from "@/types/api";
-import { normalizeString } from "./normalize-string";
 import { searchInMetadata } from "./search-on-metadata";
 
 export const traditionalSearchMetadata = (

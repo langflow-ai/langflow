@@ -8,7 +8,6 @@ import { getInputsAndOutputs } from "../../../utils/storeUtils";
 import { cn } from "../../../utils/utils";
 import IconComponent from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
-import { Button } from "../../ui/button";
 import {
   Card,
   CardDescription,

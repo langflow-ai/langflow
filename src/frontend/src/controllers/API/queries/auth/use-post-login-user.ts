@@ -1,4 +1,4 @@
-import { LoginType, changeUser, useMutationFunctionType } from "@/types/api";
+import { LoginType, useMutationFunctionType } from "@/types/api";
 import { UseMutationResult } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
