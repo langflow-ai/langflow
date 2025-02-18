@@ -7,23 +7,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-vSKY8",
+            "id": "ChatInput-JDz15",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-EPjLx",
-            "inputTypes": ["Message"],
+            "id": "Agent-jnpdC",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-vSKY8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vSKY8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-EPjLx{œfieldNameœ:œinput_valueœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-JDz15{œdataTypeœ:œChatInputœ,œidœ:œChatInput-JDz15œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-jnpdC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-jnpdCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-vSKY8",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vSKY8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-EPjLx",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-JDz15",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-JDz15œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-jnpdC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-jnpdCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -31,78 +35,65 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-EPjLx",
+            "id": "Agent-jnpdC",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-x6tZi",
-            "inputTypes": ["Message"],
+            "id": "ChatOutput-lgshI",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-EPjLx{œdataTypeœ:œAgentœ,œidœ:œAgent-EPjLxœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-x6tZi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-x6tZiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-jnpdC{œdataTypeœ:œAgentœ,œidœ:œAgent-jnpdCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-lgshI{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lgshIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-EPjLx",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-EPjLxœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-x6tZi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-x6tZiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-jnpdC",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-jnpdCœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-lgshI",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-lgshIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-zxpIu",
-            "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "dataType": "ComposioAPI",
+            "id": "ComposioAPI-ajGtz",
+            "name": "tools",
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-EPjLx",
-            "inputTypes": ["Tool"],
+            "id": "Agent-jnpdC",
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-zxpIu{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-zxpIuœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-EPjLx{œfieldNameœ:œtoolsœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-zxpIu",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-zxpIuœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-EPjLx",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-yM3pY",
-            "name": "component_as_tool",
-            "output_types": ["Tool"]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-EPjLx",
-            "inputTypes": ["Tool"],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-URL-yM3pY{œdataTypeœ:œURLœ,œidœ:œURL-yM3pYœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-EPjLx{œfieldNameœ:œtoolsœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "URL-yM3pY",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-yM3pYœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-EPjLx",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__ComposioAPI-ajGtz{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-ajGtzœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-jnpdC{œfieldNameœ:œtoolsœ,œidœ:œAgent-jnpdCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "ComposioAPI-ajGtz",
+        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-ajGtzœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-jnpdC",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-jnpdCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "description": "Define the agent's instructions, then enter a task to complete using tools.",
-          "display_name": "Agent",
-          "id": "Agent-EPjLx",
+          "id": "Agent-jnpdC",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
+            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -114,13 +105,13 @@
               "max_tokens",
               "model_kwargs",
               "json_mode",
-              "output_schema",
               "model_name",
               "openai_api_base",
               "api_key",
               "temperature",
               "seed",
-              "output_parser",
+              "max_retries",
+              "timeout",
               "system_prompt",
               "tools",
               "input_value",
@@ -139,9 +130,11 @@
             ],
             "frozen": false,
             "icon": "bot",
+            "key": "Agent",
             "legacy": false,
-            "lf_version": "1.1.1",
+            "lf_version": "1.1.5",
             "metadata": {},
+            "minimized": false,
             "output_types": [],
             "outputs": [
               {
@@ -152,11 +145,14 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
+            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -166,11 +162,13 @@
                 "dynamic": false,
                 "info": "If true, will add a tool to the agent that returns the current date.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "add_current_date_tool",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -181,8 +179,11 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "agent_description",
@@ -200,6 +201,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Model Provider",
                 "dynamic": false,
                 "info": "The provider of the language model that the agent will use to generate responses.",
@@ -216,6 +218,7 @@
                   "SambaNova",
                   "Custom"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -232,8 +235,10 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
-                "load_from_db": true,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -241,7 +246,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -268,11 +273,13 @@
                 "dynamic": false,
                 "info": "Should the Agent fix errors when reading user input for better processing?",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "handle_parsing_errors",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -283,8 +290,11 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -304,11 +314,13 @@
                 "dynamic": false,
                 "info": "If True, it will output JSON regardless of passing a schema.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "json_mode",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
@@ -320,11 +332,13 @@
                 "dynamic": false,
                 "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_iterations",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 15
@@ -354,6 +368,7 @@
                 "dynamic": false,
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
@@ -365,6 +380,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": ""
@@ -375,8 +391,11 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "memory",
                 "placeholder": "",
                 "required": false,
@@ -393,11 +412,13 @@
                 "dynamic": false,
                 "info": "Additional keyword arguments to pass to the model.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "model_kwargs",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "type": "dict",
                 "value": {}
@@ -406,6 +427,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": true,
+                "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
@@ -419,14 +441,16 @@
                   "gpt-3.5-turbo",
                   "gpt-3.5-turbo-0125"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4o"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -435,11 +459,13 @@
                 "dynamic": false,
                 "info": "Number of messages to retrieve.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 100
@@ -451,12 +477,14 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
@@ -465,16 +493,21 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Order",
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
+                "tool_mode": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
@@ -486,11 +519,13 @@
                 "dynamic": false,
                 "info": "The seed controls the reproducibility of the job.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "seed",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
@@ -499,11 +534,17 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -519,8 +560,11 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -539,8 +583,11 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -559,8 +606,11 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_prompt",
@@ -572,22 +622,34 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks.\nUse markdown to format your answer, properly embedding images and urls."
+                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
               },
               "temperature": {
-                "_input_type": "FloatInput",
+                "_input_type": "SliderInput",
                 "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
-                "list": false,
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
                 "name": "temperature",
                 "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
                 "required": false,
                 "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
                 "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
+                "tool_mode": false,
+                "type": "slider",
                 "value": 0.1
               },
               "template": {
@@ -596,8 +658,11 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "template",
@@ -635,8 +700,11 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "tools",
                 "placeholder": "",
                 "required": false,
@@ -653,11 +721,13 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "verbose",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -665,27 +735,31 @@
             },
             "tool_mode": false
           },
+          "showNode": true,
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-EPjLx",
+        "id": "Agent-jnpdC",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
-          "x": 1652.2479633316434,
-          "y": 297.9085084144251
+          "x": 246.2965482704007,
+          "y": 49.54798016575572
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-vSKY8",
+          "id": "ChatInput-JDz15",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
+            "category": "inputs",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -705,9 +779,11 @@
             ],
             "frozen": false,
             "icon": "MessagesSquare",
+            "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.1.1",
+            "lf_version": "1.1.5",
             "metadata": {},
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
@@ -718,11 +794,14 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
+            "score": 0.0020353564437605998,
             "template": {
               "_type": "Component",
               "background_color": {
@@ -731,8 +810,11 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -751,8 +833,11 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -816,6 +901,7 @@
                 "file_path": "",
                 "info": "Files to be sent with the message.",
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "files",
                 "placeholder": "",
                 "required": false,
@@ -833,6 +919,7 @@
                 "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "input_value",
@@ -850,11 +937,16 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -870,8 +962,11 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -890,8 +985,11 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -911,11 +1009,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -926,8 +1026,11 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -943,29 +1046,31 @@
             },
             "tool_mode": false
           },
+          "showNode": false,
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-vSKY8",
+        "id": "ChatInput-JDz15",
         "measured": {
-          "height": 229,
-          "width": 320
+          "height": 66,
+          "width": 192
         },
         "position": {
-          "x": 1241.9566260691947,
-          "y": 930.7462715570136
+          "x": -74.59464648081578,
+          "y": 605.4102099043162
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
-          "display_name": "Chat Output",
-          "id": "ChatOutput-x6tZi",
+          "id": "ChatOutput-lgshI",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
+            "category": "outputs",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -985,9 +1090,11 @@
             ],
             "frozen": false,
             "icon": "MessagesSquare",
+            "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.1.1",
+            "lf_version": "1.1.5",
             "metadata": {},
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
@@ -998,11 +1105,14 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
+            "score": 0.003169567463043492,
             "template": {
               "_type": "Component",
               "background_color": {
@@ -1011,8 +1121,11 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -1031,8 +1144,11 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -1069,8 +1185,11 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -1089,14 +1208,18 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
@@ -1106,11 +1229,16 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1126,8 +1254,11 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -1146,8 +1277,11 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -1167,11 +1301,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -1182,8 +1318,11 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -1199,292 +1338,78 @@
             },
             "tool_mode": false
           },
+          "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-x6tZi",
+        "dragging": false,
+        "id": "ChatOutput-lgshI",
         "measured": {
-          "height": 229,
-          "width": 320
+          "height": 66,
+          "width": 192
         },
         "position": {
-          "x": 2029.726227044409,
-          "y": 521.9624030396819
+          "x": 641.2349415828351,
+          "y": 617.3336058447763
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "description": "Load and retrive data from specified URLs.",
-          "display_name": "URL",
-          "id": "URL-yM3pY",
+          "id": "note-t5lD7",
           "node": {
-            "base_classes": ["Data", "DataFrame", "Message"],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Load and retrive data from specified URLs.",
-            "display_name": "URL",
+            "description": "# Gmail Agent\nUsing this flow you can send emails, create drafts, fetch emails and more\n\n## Instructions\n\n1. Get Composio API Key\n   - Visit https://app.composio.dev\n   - Enter the key in the \"Composio API Key\" field\n\n2. Authenticate Gmail Account\n   - Select Gmail App from the dropdown menu in the App Names field\n   - Click the refresh button next to the App Name\n   - Follow the Gmail authentication link\n   - After authenticating, click refresh again\n   - Verify that authentication status shows as successful\n\n3. Select Actions\n   - Default actions (pre-selected):\n     - GMAIL_SEND_EMAIL: Send emails directly\n     - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails\n   - Select additional actions based on your needs\n\n4. Configure OpenAI\n   - Enter your OpenAI API key in the Agent OpenAI API key field\n\n5. Run Agent\n   Example prompts:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
+            "display_name": "",
             "documentation": "",
-            "edited": false,
-            "field_order": ["urls", "format"],
-            "frozen": false,
-            "icon": "layout-template",
-            "legacy": false,
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "types": ["Tool"],
-                "value": "__UNDEFINED__"
-              }
+            "template": {}
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 842,
+        "id": "note-t5lD7",
+        "measured": {
+          "height": 842,
+          "width": 395
+        },
+        "position": {
+          "x": -699.0352178208514,
+          "y": -87.30330362954265
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 394
+      },
+      {
+        "data": {
+          "id": "ComposioAPI-ajGtz",
+          "node": {
+            "base_classes": [
+              "Tool"
             ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Load and retrive data from specified URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Message\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.fetch_content())\n"
-              },
-              "format": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "display_name": "Output Format",
-                "dynamic": false,
-                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
-                "name": "format",
-                "options": ["Text", "Raw HTML"],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Text"
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "fetch_content() - Load and retrive data from specified URLs.",
-                    "name": "URL-fetch_content",
-                    "tags": ["URL-fetch_content"]
-                  },
-                  {
-                    "description": "fetch_content_text() - Load and retrive data from specified URLs.",
-                    "name": "URL-fetch_content_text",
-                    "tags": ["URL-fetch_content_text"]
-                  },
-                  {
-                    "description": "as_dataframe() - Load and retrive data from specified URLs.",
-                    "name": "URL-as_dataframe",
-                    "tags": ["URL-as_dataframe"]
-                  }
-                ]
-              },
-              "urls": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "URLs",
-                "dynamic": false,
-                "info": "",
-                "input_types": ["Message"],
-                "list": true,
-                "list_add_label": "Add URL",
-                "load_from_db": false,
-                "name": "urls",
-                "placeholder": "Enter a URL...",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": true
-          },
-          "type": "URL"
-        },
-        "dragging": false,
-        "id": "URL-yM3pY",
-        "measured": {
-          "height": 403,
-          "width": 320
-        },
-        "position": {
-          "x": 1225.8773509111968,
-          "y": 27.333577318641687
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-Zo71g",
-          "node": {
-            "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "neutral"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "id": "note-Zo71g",
-        "measured": {
-          "height": 324,
-          "width": 324
-        },
-        "position": {
-          "x": 775.5268622081468,
-          "y": 27.927425537464444
-        },
-        "selected": true,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-enlN0",
-          "node": {
-            "description": "### 💡 Add your OpenAI API key here👇",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "id": "note-enlN0",
-        "measured": {
-          "height": 698,
-          "width": 324
-        },
-        "position": {
-          "x": 1648.6876745095624,
-          "y": 253.8646618156497
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "CalculatorComponent-zxpIu",
-          "node": {
-            "base_classes": ["Data"],
             "beta": false,
-            "category": "tools",
+            "category": "composio",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Perform basic arithmetic operations on a given expression.",
-            "display_name": "Calculator",
-            "documentation": "",
+            "description": "Use Composio toolset to run actions with your agent",
+            "display_name": "Composio Tools",
+            "documentation": "https://docs.composio.dev",
             "edited": false,
-            "field_order": ["expression"],
+            "field_order": [
+              "entity_id",
+              "api_key",
+              "app_names",
+              "app_credentials",
+              "username",
+              "auth_link",
+              "auth_status",
+              "action_names"
+            ],
             "frozen": false,
-            "icon": "calculator",
-            "key": "CalculatorComponent",
+            "icon": "Composio",
+            "key": "ComposioAPI",
             "legacy": false,
-            "lf_version": "1.1.1",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1492,20 +1417,284 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Toolset",
+                "display_name": "Tools",
                 "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
+                "method": "build_tool",
+                "name": "tools",
                 "required_inputs": null,
                 "selected": "Tool",
-                "types": ["Tool"],
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
-            "score": 0.001,
+            "score": 0.020497501093998755,
             "template": {
               "_type": "Component",
+              "action_names": {
+                "_input_type": "MultiselectInput",
+                "advanced": false,
+                "combobox": false,
+                "display_name": "Actions to use",
+                "dynamic": true,
+                "info": "The actions to pass to agent to execute",
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "action_names",
+                "options": [
+                  "GMAIL_GET_PEOPLE",
+                  "GMAIL_FETCH_EMAILS",
+                  "GMAIL_FETCH_MESSAGE_BY_THREAD_ID",
+                  "GMAIL_SEARCH_PEOPLE",
+                  "GMAIL_SEND_EMAIL",
+                  "GMAIL_CREATE_EMAIL_DRAFT",
+                  "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
+                  "GMAIL_CREATE_LABEL",
+                  "GMAIL_GET_ATTACHMENT",
+                  "GMAIL_REMOVE_LABEL",
+                  "GMAIL_GET_PROFILE",
+                  "GMAIL_ADD_LABEL_TO_EMAIL",
+                  "GMAIL_GET_CONTACTS",
+                  "GMAIL_REPLY_TO_THREAD",
+                  "GMAIL_LIST_LABELS",
+                  "GMAIL_LIST_THREADS",
+                  "GMAIL_MODIFY_THREAD_LABELS"
+                ],
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": [
+                  "GMAIL_SEND_EMAIL",
+                  "GMAIL_CREATE_EMAIL_DRAFT"
+                ]
+              },
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Composio API Key",
+                "dynamic": false,
+                "info": "Refer to https://docs.composio.dev/faq/api_key/api_key",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "app_credentials": {
+                "_input_type": "SecretStrInput",
+                "advanced": true,
+                "display_name": "App Credentials",
+                "dynamic": true,
+                "info": "Credentials for app authentication (API Key, Password, etc)",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "app_credentials",
+                "password": true,
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "app_names": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "App Name",
+                "dynamic": false,
+                "info": "The app name to use. Please refresh after selecting app name",
+                "name": "app_names",
+                "options": [
+                  "ACCELO",
+                  "AIRTABLE",
+                  "AMAZON",
+                  "APALEO",
+                  "ASANA",
+                  "ATLASSIAN",
+                  "ATTIO",
+                  "AUTH0",
+                  "BATTLENET",
+                  "BITBUCKET",
+                  "BLACKBAUD",
+                  "BLACKBOARD",
+                  "BOLDSIGN",
+                  "BORNEO",
+                  "BOX",
+                  "BRAINTREE",
+                  "BREX",
+                  "BREX_STAGING",
+                  "BRIGHTPEARL",
+                  "CALENDLY",
+                  "CANVA",
+                  "CANVAS",
+                  "CHATWORK",
+                  "CLICKUP",
+                  "CONTENTFUL",
+                  "D2LBRIGHTSPACE",
+                  "DEEL",
+                  "DISCORD",
+                  "DISCORDBOT",
+                  "DOCUSIGN",
+                  "DROPBOX",
+                  "DROPBOX_SIGN",
+                  "DYNAMICS365",
+                  "EPIC_GAMES",
+                  "EVENTBRITE",
+                  "EXIST",
+                  "FACEBOOK",
+                  "FIGMA",
+                  "FITBIT",
+                  "FRESHBOOKS",
+                  "FRONT",
+                  "GITHUB",
+                  "GMAIL",
+                  "GMAIL_BETA",
+                  "GO_TO_WEBINAR",
+                  "GOOGLE_ANALYTICS",
+                  "GOOGLE_DRIVE_BETA",
+                  "GOOGLE_MAPS",
+                  "GOOGLECALENDAR",
+                  "GOOGLEDOCS",
+                  "GOOGLEDRIVE",
+                  "GOOGLEMEET",
+                  "GOOGLEPHOTOS",
+                  "GOOGLESHEETS",
+                  "GOOGLETASKS",
+                  "GORGIAS",
+                  "GUMROAD",
+                  "HARVEST",
+                  "HIGHLEVEL",
+                  "HUBSPOT",
+                  "ICIMS_TALENT_CLOUD",
+                  "INTERCOM",
+                  "JIRA",
+                  "KEAP",
+                  "KLAVIYO",
+                  "LASTPASS",
+                  "LEVER",
+                  "LEVER_SANDBOX",
+                  "LINEAR",
+                  "LINKEDIN",
+                  "LINKHUT",
+                  "MAILCHIMP",
+                  "MICROSOFT_TEAMS",
+                  "MICROSOFT_TENANT",
+                  "MIRO",
+                  "MONDAY",
+                  "MURAL",
+                  "NETSUITE",
+                  "NOTION",
+                  "ONE_DRIVE",
+                  "OUTLOOK",
+                  "PAGERDUTY",
+                  "PIPEDRIVE",
+                  "PRODUCTBOARD",
+                  "REDDIT",
+                  "RING_CENTRAL",
+                  "RIPPLING",
+                  "SAGE",
+                  "SALESFORCE",
+                  "SEISMIC",
+                  "SERVICEM8",
+                  "SHARE_POINT",
+                  "SHOPIFY",
+                  "SLACK",
+                  "SLACKBOT",
+                  "SMARTRECRUITERS",
+                  "SPOTIFY",
+                  "SQUARE",
+                  "STACK_EXCHANGE",
+                  "SURVEY_MONKEY",
+                  "TIMELY",
+                  "TODOIST",
+                  "TONEDEN",
+                  "TRELLO",
+                  "TWITCH",
+                  "TWITTER",
+                  "TWITTER_MEDIA",
+                  "WAKATIME",
+                  "WAVE_ACCOUNTING",
+                  "WEBEX",
+                  "WIZ",
+                  "WRIKE",
+                  "XERO",
+                  "YANDEX",
+                  "YNAB",
+                  "YOUTUBE",
+                  "ZENDESK",
+                  "ZOHO",
+                  "ZOHO_BIGIN",
+                  "ZOHO_BOOKS",
+                  "ZOHO_DESK",
+                  "ZOHO_INVENTORY",
+                  "ZOHO_INVOICE",
+                  "ZOHO_MAIL",
+                  "ZOOM"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "refresh_button": true,
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "GMAIL"
+              },
+              "auth_link": {
+                "_input_type": "LinkInput",
+                "advanced": true,
+                "display_name": "Authentication Link",
+                "dynamic": true,
+                "info": "Click to authenticate with OAuth2",
+                "load_from_db": false,
+                "name": "auth_link",
+                "placeholder": "Click to authenticate",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "type": "link",
+                "value": ""
+              },
+              "auth_status": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Auth Status",
+                "dynamic": true,
+                "info": "Current authentication status",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "auth_status",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1522,140 +1711,92 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport operator\nfrom collections.abc import Callable\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\n\n\nclass CalculatorComponent(Component):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n\n    # Cache operators dictionary as a class variable\n    OPERATORS: dict[type[ast.operator], Callable] = {\n        ast.Add: operator.add,\n        ast.Sub: operator.sub,\n        ast.Mult: operator.mul,\n        ast.Div: operator.truediv,\n        ast.Pow: operator.pow,\n    }\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"result\", type_=Data, method=\"evaluate_expression\"),\n    ]\n\n    def _eval_expr(self, node: ast.AST) -> float:\n        \"\"\"Evaluate an AST node recursively.\"\"\"\n        if isinstance(node, ast.Constant):\n            if isinstance(node.value, int | float):\n                return float(node.value)\n            error_msg = f\"Unsupported constant type: {type(node.value).__name__}\"\n            raise TypeError(error_msg)\n        if isinstance(node, ast.Num):  # For backwards compatibility\n            if isinstance(node.n, int | float):\n                return float(node.n)\n            error_msg = f\"Unsupported number type: {type(node.n).__name__}\"\n            raise TypeError(error_msg)\n\n        if isinstance(node, ast.BinOp):\n            op_type = type(node.op)\n            if op_type not in self.OPERATORS:\n                error_msg = f\"Unsupported binary operator: {op_type.__name__}\"\n                raise TypeError(error_msg)\n\n            left = self._eval_expr(node.left)\n            right = self._eval_expr(node.right)\n            return self.OPERATORS[op_type](left, right)\n\n        error_msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(error_msg)\n\n    def evaluate_expression(self) -> Data:\n        \"\"\"Evaluate the mathematical expression and return the result.\"\"\"\n        try:\n            tree = ast.parse(self.expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            formatted_result = f\"{float(result):.6f}\".rstrip(\"0\").rstrip(\".\")\n            self.log(f\"Calculation result: {formatted_result}\")\n\n            self.status = formatted_result\n            return Data(data={\"result\": formatted_result})\n\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n        except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:\n            error_message = f\"Invalid expression: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n    def build(self):\n        \"\"\"Return the main evaluation function.\"\"\"\n        return self.evaluate_expression\n"
+                "value": "# Standard library imports\nfrom collections.abc import Sequence\nfrom typing import Any\n\nimport requests\n\n# Third-party imports\nfrom composio.client.collections import AppAuthScheme\nfrom composio.client.exceptions import NoItemsFound\nfrom composio_langchain import Action, ComposioToolSet\nfrom langchain_core.tools import Tool\nfrom loguru import logger\n\n# Local imports\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput\nfrom langflow.io import Output\n\n\nclass ComposioAPIComponent(LCToolComponent):\n    display_name: str = \"Composio Tools\"\n    description: str = \"Use Composio toolset to run actions with your agent\"\n    name = \"ComposioAPI\"\n    icon = \"Composio\"\n    documentation: str = \"https://docs.composio.dev\"\n\n    inputs = [\n        # Basic configuration inputs\n        MessageTextInput(name=\"entity_id\", display_name=\"Entity ID\", value=\"default\", advanced=True),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Composio API Key\",\n            required=True,\n            info=\"Refer to https://docs.composio.dev/faq/api_key/api_key\",\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"app_names\",\n            display_name=\"App Name\",\n            options=[],\n            value=\"\",\n            info=\"The app name to use. Please refresh after selecting app name\",\n            refresh_button=True,\n            required=True,\n        ),\n        # Authentication-related inputs (initially hidden)\n        SecretStrInput(\n            name=\"app_credentials\",\n            display_name=\"App Credentials\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Credentials for app authentication (API Key, Password, etc)\",\n            load_from_db=False,\n        ),\n        MessageTextInput(\n            name=\"username\",\n            display_name=\"Username\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Username for Basic authentication\",\n        ),\n        LinkInput(\n            name=\"auth_link\",\n            display_name=\"Authentication Link\",\n            value=\"\",\n            info=\"Click to authenticate with OAuth2\",\n            dynamic=True,\n            show=False,\n            placeholder=\"Click to authenticate\",\n        ),\n        StrInput(\n            name=\"auth_status\",\n            display_name=\"Auth Status\",\n            value=\"Not Connected\",\n            info=\"Current authentication status\",\n            dynamic=True,\n            show=False,\n        ),\n        MultiselectInput(\n            name=\"action_names\",\n            display_name=\"Actions to use\",\n            required=True,\n            options=[],\n            value=[],\n            info=\"The actions to pass to agent to execute\",\n            dynamic=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"tools\", display_name=\"Tools\", method=\"build_tool\"),\n    ]\n\n    def _check_for_authorization(self, app: str) -> str:\n        \"\"\"Checks if the app is authorized.\n\n        Args:\n            app (str): The app name to check authorization for.\n\n        Returns:\n            str: The authorization status or URL.\n        \"\"\"\n        toolset = self._build_wrapper()\n        entity = toolset.client.get_entity(id=self.entity_id)\n        try:\n            # Check if user is already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # Get auth scheme for the app\n            auth_scheme = self._get_auth_scheme(app)\n            return self._handle_auth_by_scheme(entity, app, auth_scheme)\n        except Exception:  # noqa: BLE001\n            logger.exception(\"Authorization error\")\n            return \"Error checking authorization\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _get_auth_scheme(self, app_name: str) -> AppAuthScheme:\n        \"\"\"Get the primary auth scheme for an app.\n\n        Args:\n            app_name (str): The name of the app to get auth scheme for.\n\n        Returns:\n            AppAuthScheme: The auth scheme details.\n        \"\"\"\n        toolset = self._build_wrapper()\n        try:\n            return toolset.get_auth_scheme_for_app(app=app_name.lower())\n        except Exception:  # noqa: BLE001\n            logger.exception(f\"Error getting auth scheme for {app_name}\")\n            return None\n\n    def _get_oauth_apps(self, api_key: str) -> list[str]:\n        \"\"\"Fetch OAuth-enabled apps from Composio API.\n\n        Args:\n            api_key (str): The Composio API key.\n\n        Returns:\n            list[str]: A list containing OAuth-enabled app names.\n        \"\"\"\n        oauth_apps = []\n        try:\n            url = \"https://backend.composio.dev/api/v1/apps\"\n            headers = {\"x-api-key\": api_key}\n            params = {\n                \"includeLocal\": \"true\",\n                \"additionalFields\": \"auth_schemes\",\n                \"sortBy\": \"alphabet\",\n            }\n\n            response = requests.get(url, headers=headers, params=params, timeout=20)\n            data = response.json()\n\n            for item in data.get(\"items\", []):\n                for auth_scheme in item.get(\"auth_schemes\", []):\n                    if auth_scheme.get(\"mode\") in [\"OAUTH1\", \"OAUTH2\"]:\n                        oauth_apps.append(item[\"key\"].upper())\n                        break\n        except requests.RequestException as e:\n            logger.error(f\"Error fetching OAuth apps: {e}\")\n            return []\n        else:\n            return oauth_apps\n\n    def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:\n        \"\"\"Handle authentication based on the auth scheme.\n\n        Args:\n            entity (Any): The entity instance.\n            app (str): The app name.\n            auth_scheme (AppAuthScheme): The auth scheme details.\n\n        Returns:\n            str: The authentication status or URL.\n        \"\"\"\n        auth_mode = auth_scheme.auth_mode\n\n        try:\n            # First check if already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # If not connected, handle new connection based on auth mode\n            if auth_mode == \"API_KEY\":\n                if hasattr(self, \"app_credentials\") and self.app_credentials:\n                    try:\n                        entity.initiate_connection(\n                            app_name=app,\n                            auth_mode=\"API_KEY\",\n                            auth_config={\"api_key\": self.app_credentials},\n                            use_composio_auth=False,\n                            force_new_integration=True,\n                        )\n                    except Exception as e:  # noqa: BLE001\n                        logger.error(f\"Error connecting with API Key: {e}\")\n                        return \"Invalid API Key\"\n                    else:\n                        return f\"{app} CONNECTED\"\n                return \"Enter API Key\"\n\n            if (\n                auth_mode == \"BASIC\"\n                and hasattr(self, \"username\")\n                and hasattr(self, \"app_credentials\")\n                and self.username\n                and self.app_credentials\n            ):\n                try:\n                    entity.initiate_connection(\n                        app_name=app,\n                        auth_mode=\"BASIC\",\n                        auth_config={\"username\": self.username, \"password\": self.app_credentials},\n                        use_composio_auth=False,\n                        force_new_integration=True,\n                    )\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error connecting with Basic Auth: {e}\")\n                    return \"Invalid credentials\"\n                else:\n                    return f\"{app} CONNECTED\"\n            elif auth_mode == \"BASIC\":\n                return \"Enter Username and Password\"\n\n            if auth_mode == \"OAUTH2\":\n                try:\n                    return self._initiate_default_connection(entity, app)\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error initiating OAuth2: {e}\")\n                    return \"OAuth2 initialization failed\"\n\n            return \"Unsupported auth mode\"\n        except Exception as e:  # noqa: BLE001\n            logger.error(f\"Error checking connection status: {e}\")\n            return f\"Error: {e!s}\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _initiate_default_connection(self, entity: Any, app: str) -> str:\n        connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)\n        return connection.redirectUrl\n\n    def _get_connected_app_names_for_entity(self) -> list[str]:\n        toolset = self._build_wrapper()\n        connections = toolset.client.get_entity(id=self.entity_id).get_connections()\n        return list({connection.appUniqueId for connection in connections})\n\n    def _get_normalized_app_name(self) -> str:\n        \"\"\"Get app name without connection status suffix.\n\n        Returns:\n            str: Normalized app name.\n        \"\"\"\n        return self.app_names.replace(\" ✅\", \"\").replace(\"_connected\", \"\")\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002\n        # Update the available apps options from the API\n        if hasattr(self, \"api_key\") and self.api_key != \"\":\n            toolset = self._build_wrapper()\n            build_config[\"app_names\"][\"options\"] = self._get_oauth_apps(api_key=self.api_key)\n\n        # First, ensure all dynamic fields are hidden by default\n        dynamic_fields = [\"app_credentials\", \"username\", \"auth_link\", \"auth_status\", \"action_names\"]\n        for field in dynamic_fields:\n            if field in build_config:\n                if build_config[field][\"value\"] is None or build_config[field][\"value\"] == \"\":\n                    build_config[field][\"show\"] = False\n                    build_config[field][\"advanced\"] = True\n                    build_config[field][\"load_from_db\"] = False\n                else:\n                    build_config[field][\"show\"] = True\n                    build_config[field][\"advanced\"] = False\n\n        if field_name == \"app_names\" and (not hasattr(self, \"app_names\") or not self.app_names):\n            build_config[\"auth_status\"][\"show\"] = True\n            build_config[\"auth_status\"][\"value\"] = \"Please select an app first\"\n            return build_config\n\n        if field_name == \"app_names\" and hasattr(self, \"api_key\") and self.api_key != \"\":\n            # app_name = self._get_normalized_app_name()\n            app_name = self.app_names\n            try:\n                toolset = self._build_wrapper()\n                entity = toolset.client.get_entity(id=self.entity_id)\n\n                # Always show auth_status when app is selected\n                build_config[\"auth_status\"][\"show\"] = True\n                build_config[\"auth_status\"][\"advanced\"] = False\n\n                try:\n                    # Check if already connected\n                    entity.get_connection(app=app_name)\n                    build_config[\"auth_status\"][\"value\"] = \"✅\"\n                    build_config[\"auth_link\"][\"show\"] = False\n                    # Show action selection for connected apps\n                    build_config[\"action_names\"][\"show\"] = True\n                    build_config[\"action_names\"][\"advanced\"] = False\n\n                except NoItemsFound:\n                    # Get auth scheme and show relevant fields\n                    auth_scheme = self._get_auth_scheme(app_name)\n                    auth_mode = auth_scheme.auth_mode\n                    logger.info(f\"Auth mode for {app_name}: {auth_mode}\")\n\n                    if auth_mode == \"API_KEY\":\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"API Key\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter API Key\"\n\n                    elif auth_mode == \"BASIC\":\n                        build_config[\"username\"][\"show\"] = True\n                        build_config[\"username\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"Password\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter Username and Password\"\n\n                    elif auth_mode == \"OAUTH2\":\n                        build_config[\"auth_link\"][\"show\"] = True\n                        build_config[\"auth_link\"][\"advanced\"] = False\n                        auth_url = self._initiate_default_connection(entity, app_name)\n                        build_config[\"auth_link\"][\"value\"] = auth_url\n                        build_config[\"auth_status\"][\"value\"] = \"Click link to authenticate\"\n\n                    else:\n                        build_config[\"auth_status\"][\"value\"] = \"Unsupported auth mode\"\n\n                # Update action names if connected\n                if build_config[\"auth_status\"][\"value\"] == \"✅\":\n                    all_action_names = [str(action).replace(\"Action.\", \"\") for action in Action.all()]\n                    app_action_names = [\n                        action_name\n                        for action_name in all_action_names\n                        if action_name.lower().startswith(app_name.lower() + \"_\")\n                    ]\n                    if build_config[\"action_names\"][\"options\"] != app_action_names:\n                        build_config[\"action_names\"][\"options\"] = app_action_names\n                        build_config[\"action_names\"][\"value\"] = [app_action_names[0]] if app_action_names else [\"\"]\n\n            except Exception as e:  # noqa: BLE001\n                logger.error(f\"Error checking auth status: {e}, app: {app_name}\")\n                build_config[\"auth_status\"][\"value\"] = f\"Error: {e!s}\"\n\n        return build_config\n\n    def build_tool(self) -> Sequence[Tool]:\n        \"\"\"Build Composio tools based on selected actions.\n\n        Returns:\n            Sequence[Tool]: List of configured Composio tools.\n        \"\"\"\n        composio_toolset = self._build_wrapper()\n        return composio_toolset.get_tools(actions=self.action_names)\n\n    def _build_wrapper(self) -> ComposioToolSet:\n        \"\"\"Build the Composio toolset wrapper.\n\n        Returns:\n            ComposioToolSet: The initialized toolset.\n\n        Raises:\n            ValueError: If the API key is not found or invalid.\n        \"\"\"\n        try:\n            if not self.api_key:\n                msg = \"Composio API Key is required\"\n                raise ValueError(msg)\n            return ComposioToolSet(api_key=self.api_key)\n        except ValueError as e:\n            logger.error(f\"Error building Composio wrapper: {e}\")\n            msg = \"Please provide a valid Composio API Key in the component settings\"\n            raise ValueError(msg) from e\n"
               },
-              "expression": {
+              "entity_id": {
                 "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Expression",
+                "advanced": true,
+                "display_name": "Entity ID",
                 "dynamic": false,
-                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": ["Message"],
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "expression",
+                "name": "entity_id",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": true,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "default"
+              },
+              "username": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Username",
+                "dynamic": true,
+                "info": "Username for Basic authentication",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "username",
+                "placeholder": "",
+                "required": false,
+                "show": false,
+                "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
-                    "name": "None-evaluate_expression",
-                    "tags": ["None-evaluate_expression"]
-                  }
-                ]
               }
             },
-            "tool_mode": true
+            "tool_mode": false
           },
           "showNode": true,
-          "type": "CalculatorComponent"
+          "type": "ComposioAPI"
         },
         "dragging": false,
-        "id": "CalculatorComponent-zxpIu",
+        "id": "ComposioAPI-ajGtz",
         "measured": {
-          "height": 333,
+          "height": 415,
           "width": 320
         },
         "position": {
-          "x": 1233.166256931297,
-          "y": 514.7544001650839
+          "x": -137.53986902236176,
+          "y": 20.325147658297382
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 528.5325055091846,
-      "y": 51.2172319875898,
-      "zoom": 0.12508906569071757
+      "x": 368.95391968218075,
+      "y": 154.58720326423327,
+      "zoom": 0.7309415987294762
     }
   },
-  "description": "A simple but powerful starter agent.",
+  "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
   "endpoint_name": null,
-  "id": "263070d6-3560-4f4d-a6c4-003f4a586e6e",
+  "folder_id": "4599f5b8-0cbe-4a2e-a492-8b3fa6193da4",
+  "gradient": null,
+  "icon": "mail",
+  "icon_bg_color": null,
+  "id": "44cfd75e-0f47-4011-8802-9e124b782c42",
   "is_component": false,
-  "last_tested_version": "1.1.1",
-  "name": "Simple Agent",
-  "tags": ["assistants", "agents"]
+  "locked": false,
+  "name": "Gmail Agent",
+  "tags": ["agents"],
+  "updated_at": "2025-02-14T09:35:52+00:00",
+  "user_id": "baa8aaab-c242-4191-b79d-761bdb5a393c",
+  "webhook": false
 }
