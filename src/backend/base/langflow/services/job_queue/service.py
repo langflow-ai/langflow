@@ -143,7 +143,7 @@ class JobQueueService(Service):
             raise ValueError(msg)
 
         main_queue: asyncio.Queue = asyncio.Queue()
-        event_manager = self._create_default_event_manager(main_queue)
+        event_manager: EventManager = self._create_default_event_manager(main_queue)
 
         # Register the queue without an active task.
         self._queues[job_id] = (main_queue, event_manager, None, None)
