@@ -1,6 +1,6 @@
 # from langflow.field_typing import Data
 from langflow.custom import Component
-from langflow.inputs import DataInput, SecretStrInput, StrInput, MessageInput
+from langflow.inputs import DataInput, SecretStrInput, MessageInput
 from langflow.io import Output
 from langflow.schema import Data
 from typing import Dict, Any
@@ -10,12 +10,12 @@ import os
 import subprocess
 import json
 
-class TwelveLabsEmbed(Component):
-    display_name = "Video to Embeddings"
+class TwelveLabsVideoEmbeddings(Component):
+    display_name = "Twelve Labs Video Embeddings"
     description = "Converts video content to embeddings using Twelve Labs API."
     documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "video"
-    name = "VideoToEmbeddings"
+    name = "TwelveLabsVideoEmbeddings"
 
     inputs = [
         DataInput(
