@@ -503,7 +503,172 @@
       },
       {
         "data": {
-          "id": "ChatOutput-meCWe",
+          "id": "ParseData-hLbU0",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
+            "beta": false,
+            "category": "processing",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Convert Data objects into Messages using any {field_name} from input data.",
+            "display_name": "Data to Message",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
+            "frozen": false,
+            "icon": "message-square",
+            "key": "ParseData",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {
+              "legacy_name": "Parse Data"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "parse_data",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Data List",
+                "method": "parse_data_as_list",
+                "name": "data_list",
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 0.23285358167685585,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n    metadata = {\n        \"legacy_name\": \"Parse Data\",\n    }\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to text.\",\n            is_list=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
+              },
+              "data": {
+                "_input_type": "DataInput",
+                "advanced": false,
+                "display_name": "Data",
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "input_types": [
+                  "Data"
+                ],
+                "list": true,
+                "list_add_label": "Add More",
+                "name": "data",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "other",
+                "value": ""
+              },
+              "sep": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sep",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n"
+              },
+              "template": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "template",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "EBITIDA: {EBITIDA}  , \nNet Income: {NET_INCOME} ,\nGROSS_PROFIT: {GROSS_PROFIT}"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ParseData"
+        },
+        "dragging": false,
+        "id": "ParseData-hLbU0",
+        "measured": {
+          "height": 342,
+          "width": 320
+        },
+        "position": {
+          "x": 1788.8753184818502,
+          "y": 247.15776278878775
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-ZtLkt",
           "node": {
             "base_classes": [
               "Message"
