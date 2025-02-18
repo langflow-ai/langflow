@@ -1005,3 +1005,5 @@ export const ICON_STROKE_WIDTH = 1.5;
 export const DEFAULT_PLACEHOLDER = "Type something...";
 
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
+
+export const PLAYGROUND_BUTTON_NAME = "Playground";

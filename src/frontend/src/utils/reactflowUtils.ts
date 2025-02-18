@@ -1904,3 +1904,7 @@ export function buildPositionDictionary(nodes: AllNodeType[]) {
   });
   return positionDictionary;
 }
+
+export function hasStreaming(nodes: AllNodeType[]) {
+  return nodes.some((node) => node.data.node?.template?.stream?.value);
+}

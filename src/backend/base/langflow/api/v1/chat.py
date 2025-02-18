@@ -8,7 +8,7 @@ import typing
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
@@ -39,11 +39,12 @@ from langflow.events.event_manager import EventManager, create_default_event_man
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.deps import get_chat_service, get_session, get_telemetry_service, session_scope
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
@@ -152,6 +153,7 @@ async def build_flow(
     start_component_id: str | None = None,
     log_builds: bool | None = True,
     current_user: CurrentActiveUser,
+    flow_name: str | None = None,
 ):
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -166,7 +168,7 @@ async def build_flow(
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
-                graph = await create_graph(fresh_session, flow_id_str)
+                graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
             graph.validate_stream()
             first_layer = sort_vertices(graph)
@@ -208,12 +210,12 @@ async def build_flow(
             ),
         )
 
-    async def create_graph(fresh_session, flow_id_str: str) -> Graph:
+    async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None = None) -> Graph:
         if not data:
             return await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
-
-        result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
-        flow_name = result.first()
+        if not flow_name:
+            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+            flow_name = result.first()
 
         return await build_graph_from_data(
             flow_id=flow_id_str,
@@ -736,6 +738,55 @@ async def build_vertex_stream(
     try:
         return StreamingResponse(
             _stream_vertex(str(flow_id), vertex_id, get_chat_service()), media_type="text/event-stream"
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Error building Component") from exc
+
+
+@router.post("/build_public_tmp/{flow_id}/flow")
+async def build_public_tmp(
+    *,
+    background_tasks: BackgroundTasks,
+    flow_id: uuid.UUID,
+    inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
+    data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool | None = True,
+    flow_name: str | None = None,
+    request: Request,
+):
+    async with session_scope() as session:
+        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+
+        if flow.access_type is not AccessTypeEnum.PUBLIC:
+            raise HTTPException(status_code=403, detail="Flow is not public")
+        # Copy the flow to a new flow with a new id
+        current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+
+    # Get cookie from request and raise if not found
+    cookie = request.cookies.get("client_id")
+    if not cookie:
+        raise HTTPException(status_code=400, detail="No session cookie found")
+
+    new_id = f"{cookie}_{flow_id}"
+    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
+    if not flow_name:
+        flow_name = new_id
+        # Create a deterministic UUID using uuid5 with DNS namespace and the flow_id string
+    try:
+        return await build_flow(
+            background_tasks=background_tasks,
+            flow_id=new_flow_id,
+            inputs=inputs,
+            data=data,
+            files=files,
+            stop_component_id=stop_component_id,
+            start_component_id=start_component_id,
+            log_builds=log_builds,
+            current_user=current_user,
+            flow_name=flow_name,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
