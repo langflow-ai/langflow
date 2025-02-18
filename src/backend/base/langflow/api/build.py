@@ -424,5 +424,5 @@ async def generate_flow_events(
         )
         event_manager.on_error(data=error_message.data)
         raise
-
+    event_manager.on_end(data={})
     await event_manager.queue.put((None, None, time.time()))
