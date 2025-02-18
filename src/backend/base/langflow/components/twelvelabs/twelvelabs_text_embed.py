@@ -26,12 +26,6 @@ class TwelveLabsTextEmbeddings(Component):
             name="api_key",
             display_name="Twelve Labs API Key",
             info="Enter your Twelve Labs API Key."
-        ),
-        MessageInput(
-            name="message",
-            display_name="Message",
-            info="Random message",
-            required=False,
         )
     ]
 
