@@ -1,8 +1,8 @@
 import json
-import logging
 
 import httpx
 from loguru import logger
+
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
@@ -108,7 +108,7 @@ class OlivyaComponent(Component):
         except json.JSONDecodeError as json_err:
             logger.exception("Response parsing failed")
             response_data = {"error": f"Response parsing failed: {json_err}", "raw_response": response.text}
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.exception("An unexpected error occurred")
             response_data = {"error": f"An unexpected error occurred: {e!s}"}
 
