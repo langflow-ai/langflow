@@ -61,14 +61,11 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const randomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.waitForSelector('[data-testid="default_slider_display_value"]', {
@@ -93,14 +90,11 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const secondRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.waitForSelector("text=OpenAI", {
@@ -144,14 +138,11 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const thirdRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     expect(randomTextGeneratedByAI).not.toEqual(secondRandomTextGeneratedByAI);

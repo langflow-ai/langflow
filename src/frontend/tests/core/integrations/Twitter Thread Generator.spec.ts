@@ -8,7 +8,7 @@ import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-moda
 
 test(
   "Twitter Thread Generator",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
