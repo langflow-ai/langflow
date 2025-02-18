@@ -40,7 +40,7 @@ const config = {
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
-          sidebarCollapsed: true,
+          sidebarCollapsed: false,
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
@@ -175,6 +175,10 @@ const config = {
             to: "/concepts-api",
             from: "/workspace-api",
           },
+          {
+            to: "/components-custom-components",
+            from: "/components/custom",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
@@ -251,7 +255,7 @@ const config = {
       },
       docs: {
         sidebar: {
-          hideable: true,
+          hideable: false,
         },
       },
     }),

@@ -1,5 +1,5 @@
 {
-    "description": "A template that extracts structured data from any website using ScrapeGraph AI. Simply input a URL and your API key to get detailed information from the webpage.",
+    "description": "A template that extracts structured data from any website using ScrapeGraph AI. Simply input a URL, prompt, and your API key to get detailed information from the webpage.",
     "name": "Website Scraper",
     "type": "web-scraping",
     "flow_id": "scraping-website",
@@ -16,6 +16,20 @@
                     "node": {
                         "display_name": "URL Input",
                         "description": "Enter the website URL to scrape"
+                    }
+                }
+            },
+            {
+                "id": "prompt_input",
+                "type": "TextInput",
+                "position": {
+                    "x": 100,
+                    "y": 300
+                },
+                "data": {
+                    "node": {
+                        "display_name": "Scraping Prompt",
+                        "description": "Enter the prompt to guide the scraping process"
                     }
                 }
             },
@@ -68,6 +82,12 @@
                 "target": "scraper",
                 "sourceHandle": "text_value",
                 "targetHandle": "url"
+            },
+            {
+                "source": "prompt_input",
+                "target": "scraper",
+                "sourceHandle": "text_value",
+                "targetHandle": "prompt"
             },
             {
                 "source": "api_key_input",
