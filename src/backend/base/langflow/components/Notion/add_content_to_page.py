@@ -1,37 +1,38 @@
-import json
 from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
-from langchain.tools import StructuredTool
 from loguru import logger
 from markdown import markdown
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
-from langflow.inputs import MultilineInput, SecretStrInput, StrInput
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput, MultilineInput, SecretStrInput
 from langflow.schema import Data
+from langflow.template import Output
 
 MIN_ROWS_IN_TABLE = 3
 
 
-class AddContentToPage(LCToolComponent):
-    display_name: str = "Add Content to Page "
+class AddContentToPage(Component):
+    """A component that adds content to a Notion page by converting markdown to Notion blocks."""
+
+    display_name: str = "Add Content to Page"
     description: str = "Convert markdown text to Notion blocks and append them to a Notion page."
     documentation: str = "https://developers.notion.com/reference/patch-block-children"
-    icon = "NotionDirectoryLoader"
+    icon: str = "NotionDirectoryLoader"
 
     inputs = [
         MultilineInput(
             name="markdown_text",
             display_name="Markdown Text",
             info="The markdown text to convert to Notion blocks.",
+            tool_mode=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="block_id",
             display_name="Page/Block ID",
             info="The ID of the page/block to add the content.",
+            tool_mode=True,
         ),
         SecretStrInput(
             name="notion_secret",
@@ -41,29 +42,18 @@ class AddContentToPage(LCToolComponent):
         ),
     ]
 
-    class AddContentToPageSchema(BaseModel):
-        markdown_text: str = Field(..., description="The markdown text to convert to Notion blocks.")
-        block_id: str = Field(..., description="The ID of the page/block to add the content.")
+    outputs = [
+        Output(name="data", display_name="Response Data", method="add_content_to_page"),
+    ]
 
-    def run_model(self) -> Data:
-        result = self._add_content_to_page(self.markdown_text, self.block_id)
-        return Data(data=result, text=json.dumps(result))
-
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="add_content_to_notion_page",
-            description="Convert markdown text to Notion blocks and append them to a Notion page.",
-            func=self._add_content_to_page,
-            args_schema=self.AddContentToPageSchema,
-        )
-
-    def _add_content_to_page(self, markdown_text: str, block_id: str) -> dict[str, Any] | str:
+    def add_content_to_page(self) -> Data:
+        """Convert markdown text to Notion blocks and append them to a Notion page."""
         try:
-            html_text = markdown(markdown_text)
+            html_text = markdown(self.markdown_text)
             soup = BeautifulSoup(html_text, "html.parser")
             blocks = self.process_node(soup)
 
-            url = f"https://api.notion.com/v1/blocks/{block_id}/children"
+            url = f"https://api.notion.com/v1/blocks/{self.block_id}/children"
             headers = {
                 "Authorization": f"Bearer {self.notion_secret}",
                 "Content-Type": "application/json",
@@ -77,15 +67,15 @@ class AddContentToPage(LCToolComponent):
             response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
 
-            return response.json()
+            return Data(data=response.json())
         except requests.exceptions.RequestException as e:
             error_message = f"Error: Failed to add content to Notion page. {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
-            return error_message
+            return Data(data={"error": error_message})
         except Exception as e:  # noqa: BLE001
             logger.opt(exception=True).debug("Error adding content to Notion page")
-            return f"Error: An unexpected error occurred while adding content to Notion page. {e}"
+            return Data(data={"error": f"An unexpected error occurred while adding content to Notion page. {e}"})
 
     def process_node(self, node):
         blocks = []
