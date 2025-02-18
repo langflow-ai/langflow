@@ -246,7 +246,7 @@ export default function IOModal({
       type={isPlayground ? "full-screen" : undefined}
       onSubmit={() => sendMessage({ repeat: 1 })}
       size="x-large"
-      className="!rounded-[12px] p-0"
+      className="rounded-[12px]! p-0"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       {/* TODO ADAPT TO ALL TYPES OF INPUTS AND OUTPUTS */}
@@ -255,7 +255,7 @@ export default function IOModal({
           <div className="flex-max-width h-full">
             <div
               className={cn(
-                "flex h-full flex-shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
+                "flex h-full shrink-0 flex-col justify-start overflow-hidden transition-all duration-300",
                 sidebarOpen
                   ? "absolute z-50 lg:relative lg:w-1/5 lg:max-w-[280px]"
                   : "w-0",
@@ -270,7 +270,7 @@ export default function IOModal({
                   >
                     <Button
                       variant="ghost"
-                      className="flex h-8 w-8 items-center justify-center !p-0"
+                      className="flex h-8 w-8 items-center justify-center p-0!"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
                     >
                       <IconComponent
@@ -295,7 +295,7 @@ export default function IOModal({
                 )}
               </div>
             </div>
-            <div className="flex h-full min-w-96 flex-grow bg-background">
+            <div className="flex h-full min-w-96 grow bg-background">
               {selectedViewField && (
                 <SelectedViewField
                   selectedViewField={selectedViewField}

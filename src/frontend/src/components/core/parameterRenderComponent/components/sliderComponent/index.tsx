@@ -264,7 +264,7 @@ export default function SliderComponent({
             )}
           >
             <SliderPrimitive.Range
-              className="absolute h-full rounded-full bg-gradient-to-r from-accent-indigo-foreground to-accent-pink-foreground"
+              className="absolute h-full rounded-full bg-linear-to-r from-accent-indigo-foreground to-accent-pink-foreground"
               style={{
                 width: `${percentage}%`,
                 background: `linear-gradient(to right, rgb(79, 70, 229) 0%, ${getThumbColor(percentage)} ${percentage}%)`,

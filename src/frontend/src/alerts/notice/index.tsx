@@ -47,7 +47,7 @@ export default function NoticeAlert({
         className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
       >
         <div className="flex">
-          <div className="flex-shrink-0 cursor-help">
+          <div className="shrink-0 cursor-help">
             <IconComponent
               name="Info"
               className="h-5 w-5 text-status-blue"
