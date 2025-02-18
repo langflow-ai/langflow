@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Vector Store RAG",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

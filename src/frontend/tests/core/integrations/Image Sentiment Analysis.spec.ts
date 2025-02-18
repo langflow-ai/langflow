@@ -7,8 +7,9 @@ import { buildDataTransfer } from "../../utils/build-data-transfer";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Image Sentiment Analysis",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
