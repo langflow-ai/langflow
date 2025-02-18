@@ -55,7 +55,7 @@ on:
 
 env:
   POETRY_VERSION: "1.8.3"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   release-nightly-base:

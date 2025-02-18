@@ -25,8 +25,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-          python-version: "3.12"
-      - run: uv sync --extra dev
+          python-version: "3.13"
+      - run: uv sync
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
         continue-on-error: true
