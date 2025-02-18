@@ -7,27 +7,22 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-E96Aq",
+            "id": "ParseData-4Sckw",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "references",
-            "id": "Prompt-so3We",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "id": "Prompt-65R68",
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-E96Aq{œdataTypeœ:œParseDataœ,œidœ:œParseData-E96Aqœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-so3We{œfieldNameœ:œreferencesœ,œidœ:œPrompt-so3Weœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-E96Aq",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-E96Aqœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-so3We",
-        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-so3Weœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-4Sckw{œdataTypeœ:œParseDataœ,œidœ:œParseData-4Sckwœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-65R68{œfieldNameœ:œreferencesœ,œidœ:œPrompt-65R68œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-4Sckw",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-4Sckwœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-65R68",
+        "targetHandle": "{œfieldNameœ: œreferencesœ, œidœ: œPrompt-65R68œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,104 +30,88 @@
         "data": {
           "sourceHandle": {
             "dataType": "TextInput",
-            "id": "TextInput-NyDgC",
+            "id": "TextInput-t88FI",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "instructions",
-            "id": "Prompt-so3We",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
+            "id": "Prompt-65R68",
+            "inputTypes": ["Message", "Text"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-TextInput-NyDgC{œdataTypeœ:œTextInputœ,œidœ:œTextInput-NyDgCœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-so3We{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-so3Weœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-NyDgC",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-NyDgCœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-so3We",
-        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-so3Weœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-TextInput-t88FI{œdataTypeœ:œTextInputœ,œidœ:œTextInput-t88FIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-65R68{œfieldNameœ:œinstructionsœ,œidœ:œPrompt-65R68œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-t88FI",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-t88FIœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-65R68",
+        "targetHandle": "{œfieldNameœ: œinstructionsœ, œidœ: œPrompt-65R68œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-so3We",
+            "id": "Prompt-65R68",
             "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-PSlnR",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "OpenAIModel-MyAsQ",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-so3We{œdataTypeœ:œPromptœ,œidœ:œPrompt-so3Weœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-PSlnR{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-PSlnRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-so3We",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-so3Weœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-PSlnR",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-PSlnRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-65R68{œdataTypeœ:œPromptœ,œidœ:œPrompt-65R68œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-MyAsQ{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-MyAsQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-65R68",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-65R68œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-MyAsQ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-MyAsQœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-PSlnR",
+            "id": "OpenAIModel-MyAsQ",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-rX0kw",
-            "inputTypes": [
-              "Message"
-            ],
+            "id": "ChatOutput-BE4YI",
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-PSlnR{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-PSlnRœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-rX0kw{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rX0kwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-PSlnR",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-PSlnRœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-rX0kw",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-rX0kwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-MyAsQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-MyAsQœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-BE4YI{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BE4YIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-MyAsQ",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-MyAsQœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-BE4YI",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-BE4YIœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-3QRyA",
+            "id": "URL-EPEnt",
             "name": "data",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-E96Aq",
-            "inputTypes": [
-              "Data"
-            ],
+            "id": "ParseData-4Sckw",
+            "inputTypes": ["Data"],
             "type": "other"
           }
         },
-        "id": "xy-edge__URL-3QRyA{œdataTypeœ:œURLœ,œidœ:œURL-3QRyAœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-E96Aq{œfieldNameœ:œdataœ,œidœ:œParseData-E96Aqœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "URL-3QRyA",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-3QRyAœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-E96Aq",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-E96Aqœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-URL-EPEnt{œdataTypeœ:œURLœ,œidœ:œURL-EPEntœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-4Sckw{œfieldNameœ:œdataœ,œidœ:œParseData-4Sckwœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "URL-EPEnt",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-EPEntœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-4Sckw",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-4Sckwœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -140,11 +119,9 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-E96Aq",
+          "id": "ParseData-4Sckw",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -152,16 +129,14 @@
             "display_name": "Parse Data",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "data",
-              "template",
-              "sep"
-            ],
+            "field_order": ["data", "template", "sep"],
             "frozen": false,
             "icon": "message-square",
             "legacy": false,
             "lf_version": "1.0.19.post2",
-            "metadata": {},
+            "metadata": {
+              "legacy_name": "Parse Data"
+            },
             "output_types": [],
             "outputs": [
               {
@@ -171,9 +146,8 @@
                 "method": "parse_data",
                 "name": "text",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "tool_mode": true,
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -183,9 +157,8 @@
                 "method": "parse_data_as_list",
                 "name": "data_list",
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "tool_mode": true,
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -208,16 +181,14 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\", is_list=True, required=True),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n    metadata = {\n        \"legacy_name\": \"Parse Data\",\n    }\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The data to convert to text.\",\n            is_list=True,\n            required=True,\n        ),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n"
               },
               "data": {
                 "advanced": false,
                 "display_name": "Data",
                 "dynamic": false,
                 "info": "The data to convert to text.",
-                "input_types": [
-                  "Data"
-                ],
+                "input_types": ["Data"],
                 "list": true,
                 "name": "data",
                 "placeholder": "",
@@ -250,9 +221,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -272,10 +241,10 @@
         },
         "dragging": false,
         "height": 302,
-        "id": "ParseData-E96Aq",
+        "id": "ParseData-4Sckw",
         "measured": {
           "height": 302,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 955.6736985046297,
@@ -293,26 +262,19 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-so3We",
+          "id": "Prompt-65R68",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
-              "template": [
-                "references",
-                "instructions"
-              ]
+              "template": ["references", "instructions"]
             },
             "description": "Create a prompt template with dynamic variables.",
             "display_name": "Prompt",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "template"
-            ],
+            "field_order": ["template"],
             "frozen": false,
             "icon": "prompts",
             "legacy": false,
@@ -327,9 +289,8 @@
                 "method": "build_prompt",
                 "name": "prompt",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "tool_mode": true,
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -362,10 +323,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -386,10 +344,7 @@
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [
-                  "Message",
-                  "Text"
-                ],
+                "input_types": ["Message", "Text"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -424,9 +379,7 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "tool_placeholder",
@@ -446,10 +399,10 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-so3We",
+        "id": "Prompt-65R68",
         "measured": {
           "height": 433,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1341.1018009526915,
@@ -467,11 +420,9 @@
         "data": {
           "description": "Get text inputs from the Playground.",
           "display_name": "Instructions",
-          "id": "TextInput-NyDgC",
+          "id": "TextInput-t88FI",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -479,9 +430,7 @@
             "display_name": "Instructions",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "legacy": false,
@@ -496,9 +445,8 @@
                 "method": "text_response",
                 "name": "text",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "tool_mode": true,
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -529,9 +477,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -551,10 +497,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "TextInput-NyDgC",
+        "id": "TextInput-t88FI",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 955.8314364398983,
@@ -572,11 +518,9 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-rX0kw",
+          "id": "ChatOutput-BE4YI",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -606,9 +550,8 @@
                 "method": "message_response",
                 "name": "message",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "tool_mode": true,
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -621,9 +564,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "background_color",
@@ -642,9 +583,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "chat_icon",
@@ -680,9 +619,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "data_template",
@@ -700,9 +637,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
@@ -721,10 +656,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -738,9 +670,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "sender_name",
@@ -758,9 +688,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "session_id",
@@ -795,9 +723,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "load_from_db": false,
                 "name": "text_color",
@@ -816,10 +742,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-rX0kw",
+        "id": "ChatOutput-BE4YI",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 2097.489047349972,
@@ -835,7 +761,7 @@
       },
       {
         "data": {
-          "id": "note-o0nz4",
+          "id": "note-lriuW",
           "node": {
             "description": "## URL Component Setup\n\n**Purpose:**\nFetch and process content from the web to use as reference material for creating a blog post.\n\n**Instructions:**\n1. **Input URLs**: List the URLs of web pages whose content you want to fetch. Ensure the URLs start with `http://` or `https://`.\n2. **Select Output Format**:\n   - **Text**: To extract plain text from the pages.\n   - **Raw HTML**: To retrieve the raw HTML content for advanced uses.\n\n**Tips**:\n- Double-check URL formats to prevent any data fetching errors.\n- Use the '+' button to add multiple URLs as needed for comprehensive references.\n",
             "display_name": "",
@@ -847,11 +773,11 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 329,
-        "id": "note-o0nz4",
+        "height": 324,
+        "id": "note-lriuW",
         "measured": {
-          "height": 329,
-          "width": 328
+          "height": 324,
+          "width": 325
         },
         "position": {
           "x": 484.73635938598477,
@@ -865,14 +791,14 @@
         "selected": false,
         "style": {
           "height": 329,
-          "width": 414
+          "width": 324
         },
         "type": "noteNode",
-        "width": 414
+        "width": 324
       },
       {
         "data": {
-          "id": "note-ioTU5",
+          "id": "note-1oPzi",
           "node": {
             "description": "# Blog Writing Flow Overview\n\n**Workflow Description:**\nThis flow assists in creating a blog post by using content fetched from URLs and user-provided instructions. It combines external references and user inputs to generate coherent and context-rich text.\n\n**Components**:\n1. **URL Component**: Fetches reference content from specified web pages.\n2. **Parse Data**: Converts the fetched content into a text format.\n3. **Text Input**: Accepts user-specific instructions for the blog post.\n4. **Prompt with Variables**: Merges references and instructions into a dynamic writing prompt.\n5. **OpenAI Model**: Generates the blog post using an AI language model.\n6. **Chat Output**: Displays the final blog text for user review and further refinement.\n\n**Steps to Execute**:\n1. Enter the relevant URLs and specify the output format in the **URL Component**.\n2. Provide detailed writing **Instructions** for AI to follow.\n3. Run the flow to generate the blog and view the result in **Chat Output**.\n\n**Benefits**:\n- Simplifies blog creation by using AI to structure and write content.\n- Incorporates comprehensive reference material to enhance post depth and accuracy.",
             "display_name": "",
@@ -882,11 +808,11 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 509,
-        "id": "note-ioTU5",
+        "height": 486,
+        "id": "note-1oPzi",
         "measured": {
-          "height": 509,
-          "width": 328
+          "height": 486,
+          "width": 325
         },
         "position": {
           "x": -78.41970365609802,
@@ -903,11 +829,11 @@
           "width": 562
         },
         "type": "noteNode",
-        "width": 562
+        "width": 324
       },
       {
         "data": {
-          "id": "note-OFdB9",
+          "id": "note-qhsOB",
           "node": {
             "description": "## Get Your OpenAI API Key\n**Steps**:\n1. **Visit** [OpenAI's API Key Page](https://platform.openai.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new OpenAI account.\n\n3. **Generate API Key**:\n   - Click \"Create New Secret Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the OpenAI API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
             "display_name": "",
@@ -920,14 +846,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-OFdB9",
+        "id": "note-qhsOB",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
-          "x": 1703.974189852056,
-          "y": 125.15366878585462
+          "x": 1702.078126574358,
+          "y": 121.36154223045867
         },
         "positionAbsolute": {
           "x": 1703.974189852056,
@@ -940,16 +866,13 @@
           "width": 343
         },
         "type": "noteNode",
-        "width": 343
+        "width": 324
       },
       {
         "data": {
-          "id": "OpenAIModel-PSlnR",
+          "id": "OpenAIModel-MyAsQ",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -987,9 +910,8 @@
                 "name": "text_output",
                 "required_inputs": [],
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "tool_mode": true,
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -998,13 +920,10 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
-                "types": [
-                  "LanguageModel"
-                ],
+                "tool_mode": true,
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1018,9 +937,7 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": true,
                 "name": "api_key",
                 "password": true,
@@ -1047,7 +964,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n        IntInput(\n            name=\"max_retries\",\n            display_name=\"Max Retries\",\n            info=\"The maximum number of retries to make when generating.\",\n            advanced=True,\n            value=5,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"The timeout for requests to OpenAI completion API.\",\n            advanced=True,\n            value=700,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n        max_retries = self.max_retries\n        timeout = self.timeout\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n            max_retries=max_retries,\n            request_timeout=timeout,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -1055,9 +972,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1089,6 +1004,24 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
+              },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
               },
               "max_tokens": {
                 "_input_type": "IntInput",
@@ -1221,9 +1154,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1252,7 +1183,7 @@
                 "name": "temperature",
                 "placeholder": "",
                 "range_spec": {
-                  "max": 2,
+                  "max": 1,
                   "min": 0,
                   "step": 0.01,
                   "step_type": "float"
@@ -1266,6 +1197,24 @@
                 "tool_mode": false,
                 "type": "slider",
                 "value": 0.1
+              },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
               }
             },
             "tool_mode": false
@@ -1274,10 +1223,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-PSlnR",
+        "id": "OpenAIModel-MyAsQ",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 653,
+          "width": 320
         },
         "position": {
           "x": 1715.4141756503298,
@@ -1288,13 +1237,9 @@
       },
       {
         "data": {
-          "id": "URL-3QRyA",
+          "id": "URL-EPEnt",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "base_classes": ["Data", "DataFrame", "Message"],
             "beta": false,
             "category": "data",
             "conditional_paths": [],
@@ -1303,10 +1248,7 @@
             "display_name": "URL",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "urls",
-              "format"
-            ],
+            "field_order": ["urls", "format"],
             "frozen": false,
             "icon": "layout-template",
             "key": "URL",
@@ -1322,9 +1264,8 @@
                 "method": "fetch_content",
                 "name": "data",
                 "selected": "Data",
-                "types": [
-                  "Data"
-                ],
+                "tool_mode": true,
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1334,9 +1275,8 @@
                 "method": "fetch_content_text",
                 "name": "text",
                 "selected": "Message",
-                "types": [
-                  "Message"
-                ],
+                "tool_mode": true,
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1346,9 +1286,8 @@
                 "method": "as_dataframe",
                 "name": "dataframe",
                 "selected": "DataFrame",
-                "types": [
-                  "DataFrame"
-                ],
+                "tool_mode": true,
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1383,10 +1322,7 @@
                 "dynamic": false,
                 "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
                 "name": "format",
-                "options": [
-                  "Text",
-                  "Raw HTML"
-                ],
+                "options": ["Text", "Raw HTML"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1403,9 +1339,7 @@
                 "display_name": "URLs",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": true,
                 "list_add_label": "Add URL",
                 "load_from_db": false,
@@ -1418,10 +1352,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": [
-                  "https://langflow.org/",
-                  "https://docs.langflow.org/"
-                ]
+                "value": ["https://langflow.org/", "https://docs.langflow.org/"]
               }
             },
             "tool_mode": false
@@ -1430,10 +1361,10 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-3QRyA",
+        "id": "URL-EPEnt",
         "measured": {
-          "height": 522,
-          "width": 360
+          "height": 465,
+          "width": 320
         },
         "position": {
           "x": 498.72695054312635,
@@ -1444,9 +1375,9 @@
       }
     ],
     "viewport": {
-      "x": 118.07504778051486,
-      "y": 77.01438585334114,
-      "zoom": 0.5753720075740282
+      "x": 107.17740467666556,
+      "y": 281.84175643433355,
+      "zoom": 0.5274085584390961
     }
   },
   "description": "Auto-generate a customized blog post from instructions and referenced articles.",
@@ -1457,8 +1388,5 @@
   "is_component": false,
   "last_tested_version": "1.0.19.post2",
   "name": "Blog Writer",
-  "tags": [
-    "chatbots",
-    "content-generation"
-  ]
+  "tags": ["chatbots", "content-generation"]
 }

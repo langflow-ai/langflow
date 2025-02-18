@@ -24,20 +24,30 @@ In this example of a document ingestion pipeline, the URL component outputs raw 
 
 ## API Request
 
-This component sends HTTP requests to the specified URLs.
-
-Use this component to interact with external APIs or services and retrieve data. Ensure that the URLs are valid and that you configure the method, headers, body, and timeout correctly.
+This component makes HTTP requests using URLs or cURL commands.
 
 ### Inputs
 
-| Name    | Display Name | Info                                                                       |
-| ------- | ------------ | -------------------------------------------------------------------------- |
-| URLs    | URLs         | The URLs to target                                                         |
-| curl    | curl         | Paste a curl command to fill in the dictionary fields for headers and body |
-| Method  | HTTP Method  | The HTTP method to use, such as GET or POST                                |
-| Headers | Headers      | The headers to include with the request                                    |
-| Body    | Request Body | The data to send with the request (for methods like POST, PATCH, PUT)      |
-| Timeout | Timeout      | The maximum time to wait for a response                                    |
+| Name | Display Name | Info |
+|------|--------------|------|
+| urls | URLs | Enter one or more URLs, separated by commas. |
+| curl | cURL | Paste a curl command to populate the dictionary fields for headers and body. |
+| method | Method | The HTTP method to use. |
+| use_curl | Use cURL | Enable cURL mode to populate fields from a cURL command. |
+| query_params | Query Parameters | The query parameters to append to the URL. |
+| body | Body | The body to send with the request as a dictionary (for `POST`, `PATCH`, `PUT`). |
+| headers | Headers | The headers to send with the request as a dictionary. |
+| timeout | Timeout | The timeout to use for the request. |
+| follow_redirects | Follow Redirects | Whether to follow http redirects. |
+| save_to_file | Save to File | Save the API response to a temporary file |
+| include_httpx_metadata | Include HTTPx Metadata | Include properties such as `headers`, `status_code`, `response_headers`, and `redirection_history` in the output. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | The result of the API requests. |
+
 
 ## Directory
 
@@ -51,10 +61,10 @@ This component recursively loads files from a directory, with options for file t
 | types              | MessageTextInput | File types to load (leave empty to load all types) |
 | depth              | IntInput         | Depth to search for files                          |
 | max_concurrency    | IntInput         | Maximum concurrency for loading files              |
-| load_hidden        | BoolInput        | If true, hidden files will be loaded               |
-| recursive          | BoolInput        | If true, the search will be recursive              |
-| silent_errors      | BoolInput        | If true, errors will not raise an exception        |
-| use_multithreading | BoolInput        | If true, multithreading will be used               |
+| load_hidden        | BoolInput        | If true, hidden files are loaded               |
+| recursive          | BoolInput        | If true, the search is recursive              |
+| silent_errors      | BoolInput        | If true, errors do not raise an exception        |
+| use_multithreading | BoolInput        | If true, multithreading is used               |
 
 
 ### Outputs
@@ -67,34 +77,20 @@ This component recursively loads files from a directory, with options for file t
 
 The FileComponent is a class that loads and parses text files of various supported formats, converting the content into a Data object. It supports multiple file types and provides an option for silent error handling.
 
+The maximum supported file size is 100 MB.
+
 ### Inputs
 
 | Name          | Display Name  | Info                                         |
 | ------------- | ------------- | -------------------------------------------- |
 | path          | Path          | File path to load.                           |
-| silent_errors | Silent Errors | If true, errors will not raise an exception. |
+| silent_errors | Silent Errors | If true, errors do not raise an exception. |
 
 ### Outputs
 
 | Name | Display Name | Info                                         |
 | ---- | ------------ | -------------------------------------------- |
 | data | Data         | Parsed content of the file as a Data object. |
-
-## URL
-
-The URLComponent is a class that fetches content from one or more URLs, processes the content, and returns it as a list of Data objects. It ensures that the provided URLs are valid and uses WebBaseLoader to fetch the content.
-
-### Inputs
-
-| Name | Display Name | Info                   |
-| ---- | ------------ | ---------------------- |
-| urls | URLs         | Enter one or more URLs |
-
-### Outputs
-
-| Name | Display Name | Info                                                         |
-| ---- | ------------ | ------------------------------------------------------------ |
-| data | Data         | List of Data objects containing fetched content and metadata |
 
 ## Gmail Loader
 
@@ -160,11 +156,66 @@ For more on creating a service account JSON, see [Service Account JSON](https://
 | doc_titles | List[str] | Titles of the found documents                   |
 | Data       | Data      | Document titles and URLs in a structured format |
 
+## SQL Query
+
+This component executes SQL queries on a specified database.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| query | Query | The SQL query to execute. |
+| database_url | Database URL | The URL of the database. |
+| include_columns | Include Columns | Include columns in the result. |
+| passthrough | Passthrough | If an error occurs, return the query instead of raising an exception. |
+| add_error | Add Error | Add the error to the result. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| result | Result | The result of the SQL query execution. |
+
+## URL
+
+This component fetches content from one or more URLs, processes the content, and returns it as a list of [Data](/concepts-objects) objects.
+
+### Inputs
+
+| Name | Display Name | Info                   |
+| ---- | ------------ | ---------------------- |
+| urls | URLs         | Enter one or more URLs |
+
+### Outputs
+
+| Name | Display Name | Info                                                         |
+| ---- | ------------ | ------------------------------------------------------------ |
+| data | Data         | List of Data objects containing fetched content and metadata |
+
 ## Webhook
 
-This component defines a webhook input for the flow. The flow can be triggered by an external HTTP POST request (webhook) sending a JSON payload.
+This component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
 
-If the input is not valid JSON, the component will wrap it in a "payload" field. The component's status will reflect any errors or the processed data.
+If the input is not valid JSON, the component wraps it in a `payload` object so that it can be processed and still trigger the flow. The component does not require an API key.
+
+When a **Webhook** component is added to the workspace, a new **Webhook cURL** tab becomes available in the **API** pane that contains an HTTP POST request for triggering the webhook component. For example:
+
+```bash
+curl -X POST \
+  "http://127.0.0.1:7860/api/v1/webhook/**YOUR_FLOW_ID**" \
+  -H 'Content-Type: application/json'\
+  -d '{"any": "data"}'
+  ```
+
+To test the webhook component:
+
+1. Add a **Webhook** component to the flow.
+2. Connect the **Webhook** component's **Data** output to the **Data** input of a [Data to Message](/components-processing#data-to-message) component.
+3. Connect the **Data to Message** component's **Message** output to the **Text** input of a [Chat Output](/components-io#chat-output) component.
+4. To send a POST request, copy the code from the **Webhook cURL** tab in the **API** pane and paste it into a terminal.
+5. Send the POST request.
+6. Open the **Playground**.
+Your JSON data is posted to the **Chat Output** component, which indicates that the webhook component is correctly triggering the flow.
 
 ### Inputs
 

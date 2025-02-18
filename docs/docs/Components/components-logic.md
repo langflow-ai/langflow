@@ -34,7 +34,7 @@ The use of asynchronous messaging patterns is recommended for system scalability
 It includes code examples of REST and gRPC implementations to demonstrate integration approaches.
 ```
 
-## Conditional router
+## Conditional router (If-Else component)
 
 This component routes an input message to a corresponding output based on text comparison.
 
@@ -82,7 +82,12 @@ This component is particularly useful in workflows that require conditional rout
 | false_output | Data/List   | Output when the condition is not met.                |
 
 
-## Flow as Tool {#flow-as-tool}
+## Flow as tool {#flow-as-tool}
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
 
 This component constructs a tool from a function that runs a loaded flow.
 
@@ -153,27 +158,61 @@ This component generates a notification for the Listen component to use.
 |--------|------|-----------------------------------------|
 | output | Data | The data stored in the notification.    |
 
-## Run flow
+## Pass message
 
-This component allows you to run a specified flow with given inputs and tweaks.
-
-The RunFlowComponent executes a specified flow within a larger workflow. It provides the ability to run a flow with custom inputs and apply tweaks to modify its behavior.
+This component forwards the input message, unchanged.
 
 ### Inputs
 
-| Name        | Type         | Description                                           |
-|-------------|--------------|-------------------------------------------------------|
-| input_value | String       | The input value for the flow to process.          |
-| flow_name   | Dropdown     | The name of the flow to run.                          |
-| tweaks      | Nested Dict  | Tweaks to apply to the flow.                          |
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_message | Input Message | The message to be passed forward. |
+| ignored_message | Ignored Message | A second message to be ignored. Used as a workaround for continuity. |
 
 ### Outputs
 
-| Name        | Type        | Description                                    |
-|-------------|-------------|------------------------------------------------|
-| run_outputs | List[Data]  | The results generated from running the flow.   |
+| Name | Display Name | Info |
+|------|--------------|------|
+| output_message | Output Message | The forwarded input message. |
 
-## Sub Flow
+## Run flow
+
+This component allows you to run any flow stored in your Langflow database without opening the flow editor.
+
+The Run Flow component can also be used as a tool when connected to an [Agent](/components-agents). The `name` and `description` metadata that the Agent uses to register the tool are created automatically.
+
+When you select a flow, the component fetches the flow's graph structure and uses it to generate the inputs and outputs for the Run Flow component.
+
+To use the Run Flow component as a tool, do the following:
+1. Add the **Run Flow** component to the [Simple Agent](/starter-projects-simple-agent) flow.
+2. In the **Flow Name** menu, select the sub-flow you want to run.
+The appearance of the **Run Flow** component changes to reflect the inputs and outputs of the selected flow.
+3. On the **Run Flow** component, enable **Tool Mode**.
+4. Connect the **Run Flow** component to the **Toolset** input of the Agent.
+Your flow should now look like this:
+![Run Flow component](/img/component-run-flow.png)
+5. Run the flow. The Agent uses the Run Flow component as a tool to run the selected sub-flow.
+
+### Inputs
+
+| Name              | Type     | Description                                                    |
+|-------------------|----------|----------------------------------------------------------------|
+| flow_name_selected| Dropdown | The name of the flow to run.                                    |
+| flow_tweak_data   | Dict     | Dictionary of tweaks to customize the flow's behavior.         |
+| dynamic inputs  | Various  | Additional inputs that are generated based on the selected flow.     |
+
+### Outputs
+
+| Name         | Type        | Description                                                   |
+|--------------|-------------|---------------------------------------------------------------|
+| run_outputs  | A `List` of types `Data`, `Message,` or `DataFrame`  | All outputs are generated from running the flow.                   |
+
+## Sub flow
+
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Run flow component](/components-logic#run-flow)
+:::
 
 This `SubFlowComponent` generates a component from a flow with all of its inputs and outputs.
 
