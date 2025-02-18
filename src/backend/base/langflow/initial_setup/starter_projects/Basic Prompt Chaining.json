@@ -1363,6 +1363,7 @@
                 "display_name": "Toolset",
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "required_inputs": [],
                 "selected": "Tool",
                 "tool_mode": true,
                 "types": [
@@ -1758,6 +1759,7 @@
                 "display_name": "Toolset",
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "required_inputs": [],
                 "selected": "Tool",
                 "tool_mode": true,
                 "types": [
@@ -2153,6 +2155,7 @@
                 "display_name": "Toolset",
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "required_inputs": [],
                 "selected": "Tool",
                 "tool_mode": true,
                 "types": [
