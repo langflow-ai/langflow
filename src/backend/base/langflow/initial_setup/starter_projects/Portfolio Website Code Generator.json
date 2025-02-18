@@ -2334,9 +2334,12 @@
     }
   },
   "description": "This template transforms PDF or TXT resume documents into structured JSON, generating a portfolio website HTML code from the structured data.",
-  "endpoint_name": null,
   "id": "abe52a4a-656d-4ac8-a494-19ec5e162bec",
   "is_component": false,
   "last_tested_version": "1.1.5",
-  "name": "Portfolio Website Code Generator"
+  "name": "Portfolio Website Code Generator",
+  "endpoint_name": "portfolio_website",
+  "gradient": "3",
+  "icon": "file-user",
+  "tags": ["chatbots", "coding"]
 }
