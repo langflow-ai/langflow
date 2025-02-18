@@ -137,7 +137,8 @@ async def log_transaction(
         async with session_getter(get_db_service()) as session:
             with session.no_autoflush:
                 inserted = await crud_log_transaction(session, transaction)
-                logger.debug(f"Logged transaction: {inserted.id}")
+                if inserted:
+                    logger.debug(f"Logged transaction: {inserted.id}")
     except Exception:  # noqa: BLE001
         logger.error("Error logging transaction")
 
