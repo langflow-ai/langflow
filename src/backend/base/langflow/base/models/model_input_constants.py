@@ -8,6 +8,7 @@ from langflow.components.models.google_generative_ai import GoogleGenerativeAICo
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
+from langflow.components.models.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -147,6 +148,17 @@ def _get_amazon_bedrock_inputs_and_fields():
     return amazon_bedrock_inputs, create_input_fields_dict(amazon_bedrock_inputs, "")
 
 
+def _get_sambanova_inputs_and_fields():
+    try:
+        from langflow.components.models.sambanova import SambaNovaComponent
+
+        sambanova_inputs = get_filtered_inputs(SambaNovaComponent)
+    except ImportError as e:
+        msg = "SambaNova is not installed. Please install it with `pip install langchain-sambanova`."
+        raise ImportError(msg) from e
+    return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
+
+
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
@@ -223,6 +235,17 @@ try:
         "inputs": google_generative_ai_inputs,
         "prefix": "",
         "component_class": GoogleGenerativeAIComponent(),
+    }
+except ImportError:
+    pass
+
+try:
+    sambanova_inputs, sambanova_fields = _get_sambanova_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["SambaNova"] = {
+        "fields": sambanova_fields,
+        "inputs": sambanova_inputs,
+        "prefix": "",
+        "component_class": SambaNovaComponent(),
     }
 except ImportError:
     pass

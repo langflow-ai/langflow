@@ -31,6 +31,7 @@
   <a href="./README.ja.md"><img alt="README en Japonés" src="https://img.shields.io/badge/日本語-d9d9d9"></a>
   <a href="./README.KR.md"><img alt="README en Coreano" src="https://img.shields.io/badge/한국어-d9d9d9"></a>
   <a href="./README.FR.md"><img alt="README en Francès" src="https://img.shields.io/badge/Français-d9d9d9"></a>
+  <a href="./README.RU.md"><img alt="README en Russian" src="https://img.shields.io/badge/Русский"></a>
 </div>
 
 <p align="center">
