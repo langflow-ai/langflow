@@ -243,7 +243,7 @@ class TracingService(Service):
             trace_id,
             trace_name,
             trace_type,
-            self._cleanup_inputs(inputs),
+            inputs,
             metadata,
             component._vertex,
         )
