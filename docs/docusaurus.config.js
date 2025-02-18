@@ -258,6 +258,15 @@ const config = {
           hideable: false,
         },
       },
+      algolia: {
+        appId: 'UZK6BDPCVY',
+        // public key, safe to commit
+        apiKey: 'adbd7686dceb1cd510d5ce20d04bf74c',
+        indexName: 'langflow',
+        contextualSearch: true,
+        searchParameters: {},
+        searchPagePath: 'search',
+      },
     }),
 };
 
