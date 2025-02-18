@@ -11,7 +11,6 @@ from .parse_data import ParseDataComponent
 from .parse_json_data import ParseJSONDataComponent
 from .select_data import SelectDataComponent
 from .split_text import SplitTextComponent
-from .split_text_legacy import SplitTextComponentLegacy
 from .update_data import UpdateDataComponent
 
 __all__ = [
@@ -29,6 +28,5 @@ __all__ = [
     "ParseJSONDataComponent",
     "SelectDataComponent",
     "SplitTextComponent",
-    "SplitTextComponentLegacy",
     "UpdateDataComponent",
 ]

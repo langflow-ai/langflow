@@ -48,8 +48,8 @@ class SplitTextComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data_chunks", method="as_data"),
-        Output(display_name="DataFrame", name="dataframe_chunks", method="as_dataframe"),
+        Output(display_name="Chunks", name="chunks", method="split_text"),
+        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
     def _docs_to_data(self, docs) -> list[Data]:
@@ -59,7 +59,7 @@ class SplitTextComponent(Component):
         data_dicts = [{self.text_key: doc.page_content, **doc.metadata} for doc in docs]
         return DataFrame(data_dicts)
 
-    def split_text(self):
+    def split_text_base(self):
         separator = unescape_string(self.separator)
         if isinstance(self.data_inputs, DataFrame):
             if not len(self.data_inputs):
@@ -101,8 +101,8 @@ class SplitTextComponent(Component):
             msg = f"Error splitting text: {e}"
             raise TypeError(msg) from e
 
-    def as_data(self) -> list[Data]:
-        return self._docs_to_data(self.split_text())
+    def split_text(self) -> list[Data]:
+        return self._docs_to_data(self.split_text_base())
 
     def as_dataframe(self) -> DataFrame:
-        return self._docs_to_dataframe(self.split_text())
+        return self._docs_to_dataframe(self.split_text_base())

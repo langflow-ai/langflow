@@ -45,13 +45,14 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
                 "chunk_overlap": 0,
                 "chunk_size": 15,
                 "separator": "\n",
+                "text_key": "text",
                 "session_id": "test_session",
                 "sender": "test_sender",
                 "sender_name": "test_sender_name",
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) == 3, f"Expected 3 chunks, got {len(results)}"
         assert "This is a test" in results[0].text, f"Expected 'This is a test', got '{results[0].text}'"
         assert "It has multiple lines" in results[1].text, f"Expected 'It has multiple lines', got '{results[1].text}'"
@@ -75,7 +76,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) > 1, f"Expected more than 1 chunk, got {len(results)}"
         # Check that chunks contain the expected text
         assert "First chunk" in results[0].text, f"Expected 'First chunk' in '{results[0].text}'"
@@ -98,7 +99,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) == 3, f"Expected 3 chunks, got {len(results)}"
         assert "First part" in results[0].text, f"Expected 'First part', got '{results[0].text}'"
         assert "Second part" in results[1].text, f"Expected 'Second part', got '{results[1].text}'"
@@ -121,7 +122,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) == 2, f"Expected 2 chunks, got {len(results)}"
         for result in results:
             assert result.data["source"] == test_metadata["source"], (
@@ -176,7 +177,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) == 0, f"Expected 0 chunks for empty input, got {len(results)}"
 
     def test_split_text_single_chunk(self):
@@ -195,7 +196,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) == 1, f"Expected 1 chunk, got {len(results)}"
         assert results[0].text == test_text, f"Expected '{test_text}', got '{results[0].text}'"
 
@@ -215,7 +216,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) == 4, f"Expected 4 chunks (2 from each text), got {len(results)}"
         assert "First text" in results[0].text, f"Expected 'First text', got '{results[0].text}'"
         assert "Second line" in results[1].text, f"Expected 'Second line', got '{results[1].text}'"
@@ -239,7 +240,7 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
             }
         )
 
-        results = component.as_data()
+        results = component.split_text()
         assert len(results) == 4, f"Expected 4 chunks (2 from each text), got {len(results)}"
         assert "First text" in results[0].text, f"Expected 'First text', got '{results[0].text}'"
         assert "Second line" in results[1].text, f"Expected 'Second line', got '{results[1].text}'"
@@ -268,6 +269,6 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert isinstance(results, DataFrame), "Expected DataFrame instance"
         assert len(results) > 2, f"Expected DataFrame with more than 2 rows, got {len(results)}"
 
-        results = component.as_data()
+        results = component.split_text()
         assert isinstance(results, list), "Expected list instance"
         assert len(results) > 2, f"Expected DataFrame with more than 2 rows, got {len(results)}"
