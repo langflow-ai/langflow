@@ -262,7 +262,7 @@ jobs:
         uses: ./.github/actions/setup-uv
 
       - name: Install Python Dependencies
-        run: uv sync --dev
+        run: uv sync
 
       - name: Configure Environment Variables
         run: |

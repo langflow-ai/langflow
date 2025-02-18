@@ -30,7 +30,7 @@ jobs:
 
       - name: "Install dependencies"
         run: |
-          uv sync --frozen
+          uv sync
           uv pip install -e .
 
       - name: Run starter projects update
