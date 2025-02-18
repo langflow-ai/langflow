@@ -819,8 +819,8 @@ export const defaultShortcuts = [
     shortcut: "backspace",
   },
   {
-    display_name: "Open playground",
-    name: "Open playground",
+    display_name: "Open Playground",
+    name: "Open Playground",
     shortcut: "mod+k",
   },
   {
