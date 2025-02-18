@@ -554,6 +554,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
+        # Append a special case for Bring your own
+        vectorize_providers["Bring your own"] = [None, ["Bring your own"]]
+
         # If the collection is set, allow user to see embedding options
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "embedding_generation_provider"
