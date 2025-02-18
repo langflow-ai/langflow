@@ -30,6 +30,7 @@ import {
   Binary,
   Blocks,
   BookMarked,
+  BookOpenText,
   BookmarkPlus,
   Bot,
   BotMessageSquare,
@@ -69,6 +70,7 @@ import {
   Database,
   DatabaseZap,
   Delete,
+  DollarSign,
   Dot,
   Download,
   DownloadCloud,
@@ -285,6 +287,7 @@ import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
 import { NovitaIcon } from "../icons/Novita";
 import { NvidiaIcon } from "../icons/Nvidia";
+import { OlivyaIcon } from "../icons/Olivya";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { OpenRouterIcon } from "../icons/OpenRouter";
@@ -397,6 +400,7 @@ export const nodeColors: { [char: string]: string } = {
   chains: "#FE7500",
   list: "#9AAE42",
   agents: "#903BBE",
+  Olivya: "#00413B",
   tools: "#00fbfc",
   memories: "#F5B85A",
   saved_components: "#a5B85A",
@@ -523,6 +527,7 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
+  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
@@ -637,6 +642,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  Olivya: OlivyaIcon,
   Bing: BingIcon,
   Cohere: CohereIcon,
   ChevronsUpDownIcon,
@@ -959,4 +965,6 @@ export const nodeIconsLucide: iconsType = {
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
+  DollarSign,
+  BookOpenText,
 };
