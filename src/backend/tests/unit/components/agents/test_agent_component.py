@@ -96,6 +96,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert "model_name" not in updated_config
 
 
+@pytest.mark.usefixtures("client")
 @pytest.mark.api_key_required
 async def test_agent_component_with_calculator():
     # Mock inputs
@@ -113,6 +114,7 @@ async def test_agent_component_with_calculator():
         model_name="gpt-4o",
         llm_type="OpenAI",
         temperature=temperature,
+        _session_id=str(uuid4()),
     )
 
     response = await agent.message_response()

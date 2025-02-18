@@ -153,9 +153,14 @@ unit_tests: ## run unit tests
 	if [ "$(ff)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
+	if [ "$(all)" = "true" ]; then \
+		EXTRA_ARGS="$$EXTRA_ARGS"; \
+	else \
+		EXTRA_ARGS="$$EXTRA_ARGS -m 'not api_key_required'"; \
+	fi; \
 	uv run pytest src/backend/tests/unit \
 	--ignore=src/backend/tests/integration $$EXTRA_ARGS \
-	--instafail -ra -m 'not api_key_required' \
+	--instafail -ra \
 	--durations-path src/backend/tests/.test_durations \
 	--splitting-algorithm least_duration $(args)
 

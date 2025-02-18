@@ -162,6 +162,19 @@
                   "Message"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -471,6 +484,19 @@
                 "tool_mode": true,
                 "types": [
                   "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1406,6 +1432,19 @@
                   "Message"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -2129,9 +2168,9 @@
   "id": "ab091b94-13c1-42af-9f9b-3689e99fb0bf",
   "is_component": false,
   "last_tested_version": "1.1.5",
+  "name": "Price Deal Finder",
   "tags": [
     "web-scraping",
     "agents"
-  ],
-  "name": "Price Deal Finder"
+  ]
 }

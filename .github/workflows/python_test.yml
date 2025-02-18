@@ -17,6 +17,15 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      STORE_API_KEY:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      TAVILY_API_KEY:
+        required: false
   workflow_dispatch:
     inputs:
       python-versions:
@@ -25,16 +34,18 @@ on:
         type: string
         default: "['3.10', '3.11', '3.12']"
 env:
-  POETRY_VERSION: "1.8.2"
   NODE_VERSION: "21"
   PYTEST_RUN_PATH: "src/backend/tests"
+  UV_CACHE_DIR: /tmp/.uv-cache
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
 jobs:
   build:
     name: Unit Tests - Python ${{ matrix.python-version }} - Group ${{ matrix.group }}
     runs-on: ubuntu-latest
-    env:
-      UV_CACHE_DIR: /tmp/.uv-cache
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12"]' ) }}
@@ -73,7 +84,7 @@ jobs:
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: make unit_tests async=false args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
+          command: make unit_tests all=true async=false args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
       - name: Minimize uv cache
         run: uv cache prune --ci
   integration-tests:
