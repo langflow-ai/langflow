@@ -125,9 +125,7 @@ class DatabaseService(Service):
         kwargs = self._build_connection_kwargs()
 
         poolclass_key = kwargs.get("poolclass")
-        if poolclass_key is None:
-            logger.debug(f"No poolclass specified. Using default pool class.")
-        else:
+        if poolclass_key is not None:
             pool_class = getattr(sa, poolclass_key, None)
             if pool_class and isinstance(pool_class(), sa.pool.Pool):
                 logger.debug(f"Using poolclass: {poolclass_key}.")
@@ -136,13 +134,6 @@ class DatabaseService(Service):
                 logger.error(
                     f"Invalid poolclass '{poolclass_key}' specified. Using default pool class."
                 )
-
-        if url_components[0].startswith("sqlite"):
-            scheme = "sqlite+aiosqlite"
-        elif url_components[0].startswith("postgresql"):
-            scheme = "postgresql+psycopg"
-        else:
-            scheme = url_components[0]
 
         return create_async_engine(
             self.database_url,
