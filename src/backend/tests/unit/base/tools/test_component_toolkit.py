@@ -35,6 +35,7 @@ def test_component_tool():
 
 
 @pytest.mark.api_key_required
+@pytest.mark.usefixtures("client")
 async def test_component_tool_with_api_key():
     chat_output = ChatOutput()
     openai_llm = OpenAIModelComponent()
