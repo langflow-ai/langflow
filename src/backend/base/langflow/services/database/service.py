@@ -33,6 +33,8 @@ from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
+
+
 class DatabaseService(Service):
     name = "database_service"
 
@@ -121,6 +123,26 @@ class DatabaseService(Service):
         # Get connection settings from config, with defaults if not specified
         # if the user specifies an empty dict, we allow it.
         kwargs = self._build_connection_kwargs()
+
+        poolclass_key = kwargs.get("poolclass")
+        if poolclass_key is None:
+            logger.debug(f"No poolclass specified. Using default pool class.")
+        else:
+            pool_class = getattr(sa, poolclass_key, None)
+            if pool_class and isinstance(pool_class(), sa.pool.Pool):
+                logger.debug(f"Using poolclass: {poolclass_key}.")
+                kwargs["poolclass"] = pool_class
+            else:
+                logger.error(
+                    f"Invalid poolclass '{poolclass_key}' specified. Using default pool class."
+                )
+
+        if url_components[0].startswith("sqlite"):
+            scheme = "sqlite+aiosqlite"
+        elif url_components[0].startswith("postgresql"):
+            scheme = "postgresql+psycopg"
+        else:
+            scheme = url_components[0]
 
         return create_async_engine(
             self.database_url,
