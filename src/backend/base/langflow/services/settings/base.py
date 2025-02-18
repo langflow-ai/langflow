@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
 
+    db_driver_connection_settings: dict | None = None
+    """Database driver connection settings."""
+
     db_connection_settings: dict | None = {
         "pool_size": 20,  # Match the pool_size above
         "max_overflow": 30,  # Match the max_overflow above
