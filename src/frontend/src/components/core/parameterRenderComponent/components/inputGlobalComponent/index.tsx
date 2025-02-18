@@ -2,6 +2,7 @@ import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import useDetermineEnv from "@/customization/hooks/use-determine-env";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useEffect } from "react";
 import DeleteConfirmationModal from "../../../../../modals/deleteConfirmationModal";
@@ -33,6 +34,18 @@ export default function InputGlobalComponent({
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
   );
+
+  useEffect(() => {
+    const env = useDetermineEnv();
+
+    if (display_name.toLowerCase() === "environment") {
+      handleOnNewValue({
+        value: env !== "dev" ? null : "dev",
+        load_from_db: false,
+        skipSnapshot: true,
+      });
+    }
+  }, [display_name]);
 
   useEffect(() => {
     if (globalVariables) {
