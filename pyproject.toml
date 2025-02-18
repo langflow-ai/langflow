@@ -112,6 +112,10 @@ dependencies = [
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
+    "permit (>=2.7.2,<3.0.0)",
+    "python-jwt==4.1.0",
+    "cryptography==42.0.5",
+    "requests==2.32.3",
 ]
 
 [tool.uv.sources]
@@ -130,6 +134,12 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
+auth = [
+    "python-jwt==4.1.0", 
+    "cryptography==42.0.5",
+    "permit>=2.7.2,<3.0.0",
+    "requests==2.32.3"
+]
 deploy = [
     "celery[redis]>=5.3.6",
     "flower>=2.0.0"
