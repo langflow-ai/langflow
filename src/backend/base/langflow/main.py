@@ -155,10 +155,17 @@ def create_app():
     from langflow.utils.version import get_version_info
 
     __version__ = get_version_info()["version"]
+    settings = get_settings_service().settings
 
     configure()
     lifespan = get_lifespan(version=__version__)
-    app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)
+    app = FastAPI(
+        lifespan=lifespan,
+        title="Langflow",
+        version=__version__,
+        root_path=settings.root_path
+    )
+
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
@@ -220,7 +227,6 @@ def create_app():
 
         return await call_next(request)
 
-    settings = get_settings_service().settings
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)

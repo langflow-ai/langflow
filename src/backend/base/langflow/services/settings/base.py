@@ -215,6 +215,9 @@ class Settings(BaseSettings):
     """The maximum number of vertex builds to keep in the database."""
     max_vertex_builds_per_vertex: int = 2
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
+    root_path: str = ""
+    """The root path to serve requests at."""
+
 
     # MCP Server
     mcp_server_enabled: bool = True
