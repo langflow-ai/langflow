@@ -1,9 +1,9 @@
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageTextInput, Output
+from langflow.io import BoolInput, FileInput, FloatInput, IntInput, MessageTextInput
 
 
-class VertexAIEmbeddingsComponent(LCModelComponent):
+class VertexAIEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "VertexAI Embeddings"
     description = "Generate embeddings using Google Cloud VertexAI models."
     icon = "VertexAI"
@@ -30,10 +30,6 @@ class VertexAIEmbeddingsComponent(LCModelComponent):
         FloatInput(name="temperature", value=0.0, display_name="Temperature"),
         IntInput(name="top_k", display_name="Top K", advanced=True),
         FloatInput(name="top_p", display_name="Top P", value=0.95, advanced=True),
-    ]
-
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
     def build_embeddings(self) -> Embeddings:
