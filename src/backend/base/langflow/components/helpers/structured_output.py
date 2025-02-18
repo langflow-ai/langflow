@@ -8,6 +8,7 @@ from langflow.helpers.base_model import build_model_from_schema
 from langflow.io import HandleInput, MessageTextInput, MultilineInput, Output, TableInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
+from langflow.schema.table import EditMode
 
 if TYPE_CHECKING:
     from langflow.field_typing.constants import LanguageModel
@@ -70,6 +71,7 @@ class StructuredOutputComponentv2(Component):
                     "type": "str",
                     "description": "Specify the name of the output field.",
                     "default": "field",
+                    "edit_mode": EditMode.INLINE,
                 },
                 {
                     "name": "description",
@@ -77,11 +79,13 @@ class StructuredOutputComponentv2(Component):
                     "type": "str",
                     "description": "Describe the purpose of the output field.",
                     "default": "description of field",
+                    "edit_mode": EditMode.POPOVER,
                 },
                 {
                     "name": "type",
                     "display_name": "Type",
                     "type": "str",
+                    "edit_mode": EditMode.INLINE,
                     "description": (
                         "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
                     ),
@@ -93,6 +97,7 @@ class StructuredOutputComponentv2(Component):
                     "type": "boolean",
                     "description": "Set to True if this output field should be a list of the specified type.",
                     "default": "False",
+                    "edit_mode": EditMode.INLINE,
                 },
             ],
             value=[{"name": "field", "description": "description of field", "type": "text", "multiple": "False"}],
