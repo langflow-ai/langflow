@@ -25,13 +25,15 @@ test(
       },
     );
 
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 500,
+    });
+
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-
-    await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("code-button-modal").click();
+    await page.waitForSelector('//*[@id="checkAndSaveBtn"]', {
+      timeout: 5000,
+    });
 
     const customCodeWithError = `
 # from langflow.field_typing import Data
@@ -86,6 +88,8 @@ class CustomComponent(Component):
     await page.waitForSelector('text="Open table"', {
       timeout: 3000,
     });
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
     await page.getByText("Open table").click();
 

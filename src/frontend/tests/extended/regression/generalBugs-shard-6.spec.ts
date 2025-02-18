@@ -20,13 +20,15 @@ test(
       },
     );
 
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 500,
+    });
+
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-
-    await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("code-button-modal").click();
+    await page.waitForSelector('//*[@id="checkAndSaveBtn"]', {
+      timeout: 5000,
+    });
 
     const customCodeWithError = `
 # from langflow.field_typing import Data
@@ -56,13 +58,15 @@ class CustomComponent(Component):
         return data
   `;
 
-    await page.locator("textarea").press("Control+a");
+    await page.locator("textarea").focus();
+    await page.keyboard.press(`ControlOrMeta+a`);
+    await page.keyboard.press("Backspace");
     await page.locator("textarea").fill(customCodeWithError);
 
     await page.getByText("Check & Save").last().click();
 
     //wait for the animation to propagate
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(500);
 
     const error = await page
       .getByTestId("title_error_code_modal")

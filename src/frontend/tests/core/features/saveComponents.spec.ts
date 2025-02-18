@@ -48,16 +48,12 @@ test.describe("save component tests", () => {
         expect(true).toBeTruthy();
       }
 
-      await page
-        .locator('//*[@id="react-flow-id"]/div[1]/div[2]/button[3]')
-        .click();
-
       await page.getByTestId("title-ChatOpenAI").click({
-        modifiers: ["Control"],
+        modifiers: ["ControlOrMeta"],
       });
 
       await page.getByTestId("title-Agent Initializer").click({
-        modifiers: ["Control"],
+        modifiers: ["ControlOrMeta"],
       });
 
       await page.getByRole("button", { name: "Group" }).click();

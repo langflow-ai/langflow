@@ -17,6 +17,7 @@ export function useAddComponent() {
       component: APIClassType,
       type: string,
       position?: { x: number; y: number },
+      openModal?: boolean,
     ) => {
       track("Component Added", { componentType: component.display_name });
 
@@ -59,6 +60,7 @@ export function useAddComponent() {
           showNode: !component.minimized,
           type: type,
           id: newId,
+          openModal: openModal,
         },
       };
 

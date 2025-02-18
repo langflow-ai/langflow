@@ -72,6 +72,15 @@ const NodeToolbarComponent = memo(
     const shortcuts = useShortcutsStore((state) => state.shortcuts);
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
+    useEffect(() => {
+      if (data.openModal) {
+        setTimeout(() => {
+          setOpenModal(true);
+          data.openModal = undefined;
+        }, 300);
+      }
+    }, []);
+
     const frozen = data.node?.frozen ?? false;
     const currentFlow = useFlowStore((state) => state.currentFlow);
     const updateNodeInternals = useUpdateNodeInternals();

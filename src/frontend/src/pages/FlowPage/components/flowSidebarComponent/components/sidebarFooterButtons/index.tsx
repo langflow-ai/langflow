@@ -39,7 +39,7 @@ const SidebarMenuButtons = ({
           unstyled
           onClick={() => {
             if (customComponent) {
-              addComponent(customComponent, "CustomComponent");
+              addComponent(customComponent, "CustomComponent", undefined, true);
             }
           }}
           data-testid="sidebar-custom-component-button"

@@ -20,17 +20,16 @@ test(
       },
     );
 
-    await page.getByTestId("sidebar-custom-component-button").click();
-    await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
-
-    await page.getByTestId("title-Custom Component").first().click();
-
-    await page.waitForSelector('[data-testid="code-button-modal"]', {
-      timeout: 3000,
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 500,
     });
 
-    await page.getByTestId("code-button-modal").click();
+    await page.getByTestId("sidebar-custom-component-button").click();
+
+    // Wait for the code modal to appear
+    await page.waitForSelector('//*[@id="checkAndSaveBtn"]', {
+      timeout: 5000,
+    });
 
     let cleanCode = await extractAndCleanCode(page);
 
@@ -69,7 +68,8 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("fit_view").click();
+    await page.getByTitle("fit view").click();
+    await page.getByTestId("zoom_out").click();
     await page.getByTestId("zoom_out").click();
 
     expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
