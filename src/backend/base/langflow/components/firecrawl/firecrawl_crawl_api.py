@@ -26,6 +26,7 @@ class FirecrawlCrawlApi(Component):
             display_name="URL",
             required=True,
             info="The URL to scrape.",
+            tool_mode=True,
         ),
         IntInput(
             name="timeout",

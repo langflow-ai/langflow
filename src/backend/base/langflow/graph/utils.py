@@ -140,7 +140,7 @@ async def log_transaction(
                 logger.debug(f"Logged transaction: {table.id}")
 
     except Exception:  # noqa: BLE001
-        logger.exception("Error logging transaction")
+        logger.error("Error logging transaction")
 
 
 async def log_vertex_build(

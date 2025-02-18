@@ -96,14 +96,16 @@ class JobQueueService(Service):
                 - The EventManager instance for event handling tied to the queue.
         """
         if self._closed:
-            raise RuntimeError("Queue service is closed")
+            msg = "Queue service is closed"
+            raise RuntimeError(msg)
 
         existing_queue = self._queues.get(job_id)
         if existing_queue:
-            raise ValueError(f"Queue for job_id {job_id} already exists")
+            msg = f"Queue for job_id {job_id} already exists"
+            raise ValueError(msg)
 
-        main_queue = asyncio.Queue()
-        event_manager = self._create_default_event_manager(main_queue)
+        main_queue: asyncio.Queue = asyncio.Queue()
+        event_manager: EventManager = self._create_default_event_manager(main_queue)
 
         # Register the queue without an active task.
         self._queues[job_id] = (main_queue, event_manager, None)
@@ -239,7 +241,7 @@ class JobQueueService(Service):
         """
         for job_id in list(self._queues.keys()):
             _, _, task = self._queues[job_id]
-            if task and (task.done() or task.cancelled()):
+            if task and task.done():
                 logger.debug(f"Job queue for job_id {job_id} marked for cleanup.")
                 await self.cleanup_job(job_id)
 

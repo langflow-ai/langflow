@@ -59,6 +59,7 @@ class AnyIOBackend(TaskBackend):
     def __init__(self) -> None:
         """Initialize the AnyIO backend with an empty task dictionary."""
         self.tasks: dict[str, AnyIOTaskResult] = {}
+        self._run_tasks: list[anyio.TaskGroup] = []
 
     async def launch_task(
         self, task_func: Callable[..., Any], *args: Any, **kwargs: Any
