@@ -10,6 +10,7 @@ class ParseDataComponent(Component):
     description = "Convert Data objects into Messages using any {field_name} from input data."
     icon = "message-square"
     name = "ParseData"
+    legacy = True
 
     inputs = [
         DataInput(name="data", display_name="Data", info="The data to convert to text.", is_list=True, required=True),
