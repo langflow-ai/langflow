@@ -101,7 +101,7 @@ Pre-commit hooks will help keep your changes clean and well-formatted.
  Install pre-commit hooks by running the following commands:
 
 ```bash
-uv sync --dev
+uv sync
 uv run pre-commit install
 ```
 

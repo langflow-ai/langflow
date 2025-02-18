@@ -31,7 +31,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       - name: Generate main nightly tag
         id: generate_main_tag
