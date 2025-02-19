@@ -2,7 +2,6 @@ import { FlowType } from "@/types/flow";
 import { useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import { storeComponent } from "../../../../types/store";
 import DragCardComponent from "../components/dragCardComponent";
 
 const useDragStart = (data: FlowType) => {

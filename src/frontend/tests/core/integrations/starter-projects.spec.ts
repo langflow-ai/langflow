@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "vector store from starter projects should have its connections and nodes on the flow",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page, request }) => {
     const response = await request.get("/api/v1/starter-projects");
     expect(response.status()).toBe(200);
@@ -69,5 +69,54 @@ test(
 
     expect(edges).toBe(edgesFromServer);
     expect(nodes).toBe(nodesFromServer);
+  },
+);
+
+test(
+  "user should be able to use all starter projects without any outdated components on the flow",
+  { tag: ["@release", "@components"] },
+  async ({ page }) => {
+    await awaitBootstrapTest(page);
+
+    await page.getByTestId("side_nav_options_all-templates").click();
+
+    const numberOfTemplates = await page
+      .getByTestId("text_card_container")
+      .count();
+
+    let numberOfOutdatedComponents = 0;
+
+    for (let i = 0; i < numberOfTemplates; i++) {
+      const exampleName = await page
+        .getByTestId("text_card_container")
+        .nth(i)
+        .getAttribute("role");
+
+      await page.getByTestId("text_card_container").nth(i).click();
+
+      await page.waitForSelector('[data-testid="fit_view"]', {
+        timeout: 3000,
+      });
+
+      if ((await page.getByTestId("update-all-button").count()) > 0) {
+        console.error(`
+          ---------------------------------------------------------------------------------------
+          There's an outdated component on the basic template: ${exampleName}
+          ---------------------------------------------------------------------------------------
+          `);
+        numberOfOutdatedComponents++;
+      }
+
+      await page.getByTestId("icon-ChevronLeft").click();
+      await page.waitForSelector('[data-testid="mainpage_title"]', {
+        timeout: 3000,
+      });
+
+      await page.getByTestId("new-project-btn").first().click();
+
+      await page.getByTestId("side_nav_options_all-templates").click();
+    }
+
+    expect(numberOfOutdatedComponents).toBe(0);
   },
 );
