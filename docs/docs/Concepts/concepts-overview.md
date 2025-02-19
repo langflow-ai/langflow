@@ -79,7 +79,7 @@ For more information, see the [Playground](/concepts-playground).
 
 The **Publish** pane provides code templates to integrate your flows into external applications.
 
-For more information, see the [Publish pane](/concepts-api).
+For more information, see the [Publish pane](/concepts-publish).
 
 ![](/img/api-pane.png)
 
