@@ -70,17 +70,19 @@ class Settings(BaseSettings):
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
-    """Database URL for Langflow. If not provided, Langflow will use a SQLite database."""
+    """Database URL for Langflow. If not provided, Langflow will use a SQLite database.
+    The driver shall be an async one like `sqlite+aiosqlite` (`sqlite` and `postgresql`
+    will be automatically converted to the async drivers `sqlite+aiosqlite` and
+    `postgresql+psycopg` respectively)."""
     database_connection_retry: bool = False
     """If True, Langflow will retry to connect to the database if it fails."""
-    pool_size: int = 10
-    """DEPRECATED: Use db_connection_settings['pool_size'] instead.
-    The number of connections to keep open in the connection pool. If not provided, the default is 10."""
-    max_overflow: int = 20
-    """DEPRECATED: Use db_connection_settings['max_overflow'] instead.
-    The number of connections to allow that can be opened beyond the pool size.
-    If not provided, the default is 20."""
-    db_connect_timeout: int = 20
+    pool_size: int = 20
+    """The number of connections to keep open in the connection pool.
+    For high load scenarios, this should be increased based on expected concurrent users."""
+    max_overflow: int = 30
+    """The number of connections to allow that can be opened beyond the pool size.
+    Should be 2x the pool_size for optimal performance under load."""
+    db_connect_timeout: int = 30
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
 
@@ -88,13 +90,31 @@ class Settings(BaseSettings):
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
 
+    db_driver_connection_settings: dict | None = None
+    """Database driver connection settings."""
+
     db_connection_settings: dict | None = {
-        "pool_size": 10,
-        "max_overflow": 20,
-        "pool_timeout": 30,
-        "pool_pre_ping": True,
+        "pool_size": 20,  # Match the pool_size above
+        "max_overflow": 30,  # Match the max_overflow above
+        "pool_timeout": 30,  # Seconds to wait for a connection from pool
+        "pool_pre_ping": True,  # Check connection validity before using
+        "pool_recycle": 1800,  # Recycle connections after 30 minutes
+        "echo": False,  # Set to True for debugging only
     }
-    """Common database connection settings."""
+    """Database connection settings optimized for high load scenarios.
+    Note: These settings are most effective with PostgreSQL. For SQLite:
+    - Reduce pool_size and max_overflow if experiencing lock contention
+    - SQLite has limited concurrent write capability even with WAL mode
+    - Best for read-heavy or moderate write workloads
+
+    Settings:
+    - pool_size: Number of connections to maintain (increase for higher concurrency)
+    - max_overflow: Additional connections allowed beyond pool_size
+    - pool_timeout: Seconds to wait for an available connection
+    - pool_pre_ping: Validates connections before use to prevent stale connections
+    - pool_recycle: Seconds before connections are recycled (prevents timeouts)
+    - echo: Enable SQL query logging (development only)
+    """
 
     # cache configuration
     cache_type: Literal["async", "redis", "memory", "disk"] = "async"
@@ -201,6 +221,9 @@ class Settings(BaseSettings):
     """If set to False, Langflow will not enable the MCP server."""
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
+
+    event_delivery: Literal["polling", "streaming"] = "streaming"
+    """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
 
     @field_validator("dev")
     @classmethod
