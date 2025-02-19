@@ -1,5 +1,276 @@
 {
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TextInput",
+            "id": "TextInput-jcEYO",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "guidelines",
+            "id": "Prompt-5uTbs",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-TextInput-jcEYO{œdataTypeœ:œTextInputœ,œidœ:œTextInput-jcEYOœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-5uTbs{œfieldNameœ:œguidelinesœ,œidœ:œPrompt-5uTbsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "TextInput-jcEYO",
+        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-jcEYOœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-5uTbs",
+        "targetHandle": "{œfieldNameœ: œguidelinesœ, œidœ: œPrompt-5uTbsœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-RiIAB",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-nxMr2",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-RiIAB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RiIABœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-nxMr2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-nxMr2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-RiIAB",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RiIABœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-nxMr2",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-nxMr2œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-nxMr2",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "context",
+            "id": "Prompt-5uTbs",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-nxMr2{œdataTypeœ:œAgentœ,œidœ:œAgent-nxMr2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-5uTbs{œfieldNameœ:œcontextœ,œidœ:œPrompt-5uTbsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "Agent-nxMr2",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-nxMr2œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-5uTbs",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-5uTbsœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-XbcIl",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-nxMr2",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-TavilySearchComponent-XbcIl{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-XbcIlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-nxMr2{œfieldNameœ:œtoolsœ,œidœ:œAgent-nxMr2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-XbcIl",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-XbcIlœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-nxMr2",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-nxMr2œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-5uTbs",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-BUxp5",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-5uTbs{œdataTypeœ:œPromptœ,œidœ:œPrompt-5uTbsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-BUxp5{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-BUxp5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-5uTbs",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-5uTbsœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-BUxp5",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-BUxp5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-BUxp5",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "post",
+            "id": "Prompt-vNJrn",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-BUxp5{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BUxp5œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-vNJrn{œfieldNameœ:œpostœ,œidœ:œPrompt-vNJrnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-BUxp5",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-BUxp5œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-vNJrn",
+        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-vNJrnœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-BUxp5",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "post",
+            "id": "Prompt-kfn20",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-BUxp5{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BUxp5œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfn20{œfieldNameœ:œpostœ,œidœ:œPrompt-kfn20œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-BUxp5",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-BUxp5œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-kfn20",
+        "targetHandle": "{œfieldNameœ: œpostœ, œidœ: œPrompt-kfn20œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-vNJrn",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-EuPBl",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-vNJrn{œdataTypeœ:œPromptœ,œidœ:œPrompt-vNJrnœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-EuPBl{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EuPBlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-vNJrn",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-vNJrnœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-EuPBl",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-EuPBlœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-EuPBl",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "image_description",
+            "id": "Prompt-kfn20",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-EuPBl{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EuPBlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfn20{œfieldNameœ:œimage_descriptionœ,œidœ:œPrompt-kfn20œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-EuPBl",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-EuPBlœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-kfn20",
+        "targetHandle": "{œfieldNameœ: œimage_descriptionœ, œidœ: œPrompt-kfn20œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-kfn20",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-AZo3Y",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Prompt-kfn20{œdataTypeœ:œPromptœ,œidœ:œPrompt-kfn20œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-AZo3Y{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-AZo3Yœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-kfn20",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-kfn20œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-AZo3Y",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-AZo3Yœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -2022,19 +2293,19 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
-                "selected": "Tool",
-                "name": "component_as_tool",
-                "hidden": null,
-                "display_name": "Toolset",
-                "method": "to_toolkit",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": null,
-                "allows_loop": false,
-                "tool_mode": true
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -2202,75 +2473,83 @@
                 "type": "str"
               },
               "tools_metadata": {
-                "tool_mode": false,
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
                 "is_list": true,
                 "list_add_label": "Add More",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "name": "name",
-                      "display_name": "Tool Name",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "hidden": false,
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "description",
-                      "display_name": "Tool Description",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "popover",
-                      "hidden": false,
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "tags",
-                      "display_name": "Tool Identifiers",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "edit_mode": "inline",
-                      "hidden": true,
-                      "formatter": "text"
-                    }
-                  ]
-                },
-                "trigger_text": "",
-                "trigger_icon": "Hammer",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
-                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "hide_options": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
+                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ],
-                    "commands": "commands"
+                    ]
                   },
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  "hide_options": true
                 },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": true,
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "tools_metadata",
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
                 "value": [
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
@@ -2286,15 +2565,7 @@
                       "TavilySearchComponent-fetch_content_text"
                     ]
                   }
-                ],
-                "display_name": "Edit tools",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "real_time_refresh": true,
-                "title_case": false,
-                "type": "table",
-                "_input_type": "TableInput"
+                ]
               },
               "topic": {
                 "_input_type": "DropdownInput",
@@ -3101,277 +3372,6 @@
         },
         "selected": false,
         "type": "genericNode"
-      }
-    ],
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-jcEYO",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "guidelines",
-            "id": "Prompt-5uTbs",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-jcEYO{œdataTypeœ:œTextInputœ,œidœ:œTextInput-jcEYOœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-5uTbs{œfieldNameœ:œguidelinesœ,œidœ:œPrompt-5uTbsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "TextInput-jcEYO",
-        "sourceHandle": "{œdataTypeœ:œTextInputœ,œidœ:œTextInput-jcEYOœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-5uTbs",
-        "targetHandle": "{œfieldNameœ:œguidelinesœ,œidœ:œPrompt-5uTbsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-RiIAB",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-nxMr2",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-RiIAB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RiIABœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-nxMr2{œfieldNameœ:œinput_valueœ,œidœ:œAgent-nxMr2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-RiIAB",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RiIABœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-nxMr2",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-nxMr2œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-nxMr2",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "context",
-            "id": "Prompt-5uTbs",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-nxMr2{œdataTypeœ:œAgentœ,œidœ:œAgent-nxMr2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-5uTbs{œfieldNameœ:œcontextœ,œidœ:œPrompt-5uTbsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "Agent-nxMr2",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-nxMr2œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-5uTbs",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-5uTbsœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-XbcIl",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-nxMr2",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-TavilySearchComponent-XbcIl{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-XbcIlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-nxMr2{œfieldNameœ:œtoolsœ,œidœ:œAgent-nxMr2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-XbcIl",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-XbcIlœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-nxMr2",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-nxMr2œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-5uTbs",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-BUxp5",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-5uTbs{œdataTypeœ:œPromptœ,œidœ:œPrompt-5uTbsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-BUxp5{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-BUxp5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-5uTbs",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-5uTbsœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-BUxp5",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-BUxp5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-BUxp5",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "post",
-            "id": "Prompt-vNJrn",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-BUxp5{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BUxp5œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-vNJrn{œfieldNameœ:œpostœ,œidœ:œPrompt-vNJrnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-BUxp5",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BUxp5œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-vNJrn",
-        "targetHandle": "{œfieldNameœ:œpostœ,œidœ:œPrompt-vNJrnœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-BUxp5",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "post",
-            "id": "Prompt-kfn20",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-BUxp5{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BUxp5œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfn20{œfieldNameœ:œpostœ,œidœ:œPrompt-kfn20œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-BUxp5",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-BUxp5œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-kfn20",
-        "targetHandle": "{œfieldNameœ:œpostœ,œidœ:œPrompt-kfn20œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-vNJrn",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-EuPBl",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-vNJrn{œdataTypeœ:œPromptœ,œidœ:œPrompt-vNJrnœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-EuPBl{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EuPBlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-vNJrn",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-vNJrnœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-EuPBl",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EuPBlœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-EuPBl",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "image_description",
-            "id": "Prompt-kfn20",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-EuPBl{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EuPBlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-Prompt-kfn20{œfieldNameœ:œimage_descriptionœ,œidœ:œPrompt-kfn20œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-EuPBl",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EuPBlœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-kfn20",
-        "targetHandle": "{œfieldNameœ:œimage_descriptionœ,œidœ:œPrompt-kfn20œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "source": "Prompt-kfn20",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-kfn20œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-AZo3Y",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-AZo3Yœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-AZo3Y",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-kfn20",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          }
-        },
-        "id": "xy-edge__Prompt-kfn20{œdataTypeœ:œPromptœ,œidœ:œPrompt-kfn20œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-AZo3Y{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-AZo3Yœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {

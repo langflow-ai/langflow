@@ -1,5 +1,172 @@
 {
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "StructuredOutputComponent",
+            "id": "StructuredOutputComponent-Kqbq4",
+            "name": "structured_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-7XOFR",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-StructuredOutputComponent-Kqbq4{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-7XOFR{œfieldNameœ:œdataœ,œidœ:œParseData-7XOFRœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutputComponent-Kqbq4",
+        "sourceHandle": "{œdataTypeœ: œStructuredOutputComponentœ, œidœ: œStructuredOutputComponent-Kqbq4œ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-7XOFR",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-7XOFRœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-tMLRq",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-dcKuR",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-tMLRq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tMLRqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dcKuR{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-tMLRq",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-tMLRqœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-dcKuR",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-dcKuRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": true,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-dcKuR",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "StructuredOutputComponent-Kqbq4",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-dcKuR{œdataTypeœ:œAgentœ,œidœ:œAgent-dcKuRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-dcKuR",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-dcKuRœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "StructuredOutputComponent-Kqbq4",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputComponent-Kqbq4œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-cGK9T",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-dcKuR",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-TavilySearchComponent-cGK9T{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-cGK9Tœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dcKuR{œfieldNameœ:œtoolsœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-cGK9T",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-cGK9Tœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-dcKuR",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-dcKuRœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-prL67",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "StructuredOutputComponent-Kqbq4",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-prL67{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-prL67œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-prL67",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-prL67œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "StructuredOutputComponent-Kqbq4",
+        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputComponent-Kqbq4œ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-7XOFR",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-JrLxU",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ParseData-7XOFR{œdataTypeœ:œParseDataœ,œidœ:œParseData-7XOFRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JrLxU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JrLxUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "ParseData-7XOFR",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-7XOFRœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-JrLxU",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JrLxUœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -1834,19 +2001,19 @@
             "output_types": [],
             "outputs": [
               {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
-                "selected": "Tool",
-                "name": "component_as_tool",
-                "hidden": null,
-                "display_name": "Toolset",
-                "method": "to_toolkit",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": null,
-                "allows_loop": false,
-                "tool_mode": true
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -2014,75 +2181,83 @@
                 "type": "str"
               },
               "tools_metadata": {
-                "tool_mode": false,
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
                 "is_list": true,
                 "list_add_label": "Add More",
-                "table_schema": {
-                  "columns": [
-                    {
-                      "name": "name",
-                      "display_name": "Tool Name",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "inline",
-                      "hidden": false,
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "description",
-                      "display_name": "Tool Description",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "edit_mode": "popover",
-                      "hidden": false,
-                      "formatter": "text"
-                    },
-                    {
-                      "name": "tags",
-                      "display_name": "Tool Identifiers",
-                      "sortable": false,
-                      "filterable": false,
-                      "type": "text",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "edit_mode": "inline",
-                      "hidden": true,
-                      "formatter": "text"
-                    }
-                  ]
-                },
-                "trigger_text": "",
-                "trigger_icon": "Hammer",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
-                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "hide_options": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
+                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ],
-                    "commands": "commands"
+                    ]
                   },
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                  "hide_options": true
                 },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": true,
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
-                "required": false,
-                "placeholder": "",
-                "show": true,
-                "name": "tools_metadata",
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
                 "value": [
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
@@ -2098,15 +2273,7 @@
                       "TavilySearchComponent-fetch_content_text"
                     ]
                   }
-                ],
-                "display_name": "Edit tools",
-                "advanced": false,
-                "dynamic": false,
-                "info": "",
-                "real_time_refresh": true,
-                "title_case": false,
-                "type": "table",
-                "_input_type": "TableInput"
+                ]
               },
               "topic": {
                 "_input_type": "DropdownInput",
@@ -2531,173 +2698,6 @@
         },
         "selected": false,
         "type": "genericNode"
-      }
-    ],
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "StructuredOutputComponent",
-            "id": "StructuredOutputComponent-Kqbq4",
-            "name": "structured_output",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "ParseData-7XOFR",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-StructuredOutputComponent-Kqbq4{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-7XOFR{œfieldNameœ:œdataœ,œidœ:œParseData-7XOFRœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutputComponent-Kqbq4",
-        "sourceHandle": "{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
-        "target": "ParseData-7XOFR",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-7XOFRœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-tMLRq",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-dcKuR",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-tMLRq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tMLRqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dcKuR{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-tMLRq",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tMLRqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-dcKuR",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": true,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-dcKuR",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "StructuredOutputComponent-Kqbq4",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-dcKuR{œdataTypeœ:œAgentœ,œidœ:œAgent-dcKuRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-dcKuR",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-dcKuRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "StructuredOutputComponent-Kqbq4",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-cGK9T",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-dcKuR",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-TavilySearchComponent-cGK9T{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-cGK9Tœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dcKuR{œfieldNameœ:œtoolsœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-cGK9T",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-cGK9Tœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-dcKuR",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-prL67",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "StructuredOutputComponent-Kqbq4",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-prL67{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-prL67œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-prL67",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-prL67œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
-        "target": "StructuredOutputComponent-Kqbq4",
-        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
-      },
-      {
-        "source": "ParseData-7XOFR",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-7XOFRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-JrLxU",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JrLxUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-JrLxU",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "dataType": "ParseData",
-            "id": "ParseData-7XOFR",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          }
-        },
-        "id": "xy-edge__ParseData-7XOFR{œdataTypeœ:œParseDataœ,œidœ:œParseData-7XOFRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JrLxU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JrLxUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {

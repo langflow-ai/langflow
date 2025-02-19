@@ -1,5 +1,273 @@
 {
   "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-mnAoF",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "context",
+            "id": "Prompt-hdHKZ",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ParseData-mnAoF{œdataTypeœ:œParseDataœ,œidœ:œParseData-mnAoFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-hdHKZ{œfieldNameœ:œcontextœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-mnAoF",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-mnAoFœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-hdHKZ",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-hdHKZœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-8NQlz",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "question",
+            "id": "Prompt-hdHKZ",
+            "inputTypes": [
+              "Message",
+              "Text"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-8NQlz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-hdHKZ{œfieldNameœ:œquestionœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8NQlz",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8NQlzœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-hdHKZ",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-hdHKZœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "File",
+            "id": "File-7fTNc",
+            "name": "data",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data_inputs",
+            "id": "SplitText-oI0KK",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-File-7fTNc{œdataTypeœ:œFileœ,œidœ:œFile-7fTNcœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-oI0KK{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-oI0KKœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-7fTNc",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-7fTNcœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "SplitText-oI0KK",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-oI0KKœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-hdHKZ",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-690Qx",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Prompt-hdHKZ{œdataTypeœ:œPromptœ,œidœ:œPrompt-hdHKZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-690Qx{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-690Qxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-hdHKZ",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-hdHKZœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-690Qx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-690Qxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-u7coL",
+            "name": "embeddings",
+            "output_types": [
+              "Embeddings"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "embedding_model",
+            "id": "AstraDB-UZ35f",
+            "inputTypes": [
+              "Embeddings"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIEmbeddings-u7coL{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-u7coLœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-UZ35f{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-u7coL",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-u7coLœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-UZ35f",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-UZ35fœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "SplitText",
+            "id": "SplitText-oI0KK",
+            "name": "chunks",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "ingest_data",
+            "id": "AstraDB-UZ35f",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-SplitText-oI0KK{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-oI0KKœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-UZ35f{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-oI0KK",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-oI0KKœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraDB-UZ35f",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-UZ35fœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-8NQlz",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "search_query",
+            "id": "AstraDB-Etytu",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-8NQlz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Etytu{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8NQlz",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8NQlzœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-Etytu",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-Etytuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-eerk9",
+            "name": "embeddings",
+            "output_types": [
+              "Embeddings"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "embedding_model",
+            "id": "AstraDB-Etytu",
+            "inputTypes": [
+              "Embeddings"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIEmbeddings-eerk9{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-eerk9œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-Etytu{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-eerk9",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-eerk9œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-Etytu",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-Etytuœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+      },
+      {
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "AstraDB",
+            "id": "AstraDB-Etytu",
+            "name": "search_results",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-mnAoF",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-AstraDB-Etytu{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Etytuœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-mnAoF{œfieldNameœ:œdataœ,œidœ:œParseData-mnAoFœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "AstraDB-Etytu",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-Etytuœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-mnAoF",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-mnAoFœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-690Qx",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-zpEiC",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__OpenAIModel-690Qx{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-690Qxœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-zpEiC{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zpEiCœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-690Qx",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-690Qxœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-zpEiC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-zpEiCœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+      }
+    ],
     "nodes": [
       {
         "data": {
@@ -3650,38 +3918,36 @@
             "output_types": [],
             "outputs": [
               {
-                "types": [
-                  "Data"
-                ],
-                "selected": "Data",
-                "name": "search_results",
-                "hidden": null,
+                "allows_loop": false,
+                "cache": true,
                 "display_name": "Search Results",
                 "method": "search_documents",
-                "value": "__UNDEFINED__",
-                "cache": true,
+                "name": "search_results",
                 "required_inputs": [
                   "collection_name",
                   "database_name",
                   "token"
                 ],
-                "allows_loop": false,
-                "tool_mode": true
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
               },
               {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "dataframe",
+                "required_inputs": [],
+                "selected": "DataFrame",
+                "tool_mode": true,
                 "types": [
                   "DataFrame"
                 ],
-                "selected": "DataFrame",
-                "name": "dataframe",
-                "hidden": null,
-                "display_name": "DataFrame",
-                "method": "as_dataframe",
-                "value": "__UNDEFINED__",
-                "cache": true,
-                "required_inputs": [],
-                "allows_loop": false,
-                "tool_mode": true
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -4011,15 +4277,13 @@
                 "dynamic": false,
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
-                "options": [
-                  "langflow"
-                ],
+                "options": [],
                 "options_metadata": [
                   {
-                    "status": null,
-                    "collections": 10,
                     "api_endpoint": "https://deb10a81-3c5d-4fd3-8b1b-945915d2835b-us-east-2.apps.astra.datastax.com",
-                    "icon": "data"
+                    "collections": 10,
+                    "icon": "data",
+                    "status": null
                   }
                 ],
                 "placeholder": "",
@@ -4295,274 +4559,6 @@
         },
         "selected": false,
         "type": "genericNode"
-      }
-    ],
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParseData",
-            "id": "ParseData-mnAoF",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "context",
-            "id": "Prompt-hdHKZ",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ParseData-mnAoF{œdataTypeœ:œParseDataœ,œidœ:œParseData-mnAoFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-hdHKZ{œfieldNameœ:œcontextœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-mnAoF",
-        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-mnAoFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-hdHKZ",
-        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-8NQlz",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "question",
-            "id": "Prompt-hdHKZ",
-            "inputTypes": [
-              "Message",
-              "Text"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-8NQlz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-hdHKZ{œfieldNameœ:œquestionœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-8NQlz",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Prompt-hdHKZ",
-        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "File",
-            "id": "File-7fTNc",
-            "name": "data",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data_inputs",
-            "id": "SplitText-oI0KK",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-File-7fTNc{œdataTypeœ:œFileœ,œidœ:œFile-7fTNcœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-oI0KK{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-oI0KKœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-7fTNc",
-        "sourceHandle": "{œdataTypeœ:œFileœ,œidœ:œFile-7fTNcœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}",
-        "target": "SplitText-oI0KK",
-        "targetHandle": "{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-oI0KKœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Prompt",
-            "id": "Prompt-hdHKZ",
-            "name": "prompt",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "OpenAIModel-690Qx",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Prompt-hdHKZ{œdataTypeœ:œPromptœ,œidœ:œPrompt-hdHKZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-690Qx{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-690Qxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-hdHKZ",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-hdHKZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "OpenAIModel-690Qx",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-690Qxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-u7coL",
-            "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "embedding_model",
-            "id": "AstraDB-UZ35f",
-            "inputTypes": [
-              "Embeddings"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-u7coL{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-u7coLœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-UZ35f{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-u7coL",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-u7coLœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
-        "target": "AstraDB-UZ35f",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "className": ""
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "SplitText",
-            "id": "SplitText-oI0KK",
-            "name": "chunks",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "ingest_data",
-            "id": "AstraDB-UZ35f",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-SplitText-oI0KK{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-oI0KKœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-UZ35f{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "SplitText-oI0KK",
-        "sourceHandle": "{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-oI0KKœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}",
-        "target": "AstraDB-UZ35f",
-        "targetHandle": "{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "className": ""
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-8NQlz",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "AstraDB-Etytu",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-8NQlz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Etytu{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-8NQlz",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "AstraDB-Etytu",
-        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "className": ""
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-eerk9",
-            "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "embedding_model",
-            "id": "AstraDB-Etytu",
-            "inputTypes": [
-              "Embeddings"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-eerk9{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-eerk9œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-Etytu{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-eerk9",
-        "sourceHandle": "{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-eerk9œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}",
-        "target": "AstraDB-Etytu",
-        "targetHandle": "{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "className": ""
-      },
-      {
-        "data": {
-          "sourceHandle": {
-            "dataType": "AstraDB",
-            "id": "AstraDB-Etytu",
-            "name": "search_results",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "ParseData-mnAoF",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-AstraDB-Etytu{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Etytuœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-mnAoF{œfieldNameœ:œdataœ,œidœ:œParseData-mnAoFœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "AstraDB-Etytu",
-        "sourceHandle": "{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Etytuœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}",
-        "target": "ParseData-mnAoF",
-        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-mnAoFœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "className": ""
-      },
-      {
-        "source": "OpenAIModel-690Qx",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-690Qxœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-zpEiC",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zpEiCœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "data": {
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-zpEiC",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          },
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-690Qx",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          }
-        },
-        "id": "xy-edge__OpenAIModel-690Qx{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-690Qxœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-zpEiC{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zpEiCœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "viewport": {
