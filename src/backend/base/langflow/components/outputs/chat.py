@@ -99,7 +99,9 @@ class ChatOutput(ChatComponent):
         ),
     ]
 
-    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:
+    def _build_source(
+        self, id_: str | None, display_name: str | None, source: str | None
+    ) -> Source:
         source_dict = {}
         if id_:
             source_dict["id"] = id_
@@ -120,7 +122,9 @@ class ChatOutput(ChatComponent):
         text = self.convert_to_string()
 
         # Get source properties
-        source, icon, display_name, source_id = self.get_properties_from_source_component()
+        source, icon, display_name, source_id = (
+            self.get_properties_from_source_component()
+        )
         background_color = self.background_color
         text_color = self.text_color
         if self.chat_icon:
@@ -182,7 +186,7 @@ class ChatOutput(ChatComponent):
                     data = data.replace(r"^\s*$", "", regex=True)
                     # Replace multiple newlines with a single newline
                     data = data.replace(r"\n+", "\n", regex=True)
-                return data.to_markdown(index=False)
+                return "\n".join([d.get_text() for d in data.to_data_list()])
             return str(data)
         except (ValueError, TypeError, AttributeError) as e:
             msg = f"Error converting data: {e!s}"
