@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-t1SQn",
+            "id": "ParseData-mnAoF",
             "name": "text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-MGcZw",
+            "id": "Prompt-hdHKZ",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,11 +23,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-t1SQn{œdataTypeœ:œParseDataœ,œidœ:œParseData-t1SQnœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-MGcZw{œfieldNameœ:œcontextœ,œidœ:œPrompt-MGcZwœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-t1SQn",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-t1SQnœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-MGcZw",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-MGcZwœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-mnAoF{œdataTypeœ:œParseDataœ,œidœ:œParseData-mnAoFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-hdHKZ{œfieldNameœ:œcontextœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-mnAoF",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-mnAoFœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-hdHKZ",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-hdHKZœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-zJJGs",
+            "id": "ChatInput-8NQlz",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-MGcZw",
+            "id": "Prompt-hdHKZ",
             "inputTypes": [
               "Message",
               "Text"
@@ -51,11 +51,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-zJJGs{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zJJGsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-MGcZw{œfieldNameœ:œquestionœ,œidœ:œPrompt-MGcZwœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-zJJGs",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zJJGsœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-MGcZw",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-MGcZwœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-8NQlz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-hdHKZ{œfieldNameœ:œquestionœ,œidœ:œPrompt-hdHKZœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8NQlz",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8NQlzœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-hdHKZ",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-hdHKZœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-FJNXb",
+            "id": "File-7fTNc",
             "name": "data",
             "output_types": [
               "Data"
@@ -71,25 +71,25 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-FIjro",
+            "id": "SplitText-oI0KK",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-FJNXb{œdataTypeœ:œFileœ,œidœ:œFile-FJNXbœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-FIjro{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-FIjroœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "File-FJNXb",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-FJNXbœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "SplitText-FIjro",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-FIjroœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-7fTNc{œdataTypeœ:œFileœ,œidœ:œFile-7fTNcœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-oI0KK{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-oI0KKœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "File-7fTNc",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-7fTNcœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "SplitText-oI0KK",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-oI0KKœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-MGcZw",
+            "id": "Prompt-hdHKZ",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -97,50 +97,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-8NmZL",
+            "id": "OpenAIModel-690Qx",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-MGcZw{œdataTypeœ:œPromptœ,œidœ:œPrompt-MGcZwœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-8NmZL{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-8NmZLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-MGcZw",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-MGcZwœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-8NmZL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-8NmZLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-hdHKZ{œdataTypeœ:œPromptœ,œidœ:œPrompt-hdHKZœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-690Qx{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-690Qxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-hdHKZ",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-hdHKZœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-690Qx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-690Qxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-8NmZL",
-            "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-dMbC5",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-8NmZL{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-8NmZLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-dMbC5{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-dMbC5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-8NmZL",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-8NmZLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-dMbC5",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-dMbC5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "data": {
-          "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-Au4nR",
+            "id": "OpenAIEmbeddings-u7coL",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -148,24 +123,25 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-kvbzj",
+            "id": "AstraDB-UZ35f",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIEmbeddings-Au4nR{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-Au4nRœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-kvbzj{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-kvbzjœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-Au4nR",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-Au4nRœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-kvbzj",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-kvbzjœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-u7coL{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-u7coLœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-UZ35f{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-u7coL",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-u7coLœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-UZ35f",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-UZ35fœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-FIjro",
+            "id": "SplitText-oI0KK",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -173,24 +149,25 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraDB-kvbzj",
+            "id": "AstraDB-UZ35f",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__SplitText-FIjro{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-FIjroœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-kvbzj{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-kvbzjœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "SplitText-FIjro",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-FIjroœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraDB-kvbzj",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-kvbzjœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SplitText-oI0KK{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-oI0KKœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-UZ35f{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-UZ35fœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-oI0KK",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-oI0KKœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraDB-UZ35f",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-UZ35fœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-zJJGs",
+            "id": "ChatInput-8NQlz",
             "name": "message",
             "output_types": [
               "Message"
@@ -198,24 +175,25 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-sfnha",
+            "id": "AstraDB-Etytu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-zJJGs{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zJJGsœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-sfnha{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-sfnhaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-zJJGs",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zJJGsœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-sfnha",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-sfnhaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-8NQlz{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8NQlzœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-Etytu{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8NQlz",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8NQlzœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-Etytu",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-Etytuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-XD5Ju",
+            "id": "OpenAIEmbeddings-eerk9",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -223,24 +201,25 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-sfnha",
+            "id": "AstraDB-Etytu",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__OpenAIEmbeddings-XD5Ju{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-XD5Juœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-sfnha{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-sfnhaœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-XD5Ju",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-XD5Juœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-sfnha",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-sfnhaœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-OpenAIEmbeddings-eerk9{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-eerk9œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-Etytu{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-Etytuœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-eerk9",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-eerk9œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-Etytu",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-Etytuœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-sfnha",
+            "id": "AstraDB-Etytu",
             "name": "search_results",
             "output_types": [
               "Data"
@@ -248,18 +227,45 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-t1SQn",
+            "id": "ParseData-mnAoF",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__AstraDB-sfnha{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-sfnhaœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-t1SQn{œfieldNameœ:œdataœ,œidœ:œParseData-t1SQnœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "AstraDB-sfnha",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-sfnhaœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-t1SQn",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-t1SQnœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-AstraDB-Etytu{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-Etytuœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-mnAoF{œfieldNameœ:œdataœ,œidœ:œParseData-mnAoFœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "AstraDB-Etytu",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-Etytuœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-mnAoF",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-mnAoFœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-690Qx",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-zpEiC",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__OpenAIModel-690Qx{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-690Qxœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-zpEiC{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-zpEiCœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-690Qx",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-690Qxœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-zpEiC",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-zpEiCœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -267,7 +273,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-zJJGs",
+          "id": "ChatInput-8NQlz",
           "node": {
             "base_classes": [
               "Message"
@@ -531,10 +537,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-zJJGs",
+        "id": "ChatInput-8NQlz",
         "measured": {
           "height": 234,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 743.9745420290319,
@@ -552,7 +558,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-t1SQn",
+          "id": "ParseData-mnAoF",
           "node": {
             "base_classes": [
               "Message"
@@ -688,10 +694,10 @@
         },
         "dragging": false,
         "height": 350,
-        "id": "ParseData-t1SQn",
+        "id": "ParseData-mnAoF",
         "measured": {
           "height": 350,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1606.0595305373527,
@@ -709,7 +715,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-MGcZw",
+          "id": "Prompt-hdHKZ",
           "node": {
             "base_classes": [
               "Message"
@@ -868,10 +874,10 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-MGcZw",
+        "id": "Prompt-hdHKZ",
         "measured": {
           "height": 433,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1977.9097981422992,
@@ -889,7 +895,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-FIjro",
+          "id": "SplitText-oI0KK",
           "node": {
             "base_classes": [
               "Data"
@@ -1036,10 +1042,10 @@
         },
         "dragging": false,
         "height": 475,
-        "id": "SplitText-FIjro",
+        "id": "SplitText-oI0KK",
         "measured": {
           "height": 475,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1683.4543896546102,
@@ -1055,7 +1061,7 @@
       },
       {
         "data": {
-          "id": "note-piPEI",
+          "id": "note-8MY1o",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -1068,10 +1074,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-piPEI",
+        "id": "note-8MY1o",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 374.388314931542,
@@ -1092,7 +1098,7 @@
       },
       {
         "data": {
-          "id": "note-e0H33",
+          "id": "note-gi1uB",
           "node": {
             "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
             "display_name": "Read Me",
@@ -1105,10 +1111,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-e0H33",
+        "id": "note-gi1uB",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 94.28986613312418,
@@ -1131,7 +1137,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-dMbC5",
+          "id": "ChatOutput-zpEiC",
           "node": {
             "base_classes": [
               "Message"
@@ -1222,6 +1228,24 @@
                 "type": "str",
                 "value": ""
               },
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean the data",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1238,7 +1262,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            source_dict[\"source\"] = source\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if not isinstance(self.input_value, Data | DataFrame | Message | str | list):\n            msg = f\"Expected Data or DataFrame or Message or str, got {type(self.input_value).__name__}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        return self._safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -1269,13 +1293,15 @@
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "input_types": [
+                  "Data",
+                  "DataFrame",
                   "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "trace_as_input": true,
@@ -1393,10 +1419,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-dMbC5",
+        "id": "ChatOutput-zpEiC",
         "measured": {
           "height": 234,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 2738.611008351098,
@@ -1412,7 +1438,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-XD5Ju",
+          "id": "OpenAIEmbeddings-eerk9",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -1709,7 +1735,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -1892,10 +1918,10 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-XD5Ju",
+        "id": "OpenAIEmbeddings-eerk9",
         "measured": {
           "height": 320,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 825.435626932521,
@@ -1911,7 +1937,7 @@
       },
       {
         "data": {
-          "id": "note-EReHj",
+          "id": "note-CW9QR",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1924,10 +1950,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-EReHj",
+        "id": "note-CW9QR",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 955.3277857006676,
@@ -1948,7 +1974,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-Au4nR",
+          "id": "OpenAIEmbeddings-u7coL",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2245,7 +2271,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -2428,10 +2454,10 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-Au4nR",
+        "id": "OpenAIEmbeddings-u7coL",
         "measured": {
           "height": 320,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1690.9220896443658,
@@ -2447,7 +2473,7 @@
       },
       {
         "data": {
-          "id": "File-FJNXb",
+          "id": "File-7fTNc",
           "node": {
             "base_classes": [
               "Data"
@@ -2673,10 +2699,10 @@
         },
         "dragging": false,
         "height": 367,
-        "id": "File-FJNXb",
+        "id": "File-7fTNc",
         "measured": {
           "height": 367,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1314.0643184619548,
@@ -2692,7 +2718,7 @@
       },
       {
         "data": {
-          "id": "note-t3HXf",
+          "id": "note-WQR48",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2705,10 +2731,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-t3HXf",
+        "id": "note-WQR48",
         "measured": {
           "height": 324,
-          "width": 324
+          "width": 326
         },
         "position": {
           "x": 1692.2322233423606,
@@ -2724,7 +2750,7 @@
       },
       {
         "data": {
-          "id": "note-OAFzt",
+          "id": "note-yMoT0",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2737,10 +2763,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-OAFzt",
+        "id": "note-yMoT0",
         "measured": {
           "height": 324,
-          "width": 324
+          "width": 326
         },
         "position": {
           "x": 824.1003268813427,
@@ -2756,7 +2782,7 @@
       },
       {
         "data": {
-          "id": "note-romN9",
+          "id": "note-nfo9c",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2769,10 +2795,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-romN9",
+        "id": "note-nfo9c",
         "measured": {
           "height": 324,
-          "width": 324
+          "width": 326
         },
         "position": {
           "x": 2350.297636215281,
@@ -2788,7 +2814,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-8NmZL",
+          "id": "OpenAIModel-690Qx",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -3156,10 +3182,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-8NmZL",
+        "id": "OpenAIModel-690Qx",
         "measured": {
-          "height": 656,
-          "width": 320
+          "height": 734,
+          "width": 360
         },
         "position": {
           "x": 2365.714820732046,
@@ -3170,7 +3196,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-kvbzj",
+          "id": "AstraDB-UZ35f",
           "node": {
             "base_classes": [
               "Data",
@@ -3358,16 +3384,35 @@
                         ],
                         "name": "create_collection",
                         "template": {
-                          "new_collection_name": {
-                            "_input_type": "StrInput",
+                          "dimension": {
+                            "_input_type": "IntInput",
                             "advanced": false,
-                            "display_name": "Name",
+                            "display_name": "Dimensions (Required only for `Bring your own`)",
                             "dynamic": false,
-                            "info": "Name of the new collection to create in Astra DB.",
+                            "info": "Dimensions of the embeddings to generate.",
                             "list": false,
                             "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_collection_name",
+                            "name": "dimension",
+                            "placeholder": "",
+                            "required": false,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "int",
+                            "value": 1024
+                          },
+                          "embedding_generation_model": {
+                            "_input_type": "DropdownInput",
+                            "advanced": false,
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Embedding model",
+                            "dynamic": false,
+                            "info": "Model to use for generating embeddings.",
+                            "name": "embedding_generation_model",
+                            "options": [],
+                            "options_metadata": [],
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -3401,17 +3446,16 @@
                             "type": "str",
                             "value": ""
                           },
-                          "embedding_generation_model": {
-                            "_input_type": "DropdownInput",
+                          "new_collection_name": {
+                            "_input_type": "StrInput",
                             "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Embedding model",
+                            "display_name": "Name",
                             "dynamic": false,
-                            "info": "Model to use for generating embeddings.",
-                            "name": "embedding_generation_model",
-                            "options": [],
-                            "options_metadata": [],
+                            "info": "Name of the new collection to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_collection_name",
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -3420,24 +3464,6 @@
                             "trace_as_metadata": true,
                             "type": "str",
                             "value": ""
-                          },
-                          "dimension": {
-                            "_input_type": "IntInput",
-                            "advanced": false,
-                            "display_name": "Dimensions (Required only for `Bring your own`)",
-                            "dynamic": false,
-                            "info": "Dimensions of the embeddings to generate.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "name": "dimension",
-                            "placeholder": "",
-                            "required": false,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "int",
-                            "value": 1024
                           }
                         }
                       }
@@ -3498,25 +3524,6 @@
                         ],
                         "name": "create_database",
                         "template": {
-                          "new_database_name": {
-                            "_input_type": "StrInput",
-                            "advanced": false,
-                            "display_name": "Name",
-                            "dynamic": false,
-                            "info": "Name of the new database to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_database_name",
-                            "placeholder": "",
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
                           "cloud_provider": {
                             "_input_type": "DropdownInput",
                             "advanced": false,
@@ -3534,6 +3541,25 @@
                             "options_metadata": [],
                             "placeholder": "",
                             "real_time_refresh": true,
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "str",
+                            "value": ""
+                          },
+                          "new_database_name": {
+                            "_input_type": "StrInput",
+                            "advanced": false,
+                            "display_name": "Name",
+                            "dynamic": false,
+                            "info": "Name of the new database to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_database_name",
+                            "placeholder": "",
                             "required": true,
                             "show": true,
                             "title_case": false,
@@ -3827,7 +3853,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ASTRA_DB_APPLICATION_TOKEN"
+                "value": ""
               }
             },
             "tool_mode": false
@@ -3836,10 +3862,10 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-kvbzj",
+        "id": "AstraDB-UZ35f",
         "measured": {
-          "height": 532,
-          "width": 320
+          "height": 594,
+          "width": 360
         },
         "position": {
           "x": 2066.56373433188,
@@ -3850,7 +3876,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-sfnha",
+          "id": "AstraDB-Etytu",
           "node": {
             "base_classes": [
               "Data",
@@ -4037,16 +4063,35 @@
                         ],
                         "name": "create_collection",
                         "template": {
-                          "new_collection_name": {
-                            "_input_type": "StrInput",
+                          "dimension": {
+                            "_input_type": "IntInput",
                             "advanced": false,
-                            "display_name": "Name",
+                            "display_name": "Dimensions (Required only for `Bring your own`)",
                             "dynamic": false,
-                            "info": "Name of the new collection to create in Astra DB.",
+                            "info": "Dimensions of the embeddings to generate.",
                             "list": false,
                             "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_collection_name",
+                            "name": "dimension",
+                            "placeholder": "",
+                            "required": false,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "int",
+                            "value": 1024
+                          },
+                          "embedding_generation_model": {
+                            "_input_type": "DropdownInput",
+                            "advanced": false,
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Embedding model",
+                            "dynamic": false,
+                            "info": "Model to use for generating embeddings.",
+                            "name": "embedding_generation_model",
+                            "options": [],
+                            "options_metadata": [],
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -4080,17 +4125,16 @@
                             "type": "str",
                             "value": ""
                           },
-                          "embedding_generation_model": {
-                            "_input_type": "DropdownInput",
+                          "new_collection_name": {
+                            "_input_type": "StrInput",
                             "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Embedding model",
+                            "display_name": "Name",
                             "dynamic": false,
-                            "info": "Model to use for generating embeddings.",
-                            "name": "embedding_generation_model",
-                            "options": [],
-                            "options_metadata": [],
+                            "info": "Name of the new collection to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_collection_name",
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -4099,24 +4143,6 @@
                             "trace_as_metadata": true,
                             "type": "str",
                             "value": ""
-                          },
-                          "dimension": {
-                            "_input_type": "IntInput",
-                            "advanced": false,
-                            "display_name": "Dimensions (Required only for `Bring your own`)",
-                            "dynamic": false,
-                            "info": "Dimensions of the embeddings to generate.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "name": "dimension",
-                            "placeholder": "",
-                            "required": false,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "int",
-                            "value": 1024
                           }
                         }
                       }
@@ -4177,25 +4203,6 @@
                         ],
                         "name": "create_database",
                         "template": {
-                          "new_database_name": {
-                            "_input_type": "StrInput",
-                            "advanced": false,
-                            "display_name": "Name",
-                            "dynamic": false,
-                            "info": "Name of the new database to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_database_name",
-                            "placeholder": "",
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
                           "cloud_provider": {
                             "_input_type": "DropdownInput",
                             "advanced": false,
@@ -4213,6 +4220,25 @@
                             "options_metadata": [],
                             "placeholder": "",
                             "real_time_refresh": true,
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "str",
+                            "value": ""
+                          },
+                          "new_database_name": {
+                            "_input_type": "StrInput",
+                            "advanced": false,
+                            "display_name": "Name",
+                            "dynamic": false,
+                            "info": "Name of the new database to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_database_name",
+                            "placeholder": "",
                             "required": true,
                             "show": true,
                             "title_case": false,
@@ -4252,7 +4278,14 @@
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [],
+                "options_metadata": [
+                  {
+                    "api_endpoint": "https://deb10a81-3c5d-4fd3-8b1b-945915d2835b-us-east-2.apps.astra.datastax.com",
+                    "collections": 10,
+                    "icon": "data",
+                    "status": null
+                  }
+                ],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -4506,7 +4539,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ASTRA_DB_APPLICATION_TOKEN"
+                "value": ""
               }
             },
             "tool_mode": false
@@ -4515,10 +4548,10 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-sfnha",
+        "id": "AstraDB-Etytu",
         "measured": {
-          "height": 532,
-          "width": 320
+          "height": 594,
+          "width": 360
         },
         "position": {
           "x": 1220.0616335680065,
@@ -4529,9 +4562,9 @@
       }
     ],
     "viewport": {
-      "x": 23.946958998386208,
-      "y": -163.43184624766263,
-      "zoom": 0.44406917240373706
+      "x": 27.16134293669745,
+      "y": -178.0488836602833,
+      "zoom": 0.48566409515519327
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
