@@ -15,10 +15,9 @@ class SplitTextComponent(Component):
     inputs = [
         HandleInput(
             name="data_inputs",
-            display_name="Data Inputs",
+            display_name="Input Documents",
             info="The data to split.",
-            input_types=["Data"],
-            is_list=True,
+            input_types=["Data", "DataFrame"],
             required=True,
         ),
         IntInput(
@@ -39,6 +38,13 @@ class SplitTextComponent(Component):
             info="The character to split on. Defaults to newline.",
             value="\n",
         ),
+        MessageTextInput(
+            name="text_key",
+            display_name="Text Key",
+            info="The key to use for the text column.",
+            value="text",
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -46,23 +52,57 @@ class SplitTextComponent(Component):
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
-    def _docs_to_data(self, docs):
+    def _docs_to_data(self, docs) -> list[Data]:
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
-    def split_text(self) -> list[Data]:
+    def _docs_to_dataframe(self, docs):
+        data_dicts = [{self.text_key: doc.page_content, **doc.metadata} for doc in docs]
+        return DataFrame(data_dicts)
+
+    def split_text_base(self):
         separator = unescape_string(self.separator)
+        if isinstance(self.data_inputs, DataFrame):
+            if not len(self.data_inputs):
+                msg = "DataFrame is empty"
+                raise TypeError(msg)
 
-        documents = [_input.to_lc_document() for _input in self.data_inputs if isinstance(_input, Data)]
+            self.data_inputs.text_key = self.text_key
+            try:
+                documents = self.data_inputs.to_lc_documents()
+            except Exception as e:
+                msg = f"Error converting DataFrame to documents: {e}"
+                raise TypeError(msg) from e
+        else:
+            if not self.data_inputs:
+                msg = "No data inputs provided"
+                raise TypeError(msg)
 
-        splitter = CharacterTextSplitter(
-            chunk_overlap=self.chunk_overlap,
-            chunk_size=self.chunk_size,
-            separator=separator,
-        )
-        docs = splitter.split_documents(documents)
-        data = self._docs_to_data(docs)
-        self.status = data
-        return data
+            documents = []
+            if isinstance(self.data_inputs, Data):
+                self.data_inputs.text_key = self.text_key
+                documents = [self.data_inputs.to_lc_document()]
+            else:
+                try:
+                    documents = [input_.to_lc_document() for input_ in self.data_inputs if isinstance(input_, Data)]
+                    if not documents:
+                        msg = f"No valid Data inputs found in {type(self.data_inputs)}"
+                        raise TypeError(msg)
+                except AttributeError as e:
+                    msg = f"Invalid input type in collection: {e}"
+                    raise TypeError(msg) from e
+        try:
+            splitter = CharacterTextSplitter(
+                chunk_overlap=self.chunk_overlap,
+                chunk_size=self.chunk_size,
+                separator=separator,
+            )
+            return splitter.split_documents(documents)
+        except Exception as e:
+            msg = f"Error splitting text: {e}"
+            raise TypeError(msg) from e
+
+    def split_text(self) -> list[Data]:
+        return self._docs_to_data(self.split_text_base())
 
     def as_dataframe(self) -> DataFrame:
-        return DataFrame(self.split_text())
+        return self._docs_to_dataframe(self.split_text_base())

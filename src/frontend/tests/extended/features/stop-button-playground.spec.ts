@@ -23,9 +23,6 @@ test(
 
     await page.getByTestId("sidebar-custom-component-button").click();
     await page.getByTitle("fit view").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
-    await page.getByTitle("zoom out").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat output");
@@ -36,7 +33,9 @@ test(
 
     await page
       .getByTestId("outputsChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
+        targetPosition: { x: 400, y: 400 },
+      });
 
     await adjustScreenView(page);
 
