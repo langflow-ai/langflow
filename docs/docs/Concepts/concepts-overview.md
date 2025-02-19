@@ -91,6 +91,21 @@ To access the **Logs** pane, click your **Flow Name**, and then select **Logs**.
 
 ![](/img/logs.png)
 
+Langflow stores logs at the location specified in the `LANGFLOW_CONFIG_DIR` environment variable.
+
+This directory's default location depends on your operating system.
+
+* **Linux/WSL**: `~/.cache/langflow/`
+* **macOS**: `/Users/<username>/Library/Caches/langflow/`
+* **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
+
+To modify the location of your log file:
+
+1. Add `LANGFLOW_LOG_FILE=path/to/logfile.log` in your `.env.` file.
+2. To start Langflow with the values from your `.env` file, start Langflow with `uv run langflow run --env-file .env`.
+
+An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
+
 ## Projects and folders
 
 The **My Projects** page displays all the flows and components you've created in the Langflow workspace.

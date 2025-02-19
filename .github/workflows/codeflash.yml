@@ -29,6 +29,7 @@ jobs:
       - run: uv sync --extra dev
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
+        continue-on-error: true
         run: uv run codeflash
       - name: Minimize uv cache
         run: uv cache prune --ci

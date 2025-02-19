@@ -3,11 +3,13 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Custom Component Generator",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.ANTHROPIC_API_KEY,
@@ -29,10 +31,14 @@ test(
       timeout: 100000,
     });
 
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .last()
-      .fill(process.env.ANTHROPIC_API_KEY ?? "");
+    try {
+      await page
+        .getByTestId("anchor-popover-anchor-input-api_key")
+        .last()
+        .fill(process.env.ANTHROPIC_API_KEY ?? "");
+    } catch (e) {
+      console.log("There's API already added");
+    }
 
     await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
       timeout: 5000,

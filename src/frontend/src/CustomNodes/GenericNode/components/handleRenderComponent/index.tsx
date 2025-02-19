@@ -52,7 +52,7 @@ const HandleContent = memo(function HandleContent({
       styleSheet.textContent = `
         @keyframes pulseNeon-${nodeId} {
           0% {
-            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
                         0 0 2px ${handleColor},
                         0 0 4px ${handleColor},
                         0 0 6px ${handleColor},
@@ -62,7 +62,7 @@ const HandleContent = memo(function HandleContent({
                         0 0 20px ${handleColor};
           }
           50% {
-            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
                         0 0 4px ${handleColor},
                         0 0 8px ${handleColor},
                         0 0 12px ${handleColor},
@@ -72,7 +72,7 @@ const HandleContent = memo(function HandleContent({
                         0 0 30px ${handleColor};
           }
           100% {
-            box-shadow: 0 0 0 2px hsl(var(--node-ring)),
+            box-shadow: 0 0 0 3px hsl(var(--node-ring)),
                         0 0 2px ${handleColor},
                         0 0 4px ${handleColor},
                         0 0 6px ${handleColor},

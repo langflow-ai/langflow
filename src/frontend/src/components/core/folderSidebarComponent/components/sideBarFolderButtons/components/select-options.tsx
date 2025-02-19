@@ -66,7 +66,7 @@ export const SelectOptions = ({
             </SelectItem>
           )}
           <SelectItem value="download" data-testid="btn-download-folder">
-            <FolderSelectItem name="Download Content" iconName="Download" />
+            <FolderSelectItem name="Download" iconName="Download" />
           </SelectItem>
           {index > 0 && (
             <SelectItem value="delete" data-testid="btn-delete-folder">

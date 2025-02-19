@@ -4,7 +4,7 @@ import EditNodeModal from "@/modals/editNodeModal";
 import ShareModal from "@/modals/shareModal";
 import { APIClassType } from "@/types/api";
 import { FlowType } from "@/types/flow";
-import React, { memo } from "react";
+import { memo } from "react";
 
 interface ToolbarModalsProps {
   // Modal visibility states

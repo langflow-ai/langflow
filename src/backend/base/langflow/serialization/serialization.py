@@ -109,9 +109,9 @@ def _serialize_instance(obj: Any, *_) -> str:
 
 def _truncate_value(value: Any, max_length: int | None, max_items: int | None) -> Any:
     """Truncate value based on its type and provided limits."""
-    if isinstance(value, str) and max_length is not None and len(value) > max_length:
+    if max_length is not None and isinstance(value, str) and len(value) > max_length:
         return value[:max_length]
-    if isinstance(value, list | tuple) and max_items is not None and len(value) > max_items:
+    if max_items is not None and isinstance(value, list | tuple) and len(value) > max_items:
         return value[:max_items]
     return value
 
@@ -221,8 +221,8 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
 
 def serialize(
     obj: Any,
-    max_length: int | None = MAX_TEXT_LENGTH,
-    max_items: int | None = MAX_ITEMS_LENGTH,
+    max_length: int | None = None,
+    max_items: int | None = None,
     *,
     to_str: bool = False,
 ) -> Any:
@@ -275,7 +275,9 @@ def serialize(
 
 
 def serialize_or_str(
-    obj: Any, max_length: int | None = MAX_TEXT_LENGTH, max_items: int | None = MAX_ITEMS_LENGTH
+    obj: Any,
+    max_length: int | None = MAX_TEXT_LENGTH,
+    max_items: int | None = MAX_ITEMS_LENGTH,
 ) -> Any:
     """Calls serialize() and if it fails, returns a string representation of the object.
 

@@ -123,7 +123,7 @@ The [File](/components-data#file) component loads files from your local machine.
 3. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
 The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
 4. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
-The [Parse Data](/components-processing#parse-data) component converts the data from the **Astra DB** component into plain text.
+The [Data to Message](/components-processing#data-to-message) component converts the data from the **Astra DB** component into plain text.
 5. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
 6. Connect the new components into the existing flow, so your flow looks like this:

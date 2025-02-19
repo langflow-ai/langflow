@@ -12,6 +12,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
+        "hidden": False,
     },
     {
         "name": "description",
@@ -21,6 +22,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.POPOVER,
+        "hidden": False,
     },
     {
         "name": "tags",
@@ -31,6 +33,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
+        "hidden": True,
     },
 ]
 

@@ -1,4 +1,3 @@
-import { FlowType } from "@/types/flow";
 import { FolderType } from "../../../pages/MainPage/entities";
 
 export type FoldersStoreType = {

@@ -101,6 +101,12 @@ jobs:
       frontend-tests: ${{ steps.filter.outputs.frontend-tests }}
       components-changes: ${{ steps.filter.outputs.components-changes }}
       starter-projects-changes: ${{ steps.filter.outputs.starter-projects-changes }}
+      starter-projects: ${{ steps.filter.outputs.starter-projects }}
+      components: ${{ steps.filter.outputs.components }}
+      workspace: ${{ steps.filter.outputs.workspace }}
+      api: ${{ steps.filter.outputs.api }}
+      database: ${{ steps.filter.outputs.database }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -119,11 +125,10 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
-
   test-frontend:
     needs: path-filter
     name: Run Frontend Tests
-    if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' }}
+    if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true' }}
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}

@@ -57,7 +57,9 @@ export default function TableOptions({
                   name="Copy"
                   className={cn(
                     "h-5 w-5 transition-all",
-                    hasSelection ? "text-primary" : "text-muted-foreground",
+                    hasSelection
+                      ? "text-primary"
+                      : "cursor-not-allowed text-placeholder-foreground",
                   )}
                 />
               </Button>
@@ -86,7 +88,7 @@ export default function TableOptions({
                   className={cn(
                     "h-5 w-5 transition-all",
                     !hasSelection
-                      ? "text-muted-foreground"
+                      ? "cursor-not-allowed text-placeholder-foreground"
                       : "text-primary hover:text-status-red",
                   )}
                 />
@@ -109,7 +111,9 @@ export default function TableOptions({
                 strokeWidth={2}
                 className={cn(
                   "h-5 w-5 transition-all",
-                  !stateChange ? "text-muted-foreground" : "text-primary",
+                  !stateChange
+                    ? "cursor-not-allowed text-placeholder-foreground"
+                    : "text-primary",
                 )}
               />
             </Button>

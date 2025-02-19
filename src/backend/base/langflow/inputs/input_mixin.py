@@ -132,8 +132,26 @@ class DatabaseLoadMixin(BaseModel):
 
 # Specific mixin for fields needing file interaction
 class FileMixin(BaseModel):
-    file_path: str | None = Field(default="")
+    file_path: list[str] | str | None = Field(default="")
     file_types: list[str] = Field(default=[], alias="fileTypes")
+
+    @field_validator("file_path")
+    @classmethod
+    def validate_file_path(cls, v):
+        if v is None or v == "":
+            return v
+        # If it's already a list, validate each element is a string
+        if isinstance(v, list):
+            for item in v:
+                if not isinstance(item, str):
+                    msg = "All file paths must be strings"
+                    raise TypeError(msg)
+            return v
+        # If it's a single string, that's also valid
+        if isinstance(v, str):
+            return v
+        msg = "file_path must be a string, list of strings, or None"
+        raise ValueError(msg)
 
     @field_validator("file_types")
     @classmethod
