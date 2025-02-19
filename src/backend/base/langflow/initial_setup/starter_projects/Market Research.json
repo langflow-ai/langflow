@@ -1,181 +1,11 @@
 {
   "data": {
-    "edges": [
-      {
-        "animated": false,
-        "className": "not-running",
-        "data": {
-          "sourceHandle": {
-            "dataType": "StructuredOutputComponent",
-            "id": "StructuredOutputComponent-EguHE",
-            "name": "structured_output",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "ParseData-68wKj",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-StructuredOutputComponent-EguHE{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-EguHEœ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-68wKj{œfieldNameœ:œdataœ,œidœ:œParseData-68wKjœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "StructuredOutputComponent-EguHE",
-        "sourceHandle": "{œdataTypeœ: œStructuredOutputComponentœ, œidœ: œStructuredOutputComponent-EguHEœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-68wKj",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-68wKjœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "not-running",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ParseData",
-            "id": "ParseData-68wKj",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-gEsYh",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ParseData-68wKj{œdataTypeœ:œParseDataœ,œidœ:œParseData-68wKjœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-VA5gt{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-VA5gtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ParseData-8KK2E",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-8KK2Eœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-gEsYh",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-gEsYhœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "ran",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-FDuyL",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-rqbrW",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-ChatInput-FDuyL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-FDuyLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-rqbrW{œfieldNameœ:œinput_valueœ,œidœ:œAgent-rqbrWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-FDuyL",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-FDuyLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-rqbrW",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-rqbrWœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": true,
-        "className": "running",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-rqbrW",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "StructuredOutputComponent-EguHE",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-rqbrW{œdataTypeœ:œAgentœ,œidœ:œAgent-rqbrWœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-EguHE{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-EguHEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-rqbrW",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-rqbrWœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "StructuredOutputComponent-EguHE",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œStructuredOutputComponent-EguHEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "ran",
-        "data": {
-          "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-EoHje",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-rqbrW",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-TavilySearchComponent-EoHje{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-EoHjeœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-rqbrW{œfieldNameœ:œtoolsœ,œidœ:œAgent-rqbrWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "TavilySearchComponent-EoHje",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-EoHjeœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-rqbrW",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-rqbrWœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "not-running",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIModel",
-            "id": "OpenAIModel-aSzMF",
-            "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "llm",
-            "id": "StructuredOutputComponent-EguHE",
-            "inputTypes": [
-              "LanguageModel"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIModel-aSzMF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-aSzMFœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-EguHE{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-EguHEœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
-        "source": "OpenAIModel-aSzMF",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-aSzMFœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "StructuredOutputComponent-EguHE",
-        "targetHandle": "{œfieldNameœ: œllmœ, œidœ: œStructuredOutputComponent-EguHEœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-FDuyL",
+          "id": "ChatInput-tMLRq",
           "node": {
             "base_classes": [
               "Message"
@@ -449,10 +279,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-FDuyL",
+        "id": "ChatInput-tMLRq",
         "measured": {
           "height": 234,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 472.38251755471583,
@@ -470,7 +300,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-VA5gt",
+          "id": "ChatOutput-JrLxU",
           "node": {
             "base_classes": [
               "Message"
@@ -752,10 +582,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-VA5gt",
+        "id": "ChatOutput-JrLxU",
         "measured": {
           "height": 234,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 2518.282039019285,
@@ -765,13 +595,13 @@
           "x": 2518.282039019285,
           "y": 855.3686932779933
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-nklZw",
+          "id": "note-IHTZn",
           "node": {
             "description": "The StructuredOutputComponent, when utilized with our company information schema, performs the following functions:\n\n1. Accepts an input query regarding a company.\n2. Employs a Language Model (LLM) to analyze the query.\n3. Instructs the LLM to generate a structured response adhering to the predefined schema:\n   - Domain\n   - LinkedIn URL\n   - Cheapest Plan\n   - Has Free Trial\n   - Has Enterprise Plan\n   - Has API\n   - Market\n   - Pricing Tiers\n   - Key Features\n   - Target Industries\n\n4. Validates the LLM output against this schema.\n5. Returns a Data object containing the company information structured according to the schema.\n\nIn essence, this component transforms a free-text query about a company into a structured, consistent dataset, facilitating subsequent analysis and application of the information.",
             "display_name": "",
@@ -784,10 +614,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-nklZw",
+        "id": "note-IHTZn",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 2089.5869930853464,
@@ -808,7 +638,7 @@
       },
       {
         "data": {
-          "id": "note-PXFPj",
+          "id": "note-oro5s",
           "node": {
             "description": "PURPOSE:\nConverts unstructured company research into standardized JSON format\n\nKEY FUNCTIONS:\n- Extracts specific business data points\n- Validates and formats information\n- Ensures data consistency\n\nINPUT:\n- Raw company research data\n\nOUTPUT:\nStructured JSON with:\n- Domain information\n- Social links\n- Pricing details\n- Feature availability\n- Market classification\n- Product features\n- Industry focus\n\nRULES:\n1. Uses strict boolean values\n2. Standardizes pricing formats\n3. Validates market categories\n4. Handles missing data consistently",
             "display_name": "",
@@ -821,10 +651,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-PXFPj",
+        "id": "note-oro5s",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 1237.6627823432912,
@@ -845,7 +675,7 @@
       },
       {
         "data": {
-          "id": "note-TgJSC",
+          "id": "note-b5iUI",
           "node": {
             "description": "# Market Research\nThis flow helps you gather comprehensive information about companies for sales and business intelligence purposes.\n\n## Instructions\n\n1. Enter Company Name\n   - In the Chat Input node, type the name of the company you want to research\n   - Example inputs: \"Salesforce.com\", \"Shopify\", \"Zoom Video Communications\"\n\n2. Initiate Research\n   - The Agent will use the Tavily AI Search tool to gather information\n   - It will focus on key areas like pricing, features, and market positioning\n\n3. Review Structured Output\n   - The flow will generate a structured JSON output with standardized fields\n   - This includes domain, LinkedIn URL, pricing details, and key features\n\n4. Examine Formatted Results\n   - The Parse Data component will convert the JSON into a readable format\n   - You'll see a comprehensive company profile with organized sections\n\n5. Analyze and Use Data\n   - Use the generated information for sales prospecting, competitive analysis, or market research\n   - The structured format allows for easy comparison between different companies\n\nRemember: Always verify critical information from official sources before making business decisions! 🔍💼",
             "display_name": "",
@@ -858,10 +688,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-TgJSC",
+        "id": "note-b5iUI",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 244.92297036777086,
@@ -884,7 +714,7 @@
         "data": {
           "description": "Transforms LLM responses into **structured data formats**. Ideal for extracting specific information or creating consistent outputs.",
           "display_name": "Structured Output",
-          "id": "StructuredOutputComponent-EguHE",
+          "id": "StructuredOutputComponent-Kqbq4",
           "node": {
             "base_classes": [
               "Data"
@@ -1144,10 +974,10 @@
         },
         "dragging": false,
         "height": 541,
-        "id": "StructuredOutputComponent-EguHE",
+        "id": "StructuredOutputComponent-Kqbq4",
         "measured": {
           "height": 541,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1716.7237308033855,
@@ -1163,7 +993,7 @@
       },
       {
         "data": {
-          "id": "ParseData-68wKj",
+          "id": "ParseData-7XOFR",
           "node": {
             "base_classes": [
               "Message"
@@ -1304,10 +1134,10 @@
         },
         "dragging": false,
         "height": 302,
-        "id": "ParseData-68wKj",
+        "id": "ParseData-7XOFR",
         "measured": {
           "height": 302,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 2139.05558520377,
@@ -1325,7 +1155,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Agent",
-          "id": "Agent-rqbrW",
+          "id": "Agent-dcKuR",
           "node": {
             "base_classes": [
               "Message"
@@ -1475,7 +1305,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "TAVILY_API_KEY"
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1924,10 +1754,10 @@
         },
         "dragging": false,
         "height": 650,
-        "id": "Agent-rqbrW",
+        "id": "Agent-dcKuR",
         "measured": {
           "height": 650,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1287.5681517817056,
@@ -1939,7 +1769,7 @@
       },
       {
         "data": {
-          "id": "note-KpRgA",
+          "id": "note-7JQqd",
           "node": {
             "description": "# 🔑 Tavily AI Search Needs API Key\n\nYou can get 1000 searches/month free [here](https://tavily.com/) ",
             "display_name": "",
@@ -1952,10 +1782,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-KpRgA",
+        "id": "note-7JQqd",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 878.7898510090017,
@@ -1973,7 +1803,7 @@
         "data": {
           "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
           "display_name": "Tavily AI Search",
-          "id": "TavilySearchComponent-EoHje",
+          "id": "TavilySearchComponent-cGK9T",
           "node": {
             "base_classes": [
               "Data",
@@ -2004,19 +1834,19 @@
             "output_types": [],
             "outputs": [
               {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
-                "value": "__UNDEFINED__"
+                "selected": "Tool",
+                "name": "component_as_tool",
+                "hidden": null,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": null,
+                "allows_loop": false,
+                "tool_mode": true
               }
             ],
             "pinned": false,
@@ -2031,7 +1861,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2184,83 +2014,75 @@
                 "type": "str"
               },
               "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
+                "tool_mode": false,
                 "is_list": true,
                 "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
+                "table_schema": {
+                  "columns": [
+                    {
+                      "name": "name",
+                      "display_name": "Tool Name",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "edit_mode": "inline",
+                      "hidden": false,
+                      "formatter": "text"
+                    },
+                    {
+                      "name": "description",
+                      "display_name": "Tool Description",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "edit_mode": "popover",
+                      "hidden": false,
+                      "formatter": "text"
+                    },
+                    {
+                      "name": "tags",
+                      "display_name": "Tool Identifiers",
+                      "sortable": false,
+                      "filterable": false,
+                      "type": "text",
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "edit_mode": "inline",
+                      "hidden": true,
+                      "formatter": "text"
+                    }
+                  ]
+                },
+                "trigger_text": "",
+                "trigger_icon": "Hammer",
                 "table_icon": "Hammer",
                 "table_options": {
                   "block_add": true,
                   "block_delete": true,
                   "block_edit": true,
+                  "block_sort": true,
                   "block_filter": true,
                   "block_hide": true,
                   "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "hide_options": true,
                   "field_parsers": {
-                    "commands": "commands",
                     "name": [
                       "snake_case",
                       "no_blank"
-                    ]
+                    ],
+                    "commands": "commands"
                   },
-                  "hide_options": true
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
                 },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
                 "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "tools_metadata",
                 "value": [
                   {
                     "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
@@ -2276,7 +2098,15 @@
                       "TavilySearchComponent-fetch_content_text"
                     ]
                   }
-                ]
+                ],
+                "display_name": "Edit tools",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "real_time_refresh": true,
+                "title_case": false,
+                "type": "table",
+                "_input_type": "TableInput"
               },
               "topic": {
                 "_input_type": "DropdownInput",
@@ -2308,10 +2138,10 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-EoHje",
+        "id": "TavilySearchComponent-cGK9T",
         "measured": {
-          "height": 435,
-          "width": 320
+          "height": 489,
+          "width": 360
         },
         "position": {
           "x": 875.7686789989679,
@@ -2322,7 +2152,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-aSzMF",
+          "id": "OpenAIModel-prL67",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2690,10 +2520,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-aSzMF",
+        "id": "OpenAIModel-prL67",
         "measured": {
-          "height": 653,
-          "width": 320
+          "height": 734,
+          "width": 360
         },
         "position": {
           "x": 1718.9581068990763,
@@ -2703,10 +2533,177 @@
         "type": "genericNode"
       }
     ],
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "StructuredOutputComponent",
+            "id": "StructuredOutputComponent-Kqbq4",
+            "name": "structured_output",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-7XOFR",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-StructuredOutputComponent-Kqbq4{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}-ParseData-7XOFR{œfieldNameœ:œdataœ,œidœ:œParseData-7XOFRœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "StructuredOutputComponent-Kqbq4",
+        "sourceHandle": "{œdataTypeœ:œStructuredOutputComponentœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œnameœ:œstructured_outputœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParseData-7XOFR",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-7XOFRœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-tMLRq",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-dcKuR",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-tMLRq{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tMLRqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-dcKuR{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-tMLRq",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-tMLRqœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-dcKuR",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": true,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-dcKuR",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "StructuredOutputComponent-Kqbq4",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-dcKuR{œdataTypeœ:œAgentœ,œidœ:œAgent-dcKuRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-dcKuR",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-dcKuRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "StructuredOutputComponent-Kqbq4",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "TavilySearchComponent",
+            "id": "TavilySearchComponent-cGK9T",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-dcKuR",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-TavilySearchComponent-cGK9T{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-cGK9Tœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-dcKuR{œfieldNameœ:œtoolsœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "TavilySearchComponent-cGK9T",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-cGK9Tœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-dcKuR",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-dcKuRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-prL67",
+            "name": "model_output",
+            "output_types": [
+              "LanguageModel"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "llm",
+            "id": "StructuredOutputComponent-Kqbq4",
+            "inputTypes": [
+              "LanguageModel"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-OpenAIModel-prL67{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-prL67œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-StructuredOutputComponent-Kqbq4{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "source": "OpenAIModel-prL67",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-prL67œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "target": "StructuredOutputComponent-Kqbq4",
+        "targetHandle": "{œfieldNameœ:œllmœ,œidœ:œStructuredOutputComponent-Kqbq4œ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+      },
+      {
+        "source": "ParseData-7XOFR",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-7XOFRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-JrLxU",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JrLxUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-JrLxU",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-7XOFR",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__ParseData-7XOFR{œdataTypeœ:œParseDataœ,œidœ:œParseData-7XOFRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JrLxU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JrLxUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+      }
+    ],
     "viewport": {
-      "x": -55.02773146550817,
-      "y": 192.3971314158145,
-      "zoom": 0.4774432638923554
+      "x": -49.933183848022736,
+      "y": 46.49268690110034,
+      "zoom": 0.4973930841732965
     }
   },
   "description": "Researches companies, extracts key business data, and presents structured information for efficient analysis. ",

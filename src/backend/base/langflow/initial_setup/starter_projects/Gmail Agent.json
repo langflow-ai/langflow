@@ -248,7 +248,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1515,7 +1515,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "COMPOSIO_API_KEY"
               },
               "app_credentials": {
                 "_input_type": "SecretStrInput",
