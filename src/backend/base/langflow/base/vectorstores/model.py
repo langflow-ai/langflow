@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
+from langflow.inputs.inputs import BoolInput
 from langflow.io import DataInput, MultilineInput, Output
 from langflow.schema import Data, DataFrame
 
@@ -23,7 +24,9 @@ def check_cached_vector_store(f):
 
     @wraps(f)
     def check_cached(self, *args, **kwargs):
-        if self._cached_vector_store is not None:
+        should_cache = getattr(self, "should_cache_vector_store", True)
+
+        if should_cache and self._cached_vector_store is not None:
             return self._cached_vector_store
 
         result = f(self, *args, **kwargs)
@@ -61,6 +64,14 @@ class LCVectorStoreComponent(Component):
             name="search_query",
             display_name="Search Query",
             tool_mode=True,
+        ),
+        BoolInput(
+            name="should_cache_vector_store",
+            display_name="Cache Vector Store",
+            value=True,
+            advanced=True,
+            info="If True, the vector store will be cached for the current build of the component. "
+            "This is useful for components that have multiple output methods and want to share the same vector store.",
         ),
     ]
 
