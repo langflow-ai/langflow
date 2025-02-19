@@ -17,15 +17,22 @@ test.describe("group node test", () => {
       await page.getByTestId("fit_view").first().click();
 
       await page.getByTestId("title-OpenAI").click();
-      await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
-      await page.getByTestId("title-Prompt").click({ modifiers: ["Control"] });
-      await page.getByTestId("title-OpenAI").click({ modifiers: ["Control"] });
+      await page
+        .getByTestId("title-OpenAI")
+        .click({ modifiers: ["ControlOrMeta"] });
+      await page
+        .getByTestId("title-Prompt")
+        .click({ modifiers: ["ControlOrMeta"] });
+      await page
+        .getByTestId("title-OpenAI")
+        .click({ modifiers: ["ControlOrMeta"] });
 
       await page.getByRole("button", { name: "Group" }).click();
-      await page.getByTestId("title-Group").dblclick();
+      await page.getByTestId("title-Group").click();
+      await page.getByTestId("edit-name-description-button").click();
       await page.getByTestId("input-title-Group").first().fill("test");
-      await page.getByTestId("icon-Ungroup").first().click();
-      await page.keyboard.press("Control+g");
+      await page.getByTestId("save-name-description-button").first().click();
+      await page.keyboard.press("ControlOrMeta+g");
       await page.getByTestId("title-OpenAI").isVisible();
       await page.getByTestId("title-Prompt").isVisible();
     },

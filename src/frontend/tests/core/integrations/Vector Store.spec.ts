@@ -1,20 +1,18 @@
-import { Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Vector Store RAG",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
     );
-    test.skip(
-      !process?.env?.ASTRA_DB_API_ENDPOINT,
-      "ASTRA_DB_API_ENDPOINT required to run this test",
-    );
+
     test.skip(
       !process?.env?.ASTRA_DB_APPLICATION_TOKEN,
       "ASTRA_DB_APPLICATION_TOKEN required to run this test",
@@ -99,15 +97,51 @@ test(
       .getByTestId("popover-anchor-input-token")
       .nth(1)
       .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
-    // Astra DB endpoints
+
     await page
-      .getByTestId("popover-anchor-input-api_endpoint")
-      .nth(0)
-      .fill(process.env.ASTRA_DB_API_ENDPOINT ?? "");
+      .getByTestId("popover-anchor-input-collection_name_new")
+      .first()
+      .fill("fe_tests");
     await page
-      .getByTestId("popover-anchor-input-api_endpoint")
-      .nth(1)
-      .fill(process.env.ASTRA_DB_API_ENDPOINT ?? "");
+      .getByTestId("popover-anchor-input-collection_name_new")
+      .last()
+      .fill("fe_tests");
+
+    await page.waitForTimeout(500);
+
+    // Click first refresh button and wait for disabled->enabled transition
+    await page.getByTestId("refresh-button-api_endpoint").first().click();
+    await expect(
+      page.getByTestId("refresh-button-api_endpoint").first(),
+    ).toHaveAttribute("disabled", "");
+    await expect(
+      page.getByTestId("refresh-button-api_endpoint").first(),
+    ).not.toHaveAttribute("disabled", "");
+
+    // Click second refresh button and wait for disabled->enabled transition
+    await page.getByTestId("refresh-button-api_endpoint").last().click();
+    await expect(
+      page.getByTestId("refresh-button-api_endpoint").last(),
+    ).toHaveAttribute("disabled", "");
+    await expect(
+      page.getByTestId("refresh-button-api_endpoint").last(),
+    ).not.toHaveAttribute("disabled", "");
+
+    await page.getByTestId("dropdown_str_api_endpoint").first().click();
+
+    await page.waitForSelector('[data-testid="langflow-1-option"]', {
+      timeout: 100000,
+    });
+
+    await page.getByTestId("langflow-1-option").last().click();
+
+    await page.getByTestId("dropdown_str_api_endpoint").last().click();
+
+    await page.waitForSelector('[data-testid="langflow-1-option"]', {
+      timeout: 100000,
+    });
+
+    await page.getByTestId("langflow-1-option").last().click();
 
     const fileChooserPromise = page.waitForEvent("filechooser");
     await page.getByTestId("input-file-component").last().click();

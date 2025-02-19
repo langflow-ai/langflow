@@ -44,6 +44,7 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
@@ -97,6 +98,9 @@ class Component(CustomComponent):
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
+        if overlap := self._there_is_overlap_in_inputs_and_outputs():
+            msg = f"Inputs and outputs have overlapping names: {overlap}"
+            raise ValueError(msg)
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
@@ -156,6 +160,34 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    def _there_is_overlap_in_inputs_and_outputs(self) -> set[str]:
+        """Check the `.name` of inputs and outputs to see if there is overlap.
+
+        Returns:
+            set[str]: Set of names that overlap between inputs and outputs.
+        """
+        # Create sets of input and output names for O(1) lookup
+        input_names = {input_.name for input_ in self.inputs if input_.name is not None}
+        output_names = {output.name for output in self.outputs}
+
+        # Return the intersection of the sets
+        return input_names & output_names
+
+    def get_base_args(self):
+        """Get the base arguments required for component initialization.
+
+        Returns:
+            dict: A dictionary containing the base arguments:
+                - _user_id: The ID of the current user
+                - _session_id: The ID of the current session
+                - _tracing_service: The tracing service instance for logging/monitoring
+        """
+        return {
+            "_user_id": self.user_id,
+            "_session_id": self.session_id,
+            "_tracing_service": self._tracing_service,
+        }
 
     @property
     def ctx(self):
@@ -416,6 +448,7 @@ class Component(CustomComponent):
                 frontend_node["tool_mode"] = True
                 tools_metadata_input = await self._build_tools_metadata_input()
                 frontend_node["template"][TOOLS_METADATA_INPUT_NAME] = tools_metadata_input.to_dict()
+                self._append_tool_to_outputs_map()
             elif "template" in frontend_node:
                 frontend_node["template"].pop(TOOLS_METADATA_INPUT_NAME, None)
         self.tools_metadata = frontend_node.get("template", {}).get(TOOLS_METADATA_INPUT_NAME, {}).get("value")
@@ -676,7 +709,7 @@ class Component(CustomComponent):
             return PlaceholderGraph(
                 flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
             )
-        msg = f"{name} not found in {self.__class__.__name__}"
+        msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
 
     def _set_input_value(self, name: str, value: Any) -> None:
@@ -694,7 +727,11 @@ class Component(CustomComponent):
                     name, f"Input is connected to {input_value.__self__.display_name}.{input_value.__name__}"
                 )
                 raise ValueError(msg)
-            self._inputs[name].value = value
+            try:
+                self._inputs[name].value = value
+            except Exception as e:
+                msg = f"Error setting input value for {name}: {e}"
+                raise ValueError(msg) from e
             if hasattr(self._inputs[name], "load_from_db"):
                 self._inputs[name].load_from_db = False
         else:
@@ -804,6 +841,7 @@ class Component(CustomComponent):
         for key, input_obj in self._inputs.items():
             if key not in attributes and key not in self._attributes:
                 attributes[key] = input_obj.value or None
+
         self._attributes.update(attributes)
 
     def _set_outputs(self, outputs: list[dict]) -> None:
@@ -891,7 +929,9 @@ class Component(CustomComponent):
             self._pre_run_setup()
 
     def _handle_tool_mode(self):
-        if hasattr(self, "outputs") and any(getattr(_input, "tool_mode", False) for _input in self.inputs):
+        if (
+            hasattr(self, "outputs") and any(getattr(_input, "tool_mode", False) for _input in self.inputs)
+        ) or self.add_tool_output:
             self._append_tool_to_outputs_map()
 
     def _should_process_output(self, output):
@@ -929,7 +969,11 @@ class Component(CustomComponent):
         return result
 
     def _build_artifact(self, result):
-        custom_repr = self.custom_repr() or (result if isinstance(result, dict | Data | str) else str(result))
+        custom_repr = self.custom_repr()
+        if custom_repr is None and isinstance(result, dict | Data | str):
+            custom_repr = result
+        if not isinstance(custom_repr, str):
+            custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
         artifact_type = get_artifact_type(self.status or raw, result)
@@ -937,17 +981,25 @@ class Component(CustomComponent):
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
     def _process_raw_result(self, result):
+        return self.extract_data(result)
+
+    def extract_data(self, result):
+        """Extract the data from the result. this is where the self.status is set."""
+        if isinstance(result, Message):
+            self.status = result.get_text()
+            return (
+                self.status if self.status is not None else "No text available"
+            )  # Provide a default message if .text_key is missing
+        if hasattr(result, "data"):
+            return result.data
+        if hasattr(result, "model_dump"):
+            return result.model_dump()
+        if isinstance(result, Data | dict | str):
+            return result.data if isinstance(result, Data) else result
+
         if self.status:
-            raw = self.status
-        elif hasattr(result, "data"):
-            raw = result.data
-        elif hasattr(result, "model_dump"):
-            raw = result.model_dump()
-        elif isinstance(result, dict | Data | str):
-            raw = result.data if isinstance(result, Data) else result
-        else:
-            raw = result
-        return raw
+            return self.status
+        return result
 
     def _log_output(self, output):
         self._output_logs[output.name] = self._logs
@@ -998,7 +1050,7 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     async def to_toolkit(self) -> list[Tool]:
-        component_toolkit = _get_component_toolkit()
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)

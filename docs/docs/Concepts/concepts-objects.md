@@ -1,9 +1,9 @@
 ---
 title: Langflow objects
-slug: /configuration-objects
+slug: /concepts-objects
 ---
 
-In Langflow, the Data and Message objects are Pydantic models that serve as structured, functional representations of data.
+In Langflow, objects are [Pydantic](https://docs.pydantic.dev/latest/api/base_model/) models that serve as structured, functional representations of data.
 
 ## Data object
 

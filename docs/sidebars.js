@@ -3,7 +3,7 @@ module.exports = {
     "Get-Started/welcome-to-langflow",
     {
       type: "category",
-      label: "Get Started",
+      label: "Get started",
       items: [
         "Get-Started/get-started-installation",
         "Get-Started/get-started-quickstart",
@@ -11,7 +11,7 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Starter Projects",
+      label: "Starter projects",
       items: [
         'Starter-Projects/starter-projects-basic-prompting',
         'Starter-Projects/starter-projects-vector-store-rag',
@@ -25,6 +25,7 @@ module.exports = {
         'Tutorials/tutorials-blog-writer',
         'Tutorials/tutorials-document-qa',
         'Tutorials/tutorials-memory-chatbot',
+        'Tutorials/tutorials-math-agent',
         'Tutorials/tutorials-sequential-agent',
         'Tutorials/tutorials-travel-planning-agent',
       ],
@@ -37,6 +38,7 @@ module.exports = {
         "Concepts/concepts-playground",
         "Concepts/concepts-components",
         "Concepts/concepts-flows",
+        "Concepts/concepts-objects",
         "Concepts/concepts-api",
       ],
     },
@@ -79,7 +81,6 @@ module.exports = {
         "Configuration/configuration-cli",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
-        "Configuration/configuration-objects",
         "Configuration/configuration-security-best-practices"
       ],
     },
@@ -137,17 +138,28 @@ module.exports = {
     },
     {
       type: "category",
-      label: "API Reference",
+      label: "API reference",
       items: [
+        {
+          type: "link",
+          label: "API documentation",
+          href: "/api",
+        },
         {
           type: "doc",
           id: "API-Reference/api-reference-api-examples",
           label: "API examples",
         },
+      ],
+    },
+    {
+      type: "category",
+      label: "Changelog",
+      items: [
         {
           type: "link",
-          label: "API documentation",
-          href: "/api",
+          label: "Changelog",
+          href: "https://github.com/langflow-ai/langflow/releases/latest",
         },
       ],
     },

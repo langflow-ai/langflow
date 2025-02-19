@@ -37,20 +37,34 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
-        # Check if value is a list of dicts
+        # Convert single dict or Data instance into a list.
+        if isinstance(v, dict | Data):
+            v = [v]
+        # Automatically convert DataFrame into a list of dictionaries.
         if isinstance(v, DataFrame):
             v = v.to_dict(orient="records")
+        # Verify the value is now a list.
         if not isinstance(v, list):
-            msg = f"TableInput value must be a list of dictionaries or Data. Value '{v}' is not a list."
-            raise ValueError(msg)  # noqa: TRY004
-
-        for item in v:
+            msg = (
+                "The table input must be a list of rows. You provided a "
+                f"{type(v).__name__}, which cannot be converted to table format. "
+                "Please provide your data as either:\n"
+                "- A list of dictionaries (each dict is a row)\n"
+                "- A pandas DataFrame\n"
+                "- A single dictionary (will become a one-row table)\n"
+                "- A Data object (Langflow's internal data structure)\n"
+            )
+            raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
+        # Ensure each item in the list is either a dict or a Data instance.
+        for i, item in enumerate(v):
             if not isinstance(item, dict | Data):
                 msg = (
-                    "TableInput value must be a list of dictionaries or Data. "
-                    f"Item '{item}' is not a dictionary or Data."
+                    f"Row {i + 1} in your table has an invalid format. Each row must be either:\n"
+                    "- A dictionary containing column name/value pairs\n"
+                    "- A Data object (Langflow's internal data structure for passing data between components)\n"
+                    f"Instead, got a {type(item).__name__}. Please check the format of your input data."
                 )
-                raise ValueError(msg)  # noqa: TRY004
+                raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
         return v
 
 
@@ -424,11 +438,16 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.TEXT.
         options (Optional[Union[list[str], Callable]]): List of options for the field.
             Default is None.
+        options_metadata (Optional[list[dict[str, str]]): List of dictionaries with metadata for each option.
+            Default is None.
+        combobox (CoalesceBool): Variable that defines if the user can insert custom values in the dropdown.
     """
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     options: list[str] = Field(default_factory=list)
+    options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
+    dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -483,7 +502,7 @@ class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
 
 
-DEFAULT_PROMPT_INTUT_TYPES = ["Message", "Text"]
+DEFAULT_PROMPT_INTUT_TYPES = ["Message"]
 
 
 class DefaultPromptField(Input):

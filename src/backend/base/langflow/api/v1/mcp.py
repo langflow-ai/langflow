@@ -3,7 +3,6 @@ import base64
 import json
 import logging
 import traceback
-from contextlib import suppress
 from contextvars import ContextVar
 from typing import Annotated
 from urllib.parse import quote, unquote, urlparse
@@ -45,7 +44,6 @@ if False:
 
     logger.debug("MCP module loaded - debug logging enabled")
 
-enable_progress_notifications = get_settings_service().settings.mcp_server_enable_progress_notifications
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -56,6 +54,10 @@ current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
 
 # Define constants
 MAX_RETRIES = 2
+
+
+def get_enable_progress_notifications() -> bool:
+    return get_settings_service().settings.mcp_server_enable_progress_notifications
 
 
 @server.list_prompts()
@@ -175,7 +177,9 @@ async def handle_list_tools():
 
 
 @server.call_tool()
-async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
+async def handle_call_tool(
+    name: str, arguments: dict, *, enable_progress_notifications: bool = Depends(get_enable_progress_notifications)
+) -> list[types.TextContent]:
     """Handle tool execution requests."""
     try:
         session = await anext(get_session())
@@ -261,8 +265,9 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     return collected_results
                 finally:
                     progress_task.cancel()
-                    with suppress(asyncio.CancelledError):
-                        await progress_task
+                    await asyncio.wait([progress_task])
+                    if not progress_task.cancelled() and (exc := progress_task.exception()) is not None:
+                        raise exc
             except Exception as e:
                 msg = f"Error in async session: {e}"
                 logger.exception(msg)
@@ -328,6 +333,7 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
                 logger.info("Client disconnected from SSE connection")
             except asyncio.CancelledError:
                 logger.info("SSE connection was cancelled")
+                raise
             except Exception as e:
                 msg = f"Error in MCP: {e!s}"
                 logger.exception(msg)

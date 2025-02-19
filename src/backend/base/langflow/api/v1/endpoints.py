@@ -8,16 +8,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 import sqlalchemy as sa
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    Body,
-    Depends,
-    HTTPException,
-    Request,
-    UploadFile,
-    status,
-)
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from loguru import logger
@@ -36,11 +27,7 @@ from langflow.api.v1.schemas import (
     UploadFileResponse,
 )
 from langflow.custom.custom_component.component import Component
-from langflow.custom.utils import (
-    build_custom_component_template,
-    get_instance_name,
-    update_component_build_config,
-)
+from langflow.custom.utils import build_custom_component_template, get_instance_name, update_component_build_config
 from langflow.events.event_manager import create_stream_tokens_event_manager
 from langflow.exceptions.api import APIException, InvalidChatInputError
 from langflow.exceptions.serialization import SerializationError
@@ -55,16 +42,9 @@ from langflow.services.auth.utils import api_key_security, get_current_active_us
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.flow.model import FlowRead
-from langflow.services.database.models.flow.utils import (
-    get_all_webhook_components_in_flow,
-)
+from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import (
-    get_session_service,
-    get_settings_service,
-    get_task_service,
-    get_telemetry_service,
-)
+from langflow.services.deps import get_session_service, get_settings_service, get_telemetry_service
 from langflow.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.version import get_version_info
@@ -619,29 +599,16 @@ async def process() -> None:
     )
 
 
-@router.get("/task/{task_id}")
-async def get_task_status(task_id: str) -> TaskStatusResponse:
-    task_service = get_task_service()
-    task = task_service.get_task(task_id)
-    result = None
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if task.ready():
-        result = task.result
-        # If result isinstance of Exception, can we get the traceback?
-        if isinstance(result, Exception):
-            logger.exception(task.traceback)
+@router.get("/task/{_task_id}", deprecated=True)
+async def get_task_status(_task_id: str) -> TaskStatusResponse:
+    """Get the status of a task by ID (Deprecated).
 
-        if isinstance(result, dict) and "result" in result:
-            result = result["result"]
-        elif hasattr(result, "result"):
-            result = result.result
-
-    if task.status == "FAILURE":
-        result = str(task.result)
-        logger.error(f"Task {task_id} failed: {task.traceback}")
-
-    return TaskStatusResponse(status=task.status, result=result)
+    This endpoint is deprecated and will be removed in a future version.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="The /task endpoint is deprecated and will be removed in a future version. Please use /run instead.",
+    )
 
 
 @router.post(
@@ -687,6 +654,13 @@ async def custom_component(
     if raw_code.frontend_node is not None:
         built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
 
+    tool_mode: bool = built_frontend_node.get("tool_mode", False)
+    if isinstance(component_instance, Component):
+        await component_instance.run_and_validate_update_outputs(
+            frontend_node=built_frontend_node,
+            field_name="tool_mode",
+            field_value=tool_mode,
+        )
     type_ = get_instance_name(component_instance)
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
@@ -747,6 +721,7 @@ async def custom_component_update(
             field_name=code_request.field,
         )
         component_node["template"] = updated_build_config
+
         if isinstance(cc_instance, Component):
             await cc_instance.run_and_validate_update_outputs(
                 frontend_node=component_node,
