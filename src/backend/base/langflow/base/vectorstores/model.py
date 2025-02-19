@@ -24,8 +24,7 @@ def check_cached_vector_store(f):
 
     @wraps(f)
     def check_cached(self, *args, **kwargs):
-
-        should_cache = getattr(self, 'should_cache_vector_store', True)
+        should_cache = getattr(self, "should_cache_vector_store", True)
 
         if should_cache and self._cached_vector_store is not None:
             return self._cached_vector_store
