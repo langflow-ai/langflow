@@ -498,9 +498,9 @@ For more information, see [Google Vertex AI documentation](https://cloud.google.
 
 ## xAI
 
-This component generates text using xAI models like Grok.
+This component generates text using xAI models like [Grok](https://x.ai/grok).
 
-For more information, see [xAI documentation](https://x.ai/).
+For more information, see the [xAI documentation](https://x.ai/).
 
 ### Inputs
 
