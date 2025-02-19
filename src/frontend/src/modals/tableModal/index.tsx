@@ -15,6 +15,10 @@ interface TableModalProps extends TableComponentProps {
   tableOptions?: TableOptionsTypeAPI;
   hideColumns?: boolean | string[];
   tableIcon?: string;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+  onSave?: () => void;
+  onCancel?: () => void;
 }
 
 const TableModal = forwardRef<AgGridReact, TableModalProps>(
@@ -25,22 +29,43 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
       children,
       disabled,
       tableIcon,
+      open,
+      setOpen,
+      onSave,
+      onCancel,
       ...props
     }: TableModalProps,
     ref: ForwardedRef<AgGridReact>,
   ) => {
+    const handleSetOpen = (newOpen: boolean) => {
+      if (!newOpen && onCancel) {
+        onCancel();
+      }
+      if (setOpen) {
+        setOpen(newOpen);
+      }
+    };
+
+    const handleOnEscapeKeyDown = (e: KeyboardEvent) => {
+      const editingCells = (
+        ref as React.RefObject<AgGridReact>
+      )?.current?.api?.getEditingCells();
+
+      if (editingCells && editingCells.length > 0) {
+        e.preventDefault();
+      }
+    };
+
     return (
       <BaseModal
         onEscapeKeyDown={(e) => {
-          if (
-            (
-              ref as React.RefObject<AgGridReact>
-            )?.current?.api.getEditingCells().length
-          ) {
-            e.preventDefault();
-          }
+          handleOnEscapeKeyDown(e);
         }}
         disable={disabled}
+        open={open}
+        setOpen={(newOpen) => {
+          handleSetOpen(newOpen);
+        }}
       >
         <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
         <BaseModal.Header
@@ -59,6 +84,9 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
             {...props}
           ></TableComponent>
         </BaseModal.Content>
+        <BaseModal.Footer
+          submit={onSave ? { label: "Save", onClick: onSave } : undefined}
+        ></BaseModal.Footer>
       </BaseModal>
     );
   },
