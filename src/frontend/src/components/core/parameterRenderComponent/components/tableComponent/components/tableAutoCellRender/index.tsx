@@ -71,6 +71,20 @@ export default function TableAutoCellRender({
         }
       case "number":
         return <NumberReader number={value} />;
+      case "undefined":
+        return "";
+      case "null":
+        return "";
+      case "boolean":
+        return value ? (
+          <Badge variant="successStatic" size="sq" className="h-[18px]">
+            {String(value)}
+          </Badge>
+        ) : (
+          <Badge variant="errorStatic" size="sq" className="h-[18px]">
+            {String(value)}
+          </Badge>
+        );
       default:
         return String(value);
     }
