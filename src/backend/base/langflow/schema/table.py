@@ -2,7 +2,18 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-VALID_TYPES = ["date", "number", "text", "json", "integer", "int", "float", "str", "string", "boolean"]
+VALID_TYPES = [
+    "date",
+    "number",
+    "text",
+    "json",
+    "integer",
+    "int",
+    "float",
+    "str",
+    "string",
+    "boolean",
+]
 
 
 class FormatterType(str, Enum):
@@ -25,11 +36,12 @@ class Column(BaseModel):
     display_name: str = Field(default="")
     sortable: bool = Field(default=True)
     filterable: bool = Field(default=True)
-    formatter: FormatterType | str | None = Field(default=None, alias="type")
+    formatter: FormatterType | str | None = Field(default=None)
+    type: FormatterType | str | None = Field(default=None)
     description: str | None = None
     default: str | None = None
     disable_edit: bool = Field(default=False)
-    edit_mode: EditMode | None = Field(default=EditMode.MODAL)
+    edit_mode: EditMode | None = Field(default=EditMode.POPOVER)
     hidden: bool = Field(default=False)
 
     @model_validator(mode="after")
@@ -38,15 +50,25 @@ class Column(BaseModel):
             self.display_name = self.name
         return self
 
+    @model_validator(mode="after")
+    def set_formatter_from_type(self):
+        if self.type and not self.formatter:
+            self.formatter = self.validate_formatter(self.type)
+        return self
+
     @field_validator("formatter", mode="before")
     @classmethod
     def validate_formatter(cls, value):
+        if value in {"boolean", "bool"}:
+            value = FormatterType.boolean
         if value in {"integer", "int", "float"}:
             value = FormatterType.number
         if value in {"str", "string"}:
             value = FormatterType.text
         if value == "dict":
             value = FormatterType.json
+        if value == "date":
+            value = FormatterType.date
         if isinstance(value, str):
             return FormatterType(value)
         if isinstance(value, FormatterType):
@@ -99,6 +121,10 @@ class TableOptions(BaseModel):
     block_hide: bool | list[str] = Field(default=False)
     block_select: bool = Field(default=False)
     hide_options: bool = Field(default=False)
-    field_validators: dict[str, list[FieldValidatorType] | FieldValidatorType] | None = Field(default=None)
-    field_parsers: dict[str, list[FieldParserType] | FieldParserType] | None = Field(default=None)
+    field_validators: (
+        dict[str, list[FieldValidatorType] | FieldValidatorType] | None
+    ) = Field(default=None)
+    field_parsers: dict[str, list[FieldParserType] | FieldParserType] | None = Field(
+        default=None
+    )
     description: str | None = Field(default=None)
