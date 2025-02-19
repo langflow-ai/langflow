@@ -18,7 +18,6 @@ import {
 } from "../../../../components/ui/card";
 import { useFolderStore } from "../../../../stores/foldersStore";
 import { UndrawCardComponentProps } from "../../../../types/components";
-import { updateIds } from "../../../../utils/reactflowUtils";
 import { useFlowCardClick } from "../hooks/use-redirect-flow-card-click";
 
 export default function UndrawCardComponent({
