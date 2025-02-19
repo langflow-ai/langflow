@@ -1752,7 +1752,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -1760,7 +1760,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -2288,7 +2288,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "openai_api_key",
                 "password": true,
                 "placeholder": "",
@@ -2296,7 +2296,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -2918,7 +2918,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3882,7 +3882,7 @@
                 "dynamic": false,
                 "info": "Authentication token for accessing Astra DB.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "token",
                 "password": true,
                 "placeholder": "",
@@ -3891,7 +3891,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
             "tool_mode": false
@@ -4568,7 +4568,7 @@
                 "dynamic": false,
                 "info": "Authentication token for accessing Astra DB.",
                 "input_types": [],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "token",
                 "password": true,
                 "placeholder": "",
@@ -4577,7 +4577,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
             "tool_mode": false
