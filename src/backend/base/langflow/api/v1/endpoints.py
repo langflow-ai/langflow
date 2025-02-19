@@ -580,14 +580,14 @@ async def experimental_run_flow(
 
 
 @router.post(
-    "/predict/{flow_id}",
+    "/predict/{_flow_id}",
     dependencies=[Depends(api_key_security)],
 )
 @router.post(
-    "/process/{flow_id}",
+    "/process/{_flow_id}",
     dependencies=[Depends(api_key_security)],
 )
-async def process() -> None:
+async def process(_flow_id) -> None:
     """Endpoint to process an input with a given flow_id."""
     # Raise a depreciation warning
     logger.warning(

@@ -177,7 +177,7 @@ class AgentComponent(ToolCallingAgentComponent):
     ) -> dotdict:
         # Iterate over all providers in the MODEL_PROVIDERS_DICT
         # Existing logic for updating build_config
-        if field_name in ("agent_llm",):
+        if field_name == "agent_llm":
             build_config["agent_llm"]["value"] = field_value
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
             if provider_info:
