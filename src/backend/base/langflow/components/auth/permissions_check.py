@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, Literal
 
 from permit import Permit
 
 from langflow.base.auth.error_constants import AuthErrors
 from langflow.base.auth.model import AuthComponent
 from langflow.io import MessageTextInput, SecretStrInput
+from langflow.schema.message import Message
 from langflow.template import Output
 
 
@@ -48,13 +49,6 @@ class PermissionsCheckComponent(AuthComponent):
         super().__init__(**kwargs)
         self.permit: Permit | None = None
 
-    @staticmethod
-    def evaluate_access(granted: str) -> str:
-        """Handle conditional logic based on access grant status."""
-        if granted:
-            return "proceed"
-        return "error: Access denied for this resource"
-
     def build(self, **kwargs: Any) -> None:
         """Initialize the Permit client."""
         pdp_url = kwargs.get("pdp_url") or getattr(self, "pdp_url", None)
@@ -63,7 +57,7 @@ class PermissionsCheckComponent(AuthComponent):
         if pdp_url and api_key:
             self.permit = Permit(pdp=pdp_url, token=api_key)
 
-    async def validate_auth(self) -> bool:
+    async def validate_auth(self) -> Literal["allowed", "denied"]:
         """Validate authorization for the current request."""
         if not self.permit:
             self.build(pdp_url=getattr(self, "pdp_url", None), api_key=getattr(self, "api_key", None))
@@ -71,22 +65,27 @@ class PermissionsCheckComponent(AuthComponent):
                 error = AuthErrors.PERMIT_NOT_INITIALIZED
                 raise ValueError(error.message)
 
+        auth_result: Literal["allowed", "denied"] = "denied"  # Type annotation for initial value
         try:
             context = {"tenant": self.tenant} if hasattr(self, "tenant") else {}
-            allowed = await self.permit.check(
+            is_allowed = await self.permit.check(
                 user=self.user_id, action=self.action, resource=self.resource, context=context
             )
-            self.status = bool(allowed)
-            return bool(allowed)
+            auth_result = "allowed" if is_allowed else "denied"
+            self.status = auth_result
 
         except Exception as exc:
             error = AuthErrors.validation_failed(exc)
             raise ValueError(error.message) from exc
 
-    async def get_allowed(self) -> bool:
-        """Return True if permission was granted."""
-        return await self.validate_auth()
+        return auth_result
 
-    async def get_denied(self) -> bool:
-        """Return True if permission was denied."""
-        return not await self.validate_auth()
+    async def get_allowed(self) -> Message:
+        """Return 'proceed' message if permission is granted."""
+        result = await self.validate_auth()
+        return Message(content="proceed") if result == "allowed" else Message(content="")
+
+    async def get_denied(self) -> Message:
+        """Return error message if permission is denied."""
+        result = await self.validate_auth()
+        return Message(content="error: Access denied for this resource") if result == "denied" else Message(content="")
