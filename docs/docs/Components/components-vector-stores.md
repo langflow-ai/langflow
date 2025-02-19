@@ -37,31 +37,44 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| collection_name | Collection Name | The name of the collection within Astra DB where the vectors will be stored (required) |
-| token | Astra DB Application Token | Authentication token for accessing Astra DB (required) |
-| api_endpoint | API Endpoint | API endpoint URL for the Astra DB service (required) |
-| search_input | Search Input | Query string for similarity search |
-| ingest_data | Ingest Data | Data to be ingested into the vector store |
-| namespace | Namespace | Optional namespace within Astra DB to use for the collection |
-| embedding_choice | Embedding Model or Astra Vectorize | Determines whether to use an Embedding Model or Astra Vectorize for the collection |
-| embedding | Embedding Model | Allows an embedding model configuration (when using Embedding Model) |
-| provider | Vectorize Provider | Provider for Astra Vectorize (when using Astra Vectorize) |
-| metric | Metric | Optional distance metric for vector comparisons |
-| batch_size | Batch Size | Optional number of data to process in a single batch |
-| setup_mode | Setup Mode | Configuration mode for setting up the vector store (options: "Sync", "Async", "Off", default: "Sync") |
-| pre_delete_collection | Pre Delete Collection | Boolean flag to determine whether to delete the collection before creating a new one |
-| number_of_results | Number of Results | Number of results to return in similarity search (default: 4) |
-| search_type | Search Type | Search type to use (options: "Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)") |
-| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results |
-| search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query |
+| token | Astra DB Application Token | Authentication token for accessing Astra DB (required). |
+| environment | Environment | The environment for the Astra DB API Endpoint. For example, `dev` or `prod`. |
+| database_name | Database | The Database name for the Astra DB instance (required). |
+| api_endpoint | Astra DB API Endpoint | The API Endpoint for the Astra DB instance. Supercedes database selection. |
+| collection_name | Collection | The name of the collection within Astra DB where the vectors will be stored (required). |
+| keyspace | Keyspace | Optional keyspace within Astra DB to use for the collection. |
+| embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra Vectorize. |
+| embedding_model | Embedding Model | Specify the Embedding Model. Not required for Astra Vectorize collections. |
+| number_of_results | Number of Search Results | Number of search results to return (default: 4). |
+| search_type | Search Type | Search type to use (options: `Similarity`, `Similarity with score threshold`, `MMR (Max Marginal Relevance)`). |
+| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (when using 'Similarity with score threshold'). |
+| advanced_search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
+| autodetect_collection | Autodetect Collection | Boolean flag to determine whether to autodetect the collection. |
+| content_field | Content Field | Field to use as the text content field for the vector store. |
+| deletion_field | Deletion Based On Field | When provided, documents in the target collection with metadata field values matching the input metadata field value will be deleted before new data is loaded. |
+| ignore_invalid_documents | Ignore Invalid Documents | Boolean flag to determine whether to ignore invalid documents at runtime. |
+| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Optional dictionary of additional parameters for the AstraDBVectorStore. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | vector_store | Vector Store | Astra DB vector store instance configured with the specified parameters. |
-| search_results | Search Results | The results of the similarity search as a list of `Data` objects. |
+| search_results | Search Results | The results of the similarity search as a list of [Data](/concepts-objects#data-object) objects. |
 
+### Generate embeddings
+
+The **Astra DB Vector Store** component offers two methods for generating embeddings.
+
+1. **Embedding Model**: Use your own embedding model by connecting an [Embeddings](/components-embedding-models) component in Langflow.
+
+2. **Astra Vectorize**: Use Astra DB's built-in embedding generation service. When creating a new collection, choose the embeddings provider and models, including NVIDIA's `NV-Embed-QA` model hosted by Datastax.
+
+The embedding model selection is made when creating a new collection and cannot be changed later.
+
+For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/starter-projects-vector-store-rag).
+
+For more information, see the [Astra DB Serverless documentation](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html).
 
 ## AstraDB Graph vector store
 
