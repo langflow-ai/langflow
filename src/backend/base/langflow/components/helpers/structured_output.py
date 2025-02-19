@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, create_model
 from langflow.base.models.chat_result import get_chat_result
 from langflow.custom import Component
 from langflow.helpers.base_model import build_model_from_schema
-from langflow.io import HandleInput, MessageTextInput, MultilineInput, Output, TableInput
+from langflow.io import HandleInput, MessageTextInput, MultilineInput, Output, TableInput, BoolInput
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
@@ -104,6 +104,13 @@ class StructuredOutputComponent(Component):
                 },
             ],
             value=[{"name": "field", "description": "description of field", "type": "text", "multiple": "False"}],
+        ),
+        BoolInput(
+            name="multiple",
+            advanced=True,
+            display_name="Generate Multiple",
+            info="[Deplrecated] Always set to True",
+            value=True
         ),
     ]
 
