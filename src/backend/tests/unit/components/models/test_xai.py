@@ -143,7 +143,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
         models = component.get_models()
         assert models == ["grok-2-latest"]
 
-    def test_build_model_error(self, mocker):
+    def test_build_model_error(self, component_class, mocker):
         from openai import BadRequestError
 
         component = component_class()
