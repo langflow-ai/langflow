@@ -229,6 +229,29 @@ wheels = [
 ]
 
 [[package]]
+name = "apify-client"
+version = "1.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apify-shared" },
+    { name = "httpx" },
+    { name = "more-itertools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/d7/37d955bff90f6dfc353642e4b4075db3dd9abf8f5111ed35152be3dfc3da/apify_client-1.8.1.tar.gz", hash = "sha256:2be1be7879570655bddeebf126833efe94cabb95b3755592845e92c20c70c674", size = 48422 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/0b/42bb740ba9ff4cd540cc3c22687e3c07a823a5bdecb18a714de6df183a3a/apify_client-1.8.1-py3-none-any.whl", hash = "sha256:cfa6df3816c436204e37457fba28981a0ef6a7602cde372463f0f078eee64747", size = 73532 },
+]
+
+[[package]]
+name = "apify-shared"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/12/3c6639116aba2b851b38bfcd5d81bb91f733f041c12c1d547028bd075a08/apify_shared-1.2.1.tar.gz", hash = "sha256:986557e2b01c584aa57258fb4af83d32ecb6979c0d804ccbfda7c0e79a2d00b1", size = 13597 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/ff/9d60edc7602587a2e83f86687c2a1794d6ec7711599dbd0fb075e12d6abd/apify_shared-1.2.1-py3-none-any.whl", hash = "sha256:cee136729c41c215796d8ca9f7b2e5736995d44f9471663d61827d16f592df9b", size = 12404 },
+]
+
+[[package]]
 name = "appdirs"
 version = "1.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -4033,6 +4056,7 @@ source = { editable = "." }
 dependencies = [
     { name = "ag2" },
     { name = "aiofile" },
+    { name = "apify-client" },
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "astra-assistants", extra = ["tools"] },
@@ -4191,6 +4215,7 @@ dev = [
 requires-dist = [
     { name = "ag2", specifier = ">=0.1.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
+    { name = "apify-client", specifier = ">=1.8.1" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
     { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.9" },
