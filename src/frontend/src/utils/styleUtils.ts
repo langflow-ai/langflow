@@ -288,6 +288,7 @@ import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
 import { NovitaIcon } from "../icons/Novita";
 import { NvidiaIcon } from "../icons/Nvidia";
+import { OlivyaIcon } from "../icons/Olivya";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { OpenRouterIcon } from "../icons/OpenRouter";
@@ -316,6 +317,7 @@ import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
+import { XAIIcon } from "../icons/xAI";
 import { iconsType } from "../types/components";
 
 export const BG_NOISE =
@@ -401,6 +403,7 @@ export const nodeColors: { [char: string]: string } = {
   chains: "#FE7500",
   list: "#9AAE42",
   agents: "#903BBE",
+  Olivya: "#00413B",
   tools: "#00fbfc",
   memories: "#F5B85A",
   saved_components: "#a5B85A",
@@ -529,6 +532,7 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
+  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
@@ -643,6 +647,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  Olivya: OlivyaIcon,
   Bing: BingIcon,
   Cohere: CohereIcon,
   ChevronsUpDownIcon,
@@ -689,6 +694,7 @@ export const nodeIconsLucide: iconsType = {
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   DeepSeek: DeepSeekIcon,
+  xAI: XAIIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
