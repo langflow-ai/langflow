@@ -59,8 +59,8 @@ class TestChatOutput(ComponentTestBaseWithClient):
     async def test_process_dataframe_input(self, component_class, default_kwargs):
         """Test processing a DataFrame input."""
         component = component_class(**default_kwargs)
-        df = DataFrame(data={"col1": ["A", "B"], "col2": [1, 2]})
-        component.input_value = df
+        sample_df = DataFrame(data={"col1": ["A", "B"], "col2": [1, 2]})
+        component.input_value = sample_df
         result = await component.message_response()
         assert "col1" in result.text
         assert "col2" in result.text
