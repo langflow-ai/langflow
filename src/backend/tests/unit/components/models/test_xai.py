@@ -9,9 +9,9 @@ from langflow.inputs import (
     DictInput,
     DropdownInput,
     IntInput,
+    MessageTextInput,
     SecretStrInput,
     SliderInput,
-    StrInput,
 )
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -30,7 +30,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             "api_key": "dummy-key",
             "model_name": "grok-2-latest",
             "model_kwargs": {},
-            "api_base": "https://api.x.ai/v1",
+            "base_url": "https://api.x.ai/v1",
             "seed": 42,
         }
 
@@ -57,7 +57,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             "model_kwargs",
             "json_mode",
             "model_name",
-            "api_base",
+            "base_url",
             "api_key",
             "temperature",
             "seed",
@@ -73,7 +73,7 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             "model_kwargs": DictInput,
             "json_mode": BoolInput,
             "model_name": DropdownInput,
-            "api_base": StrInput,
+            "base_url": MessageTextInput,
             "api_key": SecretStrInput,
             "temperature": SliderInput,
             "seed": IntInput,
@@ -91,16 +91,15 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
                 assert input_field.range_spec.min == 0
                 assert input_field.range_spec.max == 2
 
-    def test_build_model(self, mocker):
-        component = XAIModelComponent(
-            temperature=0.7,
-            max_tokens=100,
-            api_key="test-key",
-            model_name="grok-2-latest",
-            model_kwargs={},
-            api_base="https://api.x.ai/v1",
-            seed=1,
-        )
+    def test_build_model(self, component_class, default_kwargs, mocker):
+        component = component_class(**default_kwargs)
+        component.temperature = 0.7
+        component.max_tokens = 100
+        component.api_key = "test-key"
+        component.model_name = "grok-2-latest"
+        component.model_kwargs = {}
+        component.base_url = "https://api.x.ai/v1"
+        component.seed = 1
 
         mock_chat_openai = mocker.patch("langflow.components.models.xai.ChatOpenAI", return_value=MagicMock())
         model = component.build_model()
@@ -147,15 +146,14 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
     def test_build_model_error(self, mocker):
         from openai import BadRequestError
 
-        component = XAIModelComponent(
-            api_key="invalid-key",
-            model_name="grok-2-latest",
-            temperature=0.7,
-            max_tokens=100,
-            model_kwargs={},
-            api_base="https://api.x.ai/v1",
-            seed=1,
-        )
+        component = component_class()
+        component.api_key = "invalid-key"
+        component.model_name = "grok-2-latest"
+        component.temperature = 0.7
+        component.max_tokens = 100
+        component.model_kwargs = {}
+        component.base_url = "https://api.x.ai/v1"
+        component.seed = 1
 
         mocker.patch(
             "langflow.components.models.xai.ChatOpenAI",
@@ -169,17 +167,16 @@ class TestXAIComponent(ComponentTestBaseWithoutClient):
             component.build_model()
         assert exc_info.value.body["message"] == "Invalid API key provided"
 
-    def test_json_mode(self, mocker):
-        component = XAIModelComponent(
-            api_key="test-key",
-            json_mode=True,
-            temperature=0.7,
-            max_tokens=100,
-            model_name="grok-2-latest",
-            model_kwargs={},
-            api_base="https://api.x.ai/v1",
-            seed=1,
-        )
+    def test_json_mode(self, component_class, mocker):
+        component = component_class()
+        component.api_key = "test-key"
+        component.json_mode = True
+        component.temperature = 0.7
+        component.max_tokens = 100
+        component.model_name = "grok-2-latest"
+        component.model_kwargs = {}
+        component.base_url = "https://api.x.ai/v1"
+        component.seed = 1
 
         mock_instance = MagicMock()
         mock_bound_instance = MagicMock()
