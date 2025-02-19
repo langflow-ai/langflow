@@ -1,8 +1,7 @@
 from datetime import datetime, timezone
-from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
@@ -11,13 +10,14 @@ from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
 from langflow.schema.graph import Tweaks
 from langflow.schema.schema import InputType, OutputType, OutputValue
+from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
+from langflow.serialization.serialization import serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import FlowCreate, FlowRead
 from langflow.services.database.models.user import UserRead
 from langflow.services.settings.feature_flags import FeatureFlags
 from langflow.services.tracing.schema import Log
-from langflow.utils.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.utils.util_strings import truncate_long_strings
 
 
@@ -270,65 +270,17 @@ class ResultDataResponse(BaseModel):
     @classmethod
     def serialize_results(cls, v):
         """Serialize results with custom handling for special types and truncation."""
-        if isinstance(v, dict):
-            return {key: cls._serialize_and_truncate(val, max_length=MAX_TEXT_LENGTH) for key, val in v.items()}
-        return cls._serialize_and_truncate(v, max_length=MAX_TEXT_LENGTH)
-
-    @staticmethod
-    def _serialize_and_truncate(obj: Any, max_length: int = MAX_TEXT_LENGTH) -> Any:
-        """Helper method to serialize and truncate values."""
-        if isinstance(obj, bytes):
-            obj = obj.decode("utf-8", errors="ignore")
-            if len(obj) > max_length:
-                return f"{obj[:max_length]}... [truncated]"
-            return obj
-        if isinstance(obj, str):
-            if len(obj) > max_length:
-                return f"{obj[:max_length]}... [truncated]"
-            return obj
-        if isinstance(obj, datetime):
-            return obj.replace(tzinfo=timezone.utc).isoformat()
-        if isinstance(obj, Decimal):
-            return float(obj)
-        if isinstance(obj, UUID):
-            return str(obj)
-        if isinstance(obj, OutputValue | Log):
-            # First serialize the model
-            serialized = obj.model_dump()
-            # Then recursively truncate all values in the serialized dict
-            for key, value in serialized.items():
-                # Handle string values directly to ensure proper truncation
-                if isinstance(value, str) and len(value) > max_length:
-                    serialized[key] = f"{value[:max_length]}... [truncated]"
-                else:
-                    serialized[key] = ResultDataResponse._serialize_and_truncate(value, max_length=max_length)
-            return serialized
-        if isinstance(obj, BaseModel):
-            # For other BaseModel instances, serialize all fields
-            serialized = obj.model_dump()
-            return {
-                k: ResultDataResponse._serialize_and_truncate(v, max_length=max_length) for k, v in serialized.items()
-            }
-        if isinstance(obj, dict):
-            return {k: ResultDataResponse._serialize_and_truncate(v, max_length=max_length) for k, v in obj.items()}
-        if isinstance(obj, list | tuple):
-            # If list is too long, truncate it
-            if len(obj) > MAX_ITEMS_LENGTH:
-                truncated_list = list(obj)[:MAX_ITEMS_LENGTH]
-                truncated_list.append(f"... [truncated {len(obj) - MAX_ITEMS_LENGTH} items]")
-                obj = truncated_list
-            return [ResultDataResponse._serialize_and_truncate(item, max_length=max_length) for item in obj]
-        return obj
+        return serialize(v, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH)
 
     @model_serializer(mode="plain")
     def serialize_model(self) -> dict:
         """Custom serializer for the entire model."""
         return {
             "results": self.serialize_results(self.results),
-            "outputs": self._serialize_and_truncate(self.outputs, max_length=MAX_TEXT_LENGTH),
-            "logs": self._serialize_and_truncate(self.logs, max_length=MAX_TEXT_LENGTH),
-            "message": self._serialize_and_truncate(self.message, max_length=MAX_TEXT_LENGTH),
-            "artifacts": self._serialize_and_truncate(self.artifacts, max_length=MAX_TEXT_LENGTH),
+            "outputs": serialize(self.outputs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "logs": serialize(self.logs, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "message": serialize(self.message, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
+            "artifacts": serialize(self.artifacts, max_length=MAX_TEXT_LENGTH, max_items=MAX_ITEMS_LENGTH),
             "timedelta": self.timedelta,
             "duration": self.duration,
             "used_frozen_result": self.used_frozen_result,
@@ -424,3 +376,4 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+    event_delivery: Literal["polling", "streaming"]

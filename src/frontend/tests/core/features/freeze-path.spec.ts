@@ -2,7 +2,6 @@ import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { evaluateReactStateChanges } from "../../utils/evaluate-input-react-state-changes";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
@@ -62,14 +61,11 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const randomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.waitForSelector('[data-testid="default_slider_display_value"]', {
@@ -94,14 +90,11 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const secondRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.waitForSelector("text=OpenAI", {
@@ -145,14 +138,11 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const thirdRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     expect(randomTextGeneratedByAI).not.toEqual(secondRandomTextGeneratedByAI);
