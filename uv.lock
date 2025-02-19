@@ -4162,12 +4162,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-auth = [
-    { name = "cryptography" },
-    { name = "permit" },
-    { name = "python-jwt" },
-    { name = "requests" },
-]
 cassio = [
     { name = "cassio" },
 ]
@@ -4250,7 +4244,6 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "crewai", specifier = "~=0.86.0" },
     { name = "cryptography", specifier = "==42.0.5" },
-    { name = "cryptography", marker = "extra == 'auth'", specifier = "==42.0.5" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==7.2.1" },
@@ -4308,14 +4301,12 @@ requires-dist = [
     { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
     { name = "opensearch-py", specifier = "==2.8.0" },
     { name = "permit", specifier = ">=2.7.2,<3.0.0" },
-    { name = "permit", marker = "extra == 'auth'", specifier = ">=2.7.2,<3.0.0" },
     { name = "pgvector", specifier = "==0.3.6" },
     { name = "pyarrow", specifier = "==17.0.0" },
     { name = "pydantic-ai", specifier = ">=0.0.19" },
     { name = "pydantic-settings", specifier = "==2.4.0" },
     { name = "pymongo", specifier = "==4.10.1" },
     { name = "python-jwt", specifier = "==4.1.0" },
-    { name = "python-jwt", marker = "extra == 'auth'", specifier = "==4.1.0" },
     { name = "pytube", specifier = "==15.0.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=306,<307" },
     { name = "qdrant-client", specifier = "==1.9.2" },
@@ -4323,7 +4314,6 @@ requires-dist = [
     { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
     { name = "redis", specifier = "==5.2.1" },
     { name = "requests", specifier = "==2.32.3" },
-    { name = "requests", marker = "extra == 'auth'", specifier = "==2.32.3" },
     { name = "scrapegraph-py", specifier = ">=1.12.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
     { name = "smolagents", specifier = ">=1.8.0" },
@@ -4341,7 +4331,7 @@ requires-dist = [
     { name = "youtube-transcript-api", specifier = "==0.6.3" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
-provides-extras = ["auth", "deploy", "couchbase", "cassio", "local", "clickhouse-connect"]
+provides-extras = ["deploy", "couchbase", "cassio", "local", "clickhouse-connect"]
 
 [package.metadata.requires-dev]
 dev = [
