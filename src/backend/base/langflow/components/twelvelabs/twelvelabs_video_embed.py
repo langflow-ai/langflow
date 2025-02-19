@@ -92,157 +92,99 @@ class TwelveLabsVideoEmbeddings(Component):
         raise Exception(timeout_msg)
 
     def validate_video_file(self, filepath: str) -> tuple[bool, str]:
-        """
-        Validate video file using ffprobe.
-        Returns (is_valid, error_message)
-        """
+        """Validate video file using ffprobe."""
         try:
-            cmd = [
-                'ffprobe',
-                '-loglevel', 'error',
-                '-show_entries', 'stream=codec_type,codec_name',
-                '-of', 'default=nw=1',
-                '-print_format', 'json',
-                '-show_format',
-                filepath
-            ]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run([
+                'ffprobe', '-loglevel', 'error',
+                '-show_entries', 'stream=codec_type',
+                '-of', 'json', filepath
+            ], capture_output=True, text=True)
             
             if result.returncode != 0:
                 return False, f"FFprobe error: {result.stderr}"
             
             probe_data = json.loads(result.stdout)
-            
-            # Check if we have a video stream
             has_video = any(
                 stream.get('codec_type') == 'video' 
                 for stream in probe_data.get('streams', [])
             )
             
-            if not has_video:
-                return False, "No video stream found in file"
-                
-            self.log(f"Video validation successful: {json.dumps(probe_data, indent=2)}")
-            return True, ""
+            return (True, "") if has_video else (False, "No video stream found")
             
-        except subprocess.SubprocessError as e:
-            return False, f"FFprobe process error: {str(e)}"
-        except json.JSONDecodeError as e:
-            return False, f"FFprobe output parsing error: {str(e)}"
         except Exception as e:
             return False, f"Validation error: {str(e)}"
 
     def generate_embeddings(self) -> Data:
-        temp_file = None
         try:
-            self.log("Starting video embedding process")
-            
-            if not self.videodata:
-                self.log("No video data provided", "ERROR")
-                return Data(value={"error": "No video data provided"})
-
-            if not isinstance(self.videodata, list):
-                self.log("Video data must be a list", "ERROR")
-                return Data(value={"error": "Video data must be a list"})
-
-            if len(self.videodata) != 1:
-                self.log("Exactly one video data object required", "ERROR")
-                return Data(value={"error": "Exactly one video data object required"})
-
-            video_data = self.videodata[0]
-            
-            if not hasattr(video_data, 'data') or 'path' not in video_data.data:
-                self.log("No video path found in data", "ERROR")
-                return Data(value={"error": "No video path found in data"})
-
-            video_path = video_data.data['path']
-            if not os.path.exists(video_path):
-                self.log(f"Video file not found at path: {video_path}", "ERROR")
-                return Data(value={"error": f"Video file not found at path: {video_path}"})
-
+            if not self.videodata or not isinstance(self.videodata, list):
+                return Data(value={"error": "Invalid video data format"})
             if not self.api_key:
-                self.log("No API key provided", "ERROR")
                 return Data(value={"error": "No API key provided"})
 
-            self.log(f"Initializing client with API key: {self.api_key[:4]}...")
             client = TwelveLabs(api_key=self.api_key)
-
-            # Use ffprobe for validation first
-            is_valid, error_message = self.validate_video_file(video_path)
-            if not is_valid:
-                self.log(f"Video validation failed: {error_message}", "ERROR")
-                return Data(value={"error": f"Invalid video file: {error_message}"})
-
-            self.log("Video file validated successfully")
-
-            # Create video embedding task
-            with open(video_path, 'rb') as video_file:
-                task = client.embed.task.create(
-                    model_name="Marengo-retrieval-2.7",
-                    video_file=video_file,
-                    video_embedding_scopes=["clip", "video"]
-                )
-                self.log(f"Task created with ID: {task.id}")
-
-            # Wait for task completion synchronously
-            result = self.wait_for_task_completion(client, task.id)
+            all_embeddings = []
             
-            if (result.video_embedding is not None and 
-                result.video_embedding.segments is not None):
+            for video_data in self.videodata:
+                if not hasattr(video_data, 'data') or 'path' not in video_data.data:
+                    self.log("Skipping: No video path found", "ERROR")
+                    continue
+
+                video_path = video_data.data['path']
+                if not os.path.exists(video_path):
+                    self.log(f"Skipping: File not found - {video_path}", "ERROR")
+                    continue
+
+                is_valid, error = self.validate_video_file(video_path)
+                if not is_valid:
+                    self.log(f"Skipping: Invalid video - {error}", "ERROR")
+                    continue
+
+                with open(video_path, 'rb') as video_file:
+                    task = client.embed.task.create(
+                        model_name="Marengo-retrieval-2.7",
+                        video_file=video_file,
+                        video_embedding_scopes=["clip", "video"]
+                    )
+
+                result = self.wait_for_task_completion(client, task.id)
                 
-                self.log("Processing embedding results...")
-                # Get video-level embedding
-                video_segments = [seg for seg in result.video_embedding.segments 
-                                if seg.embedding_scope == "video"]
-                clip_segments = [seg for seg in result.video_embedding.segments 
-                               if seg.embedding_scope == "clip"]
+                if not result.video_embedding or not result.video_embedding.segments:
+                    self.log(f"No embeddings found for {video_path}", "ERROR")
+                    continue
                 
-                embeddings = {
+                video_embedding = {
                     'task_id': task.id,
+                    'file_path': video_path,
                     'video_embedding': None,
                     'clip_embeddings': []
                 }
-                
+
+                # Process video-level embedding
+                video_segments = [seg for seg in result.video_embedding.segments 
+                                if seg.embedding_scope == "video"]
                 if video_segments:
-                    embeddings['video_embedding'] = [float(x) for x in video_segments[0].embeddings_float]
-                    # Log truncated video embedding
-                    self.log(f"Video embedding (first 5 values): {embeddings['video_embedding'][:5]}")
-                    self.log(f"Video embedding dimension: {len(embeddings['video_embedding'])}")
-                
-                if clip_segments:
-                    embeddings['clip_embeddings'] = [
-                        [float(x) for x in segment.embeddings_float]
-                        for segment in clip_segments
+                    video_embedding['video_embedding'] = [
+                        float(x) for x in video_segments[0].embeddings_float
                     ]
-                    # Log truncated clip embeddings
-                    self.log(f"Number of clip embeddings: {len(embeddings['clip_embeddings'])}")
-                    if embeddings['clip_embeddings']:
-                        self.log(f"First clip embedding (first 5 values): {embeddings['clip_embeddings'][0][:5]}")
-                        self.log(f"Clip embedding dimension: {len(embeddings['clip_embeddings'][0])}")
-                
-                status_msg = f"Generated video embedding and {len(embeddings['clip_embeddings'])} clip embeddings"
-                # self.status = status_msg
-                self.status = json.dumps(embeddings)
-                self.log(status_msg)
-                return Data(value=embeddings)
-            else:
-                error_msg = "No embeddings found in response"
-                self.status = error_msg
-                self.log(error_msg, "ERROR")
-                return Data(value={"error": error_msg})
+
+                # Process clip-level embeddings
+                clip_segments = [seg for seg in result.video_embedding.segments 
+                               if seg.embedding_scope == "clip"]
+                if clip_segments:
+                    video_embedding['clip_embeddings'] = [
+                        [float(x) for x in seg.embeddings_float]
+                        for seg in clip_segments
+                    ]
+
+                all_embeddings.append(video_embedding)
+                self.log(f"Processed {video_path}: {len(video_embedding['clip_embeddings'])} clips")
+
+            if not all_embeddings:
+                return Data(value={"error": "No valid embeddings generated"})
+
+            self.status = f"Processed {len(all_embeddings)} videos"
+            return Data(value={"embeddings": all_embeddings})
             
         except Exception as e:
-            error_msg = f"Error: {str(e)}"
-            self.status = error_msg
-            self.log(error_msg, "ERROR")
+            self.status = f"Error: {str(e)}"
             return Data(value={"error": str(e)})
-        finally:
-            # Clean up temporary file
-            if temp_file and os.path.exists(temp_file.name):
-                try:
-                    self.log("Cleaning up temporary file...")
-                    os.unlink(temp_file.name)
-                    self.log("Temporary file cleaned up successfully")
-                except Exception as e:
-                    self.log(f"Error cleaning up temporary file: {str(e)}", "ERROR")
