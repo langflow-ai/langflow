@@ -7,9 +7,7 @@ The **NVIDIA Ingest** component integrates with the [NVIDIA nv-ingest](https://g
 
 The `nv-ingest` service supports multiple extraction methods for PDF, Docx, and pptx file types, and includes pre and post processing services like splitting, chunking, and embedding generation.
 
-The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects.
-
-The `Ingestor` module accepts additional configuration options for data extraction from other text formats, like `extract_charts`, and `extract_tables`. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
+The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
 
 ## Prerequisites
 
@@ -22,11 +20,26 @@ uv sync --extra nv-ingest
 uv run langflow run
 ```
 
-## NVIDIA Ingest component flow
+## Use the NVIDIA Ingest component in a flow
 
 The **NVIDIA Ingest** component accepts a **Message** inputs and outputs **Data**. The component uses the NVIDIA ingest endpoint to ingest a local file and extract the text.
 
+To use the NVIDIA Ingest component in your flow, follow these steps:
+1. Click the **NVIDIA Ingest** component in the component library and drag it onto the canvas.
+2. In the **NVIDIA Ingest endpoint** field, enter the URL of the NVIDIA ingest endpoint.
+3. In the **Path** field, enter the path to the file you want to ingest.
+4. Select which text type to extract from the file.
+The component supports text, charts, and tables.
+5. Select whether to split the text into chunks.
+Modify the splitting parameters in the component's **Configuration** tab.
+7. Click **Run** to ingest the file.
+8. To confirm the component is ingesting the file, open the **Logs** pane to view the output of the flow.
+9. To store the processed data in a vector database, add a **AstraDB Vector** component to your flow, and connect the **NVIDIA Ingest** component to the **AstraDB Vector** component with a **Data** output.
+
 ![NVIDIA Ingest component flow](nvidia-component-ingest-astra.png)
+
+9. Run the flow.
+Inspect your Astra DB vector database to view the processed data.
 
 ## NVIDIA ingest component parameters {#parameters}
 
