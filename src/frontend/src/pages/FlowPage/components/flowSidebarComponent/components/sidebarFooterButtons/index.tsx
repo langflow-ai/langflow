@@ -3,11 +3,19 @@ import { Button } from "@/components/ui/button";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { CustomLink } from "@/customization/components/custom-link";
 
+interface SidebarMenuButtonsProps {
+  hasStore?: boolean;
+  customComponent?: string;
+  addComponent: (component: string, type: string) => void;
+  isLoading?: boolean;
+}
+
 const SidebarMenuButtons = ({
   hasStore = false,
   customComponent,
   addComponent,
-}) => {
+  isLoading,
+}: SidebarMenuButtonsProps) => {
   return (
     <>
       {hasStore && (
@@ -37,6 +45,7 @@ const SidebarMenuButtons = ({
       <SidebarMenuButton asChild>
         <Button
           unstyled
+          disabled={isLoading}
           onClick={() => {
             if (customComponent) {
               addComponent(customComponent, "CustomComponent");
