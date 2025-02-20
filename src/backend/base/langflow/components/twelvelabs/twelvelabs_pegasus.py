@@ -2,7 +2,8 @@
 from langflow.custom import Component
 from langflow.inputs import DataInput, SecretStrInput, MessageInput
 from langflow.io import Output
-from langflow.schema import Data
+# from langflow.schema import Data  # Remove this since we're not using Data anymore
+from langflow.schema.message import Message
 from typing import Dict, Any
 from twelvelabs import TwelveLabs
 import time
@@ -41,8 +42,19 @@ class TwelveLabsPegasus(Component):
     ]
 
     outputs = [
-        Output(display_name="Response", name="response", method="process_video"),
+        Output(
+            display_name="Message",
+            name="response",
+            method="process_video",
+            type_=Message,
+        ),
     ]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._video_id = None
+        self._index_id = None
+        self._task_id = None
 
     @retry(
         stop=stop_after_attempt(3),
@@ -156,18 +168,28 @@ class TwelveLabsPegasus(Component):
         self.status = f"Processing video... Status: {task.status}"
         self.log(self.status)
 
-    def process_video(self) -> Data:
+    def process_video(self) -> Message:
         """Process video using Pegasus and generate response if message is provided"""
         try:
+            # If we have a message and already processed video, use existing video_id
+            if self.message and self._video_id:
+                client = TwelveLabs(api_key=self.api_key)
+                response = client.generate.text(
+                    video_id=self._video_id,
+                    prompt=self.message.text
+                )
+                return Message(text=response.data)
+
+            # Otherwise process new video
             if not self.videodata or not isinstance(self.videodata, list) or len(self.videodata) != 1:
-                return Data(value={"error": "Please provide exactly one video"})
+                return Message(text="Please provide exactly one video")
 
             video_path = self.videodata[0].data.get('path')
             if not video_path or not os.path.exists(video_path):
-                return Data(value={"error": "Invalid video path"})
+                return Message(text="Invalid video path")
 
             if not self.api_key:
-                return Data(value={"error": "No API key provided"})
+                return Message(text="No API key provided")
 
             client = TwelveLabs(api_key=self.api_key)
 
@@ -176,33 +198,41 @@ class TwelveLabsPegasus(Component):
                 name=f"index_{int(time.time())}",
                 models=[{"type": "visual", "name": "pegasus1.2", "options": ["visual"]}]
             )
+            self._index_id = index.id
 
             with open(video_path, 'rb') as video_file:
                 task = client.task.create(
                     index_id=index.id,
                     file=video_file
                 )
+            self._task_id = task.id
 
             # Wait for processing to complete
             task.wait_for_done(sleep_interval=5, callback=self.on_task_update)
             
             if task.status != "ready":
-                raise RuntimeError(f"Processing failed with status {task.status}")
+                return Message(text=f"Processing failed with status {task.status}")
+
+            # Store video_id for future use
+            self._video_id = task.video_id
 
             # Generate response if message provided
             if self.message:
-                # Log the message text we're using
                 self.status = f"Processing query: {self.message.text}"
                 self.log(self.status)
 
                 response = client.generate.text(
-                    video_id=task.video_id,
+                    video_id=self._video_id,
                     prompt=self.message.text
                 )
-                return Data(value={"response": response.data})
+                return Message(text=response.data)
             else:
-                return Data(value={"response": "Video processed successfully. You can now ask questions about the video."})
+                return Message(text="Video processed successfully. You can now ask questions about the video.")
 
         except Exception as e:
             self.log(f"Error: {str(e)}", "ERROR")
-            return Data(value={"error": str(e)})
+            # Clear stored IDs on error
+            self._video_id = None
+            self._index_id = None
+            self._task_id = None
+            return Message(text=f"Error: {str(e)}")
