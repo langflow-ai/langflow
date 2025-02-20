@@ -6,6 +6,7 @@ from langflow.base.models.model_input_constants import (
     ALL_PROVIDER_FIELDS,
     MODEL_DYNAMIC_UPDATE_FIELDS,
     MODEL_PROVIDERS_DICT,
+    MODELS_METADATA,
 )
 from langflow.base.models.model_utils import get_model_name
 from langflow.components.helpers import CurrentDateComponent
@@ -43,6 +44,7 @@ class AgentComponent(ToolCallingAgentComponent):
             value="OpenAI",
             real_time_refresh=True,
             input_types=[],
+            options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())] + [{"icon": "brain"}],
         ),
         *MODEL_PROVIDERS_DICT["OpenAI"]["inputs"],
         MultilineInput(
@@ -224,6 +226,8 @@ class AgentComponent(ToolCallingAgentComponent):
                     value="Custom",
                     real_time_refresh=True,
                     input_types=["LanguageModel"],
+                    options_metadata=[MODELS_METADATA[key] for key in sorted(MODELS_METADATA.keys())]
+                    + [{"icon": "brain"}],
                 )
                 build_config.update({"agent_llm": custom_component.to_dict()})
             # Update input types for all fields
