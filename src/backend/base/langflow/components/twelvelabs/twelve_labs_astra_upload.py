@@ -68,6 +68,7 @@ class TwelveLabsAstraUpload(Component):
         
         # Extract embeddings from the data
         embeddings_list = embeddings_data.get("embeddings", [])
+        task_ids = embeddings_data.get("tasks", [])  # Get task IDs from input
         
         for embedding_item in embeddings_list:
             # Handle video embeddings
@@ -76,11 +77,11 @@ class TwelveLabsAstraUpload(Component):
                     documents.append({
                         "embedding": embedding_item["video_embedding"][:1000],  # First 1000 dimensions for vector search
                         "embedding_extra": embedding_item["video_embedding"][1000:],  # Remaining 24 dimensions
+                        "task_id": embedding_item["task_id"],  # Add task ID directly to document
                         "metadata": {
                             "type": "video",
                             "scope": "video",
-                            "file_path": embedding_item["file_path"],
-                            "task_id": embedding_item["task_id"]
+                            "file_path": embedding_item["file_path"]
                         }
                     })
                 
@@ -89,12 +90,12 @@ class TwelveLabsAstraUpload(Component):
                     documents.append({
                         "embedding": clip_embedding[:1000],  # First 1000 dimensions for vector search
                         "embedding_extra": clip_embedding[1000:],  # Remaining 24 dimensions
+                        "task_id": embedding_item["task_id"],  # Add task ID directly to document
                         "metadata": {
                             "type": "video",
                             "scope": "clip",
                             "clip_index": idx,
-                            "file_path": embedding_item["file_path"],
-                            "task_id": embedding_item["task_id"]
+                            "file_path": embedding_item["file_path"]
                         }
                     })
             
@@ -140,7 +141,7 @@ class TwelveLabsAstraUpload(Component):
                 batch = documents[i:i + batch_size]
                 collection.insert_many(batch)
                 total_uploaded += len(batch)
-                self.log(f"Uploaded {total_uploaded}/{len(documents)} embeddings")
+                self.log(f"Uploaded {total_uploaded}/{len(documents)} embedding chunks")
 
             status = {
                 "status": "success",

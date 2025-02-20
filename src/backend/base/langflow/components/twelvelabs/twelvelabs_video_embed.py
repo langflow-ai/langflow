@@ -123,6 +123,7 @@ class TwelveLabsVideoEmbeddings(Component):
 
             client = TwelveLabs(api_key=self.api_key)
             all_embeddings = []
+            all_tasks = []  # Track all task IDs
             
             for video_data in self.videodata:
                 if not hasattr(video_data, 'data') or 'path' not in video_data.data:
@@ -145,6 +146,7 @@ class TwelveLabsVideoEmbeddings(Component):
                         video_file=video_file,
                         video_embedding_scopes=["clip", "video"]
                     )
+                    all_tasks.append(task.id)  # Store task ID
 
                 result = self.wait_for_task_completion(client, task.id)
                 
@@ -183,7 +185,10 @@ class TwelveLabsVideoEmbeddings(Component):
                 return Data(value={"error": "No valid embeddings generated"})
 
             self.status = f"Processed {len(all_embeddings)} videos"
-            return Data(value={"embeddings": all_embeddings})
+            return Data(value={
+                "embeddings": all_embeddings,
+                "tasks": all_tasks  # Include task IDs in output
+            })
             
         except Exception as e:
             self.status = f"Error: {str(e)}"
