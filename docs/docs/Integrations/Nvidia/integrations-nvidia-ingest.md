@@ -38,7 +38,7 @@ Modify the splitting parameters in the component's **Configuration** tab.
 
 ![NVIDIA Ingest component flow](nvidia-component-ingest-astra.png)
 
-9. Run the flow.
+10. Run the flow.
 Inspect your Astra DB vector database to view the processed data.
 
 ## NVIDIA ingest component parameters {#parameters}
