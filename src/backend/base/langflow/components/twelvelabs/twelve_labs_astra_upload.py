@@ -54,10 +54,34 @@ class TwelveLabsAstraUpload(Component):
         """Get AstraDB database object."""
         try:
             client = DataAPIClient(token=self.token, environment=self.environment)
-            return client.get_database(
+            database = client.get_database(
                 api_endpoint=self.api_endpoint,
                 token=self.token
             )
+
+            # Get or create collection with proper indexes
+            collection = database.get_collection(self.collection_name)
+            
+            # Create indexes for our fields
+            indexes = [
+                {"fields": ["task_id"], "unique": False},
+                {"fields": ["type"], "unique": False},
+                {"fields": ["scope"], "unique": False},
+                {"fields": ["file_path"], "unique": False},
+                {"fields": ["clip_index"], "unique": False},
+                {"fields": ["content"], "unique": False}
+            ]
+            
+            for index in indexes:
+                try:
+                    collection.create_index(index)
+                    self.log(f"Created index on {index['fields']}")
+                except Exception as e:
+                    # Index might already exist
+                    self.log(f"Index creation note: {str(e)}", "WARNING")
+
+            return database
+
         except Exception as e:
             msg = f"Error connecting to AstraDB: {e}"
             raise ValueError(msg) from e
@@ -68,47 +92,46 @@ class TwelveLabsAstraUpload(Component):
         
         # Extract embeddings from the data
         embeddings_list = embeddings_data.get("embeddings", [])
-        task_ids = embeddings_data.get("tasks", [])  # Get task IDs from input
         
         for embedding_item in embeddings_list:
             # Handle video embeddings
             if "video_embedding" in embedding_item:
                 if embedding_item["video_embedding"]:
-                    documents.append({
-                        "embedding": embedding_item["video_embedding"][:1000],  # First 1000 dimensions for vector search
-                        "embedding_extra": embedding_item["video_embedding"][1000:],  # Remaining 24 dimensions
-                        "task_id": embedding_item["task_id"],  # Add task ID directly to document
-                        "metadata": {
-                            "type": "video",
-                            "scope": "video",
-                            "file_path": embedding_item["file_path"]
-                        }
-                    })
+                    # Store video-level embedding
+                    base_doc = {
+                        "$vector": embedding_item["video_embedding"],  # First 1000 dimensions for vector search
+                        "task_id": embedding_item["task_id"],
+                        "type": "video",
+                        "scope": "video",
+                        "file_path": embedding_item["file_path"],
+                        "clip_index": 0
+                    }
+                    documents.append(base_doc)
                 
                 # Process clip embeddings
                 for idx, clip_embedding in enumerate(embedding_item.get("clip_embeddings", [])):
-                    documents.append({
-                        "embedding": clip_embedding[:1000],  # First 1000 dimensions for vector search
-                        "embedding_extra": clip_embedding[1000:],  # Remaining 24 dimensions
-                        "task_id": embedding_item["task_id"],  # Add task ID directly to document
-                        "metadata": {
-                            "type": "video",
-                            "scope": "clip",
-                            "clip_index": idx,
-                            "file_path": embedding_item["file_path"]
-                        }
-                    })
+                    clip_doc = {
+                        "$vector": clip_embedding,  # First 1000 dimensions for vector search
+                        "task_id": embedding_item["task_id"],
+                        "type": "video",
+                        "scope": "clip",
+                        "file_path": embedding_item["file_path"],
+                        "clip_index": idx
+                    }
+                    documents.append(clip_doc)
             
             # Handle text embeddings
             elif "embedding" in embedding_item:
-                documents.append({
-                    "embedding": embedding_item["embedding"][:1000],  # First 1000 dimensions for vector search
-                    "embedding_extra": embedding_item["embedding"][1000:],  # Remaining 24 dimensions
-                    "metadata": {
-                        "type": "text",
-                        "text": embedding_item["text"]
-                    }
-                })
+                text_doc = {
+                    "$vector": embedding_item["embedding"],  # First 1000 dimensions for vector search
+                    "task_id": embedding_item.get("task_id"),
+                    "type": "text",
+                    "scope": "text",
+                    "content": embedding_item["text"],
+                    "clip_index": None,
+                    "file_path": None
+                }
+                documents.append(text_doc)
 
         return documents
 
