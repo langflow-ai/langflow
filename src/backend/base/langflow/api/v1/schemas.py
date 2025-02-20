@@ -376,4 +376,6 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+    public_flow_cleanup_interval: int
+    public_flow_expiration: int
     event_delivery: Literal["polling", "streaming"]

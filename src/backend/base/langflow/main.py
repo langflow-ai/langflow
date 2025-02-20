@@ -35,6 +35,7 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.task.temp_flow_cleanup import cleanup_worker
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -128,6 +129,8 @@ def get_lifespan(*, fix_migration=False, version=None):
             await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
             await load_flows_from_directory()
+            # Start the cleanup worker
+            await cleanup_worker.start()
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
@@ -140,6 +143,8 @@ def get_lifespan(*, fix_migration=False, version=None):
         finally:
             # Clean shutdown
             logger.info("Cleaning up resources...")
+            # Stop the cleanup worker
+            await cleanup_worker.stop()
             await teardown_services()
             await logger.complete()
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
@@ -264,6 +269,7 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
     return app
 
 
