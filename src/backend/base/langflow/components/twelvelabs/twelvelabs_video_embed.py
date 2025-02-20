@@ -13,7 +13,7 @@ import json
 class TwelveLabsVideoEmbeddings(Component):
     display_name = "Twelve Labs Video Embeddings"
     description = "Converts video content to embeddings using Twelve Labs API."
-    documentation: str = "https://docs.langflow.org/components-custom-components"
+    documentation: str = "https://docs.langflow.org/"
     icon = "video"
     name = "TwelveLabsVideoEmbeddings"
 
