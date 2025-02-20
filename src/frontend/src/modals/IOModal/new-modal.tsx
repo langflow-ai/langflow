@@ -1,6 +1,7 @@
 import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import { Separator } from "@/components/ui/separator";
+import { EventDeliveryType } from "@/constants/enums";
+import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
   useDeleteMessages,
   useGetMessagesQuery,
@@ -152,6 +153,11 @@ export default function IOModal({
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
+  const config = useGetConfig();
+
+  function shouldStreamEvents() {
+    return config.data?.event_delivery === EventDeliveryType.STREAMING;
+  }
 
   const sendMessage = useCallback(
     async ({
@@ -170,6 +176,7 @@ export default function IOModal({
           files: files,
           silent: true,
           session: sessionId,
+          stream: shouldStreamEvents(),
         }).catch((err) => {
           console.error(err);
         });

@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     sqlite_pragmas: dict | None = {"synchronous": "NORMAL", "journal_mode": "WAL"}
     """SQLite pragmas to use when connecting to the database."""
 
+    db_driver_connection_settings: dict | None = None
+    """Database driver connection settings."""
+
     db_connection_settings: dict | None = {
         "pool_size": 20,  # Match the pool_size above
         "max_overflow": 30,  # Match the max_overflow above
@@ -226,6 +229,8 @@ class Settings(BaseSettings):
     public_flow_expiration: int = Field(default=86400, gt=600)
     """The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup.
     Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes)."""
+    event_delivery: Literal["polling", "streaming"] = "streaming"
+    """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
 
     @field_validator("dev")
     @classmethod

@@ -10,7 +10,6 @@ import JsonView from "react18-json-view";
 import "react18-json-view/src/dark.css";
 import "react18-json-view/src/style.css";
 import IconComponent from "../../components/common/genericIconComponent";
-import { CODE_DICT_DIALOG_SUBTITLE } from "../../constants/constants";
 import { useDarkStore } from "../../stores/darkStore";
 import BaseModal from "../baseModal";
 

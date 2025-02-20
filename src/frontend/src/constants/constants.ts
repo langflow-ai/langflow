@@ -715,7 +715,7 @@ export const STORE_TITLE = "Langflow Store";
 export const NO_API_KEY = "You don't have an API key.";
 export const INSERT_API_KEY = "Insert your Langflow API key.";
 export const INVALID_API_KEY = "Your API key is not valid. ";
-export const CREATE_API_KEY = `Don’t have an API key? Sign up at`;
+export const CREATE_API_KEY = `Don't have an API key? Sign up at`;
 export const STATUS_BUILD = "Build to validate status.";
 export const STATUS_INACTIVE = "Execution blocked";
 export const STATUS_BUILDING = "Building...";
@@ -819,8 +819,8 @@ export const defaultShortcuts = [
     shortcut: "backspace",
   },
   {
-    display_name: "Open playground",
-    name: "Open playground",
+    display_name: "Open Playground",
+    name: "Open Playground",
     shortcut: "mod+k",
   },
   {
@@ -1007,3 +1007,9 @@ export const DEFAULT_PLACEHOLDER = "Type something...";
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
 
 export const PLAYGROUND_BUTTON_NAME = "Playground";
+export const POLLING_MESSAGES = {
+  ENDPOINT_NOT_AVAILABLE: "Endpoint not available",
+  STREAMING_NOT_SUPPORTED: "Streaming not supported",
+} as const;
+
+export const POLLING_INTERVAL = 100; // milliseconds between polling attempts

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
@@ -378,3 +378,4 @@ class ConfigResponse(BaseModel):
     max_file_size_upload: int
     public_flow_cleanup_interval: int
     public_flow_expiration: int
+    event_delivery: Literal["polling", "streaming"]

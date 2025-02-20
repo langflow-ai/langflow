@@ -598,6 +598,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files,
     silent,
     session,
+    stream = true,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -605,6 +606,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files?: string[];
     silent?: boolean;
     session?: string;
+    stream?: boolean;
   }) => {
     const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
@@ -831,6 +833,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
       playgroundPage,
+      stream,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();
