@@ -2,12 +2,12 @@ from collections.abc import Generator
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel
 from typing_extensions import TypedDict
 
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.schema.secrets import DataRedactionModel
 from langflow.serialization.serialization import serialize
 
 INPUT_FIELD_NAME = "input_value"
@@ -35,7 +35,7 @@ class ErrorLog(TypedDict):
     stackTrace: str
 
 
-class OutputValue(BaseModel):
+class OutputValue(DataRedactionModel):
     message: ErrorLog | StreamURL | dict | list | str
     type: str
 

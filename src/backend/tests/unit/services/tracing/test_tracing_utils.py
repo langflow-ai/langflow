@@ -2,7 +2,7 @@ import pytest
 from detect_secrets.core.potential_secret import PotentialSecret
 from hypothesis import given
 from hypothesis import strategies as st
-from langflow.services.tracing.utils import check_string_for_secrets
+from langflow.schema.secrets import check_string_for_secrets
 
 # Strategy for regular readable text without secrets
 readable_text = st.text(
