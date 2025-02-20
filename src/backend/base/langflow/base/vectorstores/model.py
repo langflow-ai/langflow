@@ -56,9 +56,9 @@ class LCVectorStoreComponent(Component):
         DropdownInput(
             name="mode",
             display_name="Mode",
-            options=["Search", "Ingest"],
+            options=["Retrieval", "Ingestion"],
             options_metadata=[{"icon": "vectorsearch"}, {"icon": "Blocks"}],
-            value="Search",
+            value="Retrieval",
             real_time_refresh=True,
         ),
         DataInput(
@@ -75,11 +75,11 @@ class LCVectorStoreComponent(Component):
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Choose the vector store mode based on the field value."""
-        if field_name == "mode" and field_value == "Ingest":
+        if field_name == "mode" and field_value == "Ingestion":
             build_config["search_query"]["value"] = ""
             build_config["search_query"]["advanced"] = True
             build_config["ingest_data"]["advanced"] = False
-        elif field_name == "mode" and field_value == "Search":
+        elif field_name == "mode" and field_value == "Retrieval":
             build_config["ingest_data"]["value"] = ""
             build_config["ingest_data"]["advanced"] = True
             build_config["search_query"]["advanced"] = False

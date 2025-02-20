@@ -1491,8 +1491,8 @@
                 "info": "",
                 "name": "mode",
                 "options": [
-                  "Search",
-                  "Ingest"
+                  "Retrieval",
+                  "Ingestion"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3200,8 +3200,8 @@
                 "info": "",
                 "name": "mode",
                 "options": [
-                  "Search",
-                  "Ingest"
+                  "Retrieval",
+                  "Ingestion"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
