@@ -24,7 +24,7 @@ export const MarkdownField = ({
       <Markdown
         remarkPlugins={[remarkGfm as any]}
         linkTarget="_blank"
-        rehypePlugins={[rehypeMathjax, rehypeRaw as any]}
+        rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
           "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
           isEmpty ? "text-muted-foreground" : "text-primary",
