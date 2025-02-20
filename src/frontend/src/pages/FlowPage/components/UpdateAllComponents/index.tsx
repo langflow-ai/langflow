@@ -12,25 +12,51 @@ import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-export default function UpdateAllComponents() {
+const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
+const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
+  "There was an error updating the components.",
+  "If the error persists, please report it on our Discord or GitHub.",
+];
+const ERROR_MESSAGE_EDGES_LOST =
+  "Some edges were lost after updating the components. Please review the flow and reconnect them.";
+
+export default function UpdateAllComponents({}: {}) {
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
-  const updateNodeInternals = useUpdateNodeInternals();
+  const setDismissAll = useUtilityStore((state) => state.setDismissAll);
   const templates = useTypesStore((state) => state.templates);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const [loadingUpdate, setLoadingUpdate] = useState(false);
-
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
 
+  const updateNodeInternals = useUpdateNodeInternals();
   const updateAllNodes = useUpdateAllNodes(setNodes, updateNodeInternals);
 
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  const setDismissAll = useUtilityStore((state) => state.setDismissAll);
+  const numberOfEdgesBeforeUpdate = useRef(0);
+
+  useMemo(() => {
+    if (
+      numberOfEdgesBeforeUpdate.current > 0 &&
+      edges.length !== numberOfEdgesBeforeUpdate.current
+    ) {
+      useAlertStore.getState().setNoticeData({
+        title: ERROR_MESSAGE_EDGES_LOST,
+      });
+    }
+  }, [edges]);
+
+  const getSuccessTitle = (updatedCount: number) => {
+    return `Successfully updated ${updatedCount} component${
+      updatedCount > 1 ? "s" : ""
+    }`;
+  };
 
   const handleUpdateAllComponents = () => {
+    numberOfEdgesBeforeUpdate.current = edges.length;
     setLoadingUpdate(true);
     takeSnapshot();
 
@@ -77,23 +103,17 @@ export default function UpdateAllComponents() {
     Promise.all(updatePromises)
       .then(() => {
         if (updatedCount > 0) {
-          // Batch update all nodes at once
           updateAllNodes(updates);
 
           useAlertStore.getState().setSuccessData({
-            title: `Successfully updated ${updatedCount} component${
-              updatedCount > 1 ? "s" : ""
-            }`,
+            title: getSuccessTitle(updatedCount),
           });
         }
       })
       .catch((error) => {
         setErrorData({
-          title: "Error updating components",
-          list: [
-            "There was an error updating the components.",
-            "If the error persists, please report it on our Discord or GitHub.",
-          ],
+          title: ERROR_MESSAGE_UPDATING_COMPONENTS,
+          list: ERROR_MESSAGE_UPDATING_COMPONENTS_LIST,
         });
         console.error(error);
       })
