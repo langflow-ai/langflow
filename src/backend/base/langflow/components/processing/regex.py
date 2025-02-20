@@ -22,7 +22,7 @@ class RegexExtractorComponent(Component):
             name="pattern",
             display_name="Regex Pattern",
             info="The regular expression pattern to match",
-            value=r"", 
+            value=r"",
             required=True,
             tool_mode=True,
         ),
