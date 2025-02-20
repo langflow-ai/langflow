@@ -51,7 +51,7 @@ on:
 
 env:
   NODE_VERSION: "21"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
   # Define the directory where Playwright browsers will be installed.
   # Adjust if your project uses a different path.
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
