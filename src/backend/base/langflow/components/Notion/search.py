@@ -1,20 +1,19 @@
-from typing import Any
-
+import pandas as pd
 import requests
-from langchain.tools import StructuredTool
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
-from langflow.inputs import DropdownInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.custom import Component
+from langflow.inputs import DropdownInput, MessageTextInput, SecretStrInput
+from langflow.schema import DataFrame
+from langflow.template import Output
 
 
-class NotionSearch(LCToolComponent):
-    display_name: str = "Search "
+class NotionSearch(Component):
+    """A component that searches all pages and databases shared with a Notion integration."""
+
+    display_name: str = "Search"
     description: str = "Searches all pages and databases that have been shared with an integration."
     documentation: str = "https://docs.langflow.org/integrations/notion/search"
-    icon = "NotionDirectoryLoader"
+    icon: str = "NotionDirectoryLoader"
 
     inputs = [
         SecretStrInput(
@@ -23,10 +22,11 @@ class NotionSearch(LCToolComponent):
             info="The Notion integration token.",
             required=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="query",
             display_name="Search Query",
             info="The text that the API compares page and database titles against.",
+            tool_mode=True,
         ),
         DropdownInput(
             name="filter_value",
@@ -34,6 +34,7 @@ class NotionSearch(LCToolComponent):
             info="Limits the results to either only pages or only databases.",
             options=["page", "database"],
             value="page",
+            tool_mode=True,
         ),
         DropdownInput(
             name="sort_direction",
@@ -41,56 +42,16 @@ class NotionSearch(LCToolComponent):
             info="The direction to sort the results.",
             options=["ascending", "descending"],
             value="descending",
+            tool_mode=True,
         ),
     ]
 
-    class NotionSearchSchema(BaseModel):
-        query: str = Field(..., description="The search query text.")
-        filter_value: str = Field(default="page", description="Filter type: 'page' or 'database'.")
-        sort_direction: str = Field(default="descending", description="Sort direction: 'ascending' or 'descending'.")
+    outputs = [
+        Output(name="results", display_name="Search Results", method="search"),
+    ]
 
-    def run_model(self) -> list[Data]:
-        results = self._search_notion(self.query, self.filter_value, self.sort_direction)
-        records = []
-        combined_text = f"Results found: {len(results)}\n\n"
-
-        for result in results:
-            result_data = {
-                "id": result["id"],
-                "type": result["object"],
-                "last_edited_time": result["last_edited_time"],
-            }
-
-            if result["object"] == "page":
-                result_data["title_or_url"] = result["url"]
-                text = f"id: {result['id']}\ntitle_or_url: {result['url']}\n"
-            elif result["object"] == "database":
-                if "title" in result and isinstance(result["title"], list) and len(result["title"]) > 0:
-                    result_data["title_or_url"] = result["title"][0]["plain_text"]
-                    text = f"id: {result['id']}\ntitle_or_url: {result['title'][0]['plain_text']}\n"
-                else:
-                    result_data["title_or_url"] = "N/A"
-                    text = f"id: {result['id']}\ntitle_or_url: N/A\n"
-
-            text += f"type: {result['object']}\nlast_edited_time: {result['last_edited_time']}\n\n"
-            combined_text += text
-            records.append(Data(text=text, data=result_data))
-
-        self.status = records
-        return records
-
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="notion_search",
-            description="Search Notion pages and databases. "
-            "Input should include the search query and optionally filter type and sort direction.",
-            func=self._search_notion,
-            args_schema=self.NotionSearchSchema,
-        )
-
-    def _search_notion(
-        self, query: str, filter_value: str = "page", sort_direction: str = "descending"
-    ) -> list[dict[str, Any]]:
+    def search(self) -> DataFrame:
+        """Search Notion pages and databases."""
         url = "https://api.notion.com/v1/search"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -99,13 +60,45 @@ class NotionSearch(LCToolComponent):
         }
 
         data = {
-            "query": query,
-            "filter": {"value": filter_value, "property": "object"},
-            "sort": {"direction": sort_direction, "timestamp": "last_edited_time"},
+            "query": self.query,
+            "filter": {"value": self.filter_value, "property": "object"},
+            "sort": {"direction": self.sort_direction, "timestamp": "last_edited_time"},
         }
 
-        response = requests.post(url, headers=headers, json=data, timeout=10)
-        response.raise_for_status()
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=10)
+            response.raise_for_status()
+            results = response.json()["results"]
 
-        results = response.json()
-        return results["results"]
+            # Transform results into a list of dicts with flattened structure
+            search_results = []
+            for result in results:
+                result_data = {
+                    "id": result["id"],
+                    "type": result["object"],
+                    "last_edited_time": result["last_edited_time"],
+                }
+
+                if result["object"] == "page":
+                    result_data["title_or_url"] = result["url"]
+                elif result["object"] == "database":
+                    if "title" in result and isinstance(result["title"], list) and len(result["title"]) > 0:
+                        result_data["title_or_url"] = result["title"][0]["plain_text"]
+                    else:
+                        result_data["title_or_url"] = "N/A"
+
+                search_results.append(result_data)
+
+            # Convert to DataFrame with ordered columns
+            search_results_df = pd.DataFrame(search_results)
+            column_order = ["id", "type", "title_or_url", "last_edited_time"]
+            search_results_df = search_results_df[column_order]
+
+            return DataFrame(search_results_df)
+
+        except requests.exceptions.RequestException as e:
+            return DataFrame(pd.DataFrame({"error": [f"Error searching Notion: {e}"]}))
+        except KeyError:
+            return DataFrame(pd.DataFrame({"error": ["Unexpected response format from Notion API"]}))
+        except (ValueError, TypeError) as e:
+            return DataFrame(pd.DataFrame({"error": [f"Error processing search results: {e}"]}))
