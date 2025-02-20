@@ -3825,7 +3825,7 @@
               },
               "search_query": {
                 "_input_type": "MultilineInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "",
@@ -3839,7 +3839,7 @@
                 "name": "search_query",
                 "placeholder": "",
                 "required": false,
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
