@@ -343,44 +343,87 @@ dev = [
     "codeflash>=0.8.4"
 ]
 
-# Convenience groups
-databases-all = [
-    "langflow-base[couchbase,cassandra,clickhouse,mongodb,supabase,redis,elasticsearch]"
-]
-
-vectors-all = [
-    "langflow-base[faiss,qdrant,weaviate,chroma,upstash,pinecone,milvus,mongodb-vectors,astradb]"
-]
-
-llms-all = [
-    "langflow-base[openai,anthropic,cohere,google,ollama,nvidia,mistral,sambanova,groq]"
-]
-
-local-llms-all = [
-    "langflow-base[llama-cpp,sentence-transformers,ctransformers]"
-]
-
-monitoring-all = [
-    "langflow-base[langfuse,langwatch,langsmith,arize]"
-]
-
-documents-all = [
-    "langflow-base[pypdf,docx,pytube]"
-]
-
-agents-all = [
-    "langflow-base[crewai,dspy,smolagents]"
-]
-
-tools-all = [
-    "langflow-base[beautifulsoup,serpapi,google-api,wikipedia,fake-useragent,duckduckgo,yfinance,wolframalpha]"
-]
-
-utils-all = [
-    "langflow-base[pyarrow,fastavro,gitpython,json-repair,nltk,lark]"
-]
-
 # Complete installation
 all = [
-    "langflow-base[deploy,databases-all,vectors-all,llms-all,local-llms-all,monitoring-all,documents-all,agents-all,tools-all,utils-all,dev]"
+    "langflow[deploy]",
+    "langflow[couchbase]",
+    "langflow[cassandra]",
+    "langflow[clickhouse]",
+    "langflow[mongodb]",
+    "langflow[supabase]",
+    "langflow[redis]",
+    "langflow[elasticsearch]",
+    "langflow[faiss]",
+    "langflow[qdrant]",
+    "langflow[weaviate]",
+    "langflow[chroma]",
+    "langflow[upstash]",
+    "langflow[pinecone]",
+    "langflow[milvus]",
+    "langflow[mongodb-vectors]",
+    "langflow[astradb]",
+    "langflow[openai]",
+    "langflow[anthropic]",
+    "langflow[cohere]",
+    "langflow[google]",
+    "langflow[ollama]",
+    "langflow[nvidia]",
+    "langflow[mistral]",
+    "langflow[sambanova]",
+    "langflow[groq]",
+    "langflow[llama-cpp]",
+    "langflow[sentence-transformers]",
+    "langflow[ctransformers]",
+    "langflow[langfuse]",
+    "langflow[langwatch]",
+    "langflow[langsmith]",
+    "langflow[arize]",
+    "langflow[pypdf]",
+    "langflow[docx]",
+    "langflow[pytube]",
+    "langflow[crewai]",
+    "langflow[dspy]",
+    "langflow[smolagents]",
+    "langflow[beautifulsoup]",
+    "langflow[serpapi]",
+    "langflow[google-api]",
+    "langflow[wikipedia]",
+    "langflow[fake-useragent]",
+    "langflow[duckduckgo]",
+    "langflow[yfinance]",
+    "langflow[wolframalpha]",
+    "langflow[pyarrow]",
+    "langflow[fastavro]",
+    "langflow[gitpython]",
+    "langflow[nltk]",
+    "langflow[lark]",
+    "langflow[huggingface]",
+    "langflow[metaphor]",
+    "langflow[metal]",
+    "langflow[markup]",
+    "langflow[aws]",
+    "langflow[numexpr]",
+    "langflow[qianfan]",
+    "langflow[pgvector]",
+    "langflow[litellm]",
+    "langflow[zep]",
+    "langflow[youtube]",
+    "langflow[markdown]",
+    "langflow[kubernetes]",
+    "langflow[json-repair]",
+    "langflow[astra]",
+    "langflow[composio]",
+    "langflow[ragstack]",
+    "langflow[opensearch]",
+    "langflow[atlassian]",
+    "langflow[mem0]",
+    "langflow[needle]",
+    "langflow[sseclient]",
+    "langflow[openinference]",
+    "langflow[mcp]",
+    "langflow[ag2]",
+    "langflow[scrapegraph]",
+    "langflow[pydantic-ai]",
+    "langflow[apify]",
+    "langflow[spider]",
 ]
