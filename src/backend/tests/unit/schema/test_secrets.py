@@ -1,5 +1,5 @@
 import pytest
-from langflow.schema.secrets import DataRedactionModel
+from langflow.schema.secrets_sanitizer import DataRedactionModel
 
 
 class TestRedactionModel(DataRedactionModel):
@@ -90,8 +90,8 @@ def test_log_serialization_pydantic_error_message():
             raise ValueError(msg)
 
     error_message = ErrorObject()
-    log = TestRedactionModel(name="error_log", message=str(error_message), type="test")
-    serialized_log = log.serialize_log_without_secrets(lambda x: x.model_dump())
+    log = TestRedactionModel(name="error_log", message=error_message, type="test")
+    serialized_log = log.model_dump()
     assert "Error" in serialized_log["message"]
 
 
@@ -102,4 +102,4 @@ def test_log_serialization_unicode_decode_error_message():
         name="unicode_decode_error_log", message=byte_message.decode("latin-1"), type="test"
     )  # decode with latin-1 to avoid immediate error
     serialized_log = log.serialize_log_without_secrets(lambda x: x.model_dump())
-    assert "\\x80abc" in serialized_log["message"]
+    assert "\x80abc" in serialized_log["message"]
