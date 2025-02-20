@@ -260,7 +260,7 @@ class Graph:
         if component_id in self.vertex_map:
             msg = f"Component ID {component_id} already exists"
             raise ValueError(msg)
-        frontend_node = component.to_frontend_node()
+        frontend_node = run_until_complete(component.to_frontend_node())
         self._vertices.append(frontend_node)
         vertex = self._create_vertex(frontend_node)
         vertex.add_component_instance(component)
