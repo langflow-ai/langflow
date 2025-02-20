@@ -22,7 +22,7 @@ class RegexExtractorComponent(Component):
             name="pattern",
             display_name="Regex Pattern",
             info="The regular expression pattern to match",
-            value=r"\b\w+@\w+\.\w+\b",  # Default pattern for email addresses
+            value=r"", 
             required=True,
             tool_mode=True,
         ),
@@ -35,9 +35,8 @@ class RegexExtractorComponent(Component):
 
     def extract_matches(self) -> list[Data]:
         if not self.pattern or not self.input_text:
-            result = []  # Empty list for no input
-            self.status = result
-            return result
+            self.status = []
+            return []
 
         try:
             # Compile regex pattern
@@ -50,7 +49,7 @@ class RegexExtractorComponent(Component):
             filtered_matches = [match for match in matches if match]  # Remove empty matches
 
             # Return empty list for no matches, or list of matches if found
-            result = [] if not filtered_matches else [Data(data={"match": match}) for match in filtered_matches]
+            result: list = [] if not filtered_matches else [Data(data={"match": match}) for match in filtered_matches]
 
         except re.error as e:
             error_message = f"Invalid regex pattern: {e!s}"
