@@ -1479,6 +1479,20 @@ toml = [
 ]
 
 [[package]]
+name = "crate"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "orjson" },
+    { name = "urllib3" },
+    { name = "verlib2" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b7/58/a0920382bda1cebe81f6bd567c337dbb7e50f2456f982d47f8bbf20eafdf/crate-2.0.0.tar.gz", hash = "sha256:b9f08842f2ee0dd2fa5c6b7d7f6d627e9c86d8cf8894cf56d50b817d679860c6", size = 60930 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f8/25/0e4eea4fe6d5b369b9ed972c7e9f4c3902827cfb89f7492807aa74567d66/crate-2.0.0-py3-none-any.whl", hash = "sha256:692a2c42a4c49ecdb6a2e395175d111c6ac7db051e6362243b69adc26bf00a18", size = 32331 },
+]
+
+[[package]]
 name = "crewai"
 version = "0.102.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2400,6 +2414,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a7/b2/4140c69c6a66432916b26158687e821ba631a4c9273c474343badf84d3ba/future-1.0.0.tar.gz", hash = "sha256:bd2968309307861edae1458a4f8a4f3598c03be43b97521076aebf5d94c07b05", size = 1228490 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/71/ae30dadffc90b9006d77af76b393cb9dfbfc9629f339fc1574a1c52e6806/future-1.0.0-py3-none-any.whl", hash = "sha256:929292d34f5872e70396626ef385ec22355a1fae8ad29e1a734c3e43f9fbc216", size = 491326 },
+]
+
+[[package]]
+name = "geojson"
+version = "3.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/85/5a/33e761df75c732fcea94aaf01f993d823138581d10c91133da58bc231e63/geojson-3.2.0.tar.gz", hash = "sha256:b860baba1e8c6f71f8f5f6e3949a694daccf40820fa8f138b3f712bd85804903", size = 24574 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/67/a7fa2d650602731c90e0a86279841b4586e14228199e8c09165ba4863e29/geojson-3.2.0-py3-none-any.whl", hash = "sha256:69d14156469e13c79479672eafae7b37e2dcd19bdfd77b53f74fa8fe29910b52", size = 15040 },
 ]
 
 [[package]]
@@ -3963,6 +3986,21 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-cratedb"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+    { name = "langchain-postgres" },
+    { name = "sqlalchemy-cratedb" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dc/ed/da772c17d7baa332c07fcf54e8d3dc7adedb1527afec76f922f146515c45/langchain_cratedb-0.1.1.tar.gz", hash = "sha256:b04aa8ef59ce3d44ce6814f357a18510169f16d3c660a7686b05995f5a64cd1a", size = 21753 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/b6/8ddb560059411b4e55066d285276cd2dddb8dcf35c590eb8908902ef43d8/langchain_cratedb-0.1.1-py3-none-any.whl", hash = "sha256:820fa15696560d79b45d86432512db7e1f3be960b1a750c74b89b03d9d76236f", size = 23566 },
+]
+
+[[package]]
 name = "langchain-elasticsearch"
 version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4166,6 +4204,23 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-postgres"
+version = "0.0.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "numpy" },
+    { name = "pgvector" },
+    { name = "psycopg" },
+    { name = "psycopg-pool" },
+    { name = "sqlalchemy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4e/20/dc09b62dfe97822841e9c3310e2faa265150ee3783902c251b0d083f8e8c/langchain_postgres-0.0.13.tar.gz", hash = "sha256:3a23f95aaeca9bf03af63cf6b9ef1381b6d2a83605179d307a6606b05e335ab1", size = 21455 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/ef/68293f413e2bf289ac17aaab84691ebaccb077709e23cfeaf9f3ee9d05e8/langchain_postgres-0.0.13-py3-none-any.whl", hash = "sha256:91cb4e62862b1a1f36cdf8462e34990bc112d5824dfb738cab9ca6577cb27cee", size = 21901 },
+]
+
+[[package]]
 name = "langchain-sambanova"
 version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4275,6 +4330,7 @@ dependencies = [
     { name = "langchain-chroma" },
     { name = "langchain-cohere" },
     { name = "langchain-community" },
+    { name = "langchain-cratedb" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
@@ -4447,6 +4503,7 @@ requires-dist = [
     { name = "langchain-chroma", specifier = "==0.1.4" },
     { name = "langchain-cohere", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.10" },
+    { name = "langchain-cratedb", specifier = "<0.2" },
     { name = "langchain-elasticsearch", specifier = "==0.3.0" },
     { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
     { name = "langchain-google-community", specifier = "==2.0.3" },
@@ -6971,6 +7028,18 @@ wheels = [
 ]
 
 [[package]]
+name = "psycopg-pool"
+version = "3.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/71/01d4e589dc5fd1f21368b7d2df183ed0e5bbc160ce291d745142b229797b/psycopg_pool-3.2.4.tar.gz", hash = "sha256:61774b5bbf23e8d22bedc7504707135aaf744679f8ef9b3fe29942920746a6ed", size = 29749 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/28/2b56ac94c236ee033c7b291bcaa6a83089d0cc0fe7830c35f6521177c199/psycopg_pool-3.2.4-py3-none-any.whl", hash = "sha256:f6a22cff0f21f06d72fb2f5cb48c618946777c49385358e0c88d062c59cbd224", size = 38240 },
+]
+
+[[package]]
 name = "psycopg2-binary"
 version = "2.9.10"
 source = { registry = "https://pypi.org/simple" }
@@ -8827,6 +8896,21 @@ postgresql-psycopgbinary = [
 ]
 
 [[package]]
+name = "sqlalchemy-cratedb"
+version = "0.41.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "crate" },
+    { name = "geojson" },
+    { name = "sqlalchemy" },
+    { name = "verlib2" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b9/4a/ce32d3c49e18f06acd54e7246529eabdd510e45355da8e4a7cc6ac054f85/sqlalchemy_cratedb-0.41.0.tar.gz", hash = "sha256:f24620f13baf6645c8500a01f29a16a3d13f2de2ef86e6cc766261592647ed6f", size = 43895 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/75/4d8f818eeb7c4f22a9c741e3ca55bbffbc87edaf407d86da64c5b189859f/sqlalchemy_cratedb-0.41.0-py3-none-any.whl", hash = "sha256:542ffe29ffa8733ed50c658034c95a3b1379a440d423f297d97ecd4c0e3ff3aa", size = 44800 },
+]
+
+[[package]]
 name = "sqlmodel"
 version = "0.0.22"
 source = { registry = "https://pypi.org/simple" }
@@ -9819,6 +9903,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/64/07/91582d69320f6f6daaf2d8072608a4ad8884683d4840e7e4f3a9dbdcc639/validators-0.34.0.tar.gz", hash = "sha256:647fe407b45af9a74d245b943b18e6a816acf4926974278f6dd617778e1e781f", size = 70955 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6e/78/36828a4d857b25896f9774c875714ba4e9b3bc8a92d2debe3f4df3a83d4f/validators-0.34.0-py3-none-any.whl", hash = "sha256:c804b476e3e6d3786fa07a30073a4ef694e617805eb1946ceee3fe5a9b8b1321", size = 43536 },
+]
+
+[[package]]
+name = "verlib2"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/e3/a27d3b956f9ba6dcdf1404474c466d29bf219cc92f803cbbb3a7f698abe1/verlib2-0.2.0.tar.gz", hash = "sha256:0ab94087c094e27163948dfa817c98d62b6bdd01226cce5188f8cc3cd68345b9", size = 10714 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/48/d3/ec173825185edcb54b950237561c5cf2310e8fb9f288974652449e0a079e/verlib2-0.2.0-py3-none-any.whl", hash = "sha256:c0fb8dbae76e228e55bb6178207cda931d44c843d8485c873b7676835edf2e8f", size = 8927 },
 ]
 
 [[package]]
