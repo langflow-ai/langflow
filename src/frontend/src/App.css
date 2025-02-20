@@ -66,8 +66,6 @@ body {
 }
 
 .jv-indent {
-  overflow-y: auto !important;
-  max-height: 310px !important;
   border-radius: 10px;
 }
 
