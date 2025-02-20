@@ -6,8 +6,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_google_genai._common import GoogleGenerativeAIError
 
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output, SecretStrInput
+from langflow.base.embeddings.model import LCEmbeddingsModel
+from langflow.io import MessageTextInput, SecretStrInput
 
 MIN_DIMENSION_ERROR = "Output dimensionality must be at least 1"
 MAX_DIMENSION_ERROR = (
@@ -17,7 +17,7 @@ MAX_DIMENSION = 768
 MIN_DIMENSION = 1
 
 
-class GoogleGenerativeAIEmbeddingsComponent(Component):
+class GoogleGenerativeAIEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "Google Generative AI Embeddings"
     description = (
         "Connect to Google's generative AI embeddings service using the GoogleGenerativeAIEmbeddings class, "
@@ -30,10 +30,6 @@ class GoogleGenerativeAIEmbeddingsComponent(Component):
     inputs = [
         SecretStrInput(name="api_key", display_name="API Key", required=True),
         MessageTextInput(name="model_name", display_name="Model Name", value="models/text-embedding-004"),
-    ]
-
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
     def build_embeddings(self) -> Embeddings:
