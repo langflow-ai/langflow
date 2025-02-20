@@ -130,6 +130,8 @@ class NvidiaIngestComponent(Component):
             )
             raise ImportError(msg) from e
 
+        self.base_url: str | None = self.base_url.strip() if self.base_url else None
+
         if not self.path:
             err_msg = "Upload a file to use this component."
             self.log(err_msg, name="NVIDIAIngestComponent")
@@ -143,7 +145,6 @@ class NvidiaIngestComponent(Component):
             raise ValueError(err_msg)
 
         try:
-            self.base_url = self.base_url.strip()
             parsed_url = urlparse(self.base_url)
             if not parsed_url.hostname or not parsed_url.port:
                 err_msg = "Invalid URL: Missing hostname or port."
@@ -154,7 +155,7 @@ class NvidiaIngestComponent(Component):
             raise
 
         self.log(
-            f"Creating Ingestor for host: {parsed_url.hostname}, port: {parsed_url.port}", name="NVIDIAIngestComponent"
+            f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {parsed_url.port!r}", name="NVIDIAIngestComponent"
         )
         try:
             from nv_ingest_client.client import Ingestor
