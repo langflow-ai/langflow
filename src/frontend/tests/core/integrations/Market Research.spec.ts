@@ -5,8 +5,9 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Market Research",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {

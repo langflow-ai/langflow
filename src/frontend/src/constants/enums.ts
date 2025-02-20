@@ -38,3 +38,8 @@ export enum IOOutputTypes {
   STRING_LIST = "StringListOutput",
   DATA = "DataOutput",
 }
+
+export enum EventDeliveryType {
+  STREAMING = "streaming",
+  POLLING = "polling",
+}

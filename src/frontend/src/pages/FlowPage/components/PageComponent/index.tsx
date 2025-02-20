@@ -89,7 +89,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
   );
-
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance,
@@ -612,7 +611,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 <span className="text-foreground">Components</span>
               </SidebarTrigger>
             </Panel>
-            {componentsToUpdate.length > 0 && <UpdateAllComponents />}
+            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
+              <UpdateAllComponents />
+            </div>
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}

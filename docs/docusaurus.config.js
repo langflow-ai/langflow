@@ -20,9 +20,6 @@ const config = {
   projectName: "langflow",
   trailingSlash: false,
   staticDirectories: ["static"],
-  customFields: {
-    mendableAnonKey: "b7f52734-297c-41dc-8737-edbd13196394", // Mendable Anon Client-side key, safe to expose to the public
-  },
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
@@ -257,6 +254,15 @@ const config = {
         sidebar: {
           hideable: false,
         },
+      },
+      algolia: {
+        appId: 'UZK6BDPCVY',
+        // public key, safe to commit
+        apiKey: 'adbd7686dceb1cd510d5ce20d04bf74c',
+        indexName: 'langflow',
+        contextualSearch: true,
+        searchParameters: {},
+        searchPagePath: 'search',
       },
     }),
 };

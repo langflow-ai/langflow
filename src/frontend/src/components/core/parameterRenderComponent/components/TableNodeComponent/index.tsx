@@ -65,10 +65,12 @@ export default function TableNodeComponent({
     };
   }, []);
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
+  const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
   const componentColumns = columns
     ? columns
-    : generateBackendColumnsFromValue(value ?? [], table_options);
+    : generateBackendColumnsFromValue(tempValue ?? [], table_options);
   let AgColumns = FormatColumns(componentColumns);
   // add info to each column
   AgColumns = AgColumns.map((col) => {
@@ -93,7 +95,7 @@ export default function TableNodeComponent({
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
-      handleOnNewValue({ value: rows });
+      setTempValue(rows);
     }
   }
   function deleteRow() {
@@ -109,8 +111,7 @@ export default function TableNodeComponent({
     if (agGrid.current && selectedNodes.length > 0) {
       const toDuplicate = selectedNodes.map((node) => cloneDeep(node.data));
       setSelectedNodes([]);
-      const rows: any = [];
-      handleOnNewValue({ value: [...value, ...toDuplicate] });
+      setTempValue([...tempValue, ...toDuplicate]);
     }
   }
   function addRow() {
@@ -118,12 +119,23 @@ export default function TableNodeComponent({
     componentColumns.forEach((column) => {
       newRow[column.name] = column.default ?? null; // Use the default value if available
     });
-    handleOnNewValue({ value: [...value, newRow] });
+    setTempValue([...tempValue, newRow]);
   }
 
   function updateComponent() {
     setAllRows();
   }
+
+  function handleSave() {
+    handleOnNewValue({ value: tempValue });
+    setIsModalOpen(false);
+  }
+
+  function handleCancel() {
+    setTempValue(cloneDeep(value));
+    setIsModalOpen(false);
+  }
+
   const editable = componentColumns
     .map((column) => {
       const isCustomEdit =
@@ -149,6 +161,8 @@ export default function TableNodeComponent({
     >
       <div className="flex w-full items-center gap-3" data-testid={"div-" + id}>
         <TableModal
+          open={isModalOpen}
+          setOpen={setIsModalOpen}
           stopEditingWhenCellsLoseFocus={true}
           tableIcon={table_icon}
           tableOptions={table_options}
@@ -169,8 +183,10 @@ export default function TableNodeComponent({
           displayEmptyAlert={false}
           className="h-full w-full"
           columnDefs={AgColumns}
-          rowData={value}
+          rowData={tempValue}
           context={{ field_parsers: table_options?.field_parsers }}
+          onSave={handleSave}
+          onCancel={handleCancel}
         >
           <Button
             disabled={disabled}

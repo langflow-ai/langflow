@@ -18,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../ui/card";
-import Loading from "../../ui/loading";
 import IconComponent from "../genericIconComponent";
 import ShadTooltip from "../shadTooltipComponent";
 import useDataEffect from "./hooks/use-data-effect";

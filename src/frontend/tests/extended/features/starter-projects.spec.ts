@@ -17,6 +17,8 @@ test(
 
     await page.getByTestId("search-input-template").fill("Document");
 
+    await page.waitForTimeout(1000);
+
     expect(
       page.getByTestId("template_basic-prompting-(hello,-world)"),
     ).toBeVisible({ visible: false, timeout: 3000 });

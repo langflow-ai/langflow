@@ -5,7 +5,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
   ALLOWED_IMAGE_INPUT_EXTENSIONS,

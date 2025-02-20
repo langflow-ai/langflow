@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { track } from "../../../../customization/utils/analytics";
 import useAddFlow from "../../../../hooks/flows/use-add-flow";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { FlowType } from "../../../../types/flow";
 import { updateIds } from "../../../../utils/reactflowUtils";
 

@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import React from "react";
 
 const FeatureToggles = ({
   showBeta,

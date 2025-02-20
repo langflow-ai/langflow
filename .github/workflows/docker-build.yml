@@ -314,6 +314,8 @@ jobs:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Restart HuggingFace Spaces Build
         run: |

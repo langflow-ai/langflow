@@ -1,4 +1,3 @@
-import { useState } from "react";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../../components/common/genericIconComponent";
