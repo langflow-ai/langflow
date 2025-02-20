@@ -282,3 +282,7 @@ input[type="search"]::-webkit-search-cancel-button {
 .react-flow__background pattern circle {
   fill: hsl(var(--canvas-dot)) !important;
 }
+
+.markdown td {
+  min-width: 78px;
+}
