@@ -112,6 +112,7 @@ dependencies = [
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
+    "apify-client>=1.8.1",
 ]
 
 [tool.uv.sources]

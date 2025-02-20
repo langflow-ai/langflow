@@ -2,7 +2,6 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { CustomLink } from "@/customization/components/custom-link";
-import React from "react";
 
 const SidebarMenuButtons = ({
   hasStore = false,
