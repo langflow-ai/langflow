@@ -8,7 +8,7 @@ from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTe
 from langflow.schema import Data
 
 
-class NVIDIAIngestComponent(Component):
+class NvidiaIngestComponent(Component):
     display_name = "NVIDIA Ingest"
     description = "Process, transform, and store data."
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
