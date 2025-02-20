@@ -44,6 +44,8 @@ jobs:
           ref: ${{ inputs.ref || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Run integration tests with api keys
         timeout-minutes: 20
         run: |
