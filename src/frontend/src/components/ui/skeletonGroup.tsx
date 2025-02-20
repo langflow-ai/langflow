@@ -12,7 +12,7 @@ const SkeletonGroup = ({
       {Array(count)
         .fill(null)
         .map((_, i) => (
-          <Skeleton key={i} className="h-8 w-full" />
+          <Skeleton key={i} className="my-0.5 h-7 w-full" />
         ))}
     </div>
   );
