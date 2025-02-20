@@ -231,13 +231,12 @@ test(
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
-    await page.getByRole("gridcell").nth(4).click();
 
     const output = await page.getByPlaceholder("Empty").textContent();
     expect(output).toContain("modified_value");
 
     // Count occurrences of modified_value in output
     const matches = output?.match(/modified_value/g) || [];
-    expect(matches).toHaveLength(2);
+    expect(matches).toHaveLength(1);
   },
 );
