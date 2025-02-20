@@ -155,7 +155,8 @@ class NvidiaIngestComponent(Component):
             raise
 
         self.log(
-            f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {parsed_url.port!r}", name="NVIDIAIngestComponent"
+            f"Creating Ingestor for host: {parsed_url.hostname!r}, port: {parsed_url.port!r}",
+            name="NVIDIAIngestComponent",
         )
         try:
             from nv_ingest_client.client import Ingestor
