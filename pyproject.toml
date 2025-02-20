@@ -115,46 +115,8 @@ dependencies = [
     "apify-client>=1.8.1",
 ]
 
-[tool.uv.sources]
-langflow-base = { workspace = true }
-langflow = { workspace = true }
-
-[tool.uv.workspace]
-members = ["src/backend/base", "."]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/backend/langflow"]
-
-
-[project.urls]
-Repository = "https://github.com/langflow-ai/langflow"
-Documentation = "https://docs.langflow.org"
-
-[project.optional-dependencies]
-deploy = [
-    "celery[redis]>=5.3.6",
-    "flower>=2.0.0"
-]
-couchbase = [
-    "couchbase>=4.2.1"
-]
-cassio = [
-    "cassio>=0.1.7"
-]
-local = [
-    "llama-cpp-python~=0.2.0",
-    "sentence-transformers>=2.3.1",
-    "ctransformers>=0.2.10"
-]
-clickhouse-connect = [
-    "clickhouse-connect==0.7.19"
-]
-
-[project.scripts]
-langflow = "langflow.__main__:main"
-
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest-instafail>=0.5.0",
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
@@ -195,6 +157,52 @@ dev-dependencies = [
     "locust>=2.32.9",
 ]
 
+[tool.uv.sources]
+langflow-base = { workspace = true }
+langflow = { workspace = true }
+
+[tool.uv.workspace]
+members = ["src/backend/base", "."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend/langflow"]
+
+
+[project.urls]
+Repository = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org"
+
+[project.optional-dependencies]
+deploy = [
+    "celery[redis]>=5.3.6",
+    "flower>=2.0.0"
+]
+couchbase = [
+    "couchbase>=4.2.1"
+]
+cassio = [
+    "cassio>=0.1.7"
+]
+local = [
+    "llama-cpp-python~=0.2.0",
+    "sentence-transformers>=2.3.1",
+    "ctransformers>=0.2.10"
+]
+clickhouse-connect = [
+    "clickhouse-connect==0.7.19"
+]
+
+nv-ingest = [
+    # nv-ingest-client 2025.2.7.dev0 does not correctly install its
+    # dependencies, so we need to install some manually.
+    "nv-ingest-client==2025.2.7.dev0",
+    "python-pptx==0.6.23",
+    "pymilvus[bulk_writer,model]==2.5.0",
+    "llama-index-embeddings-nvidia==0.1.5",
+]
+
+[project.scripts]
+langflow = "langflow.__main__:main"
 
 [tool.codespell]
 skip = '.git,*.pdf,*.svg,*.pdf,*.yaml,*.ipynb,poetry.lock,*.min.js,*.css,package-lock.json,*.trig.,**/node_modules/**,./stuff/*,*.csv'
@@ -275,6 +283,9 @@ external = ["RUF027"]
     "S101",
     "SLF001",
 ]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = [ "io", "logging", "socket"]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]
