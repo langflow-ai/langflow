@@ -45,7 +45,7 @@ class MessageBase(SQLModel):
         if not value:
             value = []
         return value
-    
+
     @field_serializer("timestamp")
     def serialize_timestamp(self, value, _info):
         if isinstance(value, datetime):
