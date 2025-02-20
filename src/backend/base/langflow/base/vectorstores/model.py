@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
-from langflow.io import DataInput, MultilineInput, Output
+from langflow.io import DataInput, DropdownInput, MultilineInput, Output
 from langflow.schema import Data, DataFrame
 
 if TYPE_CHECKING:
@@ -53,9 +53,18 @@ class LCVectorStoreComponent(Component):
     trace_type = "retriever"
 
     inputs = [
+        DropdownInput(
+            name="mode",
+            display_name="Mode",
+            options=["Search", "Ingest"],
+            options_metadata=[{"icon": "vectorsearch"}, {"icon": "Blocks"}],
+            value="Search",
+            real_time_refresh=True,
+        ),
         DataInput(
             name="ingest_data",
             display_name="Ingest Data",
+            advanced=True,
         ),
         MultilineInput(
             name="search_query",
@@ -63,6 +72,19 @@ class LCVectorStoreComponent(Component):
             tool_mode=True,
         ),
     ]
+
+    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Choose the vector store mode based on the field value."""
+        if field_name == "mode" and field_value == "Ingest":
+            build_config["search_query"]["value"] = ""
+            build_config["search_query"]["advanced"] = True
+            build_config["ingest_data"]["advanced"] = False
+        elif field_name == "mode" and field_value == "Search":
+            build_config["ingest_data"]["value"] = ""
+            build_config["ingest_data"]["advanced"] = True
+            build_config["search_query"]["advanced"] = False
+
+        return build_config
 
     outputs = [
         Output(

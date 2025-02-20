@@ -1366,7 +1366,7 @@
               },
               "ingest_data": {
                 "_input_type": "DataInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
@@ -1480,6 +1480,29 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "cosine"
+              },
+              "mode": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "",
+                "name": "mode",
+                "options": [
+                  "Search",
+                  "Ingest"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Search"
               },
               "number_of_results": {
                 "_input_type": "IntInput",
@@ -3054,7 +3077,7 @@
               },
               "ingest_data": {
                 "_input_type": "DataInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
@@ -3166,6 +3189,29 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "cosine"
+              },
+              "mode": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Mode",
+                "dynamic": false,
+                "info": "",
+                "name": "mode",
+                "options": [
+                  "Search",
+                  "Ingest"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Search"
               },
               "number_of_results": {
                 "_input_type": "IntInput",

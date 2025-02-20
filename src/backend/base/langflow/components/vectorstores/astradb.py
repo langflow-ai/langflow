@@ -651,6 +651,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        # First call the super method to handle the default behavior
+        build_config = await super().update_build_config(build_config, field_value, field_name)
+
         # Callback for database creation
         if field_name == "database_name" and isinstance(field_value, dict) and "new_database_name" in field_value:
             try:
