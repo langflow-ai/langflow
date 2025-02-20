@@ -1,13 +1,12 @@
 {
-  "id": "99aa93b0-8c09-4608-b6ca-b7edc07c5cc3",
   "data": {
     "nodes": [
       {
-        "id": "ScrapeGraphSearchApi-EQpI6",
+        "id": "ScrapeGraphSearchApi-4qF2k",
         "type": "genericNode",
         "position": {
-          "x": -64.48297849552424,
-          "y": 157.58393465264962
+          "x": 42.512465889820305,
+          "y": 172.783808513074
         },
         "data": {
           "node": {
@@ -205,21 +204,21 @@
           },
           "showNode": true,
           "type": "ScrapeGraphSearchApi",
-          "id": "ScrapeGraphSearchApi-EQpI6"
+          "id": "ScrapeGraphSearchApi-4qF2k"
         },
         "selected": false,
         "measured": {
           "width": 320,
-          "height": 495
+          "height": 497
         },
         "dragging": false
       },
       {
-        "id": "Agent-Rr9BX",
+        "id": "Agent-CBAEF",
         "type": "genericNode",
         "position": {
-          "x": 525.223604462991,
-          "y": 167.1602992307149
+          "x": 422.19675050009755,
+          "y": 174.69884952068273
         },
         "data": {
           "node": {
@@ -823,12 +822,10 @@
                 ],
                 "selected": "Message",
                 "name": "response",
-                "hidden": null,
                 "display_name": "Response",
                 "method": "message_response",
                 "value": "__UNDEFINED__",
                 "cache": true,
-                "required_inputs": null,
                 "allows_loop": false,
                 "tool_mode": true
               }
@@ -870,21 +867,21 @@
           },
           "showNode": true,
           "type": "Agent",
-          "id": "Agent-Rr9BX"
+          "id": "Agent-CBAEF"
         },
         "selected": false,
         "measured": {
           "width": 320,
-          "height": 621
+          "height": 624
         },
         "dragging": false
       },
       {
-        "id": "ChatInput-zyeCv",
+        "id": "ChatInput-8hLIp",
         "type": "genericNode",
         "position": {
-          "x": 975,
-          "y": 435
+          "x": 47.525451402968315,
+          "y": 675.7967517472522
         },
         "data": {
           "node": {
@@ -1178,20 +1175,21 @@
           },
           "showNode": false,
           "type": "ChatInput",
-          "id": "ChatInput-zyeCv"
+          "id": "ChatInput-8hLIp"
         },
         "selected": false,
         "measured": {
           "width": 192,
           "height": 66
-        }
+        },
+        "dragging": false
       },
       {
-        "id": "ChatOutput-LTsn7",
+        "id": "ChatOutput-9EKQJ",
         "type": "genericNode",
         "position": {
-          "x": 1050,
-          "y": 765
+          "x": 809.444027447054,
+          "y": 739.9352693570207
         },
         "data": {
           "node": {
@@ -1484,48 +1482,108 @@
           },
           "showNode": false,
           "type": "ChatOutput",
-          "id": "ChatOutput-LTsn7"
+          "id": "ChatOutput-9EKQJ"
         },
         "selected": false,
         "measured": {
           "width": 192,
           "height": 66
-        }
+        },
+        "dragging": false
       },
       {
-        "id": "note-A83U9",
+        "id": "note-d88zH",
         "type": "noteNode",
         "position": {
-          "x": -435,
-          "y": 210
+          "x": -322.8560821408546,
+          "y": 163.07379721011972
         },
         "data": {
           "node": {
-            "description": "# Scrapegraphai template\nThis is the official template for using the search point endpoint from ScrapeGraph (https://scrapegraphai.com)\n\n## Instructions\n\n1- visit the following website for getting the api key: https://dashboard.scrapegraphai.com\n\n2- Add scrapegraphAI API key\n\n3- Add OpenAI api key to the agent",
+            "description": "# 🚀 ScrapeGraphAI Template 🔍  \n\nThis is the **official template** for using the **Search Point** endpoint from ScrapeGraphAI (https://scrapegraphai.com).  \n\n## 📜 Instructions  \n\n✅ **Step 1:** Get your API key from ScrapeGraphAI Dashboard: [https://dashboard.scrapegraphai.com](https://dashboard.scrapegraphai.com) 🔑  \n\n✅ **Step 2:** Add your **ScrapeGraphAI API key** 🛠️  \n\n✅ **Step 3:** Add your **OpenAI API key** to the agent 🤖  \n\nNow you're all set to power up your search agent with **ScrapeGraphAI**! 🚀✨",
             "display_name": "",
             "documentation": "",
             "template": {}
           },
           "type": "note",
-          "id": "note-A83U9"
+          "id": "note-d88zH"
         },
         "measured": {
-          "width": 325,
-          "height": 474
+          "width": 346,
+          "height": 584
         },
-        "selected": false
+        "selected": false,
+        "dragging": false,
+        "width": 345,
+        "height": 584,
+        "resizing": false
+      },
+      {
+        "id": "note-K97PH",
+        "type": "noteNode",
+        "position": {
+          "x": 417.976712381606,
+          "y": 122.2833671724412
+        },
+        "data": {
+          "id": "note-K97PH",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "measured": {
+          "width": 324,
+          "height": 324
+        },
+        "dragging": false
+      },
+      {
+        "id": "note-Q9gWp",
+        "type": "noteNode",
+        "position": {
+          "x": 8.432436918410303,
+          "y": 130.15072721938364
+        },
+        "data": {
+          "id": "note-Q9gWp",
+          "node": {
+            "description": "### 💡 Add your ScrapeGraphAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "measured": {
+          "width": 389,
+          "height": 324
+        },
+        "dragging": false,
+        "width": 390,
+        "height": 324,
+        "resizing": false
       }
     ],
     "edges": [
       {
-        "source": "ScrapeGraphSearchApi-EQpI6",
-        "sourceHandle": "{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-EQpI6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-Rr9BX",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-Rr9BXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "ScrapeGraphSearchApi-4qF2k",
+        "sourceHandle": "{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-4qF2kœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-CBAEF",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "data": {
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Rr9BX",
+            "id": "Agent-CBAEF",
             "inputTypes": [
               "Tool"
             ],
@@ -1533,26 +1591,26 @@
           },
           "sourceHandle": {
             "dataType": "ScrapeGraphSearchApi",
-            "id": "ScrapeGraphSearchApi-EQpI6",
+            "id": "ScrapeGraphSearchApi-4qF2k",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
             ]
           }
         },
-        "id": "xy-edge__ScrapeGraphSearchApi-EQpI6{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-EQpI6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Rr9BX{œfieldNameœ:œtoolsœ,œidœ:œAgent-Rr9BXœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ScrapeGraphSearchApi-4qF2k{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-4qF2kœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-CBAEF{œfieldNameœ:œtoolsœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "animated": false,
         "className": ""
       },
       {
-        "source": "ChatInput-zyeCv",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zyeCvœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-Rr9BX",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Rr9BXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8hLIp",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8hLIpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-CBAEF",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Rr9BX",
+            "id": "Agent-CBAEF",
             "inputTypes": [
               "Message"
             ],
@@ -1560,26 +1618,26 @@
           },
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-zyeCv",
+            "id": "ChatInput-8hLIp",
             "name": "message",
             "output_types": [
               "Message"
             ]
           }
         },
-        "id": "xy-edge__ChatInput-zyeCv{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zyeCvœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Rr9BX{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Rr9BXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-8hLIp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8hLIpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-CBAEF{œfieldNameœ:œinput_valueœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "animated": false,
         "className": ""
       },
       {
-        "source": "Agent-Rr9BX",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-Rr9BXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-LTsn7",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-LTsn7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "source": "Agent-CBAEF",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-CBAEFœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-9EKQJ",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9EKQJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "data": {
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-LTsn7",
+            "id": "ChatOutput-9EKQJ",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -1589,32 +1647,32 @@
           },
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Rr9BX",
+            "id": "Agent-CBAEF",
             "name": "response",
             "output_types": [
               "Message"
             ]
           }
         },
-        "id": "xy-edge__Agent-Rr9BX{œdataTypeœ:œAgentœ,œidœ:œAgent-Rr9BXœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-LTsn7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-LTsn7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Agent-CBAEF{œdataTypeœ:œAgentœ,œidœ:œAgent-CBAEFœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9EKQJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9EKQJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "animated": false,
         "className": ""
       }
     ],
     "viewport": {
-      "x": 311.44535897220214,
-      "y": 191.20274810225152,
-      "zoom": 0.5219021732234731
+      "x": 386.73940143606825,
+      "y": 27.399081408903214,
+      "zoom": 0.9940070432926703
     }
   },
   "description": "Search the web for information.",
+  "name": "Search agent",
+  "last_tested_version": "1.1.5",
   "endpoint_name": null,
+  "is_component": false,
   "gradient": "3",
   "icon": "search",
-  "id": "b3f0a8d4-2e6b-4c9a-92b9-1d5f3c8e6a7f",
-  "is_component": false,
-  "last_tested_version": "1.1.1",
-  "name": "Search agent",
+  "id": "99aa93b0-8c09-4608-b6ca-b7edc07c5cc3",
   "tags": [
     "web-scraping",
     "agents",
