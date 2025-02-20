@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD030 -->
+<!-- markdownlint-disable MD030!pip install langflow -->
 
 ![Langflow](./docs/static/img/hero.png)
 
