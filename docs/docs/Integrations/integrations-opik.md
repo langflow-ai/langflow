@@ -1,0 +1,54 @@
+---
+title: Opik
+slug: /integrations-opik
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Integrate Langfuse with Langflow
+
+[Opik](https://www.comet.com/site/products/opik/) is an open-source platform designed for evaluating, testing, and monitoring large language model (LLM) applications. Developed by Comet, it aims to facilitate more intuitive collaboration, testing, and monitoring of LLM-based applications.
+
+This guide walks you through how to configure Langflow to collect [tracing](https://www.comet.com/docs/opik/tracing/log_traces) data about your flow executions and automatically send the data to Opik.
+
+## Prerequisites
+
+- A project in Langflow with a runnable flow
+- An Opik server running
+- An Opik API Key for Comet managed Opik deployment
+
+## Set your Opik configuration as environment variables
+
+Call the CLI `opik configure` to save your Opik configuration in the same environment where you run Langflow.
+
+```bash
+opik configure
+```
+
+For self-hosted Opik, you can also configure it using the Opik CLI by running the following command:
+
+```bash
+opik configure --use_local
+```
+
+See the [Opik documentation](https://www.comet.com/docs/opik/tracing/sdk_configuration) for more ways to configure Opik SDKs.
+
+## Start Langflow and run a flow
+
+1. Start Langflow in the same terminal or environment where you set the environment variables:
+
+    ```bash
+    python -m langflow run
+    ```
+
+2. In Langflow, open and existing project, and then run a flow.
+
+## View tracing data in Opik
+
+Langflow automatically collects and sends tracing data about the flow execution to Opik.
+You can view the collected data in your Opik project dashboard.
+
+## Disable the Opik integration
+
+To disable the Opik integration, remove the environment variables you set in the previous steps and restart Langflow.

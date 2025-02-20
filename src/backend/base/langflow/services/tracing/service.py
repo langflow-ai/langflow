@@ -46,6 +46,12 @@ def _get_arize_phoenix_tracer():
     return ArizePhoenixTracer
 
 
+def _get_opik_tracer():
+    from langflow.services.tracing.opik import OpikTracer
+
+    return OpikTracer
+
+
 class TracingService(Service):
     name = "tracing_service"
 
@@ -122,6 +128,7 @@ class TracingService(Service):
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()
             self._initialize_arize_phoenix_tracer()
+            self._initialize_opik_tracer()
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error initializing tracers: {e}")
 
@@ -165,6 +172,16 @@ class TracingService(Service):
             project_name=self.project_name,
             trace_id=self.run_id,
             session_id=self.session_id,
+        )
+
+    def _initialize_opik_tracer(self) -> None:
+        self.project_name = os.getenv("OPIK_PROJECT", None)
+        opik_tracer = _get_opik_tracer()
+        self._tracers["opik"] = opik_tracer(
+            trace_name=self.run_name,
+            trace_type="chain",
+            project_name=self.project_name,
+            trace_id=self.run_id,
         )
 
     def set_run_name(self, name: str) -> None:
