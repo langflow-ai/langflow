@@ -11,7 +11,7 @@ from langflow.template import Output
 
 class ParseRepository(Component):
     display_name = "Parse Repository"
-    description = "Parses a github repository and stores the knowledge graph in potpie."
+    description = "Parses a github repository and stores the knowledge graph in potpie (note: first time parsing might take a while)."
     documentation = "https://docs.potpie.ai"
     icon = "Potpie"
 
