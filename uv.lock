@@ -1,6 +1,5 @@
 version = 1
-revision = 1
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version > '3.13'",
     "python_full_version == '3.13'",
@@ -4462,7 +4461,6 @@ requires-dist = [
     { name = "youtube-transcript-api", specifier = "==0.6.3" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
-provides-extras = ["deploy", "couchbase", "cassio", "local", "clickhouse-connect"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -4713,7 +4711,6 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "validators", specifier = ">=0.34.0" },
 ]
-provides-extras = ["deploy", "local", "all"]
 
 [package.metadata.requires-dev]
 dev = [
