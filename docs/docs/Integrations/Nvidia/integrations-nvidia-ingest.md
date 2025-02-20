@@ -26,7 +26,7 @@ uv run langflow run
 
 The **NVIDIA Ingest** component accepts a **Message** inputs and outputs **Data**. The component uses the NVIDIA ingest endpoint to ingest a local file and extract the text.
 
-![NVIDIA Ingest component flow](nvidia-ingest-component.png)
+![NVIDIA Ingest component flow](nvidia-component-ingest-astra.png)
 
 ## NVIDIA ingest component parameters {#parameters}
 
