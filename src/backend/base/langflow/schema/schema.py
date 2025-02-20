@@ -7,7 +7,7 @@ from typing_extensions import TypedDict
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
-from langflow.schema.secrets import DataRedactionModel
+from langflow.schema.secrets_sanitizer import DataRedactionModel
 from langflow.serialization.serialization import serialize
 
 INPUT_FIELD_NAME = "input_value"
