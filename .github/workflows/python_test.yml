@@ -54,7 +54,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
@@ -78,7 +78,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
       - name: Minimize uv cache

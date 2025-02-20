@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Run Mypy
         run: |
           uv run mypy --namespace-packages -p "langflow"

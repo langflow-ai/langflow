@@ -26,7 +26,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Run unit tests
         id: run_tests
         continue-on-error: true
