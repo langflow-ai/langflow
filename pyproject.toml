@@ -284,6 +284,9 @@ external = ["RUF027"]
     "SLF001",
 ]
 
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = [ "io", "logging", "socket"]
+
 [tool.mypy]
 plugins = ["pydantic.mypy"]
 follow_imports = "skip"
