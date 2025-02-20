@@ -597,8 +597,8 @@ async def load_flows_from_directory() -> None:
         # Ensure that the default folder exists for this user
         _ = await get_or_create_default_folder(session, user.id)
 
-        async for file_path in anyio.Path(flows_path).iterdir():
-            if not await file_path.is_file() or file_path.suffix != ".json":
+        for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
+            if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
