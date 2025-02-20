@@ -3736,7 +3736,7 @@
               },
               "ingest_data": {
                 "_input_type": "DataInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
@@ -3826,7 +3826,7 @@
               },
               "search_query": {
                 "_input_type": "MultilineInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Search Query",
                 "dynamic": false,
                 "info": "",
