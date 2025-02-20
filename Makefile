@@ -142,7 +142,7 @@ coverage: ## run the tests and generate a coverage report
 	@uv run coverage erase
 
 unit_tests: ## run unit tests
-	@uv sync --extra dev --frozen
+	@uv sync --frozen
 	@EXTRA_ARGS=""
 	@if [ "$(async)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
