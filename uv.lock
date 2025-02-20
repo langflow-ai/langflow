@@ -1689,18 +1689,6 @@ wheels = [
 ]
 
 [[package]]
-name = "deepdiff"
-version = "8.5.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "orderly-set" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0a/0f/9cd2624f7dcd755cbf1fa21fb7234541f19a1be96a56f387ec9053ebe220/deepdiff-8.5.0.tar.gz", hash = "sha256:a4dd3529fa8d4cd5b9cbb6e3ea9c95997eaa919ba37dac3966c1b8f872dc1cd1", size = 538517, upload-time = "2025-05-09T18:44:10.035Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/3b/2e0797200c51531a6d8c97a8e4c9fa6fb56de7e6e2a15c1c067b6b10a0b0/deepdiff-8.5.0-py3-none-any.whl", hash = "sha256:d4599db637f36a1c285f5fdfc2cd8d38bde8d8be8636b65ab5e425b67c54df26", size = 85112, upload-time = "2025-05-09T18:44:07.784Z" },
-]
-
-[[package]]
 name = "defusedxml"
 version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2027,12 +2015,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/04/56/9720d27888279f6aa1b436ff4b843ba4477a1cb088634a29786dffe52137/elasticsearch-8.16.0.tar.gz", hash = "sha256:d2aaa92f44ebea3c4147389aeba038c0b42a017f8c52ff35b1e7ebc34c49adb7", size = 433139, upload-time = "2024-11-13T11:25:31.441Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/f4/5418be6b502e0260f8ee1c7eccf471ac8c01eea9bac8930d9931b7da7f1c/elasticsearch-8.16.0-py3-none-any.whl", hash = "sha256:83d9fe09e8e95880559da43e44976c1e11cc63fe96bc0c0592f3d64f371772bf", size = 543113, upload-time = "2024-11-13T11:25:25.685Z" },
-]
-
-[package.optional-dependencies]
-vectorstore-mmr = [
-    { name = "numpy" },
-    { name = "simsimd" },
 ]
 
 [[package]]
@@ -4180,21 +4162,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-aws"
-version = "0.2.7"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "boto3" },
-    { name = "langchain-core" },
-    { name = "numpy" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/39/a9/aec450d33f04100044871c9b7a227c5560e9d2e8ac06e2f2b38c5a70e8f0/langchain_aws-0.2.7.tar.gz", hash = "sha256:5abf12d7cad5164363008612f906bf27cb85b8f82befe71dbdf27afeda4548eb", size = 73756, upload-time = "2024-11-08T01:18:42.048Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/4c/3f60d00fbe294f4ea332c98d9d06f5cce6819427b7b2b08ddebc74da5e58/langchain_aws-0.2.7-py3-none-any.whl", hash = "sha256:f60f5e76ce9b3c175d569d40a7a8e113d3aa9feb8e88d013e6054da36501afef", size = 87716, upload-time = "2024-11-08T01:18:40.435Z" },
-]
-
-[[package]]
 name = "langchain-chroma"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -4265,19 +4232,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b9/0a/b71a9a5d42e743d6876cce23d803e284b191ed4d6544e2f7fe1b37f7854c/langchain_core-0.3.63.tar.gz", hash = "sha256:e2e30cfbb7684a5a0319f6cbf065fc3c438bfd1060302f085a122527890fb01e", size = 558302, upload-time = "2025-05-29T18:57:19.933Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/71/a748861e6a69ab6ef50ab8e65120422a1f36245c71a0dd0f02de49c208e1/langchain_core-0.3.63-py3-none-any.whl", hash = "sha256:f91db8221b1bc6808f70b2e72fded1a94d50ee3f1dff1636fb5a5a514c64b7f5", size = 438468, upload-time = "2025-05-29T18:57:17.424Z" },
-]
-
-[[package]]
-name = "langchain-elasticsearch"
-version = "0.3.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "elasticsearch", extra = ["vectorstore-mmr"] },
-    { name = "langchain-core" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/87/ee20cee9d255b8f8c9e34d84eb7b040cabc7bd8499c61b3886dd2a1c2e3f/langchain_elasticsearch-0.3.0.tar.gz", hash = "sha256:36c2963c432777e05b6613f57ee477de4b6e4be4ac4c1306601ab64de004a297", size = 22873, upload-time = "2024-09-14T02:05:36.201Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/0c/3d9330f0c1c6e6aba285279f4048a3cda1af30fd8a05ddaf242d59110175/langchain_elasticsearch-0.3.0-py3-none-any.whl", hash = "sha256:83d26d2a29f7628bcf2c655fe988930c90249e78e6f326c0be218ad4fa96f1f4", size = 24608, upload-time = "2024-09-14T02:05:35.272Z" },
 ]
 
 [[package]]
@@ -4546,19 +4500,6 @@ wheels = [
 ]
 
 [[package]]
-name = "langchain-unstructured"
-version = "0.1.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "langchain-core" },
-    { name = "unstructured-client" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/02/afdd2583a200aa1a66f977a4c1154a4af4aef6b1a40a2013949d2563e688/langchain_unstructured-0.1.5.tar.gz", hash = "sha256:65bff90863276c04f22dd69c2766c6e171c62275295ed62b7377bede9fd8a825", size = 6440, upload-time = "2024-09-24T22:13:02.352Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/9d/f7c5405517a45c9cc6768e1a62ec58dddace40491a506d23336f934dc2fe/langchain_unstructured-0.1.5-py3-none-any.whl", hash = "sha256:3fc8bb3c6361450a4ca5b3d667f9db6d59e0a0d4c498da6c2e5d6f9ed8790b77", size = 6974, upload-time = "2024-09-24T22:13:01.073Z" },
-]
-
-[[package]]
 name = "langchainhub"
 version = "0.1.21"
 source = { registry = "https://pypi.org/simple" }
@@ -4577,104 +4518,7 @@ name = "langflow"
 version = "1.4.3"
 source = { editable = "." }
 dependencies = [
-    { name = "ag2" },
-    { name = "apify-client" },
-    { name = "arize-phoenix-otel" },
-    { name = "astra-assistants", extra = ["tools"] },
-    { name = "atlassian-python-api" },
-    { name = "beautifulsoup4" },
-    { name = "boto3" },
-    { name = "certifi" },
-    { name = "chromadb" },
-    { name = "cleanlab-tlm" },
-    { name = "composio-core" },
-    { name = "composio-langchain" },
-    { name = "crewai" },
-    { name = "datasets" },
-    { name = "dspy-ai" },
-    { name = "duckduckgo-search" },
-    { name = "elasticsearch" },
-    { name = "faiss-cpu" },
-    { name = "fake-useragent" },
-    { name = "fastavro", version = "1.9.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
-    { name = "fastavro", version = "1.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
-    { name = "gassist", marker = "sys_platform == 'win32'" },
-    { name = "gitpython" },
-    { name = "google-api-python-client" },
-    { name = "google-search-results" },
-    { name = "graph-retriever" },
-    { name = "huggingface-hub", extra = ["inference"] },
-    { name = "json-repair" },
-    { name = "kubernetes" },
-    { name = "langchain-anthropic" },
-    { name = "langchain-astradb" },
-    { name = "langchain-aws" },
-    { name = "langchain-chroma" },
-    { name = "langchain-cohere" },
-    { name = "langchain-elasticsearch" },
-    { name = "langchain-google-calendar-tools" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
-    { name = "langchain-google-vertexai" },
-    { name = "langchain-graph-retriever" },
-    { name = "langchain-groq" },
-    { name = "langchain-ibm" },
-    { name = "langchain-milvus" },
-    { name = "langchain-mistralai" },
-    { name = "langchain-mongodb" },
-    { name = "langchain-nvidia-ai-endpoints" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
-    { name = "langchain-pinecone" },
-    { name = "langchain-sambanova" },
-    { name = "langchain-unstructured" },
-    { name = "langflow-base" },
-    { name = "langfuse" },
-    { name = "langsmith" },
-    { name = "langwatch" },
-    { name = "lark" },
-    { name = "litellm" },
-    { name = "markdown" },
-    { name = "markupsafe" },
-    { name = "mcp" },
-    { name = "mem0ai" },
-    { name = "metal-sdk" },
-    { name = "metaphor-python" },
-    { name = "needle-python" },
-    { name = "nltk" },
-    { name = "numexpr" },
-    { name = "openai" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "opensearch-py" },
-    { name = "opik" },
-    { name = "pgvector" },
-    { name = "pyarrow" },
-    { name = "pydantic-ai" },
-    { name = "pymongo" },
-    { name = "pytube" },
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "qdrant-client" },
-    { name = "qianfan" },
-    { name = "ragstack-ai-knowledge-store" },
-    { name = "redis" },
-    { name = "ruff" },
-    { name = "scipy" },
-    { name = "scrapegraph-py" },
-    { name = "smolagents" },
-    { name = "spider-client" },
-    { name = "sqlalchemy", extra = ["aiosqlite"] },
-    { name = "sseclient-py" },
-    { name = "supabase" },
-    { name = "twelvelabs" },
-    { name = "types-cachetools" },
-    { name = "upstash-vector" },
-    { name = "weaviate-client" },
-    { name = "webrtcvad" },
-    { name = "wikipedia" },
-    { name = "wolframalpha" },
-    { name = "yfinance" },
-    { name = "youtube-transcript-api" },
-    { name = "zep-python" },
+    { name = "langflow-base", extra = ["all"] },
 ]
 
 [package.optional-dependencies]
@@ -4750,113 +4594,15 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ag2", specifier = ">=0.1.0" },
-    { name = "apify-client", specifier = ">=1.8.1" },
-    { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
-    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.9" },
-    { name = "atlassian-python-api", specifier = "==3.41.16" },
-    { name = "beautifulsoup4", specifier = "==4.12.3" },
-    { name = "boto3", specifier = "==1.34.162" },
     { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
-    { name = "certifi", specifier = "==2024.8.30" },
-    { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
-    { name = "chromadb", specifier = "==0.5.23" },
-    { name = "cleanlab-tlm", specifier = ">=1.1.2" },
+    { name = "celery", extras = ["redis"], marker = "extra == 'deploy'", specifier = ">=5.3.6" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-core", specifier = "==0.7.15" },
-    { name = "composio-langchain", specifier = "==0.7.15" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
-    { name = "crewai", specifier = "==0.102.0" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "datasets", specifier = ">2.14.7" },
-    { name = "dspy-ai", specifier = "==2.5.41" },
-    { name = "duckduckgo-search", specifier = "==7.2.1" },
-    { name = "elasticsearch", specifier = "==8.16.0" },
-    { name = "faiss-cpu", specifier = "==1.9.0.post1" },
-    { name = "fake-useragent", specifier = "==1.5.1" },
-    { name = "fastavro", marker = "python_full_version < '3.13'", specifier = "==1.9.7" },
-    { name = "fastavro", marker = "python_full_version >= '3.13'", specifier = ">=1.9.8" },
-    { name = "gassist", marker = "sys_platform == 'win32'", specifier = ">=0.0.1" },
-    { name = "gitpython", specifier = "==3.1.43" },
-    { name = "google-api-python-client", specifier = "==2.154.0" },
-    { name = "google-search-results", specifier = ">=2.4.1,<3.0.0" },
-    { name = "graph-retriever", specifier = "==0.6.1" },
-    { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2,<1.0.0" },
-    { name = "json-repair", specifier = "==0.30.3" },
-    { name = "kubernetes", specifier = "==31.0.0" },
-    { name = "langchain-anthropic", specifier = "==0.3.0" },
-    { name = "langchain-astradb", specifier = "==0.5.2" },
-    { name = "langchain-aws", specifier = "==0.2.7" },
-    { name = "langchain-chroma", specifier = "==0.1.4" },
-    { name = "langchain-cohere", specifier = "==0.3.3" },
-    { name = "langchain-elasticsearch", specifier = "==0.3.0" },
-    { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
-    { name = "langchain-google-community", specifier = "==2.0.3" },
-    { name = "langchain-google-genai", specifier = "==2.0.6" },
-    { name = "langchain-google-vertexai", specifier = "==2.0.7" },
-    { name = "langchain-graph-retriever", specifier = "==0.6.1" },
-    { name = "langchain-groq", specifier = "==0.2.1" },
-    { name = "langchain-ibm", specifier = ">=0.3.8" },
-    { name = "langchain-milvus", specifier = "==0.1.7" },
-    { name = "langchain-mistralai", specifier = "==0.2.3" },
-    { name = "langchain-mongodb", specifier = "==0.2.0" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = "==0.3.8" },
-    { name = "langchain-ollama", specifier = "==0.2.1" },
-    { name = "langchain-openai", specifier = "==0.2.12" },
-    { name = "langchain-pinecone", specifier = "==0.2.2" },
-    { name = "langchain-sambanova", specifier = "==0.1.0" },
-    { name = "langchain-unstructured", specifier = "==0.1.5" },
-    { name = "langflow-base", editable = "src/backend/base" },
-    { name = "langfuse", specifier = "==2.53.9" },
-    { name = "langsmith", specifier = ">=0.3.42,<1.0.0" },
-    { name = "langwatch", specifier = "==0.1.16" },
-    { name = "lark", specifier = "==1.2.2" },
-    { name = "litellm", specifier = "==1.60.2" },
+    { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
+    { name = "langflow-base", extras = ["all"], editable = "src/backend/base" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
-    { name = "markdown", specifier = "==3.7" },
-    { name = "markupsafe", specifier = "==3.0.2" },
-    { name = "mcp", specifier = ">=0.9.1" },
-    { name = "mem0ai", specifier = "==0.1.34" },
-    { name = "metal-sdk", specifier = "==2.5.1" },
-    { name = "metaphor-python", specifier = "==0.1.23" },
-    { name = "needle-python", specifier = ">=0.4.0" },
-    { name = "nltk", specifier = "==3.9.1" },
-    { name = "numexpr", specifier = "==2.10.2" },
-    { name = "nv-ingest-api", marker = "extra == 'nv-ingest'", specifier = "==2025.4.22.dev20250422" },
-    { name = "nv-ingest-client", marker = "extra == 'nv-ingest'", specifier = "==2025.4.22.dev20250422" },
-    { name = "openai", specifier = ">=1.68.2" },
-    { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
-    { name = "opensearch-py", specifier = "==2.8.0" },
-    { name = "opik", specifier = ">=1.6.3" },
-    { name = "pgvector", specifier = "==0.3.6" },
-    { name = "pyarrow", specifier = "==19.0.0" },
-    { name = "pydantic-ai", specifier = ">=0.0.19" },
-    { name = "pymongo", specifier = "==4.10.1" },
-    { name = "pytube", specifier = "==15.0.0" },
-    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
-    { name = "qdrant-client", specifier = "==1.9.2" },
-    { name = "qianfan", specifier = "==0.3.5" },
-    { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
-    { name = "redis", specifier = "==5.2.1" },
-    { name = "ruff", specifier = ">=0.9.7" },
-    { name = "scipy", specifier = ">=1.14.1" },
-    { name = "scrapegraph-py", specifier = ">=1.12.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "smolagents", specifier = ">=1.8.0" },
-    { name = "spider-client", specifier = ">=0.0.27,<1.0.0" },
-    { name = "sqlalchemy", extras = ["aiosqlite", "postgresql-psycopg2binary", "postgresql-psycopgbinary"], specifier = ">=2.0.38,<3.0.0" },
-    { name = "sseclient-py", specifier = "==1.8.0" },
-    { name = "supabase", specifier = "==2.6.0" },
-    { name = "twelvelabs", specifier = ">=0.4.7" },
-    { name = "types-cachetools", specifier = "==5.5.0.20240820" },
-    { name = "upstash-vector", specifier = "==0.6.0" },
-    { name = "weaviate-client", specifier = "==4.10.2" },
-    { name = "webrtcvad", specifier = ">=2.0.10" },
-    { name = "wikipedia", specifier = "==1.4.0" },
-    { name = "wolframalpha", specifier = "==5.1.3" },
-    { name = "yfinance", specifier = "==0.2.50" },
-    { name = "youtube-transcript-api", specifier = "==0.6.3" },
-    { name = "zep-python", specifier = "==2.0.2" },
 ]
 provides-extras = ["couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
@@ -4986,84 +4732,35 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+ag2 = [
+    { name = "ag2" },
+]
 all = [
-    { name = "beautifulsoup4" },
-    { name = "cassio" },
-    { name = "celery", extra = ["redis"] },
-    { name = "chromadb" },
-    { name = "clickhouse-connect" },
-    { name = "codeflash" },
-    { name = "couchbase" },
-    { name = "ctransformers" },
-    { name = "devtools" },
-    { name = "dictdiffer" },
-    { name = "duckduckgo-search" },
-    { name = "faiss-cpu" },
-    { name = "fake-useragent" },
-    { name = "flower" },
-    { name = "google-api-python-client" },
-    { name = "google-search-results" },
-    { name = "httpx", extra = ["http2"] },
-    { name = "ipykernel" },
-    { name = "langchain-anthropic" },
-    { name = "langchain-astradb" },
-    { name = "langchain-aws" },
-    { name = "langchain-chroma" },
-    { name = "langchain-cohere" },
-    { name = "langchain-google-calendar-tools" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
-    { name = "langchain-google-vertexai" },
-    { name = "langchain-groq" },
-    { name = "langchain-milvus" },
-    { name = "langchain-mistralai" },
-    { name = "langchain-mongodb" },
-    { name = "langchain-nvidia-ai-endpoints" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
-    { name = "langchain-pinecone" },
-    { name = "langchain-sambanova" },
-    { name = "llama-cpp-python" },
-    { name = "mypy" },
-    { name = "pandas-stubs" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-flakefinder" },
-    { name = "pytest-instafail" },
-    { name = "pytest-mock" },
-    { name = "pytest-profiling" },
-    { name = "pytest-split" },
-    { name = "pytest-sugar" },
-    { name = "pytest-xdist" },
-    { name = "qdrant-client" },
-    { name = "requests" },
-    { name = "respx" },
-    { name = "ruff" },
-    { name = "sentence-transformers" },
-    { name = "types-google-cloud-ndb" },
-    { name = "types-markdown" },
-    { name = "types-passlib" },
-    { name = "types-pillow" },
-    { name = "types-python-jose" },
-    { name = "types-pywin32" },
-    { name = "types-pyyaml" },
-    { name = "types-redis" },
-    { name = "types-requests" },
-    { name = "upstash-vector" },
-    { name = "vulture" },
-    { name = "weaviate-client" },
-    { name = "wikipedia" },
+    { name = "langflow", extra = ["couchbase", "deploy"] },
 ]
 anthropic = [
     { name = "langchain-anthropic" },
 ]
+apify = [
+    { name = "apify-client" },
+]
+arize = [
+    { name = "arize-phoenix-otel" },
+]
+astra = [
+    { name = "astra-assistants", extra = ["tools"] },
+]
 astradb = [
     { name = "langchain-astradb" },
 ]
+atlassian = [
+    { name = "atlassian-python-api" },
+]
 aws = [
-    { name = "langchain-aws" },
+    { name = "boto3" },
+]
+beautifulsoup = [
+    { name = "beautifulsoup4" },
 ]
 cassandra = [
     { name = "cassio" },
@@ -5078,13 +4775,18 @@ clickhouse = [
 cohere = [
     { name = "langchain-cohere" },
 ]
+composio = [
+    { name = "composio-core" },
+    { name = "composio-langchain" },
+]
 couchbase = [
     { name = "couchbase" },
 ]
-databases-all = [
-    { name = "cassio" },
-    { name = "clickhouse-connect" },
-    { name = "couchbase" },
+crewai = [
+    { name = "crewai" },
+]
+ctransformers = [
+    { name = "ctransformers" },
 ]
 deploy = [
     { name = "celery", extra = ["redis"] },
@@ -5131,8 +4833,29 @@ dev = [
     { name = "types-requests" },
     { name = "vulture" },
 ]
+docx = [
+    { name = "python-docx" },
+]
+dspy = [
+    { name = "dspy-ai" },
+]
+duckduckgo = [
+    { name = "duckduckgo-search" },
+]
+elasticsearch = [
+    { name = "elasticsearch" },
+]
 faiss = [
     { name = "faiss-cpu" },
+]
+fake-useragent = [
+    { name = "fake-useragent" },
+]
+fastavro = [
+    { name = "fastavro" },
+]
+gitpython = [
+    { name = "gitpython" },
 ]
 google = [
     { name = "langchain-google-calendar-tools" },
@@ -5140,28 +4863,56 @@ google = [
     { name = "langchain-google-genai" },
     { name = "langchain-google-vertexai" },
 ]
+google-api = [
+    { name = "google-api-python-client" },
+]
 groq = [
     { name = "langchain-groq" },
 ]
-llms-all = [
-    { name = "langchain-anthropic" },
-    { name = "langchain-aws" },
-    { name = "langchain-cohere" },
-    { name = "langchain-google-calendar-tools" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
-    { name = "langchain-google-vertexai" },
-    { name = "langchain-groq" },
-    { name = "langchain-mistralai" },
-    { name = "langchain-nvidia-ai-endpoints" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
-    { name = "langchain-sambanova" },
+huggingface = [
+    { name = "huggingface-hub", extra = ["inference"] },
 ]
-local = [
-    { name = "ctransformers" },
+json-repair = [
+    { name = "json-repair" },
+]
+kubernetes = [
+    { name = "kubernetes" },
+]
+langfuse = [
+    { name = "langfuse" },
+]
+langsmith = [
+    { name = "langsmith" },
+]
+langwatch = [
+    { name = "langwatch" },
+]
+lark = [
+    { name = "lark" },
+]
+litellm = [
+    { name = "litellm" },
+]
+llama-cpp = [
     { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
+]
+markdown = [
+    { name = "markdown" },
+]
+markup = [
+    { name = "markupsafe" },
+]
+mcp = [
+    { name = "mcp" },
+]
+mem0 = [
+    { name = "mem0ai" },
+]
+metal = [
+    { name = "metal-sdk" },
+]
+metaphor = [
+    { name = "metaphor-python" },
 ]
 milvus = [
     { name = "langchain-milvus" },
@@ -5170,7 +4921,19 @@ mistral = [
     { name = "langchain-mistralai" },
 ]
 mongodb = [
+    { name = "pymongo" },
+]
+mongodb-vectors = [
     { name = "langchain-mongodb" },
+]
+needle = [
+    { name = "needle-python" },
+]
+nltk = [
+    { name = "nltk" },
+]
+numexpr = [
+    { name = "numexpr" },
 ]
 nvidia = [
     { name = "langchain-nvidia-ai-endpoints" },
@@ -5181,40 +4944,86 @@ ollama = [
 openai = [
     { name = "langchain-openai" },
 ]
+openinference = [
+    { name = "openinference-instrumentation-langchain" },
+]
+opensearch = [
+    { name = "opensearch-py" },
+]
+pgvector = [
+    { name = "pgvector" },
+]
 pinecone = [
     { name = "langchain-pinecone" },
+]
+pyarrow = [
+    { name = "pyarrow" },
+]
+pydantic-ai = [
+    { name = "pydantic-ai" },
+]
+pypdf = [
+    { name = "pypdf" },
+]
+pytube = [
+    { name = "pytube" },
 ]
 qdrant = [
     { name = "qdrant-client" },
 ]
+qianfan = [
+    { name = "qianfan" },
+]
+ragstack = [
+    { name = "ragstack-ai-knowledge-store" },
+]
+redis = [
+    { name = "redis" },
+]
 sambanova = [
     { name = "langchain-sambanova" },
 ]
-scraping = [
-    { name = "beautifulsoup4" },
-    { name = "duckduckgo-search" },
-    { name = "fake-useragent" },
-    { name = "google-api-python-client" },
+scrapegraph = [
+    { name = "scrapegraph-py" },
+]
+sentence-transformers = [
+    { name = "sentence-transformers" },
+]
+serpapi = [
     { name = "google-search-results" },
-    { name = "wikipedia" },
+]
+smolagents = [
+    { name = "smolagents" },
+]
+spider = [
+    { name = "spider-client" },
+]
+sseclient = [
+    { name = "sseclient-py" },
+]
+supabase = [
+    { name = "supabase" },
 ]
 upstash = [
     { name = "upstash-vector" },
 ]
-vectors-all = [
-    { name = "chromadb" },
-    { name = "faiss-cpu" },
-    { name = "langchain-astradb" },
-    { name = "langchain-chroma" },
-    { name = "langchain-milvus" },
-    { name = "langchain-mongodb" },
-    { name = "langchain-pinecone" },
-    { name = "qdrant-client" },
-    { name = "upstash-vector" },
-    { name = "weaviate-client" },
-]
 weaviate = [
     { name = "weaviate-client" },
+]
+wikipedia = [
+    { name = "wikipedia" },
+]
+wolframalpha = [
+    { name = "wolframalpha" },
+]
+yfinance = [
+    { name = "yfinance" },
+]
+youtube = [
+    { name = "youtube-transcript-api" },
+]
+zep = [
+    { name = "zep-python" },
 ]
 
 [package.dev-dependencies]
@@ -5227,14 +5036,20 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
     { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
     { name = "aiofiles", specifier = ">=24.1.0,<25.0.0" },
     { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
+    { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
+    { name = "arize-phoenix-otel", marker = "extra == 'arize'", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
+    { name = "astra-assistants", extras = ["tools"], marker = "extra == 'astra'", specifier = "~=2.2.9" },
     { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
+    { name = "atlassian-python-api", marker = "extra == 'atlassian'", specifier = "==3.41.16" },
     { name = "bcrypt", specifier = "==4.0.1" },
-    { name = "beautifulsoup4", marker = "extra == 'scraping'", specifier = "==4.12.3" },
+    { name = "beautifulsoup4", marker = "extra == 'beautifulsoup'", specifier = "==4.12.3" },
+    { name = "boto3", marker = "extra == 'aws'", specifier = "==1.34.162" },
     { name = "cachetools", specifier = ">=5.5.0,<6.0.0" },
     { name = "cassio", marker = "extra == 'cassandra'", specifier = ">=0.1.7" },
     { name = "celery", extras = ["redis"], marker = "extra == 'deploy'", specifier = ">=5.3.6" },
@@ -5243,35 +5058,46 @@ requires-dist = [
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
     { name = "codeflash", marker = "extra == 'dev'", specifier = ">=0.8.4" },
+    { name = "composio-core", marker = "extra == 'composio'", specifier = "==0.7.1" },
+    { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.7.1" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
+    { name = "crewai", marker = "extra == 'crewai'", specifier = "~=0.86.0" },
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
-    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
+    { name = "ctransformers", marker = "extra == 'ctransformers'", specifier = ">=0.2.10" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "diskcache", specifier = ">=5.6.3,<6.0.0" },
     { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
+    { name = "dspy-ai", marker = "extra == 'dspy'", specifier = "==2.5.41" },
     { name = "duckdb", specifier = ">=1.0.0,<2.0.0" },
-    { name = "duckduckgo-search", marker = "extra == 'scraping'", specifier = "==7.2.1" },
+    { name = "duckduckgo-search", marker = "extra == 'duckduckgo'", specifier = "==7.2.1" },
+    { name = "elasticsearch", marker = "extra == 'elasticsearch'", specifier = "==8.16.0" },
     { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
     { name = "faiss-cpu", marker = "extra == 'faiss'", specifier = "==1.9.0.post1" },
-    { name = "fake-useragent", marker = "extra == 'scraping'", specifier = "==1.5.1" },
+    { name = "fake-useragent", marker = "extra == 'fake-useragent'", specifier = "==1.5.1" },
     { name = "fastapi", specifier = ">=0.115.2,<1.0.0" },
-    { name = "fastapi-pagination", specifier = ">=0.13.1,<1.0.0" },
+    { name = "fastapi-pagination", specifier = ">=0.12.29,<1.0.0" },
+    { name = "fastavro", marker = "extra == 'fastavro'", specifier = "==1.9.7" },
     { name = "filelock", specifier = ">=3.15.4,<4.0.0" },
     { name = "firecrawl-py", specifier = ">=1.0.16,<2.0.0" },
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
-    { name = "google-api-python-client", marker = "extra == 'scraping'", specifier = "==2.154.0" },
-    { name = "google-search-results", marker = "extra == 'scraping'", specifier = ">=2.4.1,<3.0.0" },
+    { name = "gitpython", marker = "extra == 'gitpython'", specifier = "==3.1.43" },
+    { name = "google-api-python-client", marker = "extra == 'google-api'", specifier = "==2.154.0" },
+    { name = "google-search-results", marker = "extra == 'serpapi'", specifier = ">=2.4.1,<3.0.0" },
     { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
     { name = "greenlet", specifier = ">=3.1.1" },
     { name = "gunicorn", specifier = ">=22.0.0,<24.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
-    { name = "ibm-watsonx-ai", specifier = ">=1.3.1" },
+    { name = "httpx", extras = ["http2"], marker = "extra == 'dev'", specifier = ">=0.27" },
+    { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=0.23.2,<1.0.0" },
+    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
+    { name = "json-repair", specifier = "==0.30.3" },
     { name = "json-repair", specifier = ">=0.30.3" },
+    { name = "json-repair", marker = "extra == 'json-repair'", specifier = "==0.30.3" },
+    { name = "kubernetes", marker = "extra == 'kubernetes'", specifier = "==31.0.0" },
     { name = "langchain", specifier = "~=0.3.10" },
     { name = "langchain-anthropic", marker = "extra == 'anthropic'", specifier = "==0.3.0" },
     { name = "langchain-astradb", marker = "extra == 'astradb'", specifier = "==0.5.2" },
-    { name = "langchain-aws", marker = "extra == 'aws'", specifier = "==0.2.7" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "==0.1.4" },
     { name = "langchain-cohere", marker = "extra == 'cohere'", specifier = "==0.3.3" },
     { name = "langchain-community", specifier = "~=0.3.10" },
@@ -5284,24 +5110,117 @@ requires-dist = [
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "==0.2.1" },
     { name = "langchain-milvus", marker = "extra == 'milvus'", specifier = "==0.1.7" },
     { name = "langchain-mistralai", marker = "extra == 'mistral'", specifier = "==0.2.3" },
-    { name = "langchain-mongodb", marker = "extra == 'mongodb'", specifier = "==0.2.0" },
+    { name = "langchain-mongodb", marker = "extra == 'mongodb-vectors'", specifier = "==0.2.0" },
     { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'nvidia'", specifier = "==0.3.8" },
     { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = "==0.2.1" },
     { name = "langchain-openai", marker = "extra == 'openai'", specifier = "==0.2.12" },
     { name = "langchain-pinecone", marker = "extra == 'pinecone'", specifier = "==0.2.2" },
     { name = "langchain-sambanova", marker = "extra == 'sambanova'", specifier = "==0.1.0" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "langflow-base", extras = ["couchbase", "cassandra", "clickhouse"], marker = "extra == 'databases-all'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["deploy", "databases-all", "local", "vectors-all", "llms-all", "scraping", "dev"], marker = "extra == 'all'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb", "astradb"], marker = "extra == 'vectors-all'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openai", "anthropic", "cohere", "google", "ollama", "aws", "nvidia", "mistral", "sambanova", "groq"], marker = "extra == 'llms-all'", editable = "src/backend/base" },
-    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
+    { name = "langflow", extras = ["ag2"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["anthropic"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["apify"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["arize"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["astra"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["astradb"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["atlassian"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["aws"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["beautifulsoup"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["cassandra"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["chroma"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["clickhouse"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["cohere"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["composio"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["couchbase"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["crewai"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["ctransformers"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["deploy"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["docx"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["dspy"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["duckduckgo"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["elasticsearch"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["faiss"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["fake-useragent"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["fastavro"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["gitpython"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["google"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["google-api"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["groq"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["huggingface"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["json-repair"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["kubernetes"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["langfuse"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["langsmith"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["langwatch"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["lark"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["litellm"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["llama-cpp"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["markdown"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["markup"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["mcp"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["mem0"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["metal"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["metaphor"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["milvus"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["mistral"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["mongodb"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["mongodb-vectors"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["needle"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["nltk"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["numexpr"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["nvidia"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["ollama"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["openai"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["openinference"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["opensearch"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["pgvector"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["pinecone"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["pyarrow"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["pydantic-ai"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["pypdf"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["pytube"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["qdrant"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["qianfan"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["ragstack"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["redis"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["sambanova"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["scrapegraph"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["sentence-transformers"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["serpapi"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["smolagents"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["spider"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["sseclient"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["supabase"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["upstash"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["weaviate"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["wikipedia"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["wolframalpha"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["yfinance"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["youtube"], marker = "extra == 'all'", editable = "." },
+    { name = "langflow", extras = ["zep"], marker = "extra == 'all'", editable = "." },
+    { name = "langfuse", marker = "extra == 'langfuse'", specifier = "==2.53.9" },
+    { name = "langsmith", marker = "extra == 'langsmith'", specifier = "==0.1.147" },
+    { name = "langwatch", marker = "extra == 'langwatch'", specifier = "==0.1.16" },
+    { name = "lark", marker = "extra == 'lark'", specifier = "==1.2.2" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = "==1.59.8" },
+    { name = "llama-cpp-python", marker = "extra == 'llama-cpp'", specifier = "~=0.2.0" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
-    { name = "mcp", specifier = ">=1.6.0" },
+    { name = "markdown", marker = "extra == 'markdown'", specifier = "==3.7" },
+    { name = "markupsafe", marker = "extra == 'markup'", specifier = "==3.0.2" },
+    { name = "mcp", specifier = ">=1.1.2" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=0.9.1" },
+    { name = "mem0ai", marker = "extra == 'mem0'", specifier = "==0.1.34" },
+    { name = "metal-sdk", marker = "extra == 'metal'", specifier = "==2.5.1" },
+    { name = "metaphor-python", marker = "extra == 'metaphor'", specifier = "==0.1.23" },
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
+    { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
     { name = "networkx", specifier = ">=3.4.2" },
+    { name = "nltk", marker = "extra == 'nltk'", specifier = "==3.9.1" },
+    { name = "numexpr", marker = "extra == 'numexpr'", specifier = "==2.10.2" },
+    { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
+    { name = "opensearch-py", marker = "extra == 'opensearch'", specifier = "==2.8.0" },
     { name = "opentelemetry-api", specifier = ">=1.25.0,<2.0.0" },
     { name = "opentelemetry-exporter-prometheus", specifier = ">=0.46b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0,<1.0.0" },
@@ -5309,26 +5228,40 @@ requires-dist = [
     { name = "orjson", specifier = "==3.10.15" },
     { name = "pandas", specifier = "==2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
+    { name = "pgvector", marker = "extra == 'pgvector'", specifier = "==0.3.6" },
     { name = "pillow", specifier = ">=11.1.0,<12.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
+    { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = "==17.0.0" },
     { name = "pydantic", specifier = "~=2.10.1" },
+    { name = "pydantic-ai", marker = "extra == 'pydantic-ai'", specifier = ">=0.0.19" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
+    { name = "pymongo", marker = "extra == 'mongodb'", specifier = "==4.10.1" },
     { name = "pypdf", specifier = "~=5.1.0" },
+    { name = "pypdf", marker = "extra == 'pypdf'", specifier = "~=5.1.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
+    { name = "python-docx", marker = "extra == 'docx'", specifier = ">=1.1.0" },
     { name = "python-jose", specifier = ">=3.3.0,<4.0.0" },
     { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
+    { name = "pytube", marker = "extra == 'pytube'", specifier = "==15.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = "==1.9.2" },
+    { name = "qianfan", marker = "extra == 'qianfan'", specifier = "==0.3.5" },
+    { name = "ragstack-ai-knowledge-store", marker = "extra == 'ragstack'", specifier = "==0.2.1" },
+    { name = "redis", marker = "extra == 'redis'", specifier = "==5.2.1" },
     { name = "requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
     { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21.1" },
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.2" },
-    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
+    { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
+    { name = "sentence-transformers", marker = "extra == 'sentence-transformers'", specifier = ">=2.3.1" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
     { name = "setuptools", specifier = ">=70,<76.0.0" },
+    { name = "smolagents", marker = "extra == 'smolagents'", specifier = ">=1.8.0" },
+    { name = "spider-client", marker = "extra == 'spider'", specifier = ">=0.0.27,<1.0.0" },
     { name = "sqlmodel", specifier = "==0.0.22" },
-    { name = "trustcall", specifier = ">=0.0.38" },
+    { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
+    { name = "supabase", marker = "extra == 'supabase'", specifier = "==2.6.0" },
     { name = "typer", specifier = ">=0.13.0,<1.0.0" },
     { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
@@ -5336,7 +5269,11 @@ requires-dist = [
     { name = "validators", specifier = ">=0.34.0" },
     { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = "==4.10.2" },
-    { name = "wikipedia", marker = "extra == 'scraping'", specifier = "==1.4.0" },
+    { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
+    { name = "wolframalpha", marker = "extra == 'wolframalpha'", specifier = "==5.1.3" },
+    { name = "yfinance", marker = "extra == 'yfinance'", specifier = "==0.2.50" },
+    { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = "==0.6.3" },
+    { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
 provides-extras = ["postgresql", "local", "all"]
 
@@ -7261,15 +7198,6 @@ wheels = [
 ]
 
 [[package]]
-name = "orderly-set"
-version = "5.4.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/03/4a/38030da31c13dcd5a531490006e63a0954083fb115113be9393179738e25/orderly_set-5.4.1.tar.gz", hash = "sha256:a1fb5a4fdc5e234e9e8d8e5c1bbdbc4540f4dfe50d12bf17c8bc5dbf1c9c878d", size = 20943, upload-time = "2025-05-06T22:34:13.512Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/bc/e0dfb4db9210d92b44e49d6e61ba5caefbd411958357fa9d7ff489eeb835/orderly_set-5.4.1-py3-none-any.whl", hash = "sha256:b5e21d21680bd9ef456885db800c5cb4f76a03879880c0175e1b077fb166fd83", size = 12339, upload-time = "2025-05-06T22:34:12.564Z" },
-]
-
-[[package]]
 name = "orjson"
 version = "3.10.15"
 source = { registry = "https://pypi.org/simple" }
@@ -7914,74 +7842,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/eb/a2/709e0fe2f093556c17fbafda93ac032257242cabcc7ff3369e2cb76a97aa/psutil-7.0.0-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a5f098451abc2828f7dc6b58d44b532b22f2088f4999a937557b603ce72b1993", size = 279544, upload-time = "2025-02-13T21:54:24.68Z" },
     { url = "https://files.pythonhosted.org/packages/50/e6/eecf58810b9d12e6427369784efe814a1eec0f492084ce8eb8f4d89d6d61/psutil-7.0.0-cp37-abi3-win32.whl", hash = "sha256:ba3fcef7523064a6c9da440fc4d6bd07da93ac726b5733c29027d7dc95b39d99", size = 241053, upload-time = "2025-02-13T21:54:34.31Z" },
     { url = "https://files.pythonhosted.org/packages/50/1b/6921afe68c74868b4c9fa424dad3be35b095e16687989ebbb50ce4fceb7c/psutil-7.0.0-cp37-abi3-win_amd64.whl", hash = "sha256:4cf3d4eb1aa9b348dec30105c55cd9b7d4629285735a102beb4441e38db90553", size = 244885, upload-time = "2025-02-13T21:54:37.486Z" },
-]
-
-[[package]]
-name = "psycopg"
-version = "3.2.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
-    { name = "tzdata", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/27/4a/93a6ab570a8d1a4ad171a1f4256e205ce48d828781312c0bbaff36380ecb/psycopg-3.2.9.tar.gz", hash = "sha256:2fbb46fcd17bc81f993f28c47f1ebea38d66ae97cc2dbc3cad73b37cefbff700", size = 158122, upload-time = "2025-05-13T16:11:15.533Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/b0/a73c195a56eb6b92e937a5ca58521a5c3346fb233345adc80fd3e2f542e2/psycopg-3.2.9-py3-none-any.whl", hash = "sha256:01a8dadccdaac2123c916208c96e06631641c0566b22005493f09663c7a8d3b6", size = 202705, upload-time = "2025-05-13T16:06:26.584Z" },
-]
-
-[[package]]
-name = "psycopg2-binary"
-version = "2.9.10"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cb/0e/bdc8274dc0585090b4e3432267d7be4dfbfd8971c0fa59167c711105a6bf/psycopg2-binary-2.9.10.tar.gz", hash = "sha256:4b3df0e6990aa98acda57d983942eff13d824135fe2250e6522edaa782a06de2", size = 385764, upload-time = "2024-10-16T11:24:58.126Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/81/331257dbf2801cdb82105306042f7a1637cc752f65f2bb688188e0de5f0b/psycopg2_binary-2.9.10-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:0ea8e3d0ae83564f2fc554955d327fa081d065c8ca5cc6d2abb643e2c9c1200f", size = 3043397, upload-time = "2024-10-16T11:18:58.647Z" },
-    { url = "https://files.pythonhosted.org/packages/e7/9a/7f4f2f031010bbfe6a02b4a15c01e12eb6b9b7b358ab33229f28baadbfc1/psycopg2_binary-2.9.10-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:3e9c76f0ac6f92ecfc79516a8034a544926430f7b080ec5a0537bca389ee0906", size = 3274806, upload-time = "2024-10-16T11:19:03.935Z" },
-    { url = "https://files.pythonhosted.org/packages/e5/57/8ddd4b374fa811a0b0a0f49b6abad1cde9cb34df73ea3348cc283fcd70b4/psycopg2_binary-2.9.10-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2ad26b467a405c798aaa1458ba09d7e2b6e5f96b1ce0ac15d82fd9f95dc38a92", size = 2851361, upload-time = "2024-10-16T11:19:07.277Z" },
-    { url = "https://files.pythonhosted.org/packages/f9/66/d1e52c20d283f1f3a8e7e5c1e06851d432f123ef57b13043b4f9b21ffa1f/psycopg2_binary-2.9.10-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:270934a475a0e4b6925b5f804e3809dd5f90f8613621d062848dd82f9cd62007", size = 3080836, upload-time = "2024-10-16T11:19:11.033Z" },
-    { url = "https://files.pythonhosted.org/packages/a0/cb/592d44a9546aba78f8a1249021fe7c59d3afb8a0ba51434d6610cc3462b6/psycopg2_binary-2.9.10-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:48b338f08d93e7be4ab2b5f1dbe69dc5e9ef07170fe1f86514422076d9c010d0", size = 3264552, upload-time = "2024-10-16T11:19:14.606Z" },
-    { url = "https://files.pythonhosted.org/packages/64/33/c8548560b94b7617f203d7236d6cdf36fe1a5a3645600ada6efd79da946f/psycopg2_binary-2.9.10-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7f4152f8f76d2023aac16285576a9ecd2b11a9895373a1f10fd9db54b3ff06b4", size = 3019789, upload-time = "2024-10-16T11:19:18.889Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/0e/c2da0db5bea88a3be52307f88b75eec72c4de62814cbe9ee600c29c06334/psycopg2_binary-2.9.10-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:32581b3020c72d7a421009ee1c6bf4a131ef5f0a968fab2e2de0c9d2bb4577f1", size = 2871776, upload-time = "2024-10-16T11:19:23.023Z" },
-    { url = "https://files.pythonhosted.org/packages/15/d7/774afa1eadb787ddf41aab52d4c62785563e29949613c958955031408ae6/psycopg2_binary-2.9.10-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:2ce3e21dc3437b1d960521eca599d57408a695a0d3c26797ea0f72e834c7ffe5", size = 2820959, upload-time = "2024-10-16T11:19:26.906Z" },
-    { url = "https://files.pythonhosted.org/packages/5e/ed/440dc3f5991a8c6172a1cde44850ead0e483a375277a1aef7cfcec00af07/psycopg2_binary-2.9.10-cp310-cp310-musllinux_1_2_ppc64le.whl", hash = "sha256:e984839e75e0b60cfe75e351db53d6db750b00de45644c5d1f7ee5d1f34a1ce5", size = 2919329, upload-time = "2024-10-16T11:19:30.027Z" },
-    { url = "https://files.pythonhosted.org/packages/03/be/2cc8f4282898306732d2ae7b7378ae14e8df3c1231b53579efa056aae887/psycopg2_binary-2.9.10-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:3c4745a90b78e51d9ba06e2088a2fe0c693ae19cc8cb051ccda44e8df8a6eb53", size = 2957659, upload-time = "2024-10-16T11:19:32.864Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/12/fb8e4f485d98c570e00dad5800e9a2349cfe0f71a767c856857160d343a5/psycopg2_binary-2.9.10-cp310-cp310-win32.whl", hash = "sha256:e5720a5d25e3b99cd0dc5c8a440570469ff82659bb09431c1439b92caf184d3b", size = 1024605, upload-time = "2024-10-16T11:19:35.462Z" },
-    { url = "https://files.pythonhosted.org/packages/22/4f/217cd2471ecf45d82905dd09085e049af8de6cfdc008b6663c3226dc1c98/psycopg2_binary-2.9.10-cp310-cp310-win_amd64.whl", hash = "sha256:3c18f74eb4386bf35e92ab2354a12c17e5eb4d9798e4c0ad3a00783eae7cd9f1", size = 1163817, upload-time = "2024-10-16T11:19:37.384Z" },
-    { url = "https://files.pythonhosted.org/packages/9c/8f/9feb01291d0d7a0a4c6a6bab24094135c2b59c6a81943752f632c75896d6/psycopg2_binary-2.9.10-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:04392983d0bb89a8717772a193cfaac58871321e3ec69514e1c4e0d4957b5aff", size = 3043397, upload-time = "2024-10-16T11:19:40.033Z" },
-    { url = "https://files.pythonhosted.org/packages/15/30/346e4683532011561cd9c8dfeac6a8153dd96452fee0b12666058ab7893c/psycopg2_binary-2.9.10-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:1a6784f0ce3fec4edc64e985865c17778514325074adf5ad8f80636cd029ef7c", size = 3274806, upload-time = "2024-10-16T11:19:43.5Z" },
-    { url = "https://files.pythonhosted.org/packages/66/6e/4efebe76f76aee7ec99166b6c023ff8abdc4e183f7b70913d7c047701b79/psycopg2_binary-2.9.10-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b5f86c56eeb91dc3135b3fd8a95dc7ae14c538a2f3ad77a19645cf55bab1799c", size = 2851370, upload-time = "2024-10-16T11:19:46.986Z" },
-    { url = "https://files.pythonhosted.org/packages/7f/fd/ff83313f86b50f7ca089b161b8e0a22bb3c319974096093cd50680433fdb/psycopg2_binary-2.9.10-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2b3d2491d4d78b6b14f76881905c7a8a8abcf974aad4a8a0b065273a0ed7a2cb", size = 3080780, upload-time = "2024-10-16T11:19:50.242Z" },
-    { url = "https://files.pythonhosted.org/packages/e6/c4/bfadd202dcda8333a7ccafdc51c541dbdfce7c2c7cda89fa2374455d795f/psycopg2_binary-2.9.10-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:2286791ececda3a723d1910441c793be44625d86d1a4e79942751197f4d30341", size = 3264583, upload-time = "2024-10-16T11:19:54.424Z" },
-    { url = "https://files.pythonhosted.org/packages/5d/f1/09f45ac25e704ac954862581f9f9ae21303cc5ded3d0b775532b407f0e90/psycopg2_binary-2.9.10-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:512d29bb12608891e349af6a0cccedce51677725a921c07dba6342beaf576f9a", size = 3019831, upload-time = "2024-10-16T11:19:57.762Z" },
-    { url = "https://files.pythonhosted.org/packages/9e/2e/9beaea078095cc558f215e38f647c7114987d9febfc25cb2beed7c3582a5/psycopg2_binary-2.9.10-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:5a507320c58903967ef7384355a4da7ff3f28132d679aeb23572753cbf2ec10b", size = 2871822, upload-time = "2024-10-16T11:20:04.693Z" },
-    { url = "https://files.pythonhosted.org/packages/01/9e/ef93c5d93f3dc9fc92786ffab39e323b9aed066ba59fdc34cf85e2722271/psycopg2_binary-2.9.10-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:6d4fa1079cab9018f4d0bd2db307beaa612b0d13ba73b5c6304b9fe2fb441ff7", size = 2820975, upload-time = "2024-10-16T11:20:11.401Z" },
-    { url = "https://files.pythonhosted.org/packages/a5/f0/049e9631e3268fe4c5a387f6fc27e267ebe199acf1bc1bc9cbde4bd6916c/psycopg2_binary-2.9.10-cp311-cp311-musllinux_1_2_ppc64le.whl", hash = "sha256:851485a42dbb0bdc1edcdabdb8557c09c9655dfa2ca0460ff210522e073e319e", size = 2919320, upload-time = "2024-10-16T11:20:17.959Z" },
-    { url = "https://files.pythonhosted.org/packages/dc/9a/bcb8773b88e45fb5a5ea8339e2104d82c863a3b8558fbb2aadfe66df86b3/psycopg2_binary-2.9.10-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:35958ec9e46432d9076286dda67942ed6d968b9c3a6a2fd62b48939d1d78bf68", size = 2957617, upload-time = "2024-10-16T11:20:24.711Z" },
-    { url = "https://files.pythonhosted.org/packages/e2/6b/144336a9bf08a67d217b3af3246abb1d027095dab726f0687f01f43e8c03/psycopg2_binary-2.9.10-cp311-cp311-win32.whl", hash = "sha256:ecced182e935529727401b24d76634a357c71c9275b356efafd8a2a91ec07392", size = 1024618, upload-time = "2024-10-16T11:20:27.718Z" },
-    { url = "https://files.pythonhosted.org/packages/61/69/3b3d7bd583c6d3cbe5100802efa5beacaacc86e37b653fc708bf3d6853b8/psycopg2_binary-2.9.10-cp311-cp311-win_amd64.whl", hash = "sha256:ee0e8c683a7ff25d23b55b11161c2663d4b099770f6085ff0a20d4505778d6b4", size = 1163816, upload-time = "2024-10-16T11:20:30.777Z" },
-    { url = "https://files.pythonhosted.org/packages/49/7d/465cc9795cf76f6d329efdafca74693714556ea3891813701ac1fee87545/psycopg2_binary-2.9.10-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:880845dfe1f85d9d5f7c412efea7a08946a46894537e4e5d091732eb1d34d9a0", size = 3044771, upload-time = "2024-10-16T11:20:35.234Z" },
-    { url = "https://files.pythonhosted.org/packages/8b/31/6d225b7b641a1a2148e3ed65e1aa74fc86ba3fee850545e27be9e1de893d/psycopg2_binary-2.9.10-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:9440fa522a79356aaa482aa4ba500b65f28e5d0e63b801abf6aa152a29bd842a", size = 3275336, upload-time = "2024-10-16T11:20:38.742Z" },
-    { url = "https://files.pythonhosted.org/packages/30/b7/a68c2b4bff1cbb1728e3ec864b2d92327c77ad52edcd27922535a8366f68/psycopg2_binary-2.9.10-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e3923c1d9870c49a2d44f795df0c889a22380d36ef92440ff618ec315757e539", size = 2851637, upload-time = "2024-10-16T11:20:42.145Z" },
-    { url = "https://files.pythonhosted.org/packages/0b/b1/cfedc0e0e6f9ad61f8657fd173b2f831ce261c02a08c0b09c652b127d813/psycopg2_binary-2.9.10-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7b2c956c028ea5de47ff3a8d6b3cc3330ab45cf0b7c3da35a2d6ff8420896526", size = 3082097, upload-time = "2024-10-16T11:20:46.185Z" },
-    { url = "https://files.pythonhosted.org/packages/18/ed/0a8e4153c9b769f59c02fb5e7914f20f0b2483a19dae7bf2db54b743d0d0/psycopg2_binary-2.9.10-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:f758ed67cab30b9a8d2833609513ce4d3bd027641673d4ebc9c067e4d208eec1", size = 3264776, upload-time = "2024-10-16T11:20:50.879Z" },
-    { url = "https://files.pythonhosted.org/packages/10/db/d09da68c6a0cdab41566b74e0a6068a425f077169bed0946559b7348ebe9/psycopg2_binary-2.9.10-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8cd9b4f2cfab88ed4a9106192de509464b75a906462fb846b936eabe45c2063e", size = 3020968, upload-time = "2024-10-16T11:20:56.819Z" },
-    { url = "https://files.pythonhosted.org/packages/94/28/4d6f8c255f0dfffb410db2b3f9ac5218d959a66c715c34cac31081e19b95/psycopg2_binary-2.9.10-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:6dc08420625b5a20b53551c50deae6e231e6371194fa0651dbe0fb206452ae1f", size = 2872334, upload-time = "2024-10-16T11:21:02.411Z" },
-    { url = "https://files.pythonhosted.org/packages/05/f7/20d7bf796593c4fea95e12119d6cc384ff1f6141a24fbb7df5a668d29d29/psycopg2_binary-2.9.10-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:d7cd730dfa7c36dbe8724426bf5612798734bff2d3c3857f36f2733f5bfc7c00", size = 2822722, upload-time = "2024-10-16T11:21:09.01Z" },
-    { url = "https://files.pythonhosted.org/packages/4d/e4/0c407ae919ef626dbdb32835a03b6737013c3cc7240169843965cada2bdf/psycopg2_binary-2.9.10-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:155e69561d54d02b3c3209545fb08938e27889ff5a10c19de8d23eb5a41be8a5", size = 2920132, upload-time = "2024-10-16T11:21:16.339Z" },
-    { url = "https://files.pythonhosted.org/packages/2d/70/aa69c9f69cf09a01da224909ff6ce8b68faeef476f00f7ec377e8f03be70/psycopg2_binary-2.9.10-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:c3cc28a6fd5a4a26224007712e79b81dbaee2ffb90ff406256158ec4d7b52b47", size = 2959312, upload-time = "2024-10-16T11:21:25.584Z" },
-    { url = "https://files.pythonhosted.org/packages/d3/bd/213e59854fafe87ba47814bf413ace0dcee33a89c8c8c814faca6bc7cf3c/psycopg2_binary-2.9.10-cp312-cp312-win32.whl", hash = "sha256:ec8a77f521a17506a24a5f626cb2aee7850f9b69a0afe704586f63a464f3cd64", size = 1025191, upload-time = "2024-10-16T11:21:29.912Z" },
-    { url = "https://files.pythonhosted.org/packages/92/29/06261ea000e2dc1e22907dbbc483a1093665509ea586b29b8986a0e56733/psycopg2_binary-2.9.10-cp312-cp312-win_amd64.whl", hash = "sha256:18c5ee682b9c6dd3696dad6e54cc7ff3a1a9020df6a5c0f861ef8bfd338c3ca0", size = 1164031, upload-time = "2024-10-16T11:21:34.211Z" },
-    { url = "https://files.pythonhosted.org/packages/3e/30/d41d3ba765609c0763505d565c4d12d8f3c79793f0d0f044ff5a28bf395b/psycopg2_binary-2.9.10-cp313-cp313-macosx_12_0_x86_64.whl", hash = "sha256:26540d4a9a4e2b096f1ff9cce51253d0504dca5a85872c7f7be23be5a53eb18d", size = 3044699, upload-time = "2024-10-16T11:21:42.841Z" },
-    { url = "https://files.pythonhosted.org/packages/35/44/257ddadec7ef04536ba71af6bc6a75ec05c5343004a7ec93006bee66c0bc/psycopg2_binary-2.9.10-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:e217ce4d37667df0bc1c397fdcd8de5e81018ef305aed9415c3b093faaeb10fb", size = 3275245, upload-time = "2024-10-16T11:21:51.989Z" },
-    { url = "https://files.pythonhosted.org/packages/1b/11/48ea1cd11de67f9efd7262085588790a95d9dfcd9b8a687d46caf7305c1a/psycopg2_binary-2.9.10-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:245159e7ab20a71d989da00f280ca57da7641fa2cdcf71749c193cea540a74f7", size = 2851631, upload-time = "2024-10-16T11:21:57.584Z" },
-    { url = "https://files.pythonhosted.org/packages/62/e0/62ce5ee650e6c86719d621a761fe4bc846ab9eff8c1f12b1ed5741bf1c9b/psycopg2_binary-2.9.10-cp313-cp313-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:3c4ded1a24b20021ebe677b7b08ad10bf09aac197d6943bfe6fec70ac4e4690d", size = 3082140, upload-time = "2024-10-16T11:22:02.005Z" },
-    { url = "https://files.pythonhosted.org/packages/27/ce/63f946c098611f7be234c0dd7cb1ad68b0b5744d34f68062bb3c5aa510c8/psycopg2_binary-2.9.10-cp313-cp313-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:3abb691ff9e57d4a93355f60d4f4c1dd2d68326c968e7db17ea96df3c023ef73", size = 3264762, upload-time = "2024-10-16T11:22:06.412Z" },
-    { url = "https://files.pythonhosted.org/packages/43/25/c603cd81402e69edf7daa59b1602bd41eb9859e2824b8c0855d748366ac9/psycopg2_binary-2.9.10-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8608c078134f0b3cbd9f89b34bd60a943b23fd33cc5f065e8d5f840061bd0673", size = 3020967, upload-time = "2024-10-16T11:22:11.583Z" },
-    { url = "https://files.pythonhosted.org/packages/5f/d6/8708d8c6fca531057fa170cdde8df870e8b6a9b136e82b361c65e42b841e/psycopg2_binary-2.9.10-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:230eeae2d71594103cd5b93fd29d1ace6420d0b86f4778739cb1a5a32f607d1f", size = 2872326, upload-time = "2024-10-16T11:22:16.406Z" },
-    { url = "https://files.pythonhosted.org/packages/ce/ac/5b1ea50fc08a9df82de7e1771537557f07c2632231bbab652c7e22597908/psycopg2_binary-2.9.10-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:bb89f0a835bcfc1d42ccd5f41f04870c1b936d8507c6df12b7737febc40f0909", size = 2822712, upload-time = "2024-10-16T11:22:21.366Z" },
-    { url = "https://files.pythonhosted.org/packages/c4/fc/504d4503b2abc4570fac3ca56eb8fed5e437bf9c9ef13f36b6621db8ef00/psycopg2_binary-2.9.10-cp313-cp313-musllinux_1_2_ppc64le.whl", hash = "sha256:f0c2d907a1e102526dd2986df638343388b94c33860ff3bbe1384130828714b1", size = 2920155, upload-time = "2024-10-16T11:22:25.684Z" },
-    { url = "https://files.pythonhosted.org/packages/b2/d1/323581e9273ad2c0dbd1902f3fb50c441da86e894b6e25a73c3fda32c57e/psycopg2_binary-2.9.10-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:f8157bed2f51db683f31306aa497311b560f2265998122abe1dce6428bd86567", size = 2959356, upload-time = "2024-10-16T11:22:30.562Z" },
-    { url = "https://files.pythonhosted.org/packages/08/50/d13ea0a054189ae1bc21af1d85b6f8bb9bbc5572991055d70ad9006fe2d6/psycopg2_binary-2.9.10-cp313-cp313-win_amd64.whl", hash = "sha256:27422aa5f11fbcd9b18da48373eb67081243662f9b46e6fd07c3eb46e4535142", size = 2569224, upload-time = "2025-01-04T20:09:19.234Z" },
 ]
 
 [[package]]
@@ -9812,70 +9672,6 @@ wheels = [
 ]
 
 [[package]]
-name = "simsimd"
-version = "6.4.7"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/56/0b/10196e7167122d26c4cdb4e9b0abe082c2859a9d99a26f9ccf63b1159274/simsimd-6.4.7.tar.gz", hash = "sha256:32f5f05f8c97fb5cd42e488b63c9c5462fa2d3b930911eb7a18f246894774e2a", size = 168828, upload-time = "2025-06-01T13:47:32.892Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/e1/60abcdb596327cde37ce91e322698280fc6c633a5b2e7841a4d5c64f5c22/simsimd-6.4.7-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:0d2e4eb67a24897c251e237d5e3d62410a3a55a56c3a99764fc080882f9ea18f", size = 176564, upload-time = "2025-06-01T13:44:04.718Z" },
-    { url = "https://files.pythonhosted.org/packages/1a/99/79dc1f65bbb4d3ac9278925c50427e753482bf24cce451f02c91b4786bdd/simsimd-6.4.7-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:24a3069054a4a83d4589c5fc1e6c429c3772f6a9c07618fc1ce688819567fad8", size = 132491, upload-time = "2025-06-01T13:44:08.259Z" },
-    { url = "https://files.pythonhosted.org/packages/23/61/9040ce6f04e1154893ce44a0ef71c959d744a63971488f381ab6ce9c5ffa/simsimd-6.4.7-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:c468be980271114bfb8235ddce40219a7489c2ea36f18e239c3aa2208bac84ae", size = 336500, upload-time = "2025-06-01T13:44:10.821Z" },
-    { url = "https://files.pythonhosted.org/packages/f0/1a/4f407ae83c3fe2295f4582855e705b52952e68d705e7968bf7eac275179a/simsimd-6.4.7-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:d8e10dc9872a27633d7c1739855c4648b2c2ebae9912e556d234de1e19ea0999", size = 410931, upload-time = "2025-06-01T13:44:13.066Z" },
-    { url = "https://files.pythonhosted.org/packages/ae/73/67490cd1fa96523315deebfd6ac574c69fab230f217bf583fca2728f6b62/simsimd-6.4.7-cp310-cp310-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:8d1932a7dc65b4c5b0d51a67e19fe9a7e96e6b6e03826673e391f0bafc654b96", size = 277516, upload-time = "2025-06-01T13:44:14.94Z" },
-    { url = "https://files.pythonhosted.org/packages/ef/6a/55a97c4b3574195e2e1510eb2a57dd19a729a862bc899531afae1d567d8d/simsimd-6.4.7-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:1cd57bf822dbc5edacb5c46e8708ee5e7238dab6572e4e852cdc66447aaa6db9", size = 611034, upload-time = "2025-06-01T13:44:17.207Z" },
-    { url = "https://files.pythonhosted.org/packages/27/84/e1d8d3702497b2f644b71049fcb5916d65535edee8fac4337ff7fc8e2a1a/simsimd-6.4.7-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:57aa7a780b66336d693b9250e164a2ae16ddb369da155fdeb38525fa282cf950", size = 1095390, upload-time = "2025-06-01T13:44:19.149Z" },
-    { url = "https://files.pythonhosted.org/packages/02/f7/a52ee2d85252b6a1c4038428caab8949f0cbef0dc6395c62f40a089f0438/simsimd-6.4.7-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:5671ae0b142f137f9a0b1c438995a6a63b1656916ff7e8e118b1d4b8553355b6", size = 652423, upload-time = "2025-06-01T13:44:21.269Z" },
-    { url = "https://files.pythonhosted.org/packages/f4/20/6ee87730c77776b5ffb00d9ded88fea7cecd91acab3bfd03a7eddeffca72/simsimd-6.4.7-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:6806d9d42c6c63ab054573bc49170f5c11025409272a84e84f8c3b96775be69f", size = 424898, upload-time = "2025-06-01T13:44:22.95Z" },
-    { url = "https://files.pythonhosted.org/packages/41/e6/1fab941f352508666adf6d7c755f7426a692c0805ec86836634556e2bf26/simsimd-6.4.7-cp310-cp310-musllinux_1_2_ppc64le.whl", hash = "sha256:6812c400cbc8b710ca4949d37faf7fe108794e3ac9bbd8891505ba76c266df79", size = 527407, upload-time = "2025-06-01T13:44:25.2Z" },
-    { url = "https://files.pythonhosted.org/packages/a1/d9/5cf66815141d4e4b875d5d2ac0c3f4f4a259557a5f053e74c7ddb2e4bcb9/simsimd-6.4.7-cp310-cp310-musllinux_1_2_s390x.whl", hash = "sha256:8bcffd7046c90237e4c720a7d52b824f86103c4c08d88b0d0eecece2449770c6", size = 383140, upload-time = "2025-06-01T13:44:28.257Z" },
-    { url = "https://files.pythonhosted.org/packages/20/1a/bf95287331e144097c0f5741f4a97440957846671833fd52730973786b0f/simsimd-6.4.7-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:8aea54bf188344ff0db7052cd70b591a10cd1c9face52ddc751c9e7239803b27", size = 1029548, upload-time = "2025-06-01T13:44:30.308Z" },
-    { url = "https://files.pythonhosted.org/packages/d7/79/c827a19536271963e8716369e5059768f4b81fb62903d80f66887e4b76d4/simsimd-6.4.7-cp310-cp310-win_amd64.whl", hash = "sha256:b1f5cfbe3180bbf149f20a2c14c469963d3e2992ca6f6f8fe3580aa4e5b0a6fd", size = 94956, upload-time = "2025-06-01T13:44:33.371Z" },
-    { url = "https://files.pythonhosted.org/packages/c0/01/f5b16ab9728f51cbcb403b4a2472fb3694ce92324d41d6fb605bec7977e0/simsimd-6.4.7-cp310-cp310-win_arm64.whl", hash = "sha256:37e9119e652ea680e7535fe8bc1f1054d5cb9f4784e3e0fc1ed08e6ee48be500", size = 58084, upload-time = "2025-06-01T13:44:34.999Z" },
-    { url = "https://files.pythonhosted.org/packages/61/f6/8d312e6883d37a0a9d8be958ba3cd87ea9818c26da32dee6e304314d7317/simsimd-6.4.7-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:328357439c79a72ac3a896374ea01db6c0b210faa1f0e3284ee765a3ada1e471", size = 176566, upload-time = "2025-06-01T13:44:37.833Z" },
-    { url = "https://files.pythonhosted.org/packages/0f/e1/de3f5ec5a1223747b5e46751d6b10cb0e1cac069ae2ee3602163beb732b4/simsimd-6.4.7-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0f581dcdff30ad7afc2a608d5c5d4c566a5c56ecd8b721d25db2f4fce786236d", size = 132488, upload-time = "2025-06-01T13:44:40.052Z" },
-    { url = "https://files.pythonhosted.org/packages/ae/0e/0cf98392d4ac93b021dfc1676c31b30781fc3e01cab9f9ffc505a3b280d7/simsimd-6.4.7-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:92cf92b3fe74d29a1a04237322211f7bb8325bd65720a1124540e27e8c7d69cd", size = 336472, upload-time = "2025-06-01T13:44:42.332Z" },
-    { url = "https://files.pythonhosted.org/packages/75/34/3b670d9070a22300128de464241ec738465b3381da93f3a60b31e8ecd625/simsimd-6.4.7-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:af176bf467f6b339ff7c2e2703b3f1e2808be51274d94474b3aa98ba65ffc83d", size = 410890, upload-time = "2025-06-01T13:44:44.623Z" },
-    { url = "https://files.pythonhosted.org/packages/ea/d8/7b9d4cbdae7f090ac75041f37ee80c6075b4a401ce354069ce08a34c1942/simsimd-6.4.7-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:4cadc52812234f91a0b6f1c2f75e37460d68b36a2ab0bc7243760a58f7ecd835", size = 277776, upload-time = "2025-06-01T13:44:46.432Z" },
-    { url = "https://files.pythonhosted.org/packages/8f/ed/e4de5450ff5478fefcc59d2535fa9f44e55834a6a4e249f3e9951afdedfa/simsimd-6.4.7-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:a5cabbd0b83d9a188c52c40333e0d78e136db50743120f9153adb6aa38c4660d", size = 610999, upload-time = "2025-06-01T13:44:48.339Z" },
-    { url = "https://files.pythonhosted.org/packages/99/d3/0f5bd70c02073db177a8b51d6d31ba592d10aad662ab930f1c3448aba71c/simsimd-6.4.7-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:06709a7ac4ed555b41fadb5ee935b8a225818ba82f1d2fd664fbe79c6a89f685", size = 1095369, upload-time = "2025-06-01T13:44:50.395Z" },
-    { url = "https://files.pythonhosted.org/packages/b8/f1/4bf6d14df85eb7f49a3002af80566472746890c19f0d81d027d04747d3e0/simsimd-6.4.7-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:ca0709e13299d961a4f96a0ec789df4a8b8f965914474e8e95d34046c2866c9a", size = 652418, upload-time = "2025-06-01T13:44:52.955Z" },
-    { url = "https://files.pythonhosted.org/packages/16/c1/41c1e8c2fa1b2d6224243cc6eb1390fc275a0cd2bfd672de72780876d0d4/simsimd-6.4.7-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:bd793a30960ad7c1147cd6346090d7b2ec78da4db69950615afe9004c5466a43", size = 424911, upload-time = "2025-06-01T13:44:54.92Z" },
-    { url = "https://files.pythonhosted.org/packages/2d/69/d18c57bbc8c33169c16521a9b7c9d16abd9dd911e5518480f9f5acf0fc42/simsimd-6.4.7-cp311-cp311-musllinux_1_2_ppc64le.whl", hash = "sha256:99816119d5ae63dc8bc4ca4933b306c55b1706d60ed072bf4f434aa8635d159b", size = 527386, upload-time = "2025-06-01T13:44:56.71Z" },
-    { url = "https://files.pythonhosted.org/packages/70/c1/fab293c8871bcbb897b06cfd06cd694d1ccd4827070aba57fc631be42ea1/simsimd-6.4.7-cp311-cp311-musllinux_1_2_s390x.whl", hash = "sha256:12e0a101eaf22792b228d440963f60f9c2b2fe6cdcafc28611ec9257a3941713", size = 383161, upload-time = "2025-06-01T13:44:58.493Z" },
-    { url = "https://files.pythonhosted.org/packages/c6/8c/3c3bf4162f6581abb65d9d21ea920c7d09b7161636fad3118e33c94d7c73/simsimd-6.4.7-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:f31239828034714c1c39b42d93ec6f891ad28755cc94927d33ab91ad839bd16d", size = 1029553, upload-time = "2025-06-01T13:45:00.971Z" },
-    { url = "https://files.pythonhosted.org/packages/af/74/a8bca67241d8d5d4313a743f837dccdf146fca2b420625638d10074256d0/simsimd-6.4.7-cp311-cp311-win_amd64.whl", hash = "sha256:03f7751d84698da3e1c5a00f88883b163b4aad9bc2b63e8f349cb75bd146eebc", size = 94960, upload-time = "2025-06-01T13:45:02.875Z" },
-    { url = "https://files.pythonhosted.org/packages/bb/f3/4965a4f14ef4bbd66b06bd420470af99b1f9cdc3d0fc5da0943cd24d62b6/simsimd-6.4.7-cp311-cp311-win_arm64.whl", hash = "sha256:d4d1008fc721e7e6aeeb90459b7e4f8f194685cc6caee4afce8f88cfcb52cac2", size = 58078, upload-time = "2025-06-01T13:45:04.458Z" },
-    { url = "https://files.pythonhosted.org/packages/dc/a9/3357b6059586f06d61e310b7d77f9b837729a4bd122e5e2c7ef04ed39c09/simsimd-6.4.7-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:40e4136ba9dd8a3f75e3a35dc670076cb54630431611009b9dd6bed66a298bcf", size = 175132, upload-time = "2025-06-01T13:45:06.691Z" },
-    { url = "https://files.pythonhosted.org/packages/39/55/1880adebd76ed385fb0b407ca1967caa88b67cc292ac4961380a2885b698/simsimd-6.4.7-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:5dd97db6c61fc42b048f5576ed4630472f900bd88ac67d6a54ae8442734e898e", size = 132481, upload-time = "2025-06-01T13:45:08.446Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/6e/cca4c1b59f58987083ca85de31d33d98d32bd84507bb3c97a2b4937abbf3/simsimd-6.4.7-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:877379e510fa5c94c95a0e6be03d11ceb0f6d1f210f215ffd4f4d6ff5fe9ccbe", size = 336898, upload-time = "2025-06-01T13:45:10.174Z" },
-    { url = "https://files.pythonhosted.org/packages/be/9f/b05e95d7c707d86a05429ac8d857bc039851cb7beefeb6659b864b64ca1a/simsimd-6.4.7-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:98e6fb57ae7cae5a43927926fde307231be2f27306c3694c83ddba3bcccb25ad", size = 411478, upload-time = "2025-06-01T13:45:12.09Z" },
-    { url = "https://files.pythonhosted.org/packages/69/f5/75cb6a5ccb938324dcb36a848da69d945e9edaaa61963df953416c49ea01/simsimd-6.4.7-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:cf080f2d140b55c67e4aec49cff9c1c5c9e6237ed8f32700d5ef7a5f64eafdde", size = 278222, upload-time = "2025-06-01T13:45:13.973Z" },
-    { url = "https://files.pythonhosted.org/packages/1d/71/3558fc07f49ecd4972064ceef6f3ea8435d90293a741a53a8b59d7ca994a/simsimd-6.4.7-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:18622cd2f18daf7ef93567b4b3c09bd4b906227e27957715e09faeeea8596df8", size = 611058, upload-time = "2025-06-01T13:45:15.825Z" },
-    { url = "https://files.pythonhosted.org/packages/e8/6e/dc378f79bbd421da1ee7cb4c83497fe2dd7cbad6f83ff203bc67d7d0d2ba/simsimd-6.4.7-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:06456f590605e8fb88b53136870e0a6402c568efc9f187c413dabb146ef8d1d5", size = 1095680, upload-time = "2025-06-01T13:45:17.952Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/0b/92685e9bbd725bcc7b916754d020c512f979c6efcdd2a1b1af55de16b36d/simsimd-6.4.7-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:a3aaaf72c91aa9e7bf5ccc198d583f644dbb26f0215373fc99bb797bdce05f9b", size = 652665, upload-time = "2025-06-01T13:45:19.964Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/0d/41a6491ac4a75450aa19945fb20bfcc063110a0cacfffae7e5d429098024/simsimd-6.4.7-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:2007afe8caf2a4362c9d13261b8a7edd9e2039fa377f9ba72fc6fd645767f478", size = 425170, upload-time = "2025-06-01T13:45:22.452Z" },
-    { url = "https://files.pythonhosted.org/packages/0b/1f/00d20641a21e512efb3e0ebcb6d1c1e7beb388bbe2c43490383dd3221470/simsimd-6.4.7-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:c21c546935cd4dfa7b3e5b25552e1a2917564d2aec320f78ab1a9ebb588b9819", size = 527606, upload-time = "2025-06-01T13:45:24.427Z" },
-    { url = "https://files.pythonhosted.org/packages/32/07/80dea449dd4e00cae899823ed31e720527a9448b3b5ac24e66f8ef6e0206/simsimd-6.4.7-cp312-cp312-musllinux_1_2_s390x.whl", hash = "sha256:77883107de2671fe6872a208be7a579b86155aded3fe72b087f45070fbea0d27", size = 383380, upload-time = "2025-06-01T13:45:26.978Z" },
-    { url = "https://files.pythonhosted.org/packages/86/4a/15b4b69907f6050a27af634f4b02bf9511712a17473fa21110660e692d81/simsimd-6.4.7-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:53042bfb2b608d6181e7eef5bea4e00dbe2f67f69e81348dd87c55659e18dbaf", size = 1029870, upload-time = "2025-06-01T13:45:28.897Z" },
-    { url = "https://files.pythonhosted.org/packages/6a/64/563e43fdcf002afe81065c963ee2460eb5f49fadf2aa668abc0420602721/simsimd-6.4.7-cp312-cp312-win_amd64.whl", hash = "sha256:0285e6a0157a09b22f198149e23e643588f87e4747642db1cf9213328a356d7e", size = 95233, upload-time = "2025-06-01T13:45:31.127Z" },
-    { url = "https://files.pythonhosted.org/packages/24/e3/0e4343faebe9ecd59b5c47039073618541d7598170e75047a2cddd786dba/simsimd-6.4.7-cp312-cp312-win_arm64.whl", hash = "sha256:d44b8a6cd7e653bd0f3438d15fad1b59cff539f81695cdf75f20f108c187eb76", size = 58268, upload-time = "2025-06-01T13:45:32.894Z" },
-    { url = "https://files.pythonhosted.org/packages/e0/4e/888753102655edd63d64d7e042a6989f17d3090728e994244ae4a7f8540e/simsimd-6.4.7-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:39ad3a9c9d479c3f654fcabca31b6c1b731260d327ee34408a0c1ed0f6a117f9", size = 175140, upload-time = "2025-06-01T13:45:34.658Z" },
-    { url = "https://files.pythonhosted.org/packages/35/64/5836a99e65ae66bc6082a1925840a8e59116c51af9f2125b4a713b35c278/simsimd-6.4.7-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:389360fdc16821d70feb90829e71221ea91e7223d9d825a13f8ad9598e6176d7", size = 132485, upload-time = "2025-06-01T13:45:36.336Z" },
-    { url = "https://files.pythonhosted.org/packages/f2/ff/43b2ce2386e802ed0e7ab978d5c988899f92f9a5b7d2ea1ffd0022560717/simsimd-6.4.7-cp313-cp313-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6fb620ba82a6722175f8335767fb04819873d2b5eb56ce8d5a5597535d2db96e", size = 336935, upload-time = "2025-06-01T13:45:38.1Z" },
-    { url = "https://files.pythonhosted.org/packages/40/44/fc5611e598845d6932f4117ec5cc89c2ff4c6722c93290a4276d726336ea/simsimd-6.4.7-cp313-cp313-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:0bbd960410eda674668f3c66293ebd051d603fbe958360ca4b1adf22aadeceba", size = 411486, upload-time = "2025-06-01T13:45:39.965Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/a8/a25c4b0b6fe4b24c90ce9476f2e270c6080b9155dfcc5be787cf61c06799/simsimd-6.4.7-cp313-cp313-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:8791e69359c34f36662647c2022b82143d0fdce8c515b5585f7e141266dc260d", size = 278250, upload-time = "2025-06-01T13:45:42.008Z" },
-    { url = "https://files.pythonhosted.org/packages/ca/ad/a5950a6a17f05623255361dc54194e498dd42fbf7870dc389ae6b9bb3942/simsimd-6.4.7-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:ac83623233b36ada8cb2bfe67a1759fa02520fb979bde9fee5d18ac6b25aa974", size = 611132, upload-time = "2025-06-01T13:45:43.836Z" },
-    { url = "https://files.pythonhosted.org/packages/87/d6/b601e47cda57f7229674b7a528d0ecdfc9c9d6056e76dc70f0510d8e5127/simsimd-6.4.7-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:c19c497b45bf1cbd46a677302e33c8b45493b7e12adf0c1ea7997dbabe7d88be", size = 1095763, upload-time = "2025-06-01T13:45:46.052Z" },
-    { url = "https://files.pythonhosted.org/packages/10/20/55a54bd0e6ee77322e4ead72060d6278ee20a9348d01ac6388f924bc3ab4/simsimd-6.4.7-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:344ec13cd1ebee2a57bc860f6b1ca1c12060130412a680a2b5a019490245023b", size = 652716, upload-time = "2025-06-01T13:45:48.577Z" },
-    { url = "https://files.pythonhosted.org/packages/5a/b7/89586d942caee76e82f27b5700ed98d397cad33b90a4aa3a4c0932c0b565/simsimd-6.4.7-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:6df19543250b80b8a8aabb39ba51bd62f9e96fca3244ce17d51914c6997ca975", size = 425207, upload-time = "2025-06-01T13:45:51.086Z" },
-    { url = "https://files.pythonhosted.org/packages/2e/33/91666a0d13ea582fea8892cc4550784b12d846339b092334ebfc0c48d376/simsimd-6.4.7-cp313-cp313-musllinux_1_2_ppc64le.whl", hash = "sha256:f6698abfdb7ed1c3bcf88bb3bd7fce73f0f6c38869a552bb007edb7434c07435", size = 527626, upload-time = "2025-06-01T13:45:53.056Z" },
-    { url = "https://files.pythonhosted.org/packages/3f/f7/cf87e6461ef24d1e7539de3e3fb0531b89dce0ea284912e1e2eb1c155804/simsimd-6.4.7-cp313-cp313-musllinux_1_2_s390x.whl", hash = "sha256:7d2ecd002cc488e53d73d4e575421dbd11569da3e5a1083ece223a7ec642127c", size = 383384, upload-time = "2025-06-01T13:45:54.988Z" },
-    { url = "https://files.pythonhosted.org/packages/0f/db/8bf72b73f933f9cd0a3833d8119045a490a637f3fa071152575500acb31c/simsimd-6.4.7-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:48a3f8f7e9145c0bde5cacf82ec990ffbf30065ffe029902deede8a9fe0e1542", size = 1029874, upload-time = "2025-06-01T13:45:57.018Z" },
-    { url = "https://files.pythonhosted.org/packages/67/09/6e63aa9066a35769619eb89a3613dfddceb32583359c881891b3246210a8/simsimd-6.4.7-cp313-cp313-win_amd64.whl", hash = "sha256:2729c67c58a02125135aa3172be899098f05400cb39e83f94912361ca8af7a5e", size = 95237, upload-time = "2025-06-01T13:45:59.377Z" },
-    { url = "https://files.pythonhosted.org/packages/19/74/b6072ab0ad1bbf8b38b543b3ac88d0f45fec8bef79c9a3b3dda1a359eda1/simsimd-6.4.7-cp313-cp313-win_arm64.whl", hash = "sha256:7bb7b3dd56acf6fd042c5bdc328016ea8c5e49b47defedfffad056448c34acb1", size = 58274, upload-time = "2025-06-01T13:46:01.133Z" },
-]
-
-[[package]]
 name = "six"
 version = "1.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -9992,22 +9788,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/2e/677c17c5d6a004c3c45334ab1dbe7b7deb834430b282b8a0f75ae220c8eb/sqlalchemy-2.0.41-cp313-cp313-win32.whl", hash = "sha256:bfc9064f6658a3d1cadeaa0ba07570b83ce6801a1314985bf98ec9b95d74e15f", size = 2082420, upload-time = "2025-05-14T17:55:52.69Z" },
     { url = "https://files.pythonhosted.org/packages/e9/61/e8c1b9b6307c57157d328dd8b8348ddc4c47ffdf1279365a13b2b98b8049/sqlalchemy-2.0.41-cp313-cp313-win_amd64.whl", hash = "sha256:82ca366a844eb551daff9d2e6e7a9e5e76d2612c8564f58db6c19a726869c1df", size = 2108329, upload-time = "2025-05-14T17:55:54.495Z" },
     { url = "https://files.pythonhosted.org/packages/1c/fc/9ba22f01b5cdacc8f5ed0d22304718d2c758fce3fd49a5372b886a86f37c/sqlalchemy-2.0.41-py3-none-any.whl", hash = "sha256:57df5dc6fdb5ed1a88a1ed2195fd31927e705cad62dedd86b46972752a80f576", size = 1911224, upload-time = "2025-05-14T17:39:42.154Z" },
-]
-
-[package.optional-dependencies]
-aiosqlite = [
-    { name = "aiosqlite" },
-    { name = "greenlet" },
-    { name = "typing-extensions" },
-]
-asyncio = [
-    { name = "greenlet" },
-]
-postgresql-psycopg = [
-    { name = "psycopg" },
-]
-postgresql-psycopg2binary = [
-    { name = "psycopg2-binary" },
 ]
 
 [[package]]
@@ -10599,15 +10379,6 @@ wheels = [
 ]
 
 [[package]]
-name = "types-cachetools"
-version = "5.5.0.20240820"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c2/7e/ad6ba4a56b2a994e0f0a04a61a50466b60ee88a13d10a18c83ac14a66c61/types-cachetools-5.5.0.20240820.tar.gz", hash = "sha256:b888ab5c1a48116f7799cd5004b18474cd82b5463acb5ffb2db2fc9c7b053bc0", size = 4198, upload-time = "2024-08-20T02:30:07.525Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/4d/fd7cc050e2d236d5570c4d92531c0396573a1e14b31735870e849351c717/types_cachetools-5.5.0.20240820-py3-none-any.whl", hash = "sha256:efb2ed8bf27a4b9d3ed70d33849f536362603a90b8090a328acf0cd42fda82e2", size = 4149, upload-time = "2024-08-20T02:30:06.461Z" },
-]
-
-[[package]]
 name = "types-cffi"
 version = "1.17.0.20250523"
 source = { registry = "https://pypi.org/simple" }
@@ -10901,37 +10672,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ed/40/3bf1afc96e93c7322520981ac4593cbb29daa21b48d32746f05ab5563dca/unittest-xml-reporting-3.2.0.tar.gz", hash = "sha256:edd8d3170b40c3a81b8cf910f46c6a304ae2847ec01036d02e9c0f9b85762d28", size = 18002, upload-time = "2022-01-20T19:09:55.76Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/88/f6e9b87428584a3c62cac768185c438ca6d561367a5d267b293259d76075/unittest_xml_reporting-3.2.0-py2.py3-none-any.whl", hash = "sha256:f3d7402e5b3ac72a5ee3149278339db1a8f932ee405f48bcb9c681372f2717d5", size = 20936, upload-time = "2022-01-20T19:09:53.824Z" },
-]
-
-[[package]]
-name = "unstructured-client"
-version = "0.25.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "certifi" },
-    { name = "charset-normalizer" },
-    { name = "cryptography" },
-    { name = "dataclasses-json" },
-    { name = "deepdiff" },
-    { name = "httpx" },
-    { name = "idna" },
-    { name = "jsonpath-python" },
-    { name = "marshmallow" },
-    { name = "mypy-extensions" },
-    { name = "nest-asyncio" },
-    { name = "packaging" },
-    { name = "pypdf" },
-    { name = "python-dateutil" },
-    { name = "requests" },
-    { name = "requests-toolbelt" },
-    { name = "six" },
-    { name = "typing-extensions" },
-    { name = "typing-inspect" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cf/b2/1214a9391951754a770d6be81a67093e827a198f610dbaa971fea2b65a3a/unstructured-client-0.25.9.tar.gz", hash = "sha256:fcc461623f58fefb0e22508e28bf653a8f6934b9779cb4a90dd68d77a39fb5b2", size = 39986, upload-time = "2024-09-18T15:37:15.596Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/42/71/f0e594858f251ee2ac2edfe532714fd47afcc4e9294a3862a7c19ec13cf6/unstructured_client-0.25.9-py3-none-any.whl", hash = "sha256:c984c01878c8fc243be7c842467d1113a194d885ab6396ae74258ee42717c5b5", size = 45296, upload-time = "2024-09-18T15:37:14.32Z" },
 ]
 
 [[package]]
