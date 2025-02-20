@@ -3,7 +3,9 @@ from typing import Any
 from detect_secrets.core.scan import scan_line
 from detect_secrets.settings import default_settings
 from loguru import logger
-from pydantic import BaseModel, model_serializer, model_validator
+from pydantic import BaseModel, field_serializer, model_serializer, model_validator
+
+from langflow.serialization import serialize
 
 MIN_SECRET_LENGTH = 8
 
@@ -108,3 +110,23 @@ class DataRedactionModel(BaseModel):
             return {"name": self.name, "type": self.type, "message": f"<Error: {e!s}>"}
         else:
             return dump
+
+    @field_serializer("message", when_used="always", check_fields=False)
+    @classmethod
+    def serialize_message(cls, value: Any) -> str:
+        try:
+            if isinstance(value, int | float | bool):
+                return str(value)
+            if isinstance(value, bytes):
+                try:
+                    return value.decode("utf-8")
+                except UnicodeDecodeError:
+                    return str(value)
+            if hasattr(value, "__repr__"):
+                try:
+                    return str(value)
+                except (ValueError, TypeError) as e:
+                    return f"<Error: {e!s}>"
+            return serialize(value)
+        except (ValueError, TypeError) as e:
+            return f"<Error: {e!s}>"
