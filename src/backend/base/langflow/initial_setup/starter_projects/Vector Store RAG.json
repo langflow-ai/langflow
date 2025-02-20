@@ -3736,7 +3736,6 @@
               },
               "ingest_data": {
                 "_input_type": "DataInput",
-                "advanced": true,
                 "display_name": "Ingest Data",
                 "dynamic": false,
                 "info": "",
@@ -3840,7 +3839,7 @@
                 "name": "search_query",
                 "placeholder": "",
                 "required": false,
-                "show": true,
+                "show": false,
                 "title_case": false,
                 "tool_mode": true,
                 "trace_as_input": true,
