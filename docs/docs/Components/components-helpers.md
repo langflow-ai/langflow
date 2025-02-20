@@ -139,19 +139,21 @@ It provides flexibility in managing message storage and retrieval within a chat 
 
 This component transforms LLM responses into structured data formats.
 
-### Input
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | llm | Language Model | The language model to use to generate the structured output. |
-| input_value | Input message | The input message for the language model to process. |
+| input_value | Input Message | The input message to the language model. |
+| system_prompt | Format Instructions | Instructions to the language model for formatting the output. |
 | schema_name | Schema Name | Provide a name for the output data schema. |
-| output_schema | Output Schema | Define the structure and data types for the model's output. |
-| multiple | Generate Multiple | Set to True if the model should generate a list of outputs instead of a single output. |
+| output_schema | Output Schema | Define the structure and data types for the model's output using a table with fields for name, description, type, and multiple values. |
+| multiple | Generate Multiple | [Deprecated] Always set to `True`. |
 
-### Output
+### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| stored_messages | Stored Messages | structured output based on the defined schema. |
+| structured_output | Structured Output | The structured output based on the defined schema. |
+| structured_output_dataframe | DataFrame | The structured output converted to a [DataFrame](/concepts-objects#dataframe-object) format. |
 
