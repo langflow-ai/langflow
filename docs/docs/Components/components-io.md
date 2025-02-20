@@ -14,13 +14,20 @@ The difference between Chat Input and Text Input components is the output format
 This component collects user input from the chat.
 
 The Chat Input component creates a [Message](/concepts-objects) object that includes the input text, sender information, session ID, file attachments, and styling properties.
-It can optionally store the message in a chat history and supports customization of the message appearance.
+
+The component accepts the following input types:
+
+* Text (strings)
+* Data objects
+* DataFrame objects
+* Message objects
+* Lists
 
 ### Inputs
 
 | Name | Display Name | Info | Type |
 |------|--------------|------|------|
-|input_value|Text|Message to be passed as input.|MultilineInput|
+|input_value|Text|Message to be passed as input. Accepts text, data objects, messages, and dataframes.|MultilineInput|
 |should_store_message|Store Messages|Store the message in the history.|BoolInput|
 |sender|Sender Type|Type of sender.|DropdownInput|
 |sender_name|Sender Name|Name of the sender.|MessageTextInput|
@@ -59,6 +66,11 @@ The Text Input component offers one input field for text, while the Chat Input h
 
 The Chat Output component creates a [Message](/concepts-objects) object that includes the input text, sender information, session ID, and styling properties.
 It can optionally store the message in a chat history and supports customization of the message appearance, including background color, icon, and text color.
+
+The component accepts the following input types.
+* Data objects
+* DataFrame objects
+* Message objects
 
 ### Inputs
 
