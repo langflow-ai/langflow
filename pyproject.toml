@@ -66,6 +66,7 @@ dev = [
     'elevenlabs>=1.52.0; python_version != "3.12"',
     "faker>=37.0.0",
     "pytest-timeout>=2.3.1",
+    "types-cachetools>=5.5.0.20240820",
 ]
 
 [tool.uv.sources]

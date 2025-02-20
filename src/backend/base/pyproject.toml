@@ -313,8 +313,8 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.6.2",
-    "httpx[http2]>=0.27",
+    "ruff>=0.9.1,<0.10",
+    "httpx>=0.27.0",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
     "requests>=2.32.0",
@@ -337,10 +337,17 @@ dev = [
     "vulture>=2.11",
     "dictdiffer>=0.9.0",
     "pytest-split>=0.9.0",
-    "devtools>=0.12.2",
     "pytest-flakefinder>=1.1.0",
     "types-markdown>=3.7.0.20240822",
-    "codeflash>=0.8.4"
+    "packaging>=24.1,<25.0",
+    "asgi-lifespan>=2.1.0",
+    "pytest-github-actions-annotate-failures>=0.2.0",
+    "pytest-codspeed>=3.0.0",
+    "blockbuster>=1.5.20,<1.6",
+    "types-aiofiles>=24.1.0.20240626",
+    "codeflash>=0.8.4",
+    "hypothesis>=6.123.17",
+    "locust>=2.32.9"
 ]
 
 # Complete installation
