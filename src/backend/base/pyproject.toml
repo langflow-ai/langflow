@@ -204,7 +204,7 @@ clickhouse = ["clickhouse-connect==0.7.19"]
 mongodb = ["pymongo==4.10.1"]
 supabase = ["supabase==2.6.0"]
 redis = ["redis==5.2.1"]
-elasticsearch = ["elasticsearch==8.16.0"]
+elasticsearch = ["elasticsearch==8.16.0", "langchain_elasticsearch==0.3.2"]
 
 # Individual vector store providers
 faiss = ["faiss-cpu==1.9.0.post1"]
