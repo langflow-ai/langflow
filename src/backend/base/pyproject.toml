@@ -344,7 +344,7 @@ dev = [
 ]
 
 # Complete installation
-all = [
+local = [
     "langflow-base[deploy]",
     "langflow-base[couchbase]",
     "langflow-base[cassandra]",
@@ -371,9 +371,6 @@ all = [
     "langflow-base[mistral]",
     "langflow-base[sambanova]",
     "langflow-base[groq]",
-    "langflow-base[llama-cpp]",
-    "langflow-base[sentence-transformers]",
-    "langflow-base[ctransformers]",
     "langflow-base[langfuse]",
     "langflow-base[langwatch]",
     "langflow-base[langsmith]",
@@ -426,4 +423,11 @@ all = [
     "langflow-base[pydantic-ai]",
     "langflow-base[apify]",
     "langflow-base[spider]",
+]
+
+
+all = [
+    "langflow-base[local]",
+    "langflow-base[dev]",
+    "langflow-base[deploy]",
 ]
