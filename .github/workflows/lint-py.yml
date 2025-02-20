@@ -19,6 +19,7 @@ jobs:
     strategy:
       matrix:
         python-version:
+          - "3.13"
           - "3.12"
           - "3.11"
           - "3.10"
@@ -30,6 +31,8 @@ jobs:
           persist-credentials: true
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Install the project
         run: uv sync --dev
       - name: Run Mypy
