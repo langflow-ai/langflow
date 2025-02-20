@@ -21,12 +21,13 @@ class CohereRerankComponent(LCCompressorComponent):
             name="model",
             display_name="Model",
             options=[
+                "rerank-v3.5",
                 "rerank-english-v3.0",
                 "rerank-multilingual-v3.0",
                 "rerank-english-v2.0",
                 "rerank-multilingual-v2.0",
             ],
-            value="rerank-english-v3.0",
+            value="rerank-v3.5",
         ),
     ]
 
