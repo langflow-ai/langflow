@@ -247,7 +247,7 @@ export const DESCRIPTIONS: string[] = [
   "Design, Develop, Dialogize.",
 ];
 export const BUTTON_DIV_STYLE =
-  " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-none ";
+  " flex gap-2 focus:ring-1 focus:ring-offset-1 focus:ring-ring focus:outline-hidden ";
 
 /**
  * The base text for subtitle of code dialog

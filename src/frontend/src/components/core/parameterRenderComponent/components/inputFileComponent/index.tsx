@@ -100,7 +100,7 @@ export default function InputFileComponent({
                 data-testid="input-file-component"
                 type="text"
                 className={cn(
-                  "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-none focus:ring-0",
+                  "primary-input h-9 w-full cursor-pointer rounded-r-none text-sm focus:border-border focus:outline-hidden focus:ring-0",
                   !value && "text-placeholder-foreground",
                   editNode && "h-6",
                 )}
