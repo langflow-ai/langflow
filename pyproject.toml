@@ -3,7 +3,7 @@
 name = "langflow"
 version = "1.1.5"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -26,7 +26,7 @@ dependencies = [
     "huggingface-hub[inference]>=0.23.2,<1.0.0",
     "networkx==3.4.2",
     "fake-useragent==1.5.1",
-    "pyarrow==17.0.0",
+    "pyarrow==19.0.0",
     "wikipedia==1.4.0",
     "qdrant-client==1.9.2",
     "weaviate-client==4.10.2",
@@ -52,7 +52,7 @@ dependencies = [
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
     "assemblyai==0.35.1",
-    "litellm==1.59.8",
+    "litellm==1.60.2",
     "chromadb==0.5.23",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",
@@ -105,13 +105,14 @@ dependencies = [
     "sseclient-py==1.8.0",
     "arize-phoenix-otel>=0.6.1",
     "openinference-instrumentation-langchain>=0.1.29",
-    "crewai~=0.86.0",
+    "crewai==0.102.0",
     "mcp>=0.9.1",
     "uv>=0.5.7",
     "ag2>=0.1.0",
     "scrapegraph-py>=1.12.0",
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
+    "apify-client>=1.8.1",
 ]
 
 [tool.uv.sources]
@@ -147,6 +148,14 @@ local = [
 ]
 clickhouse-connect = [
     "clickhouse-connect==0.7.19"
+]
+nv-ingest = [
+    # nv-ingest-client 2025.2.7.dev0 does not correctly install its
+    # dependencies, so we need to install some manually.
+    "nv-ingest-client==2025.2.7.dev0",
+    "python-pptx==0.6.23",
+    "pymilvus[bulk_writer,model]==2.5.0",
+    "llama-index-embeddings-nvidia==0.1.5",
 ]
 
 [project.scripts]
@@ -187,7 +196,7 @@ dev-dependencies = [
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "pytest-codspeed>=3.0.0",
-    "blockbuster>=1.5.18,<1.6",
+    "blockbuster>=1.5.20,<1.6",
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
@@ -274,6 +283,9 @@ external = ["RUF027"]
     "S101",
     "SLF001",
 ]
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = [ "io", "logging", "socket"]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]

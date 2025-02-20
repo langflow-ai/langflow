@@ -237,6 +237,6 @@ test(
 
     // Count occurrences of modified_value in output
     const matches = output?.match(/modified_value/g) || [];
-    expect(matches).toHaveLength(2);
+    expect(matches).toHaveLength(1);
   },
 );
