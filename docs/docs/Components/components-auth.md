@@ -18,7 +18,7 @@ To optimize performance, the component automatically fetches and caches the JWKs
 ### **Inputs**
 | Name       | Display Name | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
-| jwt_token  | JWT Token    | The JWT token to validate. Must follow RFC 7519 standards.                  |
+| jwt_token  | JWT Token    | The JWT token to validate (as MessageTextInput). Must follow RFC 7519 standards. |
 
 ### **Configuration**
 | Name       | Display Name | Description                                                                 |
@@ -28,7 +28,7 @@ To optimize performance, the component automatically fetches and caches the JWKs
 ### **Outputs**
 | Name       | Display Name | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
-| user_id    | User ID      | The extracted user ID from the validated token (`sub` claim).               |
+| user_id    | User ID      | A Message containing the extracted user ID from the validated token (`sub` claim). |
 
 ## **Permissions Check**
 
@@ -39,7 +39,7 @@ It supports context-aware authorization by optionally including tenant informati
 ### **Inputs**
 | Name       | Display Name | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
-| user       | User         | The user identifier to check permissions for.                              |
+| user_id    | User ID      | The user identifier to check permissions for.                              |
 | action     | Action       | The action being performed (e.g., `read`, `write`, `delete`, `create`).     |
 | resource   | Resource     | The resource identifier being acted upon.                                  |
 | tenant     | Tenant       | Optional tenant identifier for multi-tenant scenarios.                     |
@@ -53,7 +53,8 @@ It supports context-aware authorization by optionally including tenant informati
 ### **Outputs**
 | Name       | Display Name | Description                                                                 |
 |------------|--------------|-----------------------------------------------------------------------------|
-| allowed    | Allowed      | A boolean value indicating whether the action is permitted (`true` or `false`). |
+| allowed    | Allowed Path | Returns "proceed" message when action is permitted, empty string otherwise. |
+| denied     | Denied Path  | Returns error message when action is denied, empty string otherwise.        |
 
 ## **Data Protection**
 
@@ -62,12 +63,13 @@ This component retrieves and filters the list of resources a user is allowed to 
 The component supports bulk permission checks and uses caching to enhance performance when evaluating multiple resources.
 
 ### **Inputs**
-| Name          | Display Name | Description                                                                 |
-|---------------|--------------|-----------------------------------------------------------------------------|
-| user_id       | User ID      | The user identifier to retrieve permissions for.                           |
-| action        | Action       | The action to filter permissions by (e.g., `read`, `write`).                |
-| resource_type | Resource Type| The type of resource to check permissions for (e.g., `document`, `project`).|
-| filter_ids    | Filter IDs   | Optional list of specific resource IDs to check permissions for.            |
+| Name             | Display Name    | Description                                                                 |
+|------------------|----------------|-----------------------------------------------------------------------------|
+| user_id          | User ID        | The user identifier to retrieve permissions for.                           |
+| action           | Action         | The action to filter permissions by (e.g., `read`, `write`).                |
+| resource_type    | Resource Type  | The type of resource to check permissions for (e.g., `document`, `project`).|
+| filter_ids       | Filter IDs     | Optional list of specific resource IDs to check permissions for.            |
+| sensitive_fields | Sensitive Fields| List of fields to redact from the response data.                           |
 
 ### **Configuration**
 | Name       | Display Name | Description                                                                 |
@@ -78,7 +80,7 @@ The component supports bulk permission checks and uses caching to enhance perfor
 ### **Outputs**
 | Name          | Display Name | Description                                                                 |
 |---------------|--------------|-----------------------------------------------------------------------------|
-| allowed_ids   | Allowed IDs  | A list of resource IDs that the user is authorized to access for the specified action. |
+| allowed_ids   | Allowed IDs  | A Message containing the list of resource IDs that the user is authorized to access. |
 
 ## How These Components Work Together
 
