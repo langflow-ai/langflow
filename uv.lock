@@ -4561,7 +4561,7 @@ name = "langflow"
 version = "1.4.3"
 source = { editable = "." }
 dependencies = [
-    { name = "langflow-base", extra = ["local"] },
+    { name = "langflow-base", extra = ["complete"] },
 ]
 
 [package.optional-dependencies]
@@ -4644,7 +4644,7 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
-    { name = "langflow-base", extras = ["local"], editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
     { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
     { name = "llama-index-embeddings-nvidia", marker = "extra == 'nv-ingest'", specifier = "==0.1.5" },
     { name = "nv-ingest-client", marker = "extra == 'nv-ingest'", specifier = "==2025.2.7.dev0" },
@@ -4788,22 +4788,18 @@ all = [
     { name = "ag2" },
     { name = "apify-client" },
     { name = "arize-phoenix-otel" },
-    { name = "asgi-lifespan" },
     { name = "astra-assistants", extra = ["tools"] },
     { name = "atlassian-python-api" },
     { name = "beautifulsoup4" },
-    { name = "blockbuster" },
     { name = "boto3" },
     { name = "cassio" },
     { name = "celery", extra = ["redis"] },
     { name = "chromadb" },
     { name = "clickhouse-connect" },
-    { name = "codeflash" },
     { name = "composio-core" },
     { name = "composio-langchain" },
     { name = "couchbase" },
     { name = "crewai" },
-    { name = "dictdiffer" },
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
     { name = "elasticsearch" },
@@ -4814,10 +4810,7 @@ all = [
     { name = "gitpython" },
     { name = "google-api-python-client" },
     { name = "google-search-results" },
-    { name = "httpx" },
     { name = "huggingface-hub", extra = ["inference"] },
-    { name = "hypothesis" },
-    { name = "ipykernel" },
     { name = "json-repair" },
     { name = "kubernetes" },
     { name = "langchain-anthropic" },
@@ -4843,65 +4836,34 @@ all = [
     { name = "langwatch" },
     { name = "lark" },
     { name = "litellm" },
-    { name = "locust" },
     { name = "markdown" },
     { name = "markupsafe" },
     { name = "mcp" },
     { name = "mem0ai" },
     { name = "metal-sdk" },
     { name = "metaphor-python" },
-    { name = "mypy" },
     { name = "needle-python" },
     { name = "nltk" },
     { name = "numexpr" },
     { name = "openinference-instrumentation-langchain" },
     { name = "opensearch-py" },
-    { name = "packaging" },
-    { name = "pandas-stubs" },
     { name = "pgvector" },
-    { name = "pre-commit" },
     { name = "pyarrow" },
     { name = "pydantic-ai" },
     { name = "pymongo" },
     { name = "pypdf" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-codspeed" },
-    { name = "pytest-cov" },
-    { name = "pytest-flakefinder" },
-    { name = "pytest-github-actions-annotate-failures" },
-    { name = "pytest-instafail" },
-    { name = "pytest-mock" },
-    { name = "pytest-profiling" },
-    { name = "pytest-split" },
-    { name = "pytest-sugar" },
-    { name = "pytest-xdist" },
     { name = "python-docx" },
     { name = "pytube" },
     { name = "qdrant-client" },
     { name = "qianfan" },
     { name = "ragstack-ai-knowledge-store" },
     { name = "redis" },
-    { name = "requests" },
-    { name = "respx" },
-    { name = "ruff" },
     { name = "scrapegraph-py" },
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "sseclient-py" },
     { name = "supabase" },
-    { name = "types-aiofiles" },
-    { name = "types-google-cloud-ndb" },
-    { name = "types-markdown" },
-    { name = "types-passlib" },
-    { name = "types-pillow" },
-    { name = "types-python-jose" },
-    { name = "types-pywin32" },
-    { name = "types-pyyaml" },
-    { name = "types-redis" },
-    { name = "types-requests" },
     { name = "upstash-vector" },
-    { name = "vulture" },
     { name = "weaviate-client" },
     { name = "wikipedia" },
     { name = "wolframalpha" },
@@ -4946,128 +4908,7 @@ clickhouse = [
 cohere = [
     { name = "langchain-cohere" },
 ]
-composio = [
-    { name = "composio-core" },
-    { name = "composio-langchain" },
-]
-couchbase = [
-    { name = "couchbase" },
-]
-crewai = [
-    { name = "crewai" },
-]
-ctransformers = [
-    { name = "ctransformers" },
-]
-deploy = [
-    { name = "celery", extra = ["redis"] },
-    { name = "flower" },
-]
-dev = [
-    { name = "asgi-lifespan" },
-    { name = "blockbuster" },
-    { name = "codeflash" },
-    { name = "dictdiffer" },
-    { name = "httpx" },
-    { name = "hypothesis" },
-    { name = "ipykernel" },
-    { name = "locust" },
-    { name = "mypy" },
-    { name = "packaging" },
-    { name = "pandas-stubs" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-codspeed" },
-    { name = "pytest-cov" },
-    { name = "pytest-flakefinder" },
-    { name = "pytest-github-actions-annotate-failures" },
-    { name = "pytest-instafail" },
-    { name = "pytest-mock" },
-    { name = "pytest-profiling" },
-    { name = "pytest-split" },
-    { name = "pytest-sugar" },
-    { name = "pytest-xdist" },
-    { name = "requests" },
-    { name = "respx" },
-    { name = "ruff" },
-    { name = "types-aiofiles" },
-    { name = "types-google-cloud-ndb" },
-    { name = "types-markdown" },
-    { name = "types-passlib" },
-    { name = "types-pillow" },
-    { name = "types-python-jose" },
-    { name = "types-pywin32" },
-    { name = "types-pyyaml" },
-    { name = "types-redis" },
-    { name = "types-requests" },
-    { name = "vulture" },
-]
-docx = [
-    { name = "python-docx" },
-]
-dspy = [
-    { name = "dspy-ai" },
-]
-duckduckgo = [
-    { name = "duckduckgo-search" },
-]
-elasticsearch = [
-    { name = "elasticsearch" },
-    { name = "langchain-elasticsearch" },
-]
-faiss = [
-    { name = "faiss-cpu" },
-]
-fake-useragent = [
-    { name = "fake-useragent" },
-]
-fastavro = [
-    { name = "fastavro" },
-]
-gitpython = [
-    { name = "gitpython" },
-]
-google = [
-    { name = "langchain-google-calendar-tools" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
-    { name = "langchain-google-vertexai" },
-]
-google-api = [
-    { name = "google-api-python-client" },
-]
-groq = [
-    { name = "langchain-groq" },
-]
-huggingface = [
-    { name = "huggingface-hub", extra = ["inference"] },
-]
-json-repair = [
-    { name = "json-repair" },
-]
-kubernetes = [
-    { name = "kubernetes" },
-]
-langfuse = [
-    { name = "langfuse" },
-]
-langsmith = [
-    { name = "langsmith" },
-]
-langwatch = [
-    { name = "langwatch" },
-]
-lark = [
-    { name = "lark" },
-]
-litellm = [
-    { name = "litellm" },
-]
-llama-cpp = [
-    { name = "llama-cpp-python" },
-]
-local = [
+complete = [
     { name = "ag2" },
     { name = "apify-client" },
     { name = "arize-phoenix-otel" },
@@ -5153,6 +4994,87 @@ local = [
     { name = "yfinance" },
     { name = "youtube-transcript-api" },
     { name = "zep-python" },
+]
+composio = [
+    { name = "composio-core" },
+    { name = "composio-langchain" },
+]
+couchbase = [
+    { name = "couchbase" },
+]
+crewai = [
+    { name = "crewai" },
+]
+ctransformers = [
+    { name = "ctransformers" },
+]
+deploy = [
+    { name = "celery", extra = ["redis"] },
+    { name = "flower" },
+]
+docx = [
+    { name = "python-docx" },
+]
+dspy = [
+    { name = "dspy-ai" },
+]
+duckduckgo = [
+    { name = "duckduckgo-search" },
+]
+elasticsearch = [
+    { name = "elasticsearch" },
+    { name = "langchain-elasticsearch" },
+]
+faiss = [
+    { name = "faiss-cpu" },
+]
+fake-useragent = [
+    { name = "fake-useragent" },
+]
+fastavro = [
+    { name = "fastavro" },
+]
+gitpython = [
+    { name = "gitpython" },
+]
+google = [
+    { name = "langchain-google-calendar-tools" },
+    { name = "langchain-google-community" },
+    { name = "langchain-google-genai" },
+    { name = "langchain-google-vertexai" },
+]
+google-api = [
+    { name = "google-api-python-client" },
+]
+groq = [
+    { name = "langchain-groq" },
+]
+huggingface = [
+    { name = "huggingface-hub", extra = ["inference"] },
+]
+json-repair = [
+    { name = "json-repair" },
+]
+kubernetes = [
+    { name = "kubernetes" },
+]
+langfuse = [
+    { name = "langfuse" },
+]
+langsmith = [
+    { name = "langsmith" },
+]
+langwatch = [
+    { name = "langwatch" },
+]
+lark = [
+    { name = "lark" },
+]
+litellm = [
+    { name = "litellm" },
+]
+llama-cpp = [
+    { name = "llama-cpp-python" },
 ]
 markdown = [
     { name = "markdown" },
@@ -5332,14 +5254,12 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
     { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
     { name = "arize-phoenix-otel", marker = "extra == 'arize'", specifier = ">=0.6.1" },
-    { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = ">=2.1.0" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "astra-assistants", extras = ["tools"], marker = "extra == 'astra'", specifier = "~=2.2.9" },
     { name = "asyncer", specifier = ">=0.0.5,<1.0.0" },
     { name = "atlassian-python-api", marker = "extra == 'atlassian'", specifier = "==3.41.16" },
     { name = "bcrypt", specifier = "==4.0.1" },
     { name = "beautifulsoup4", marker = "extra == 'beautifulsoup'", specifier = "==4.12.3" },
-    { name = "blockbuster", marker = "extra == 'dev'", specifier = ">=1.5.20,<1.6" },
     { name = "boto3", marker = "extra == 'aws'", specifier = "==1.34.162" },
     { name = "cachetools", specifier = ">=5.5.0,<6.0.0" },
     { name = "cassio", marker = "extra == 'cassandra'", specifier = ">=0.1.7" },
@@ -5348,7 +5268,6 @@ requires-dist = [
     { name = "chromadb", marker = "extra == 'chroma'", specifier = "==0.5.23" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
-    { name = "codeflash", marker = "extra == 'dev'", specifier = ">=0.8.4" },
     { name = "composio-core", marker = "extra == 'composio'", specifier = "==0.7.1" },
     { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.7.1" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
@@ -5356,7 +5275,6 @@ requires-dist = [
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
     { name = "ctransformers", marker = "extra == 'ctransformers'", specifier = ">=0.2.10" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
-    { name = "dictdiffer", marker = "extra == 'dev'", specifier = ">=0.9.0" },
     { name = "diskcache", specifier = ">=5.6.3,<6.0.0" },
     { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
     { name = "dspy-ai", marker = "extra == 'dspy'", specifier = "==2.5.41" },
@@ -5378,11 +5296,8 @@ requires-dist = [
     { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
     { name = "greenlet", specifier = ">=3.1.1" },
     { name = "gunicorn", specifier = ">=22.0.0,<24.0.0" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=0.23.2,<1.0.0" },
-    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.123.17" },
-    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.29.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = "==0.30.3" },
     { name = "json-repair", specifier = ">=0.30.3" },
@@ -5411,94 +5326,93 @@ requires-dist = [
     { name = "langchain-pinecone", marker = "extra == 'pinecone'", specifier = "==0.2.2" },
     { name = "langchain-sambanova", marker = "extra == 'sambanova'", specifier = "==0.1.0" },
     { name = "langchainhub", specifier = "~=0.1.15" },
-    { name = "langflow-base", extras = ["ag2"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["anthropic"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["apify"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["arize"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["astra"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["astradb"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["atlassian"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["aws"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["beautifulsoup"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cassandra"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["chroma"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["clickhouse"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cohere"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["composio"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["couchbase"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["crewai"], marker = "extra == 'local'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["ag2"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["anthropic"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["apify"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["arize"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["astra"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["astradb"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["atlassian"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["aws"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["beautifulsoup"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["cassandra"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["clickhouse"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["cohere"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["complete"], marker = "extra == 'all'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["composio"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["couchbase"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["crewai"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["deploy"], marker = "extra == 'all'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["deploy"], marker = "extra == 'local'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["deploy"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["dev"], marker = "extra == 'all'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["docx"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["dspy"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["duckduckgo"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["elasticsearch"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["faiss"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["fake-useragent"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["fastavro"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["gitpython"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["google"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["google-api"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["groq"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["huggingface"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["json-repair"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["kubernetes"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langfuse"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langsmith"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["langwatch"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["lark"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["litellm"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["local"], marker = "extra == 'all'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["markdown"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["markup"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mcp"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mem0"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["metal"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["metaphor"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["milvus"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mistral"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mongodb"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mongodb-vectors"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["needle"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["nltk"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["numexpr"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["nvidia"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["ollama"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openai"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["openinference"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pinecone"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pyarrow"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pydantic-ai"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pypdf"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pytube"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["qdrant"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["qianfan"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["ragstack"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["redis"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["sambanova"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["scrapegraph"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["serpapi"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["smolagents"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["spider"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["sseclient"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["supabase"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["upstash"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["weaviate"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["wikipedia"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["wolframalpha"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["yfinance"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["youtube"], marker = "extra == 'local'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["zep"], marker = "extra == 'local'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["docx"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["dspy"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["duckduckgo"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["elasticsearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["faiss"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["fake-useragent"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["fastavro"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["gitpython"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["google"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["google-api"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["groq"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["huggingface"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["json-repair"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["kubernetes"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["langfuse"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["langsmith"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["langwatch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["lark"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["litellm"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["markdown"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["markup"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["mcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["mem0"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["metal"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["metaphor"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["milvus"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["mistral"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["mongodb"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["mongodb-vectors"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["needle"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["nltk"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["numexpr"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["nvidia"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["ollama"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["openai"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["openinference"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["pinecone"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["pyarrow"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["pydantic-ai"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["pypdf"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["pytube"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["qdrant"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["qianfan"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["ragstack"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["sambanova"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["scrapegraph"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["serpapi"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["smolagents"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["spider"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["sseclient"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["supabase"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["upstash"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["weaviate"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["wikipedia"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["wolframalpha"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["yfinance"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["youtube"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["zep"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = "==2.53.9" },
     { name = "langsmith", marker = "extra == 'langsmith'", specifier = "==0.1.147" },
     { name = "langwatch", marker = "extra == 'langwatch'", specifier = "==0.1.16" },
     { name = "lark", marker = "extra == 'lark'", specifier = "==1.2.2" },
     { name = "litellm", marker = "extra == 'litellm'", specifier = "==1.60.2" },
     { name = "llama-cpp-python", marker = "extra == 'llama-cpp'", specifier = "~=0.2.0" },
-    { name = "locust", marker = "extra == 'dev'", specifier = ">=2.32.9" },
     { name = "loguru", specifier = ">=0.7.1,<1.0.0" },
     { name = "markdown", marker = "extra == 'markdown'", specifier = "==3.7" },
     { name = "markupsafe", marker = "extra == 'markup'", specifier = "==3.0.2" },
@@ -5508,7 +5422,6 @@ requires-dist = [
     { name = "metal-sdk", marker = "extra == 'metal'", specifier = "==2.5.1" },
     { name = "metaphor-python", marker = "extra == 'metaphor'", specifier = "==0.1.23" },
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0,<2.0.0" },
@@ -5522,14 +5435,11 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.46b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.25.0,<2.0.0" },
     { name = "orjson", specifier = "==3.10.15" },
-    { name = "packaging", marker = "extra == 'dev'", specifier = ">=24.1,<25.0" },
     { name = "pandas", specifier = "==2.2.3" },
-    { name = "pandas-stubs", marker = "extra == 'dev'", specifier = ">=2.1.4.231227" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
     { name = "pgvector", marker = "extra == 'pgvector'", specifier = "==0.3.6" },
     { name = "pillow", specifier = ">=11.1.0,<12.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7.0" },
     { name = "prometheus-client", specifier = ">=0.20.0,<1.0.0" },
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = "==19.0.0" },
     { name = "pydantic", specifier = "~=2.10.1" },
@@ -5539,18 +5449,6 @@ requires-dist = [
     { name = "pypdf", specifier = "~=5.1.0" },
     { name = "pypdf", marker = "extra == 'pypdf'", specifier = "~=5.1.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.2.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
-    { name = "pytest-codspeed", marker = "extra == 'dev'", specifier = ">=3.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
-    { name = "pytest-flakefinder", marker = "extra == 'dev'", specifier = ">=1.1.0" },
-    { name = "pytest-github-actions-annotate-failures", marker = "extra == 'dev'", specifier = ">=0.2.0" },
-    { name = "pytest-instafail", marker = "extra == 'dev'", specifier = ">=0.5.0" },
-    { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14.0" },
-    { name = "pytest-profiling", marker = "extra == 'dev'", specifier = ">=1.7.0" },
-    { name = "pytest-split", marker = "extra == 'dev'", specifier = ">=0.9.0" },
-    { name = "pytest-sugar", marker = "extra == 'dev'", specifier = ">=1.0.0" },
-    { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6.0" },
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
     { name = "python-docx", marker = "extra == 'docx'", specifier = ">=1.1.0" },
     { name = "python-jose", specifier = ">=3.3.0,<4.0.0" },
@@ -5560,10 +5458,7 @@ requires-dist = [
     { name = "qianfan", marker = "extra == 'qianfan'", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", marker = "extra == 'ragstack'", specifier = "==0.2.1" },
     { name = "redis", marker = "extra == 'redis'", specifier = "==5.2.1" },
-    { name = "requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
-    { name = "respx", marker = "extra == 'dev'", specifier = ">=0.21.1" },
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9.1,<0.10" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
     { name = "sentence-transformers", marker = "extra == 'sentence-transformers'", specifier = ">=2.3.1" },
     { name = "sentry-sdk", extras = ["fastapi", "loguru"], specifier = ">=2.5.1,<3.0.0" },
@@ -5574,21 +5469,10 @@ requires-dist = [
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = "==2.6.0" },
     { name = "typer", specifier = ">=0.13.0,<1.0.0" },
-    { name = "types-aiofiles", marker = "extra == 'dev'", specifier = ">=24.1.0.20240626" },
-    { name = "types-google-cloud-ndb", marker = "extra == 'dev'", specifier = ">=2.2.0.0" },
-    { name = "types-markdown", marker = "extra == 'dev'", specifier = ">=3.7.0.20240822" },
-    { name = "types-passlib", marker = "extra == 'dev'", specifier = ">=1.7.7.13" },
-    { name = "types-pillow", marker = "extra == 'dev'", specifier = ">=10.2.0.20240213" },
-    { name = "types-python-jose", marker = "extra == 'dev'", specifier = ">=3.3.4.8" },
-    { name = "types-pywin32", marker = "extra == 'dev'", specifier = ">=306.0.0.4" },
-    { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.12.8" },
-    { name = "types-redis", marker = "extra == 'dev'", specifier = ">=4.6.0.5" },
-    { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.32.0" },
     { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "validators", specifier = ">=0.34.0" },
-    { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.11" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = "==4.10.2" },
     { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
     { name = "wolframalpha", marker = "extra == 'wolframalpha'", specifier = "==5.1.3" },
