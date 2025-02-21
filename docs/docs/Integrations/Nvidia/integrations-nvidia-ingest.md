@@ -11,7 +11,7 @@ The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests fi
 
 ## Prerequisites
 
-* An NVIDIA Ingest endpoint, like `http://33.71.182.84:7670`. For more information on setting up an NVIDIA ingest endpoint, see the [NVIDIA Ingest quickstart](https://github.com/NVIDIA/nv-ingest?tab=readme-ov-file#quickstart).
+* An NVIDIA Ingest endpoint. For more information on setting up an NVIDIA ingest endpoint, see the [NVIDIA Ingest quickstart](https://github.com/NVIDIA/nv-ingest?tab=readme-ov-file#quickstart).
 
 * The **NVIDIA Ingest** component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands:
 ```bash
@@ -49,24 +49,24 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 
 ### Inputs
 
-| Name | Display Name | Info | Required/Default |
-|------|--------------|------|------------------|
-| base_url | NVIDIA Ingestion URL | The URL of the NVIDIA Ingestion API | Required |
-| path | Path | File path to process | Required |
-| extract_text | Extract Text | Extract text from documents | Default: True |
-| extract_charts | Extract Charts | Extract text from charts | Default: False |
-| extract_tables | Extract Tables | Extract text from tables | Default: True |
-| text_depth | Text Depth | Level at which text is extracted (applies before splitting). Support for 'block', 'line', 'span' varies by document type | Default: "document" |
-| split_text | Split Text | Split text into smaller chunks | Default: True |
-| split_by | Split By | How to split into chunks ('size' splits by number of characters) | Default: "word" |
-| split_length | Split Length | The size of each chunk based on the 'split_by' method | Default: 200 |
-| split_overlap | Split Overlap | Number of segments to overlap from previous chunk | Default: 20 |
-| max_character_length | Max Character Length | Maximum number of characters in each chunk | Default: 1000 |
-| sentence_window_size | Sentence Window Size | Number of sentences to include from previous and following chunk (when split_by='sentence') | Default: 0 |
+| Name | Display Name | Info |
+|------|--------------|------|
+| base_url | NVIDIA Ingestion URL | The URL of the NVIDIA Ingestion API. |
+| path | Path | File path to process. |
+| extract_text | Extract Text | Extract text from documents. Default: `True`. |
+| extract_charts | Extract Charts | Extract text from charts. Default: `False`. |
+| extract_tables | Extract Tables | Extract text from tables. Default: `True`. |
+| text_depth | Text Depth | Level at which text is extracted (applies before splitting). Support for 'block', 'line', 'span' varies by document type. Default: `document`. |
+| split_text | Split Text | Split text into smaller chunks. Default: `True`. |
+| split_by | Split By | How to split into chunks ('size' splits by number of characters). Default: `word`. |
+| split_length | Split Length | The size of each chunk based on the 'split_by' method. Default: `200`. |
+| split_overlap | Split Overlap | Number of segments to overlap from previous chunk. Default: `20`. |
+| max_character_length | Max Character Length | Maximum number of characters in each chunk. Default: `1000`. |
+| sentence_window_size | Sentence Window Size | Number of sentences to include from previous and following chunks (when `split_by=sentence`). Default: `0`. |
 
 ### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
-| data | Data | List of Data objects containing processed content. Each Data object includes: text content, file path, document type, and description |
+| data | Data | List of [Data](/concepts-objects#data-object) objects containing processed content. Each Data object includes text content, file path, document type, and description. |
 
