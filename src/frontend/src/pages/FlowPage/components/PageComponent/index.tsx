@@ -648,7 +648,7 @@ export default function Page({
           ></div>
         </div>
       ) : (
-        <div className="z-50 flex h-full w-full items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center">
           <CustomLoader remSize={30} />
         </div>
       )}
