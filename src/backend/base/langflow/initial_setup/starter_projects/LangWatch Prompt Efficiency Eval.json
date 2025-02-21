@@ -863,7 +863,7 @@
                 "placeholder": "",
                 "show": true,
                 "name": "template",
-                "value": "{text}",
+                "value": "{data}",
                 "display_name": "Template",
                 "advanced": false,
                 "input_types": [
@@ -1014,7 +1014,7 @@
                 "file_path": "",
                 "password": false,
                 "name": "code",
-                "advanced": true,
+                "advanced": true, 
                 "dynamic": true,
                 "info": "",
                 "load_from_db": false,
