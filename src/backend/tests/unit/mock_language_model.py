@@ -1,8 +1,8 @@
+from collections.abc import Callable
 from unittest.mock import MagicMock
 
 from langchain_core.language_models import BaseLanguageModel
 from pydantic import BaseModel, Field
-from typing import Callable
 from typing_extensions import override
 
 
