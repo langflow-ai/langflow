@@ -306,7 +306,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.12"
+          - "3.13"
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
@@ -314,6 +314,8 @@ jobs:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Restart HuggingFace Spaces Build
         run: |

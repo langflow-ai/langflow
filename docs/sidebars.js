@@ -100,6 +100,7 @@ module.exports = {
       type: "category",
       label: "Integrations",
       items: [
+        "Integrations/Apify/integrations-apify",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
@@ -141,14 +142,14 @@ module.exports = {
       label: "API reference",
       items: [
         {
-          type: "doc",
-          id: "API-Reference/api-reference-api-examples",
-          label: "API examples",
-        },
-        {
           type: "link",
           label: "API documentation",
           href: "/api",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-reference-api-examples",
+          label: "API examples",
         },
       ],
     },

@@ -61,10 +61,10 @@ class MessageStoreComponent(Component):
             self.memory.session_id = message.session_id
             lc_message = message.to_lc_message()
             await self.memory.aadd_messages([lc_message])
-            stored_message = await self.memory.aget_messages()
-            stored_message = [Message.from_lc_message(m) for m in stored_message]
+            stored_messages = await self.memory.aget_messages()
+            stored_messages = [Message.from_lc_message(m) for m in stored_messages]
             if message.sender:
-                stored_message = [m for m in stored_message if m.sender == message.sender]
+                stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
             await astore_message(message, flow_id=self.graph.flow_id)
             stored_messages = await aget_messages(
