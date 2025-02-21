@@ -22,7 +22,7 @@ uv run langflow run
 
 ## Use the NVIDIA Ingest component in a flow
 
-The **NVIDIA Ingest** component accepts a **Message** inputs and outputs **Data**. The component uses the NVIDIA Ingest endpoint to ingest a local file and extract the text.
+The **NVIDIA Ingest** component accepts **Message** inputs and outputs **Data**. The component uses the NVIDIA Ingest endpoint to ingest a local file and extract the text.
 
 To use the NVIDIA Ingest component in your flow, follow these steps:
 1. In the component library, click the **NVIDIA Ingest** component, and then drag it onto the canvas.
@@ -62,13 +62,13 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 | extract_text | Extract Text | Extract text from documents. Default: `True`. |
 | extract_charts | Extract Charts | Extract text from charts. Default: `False`. |
 | extract_tables | Extract Tables | Extract text from tables. Default: `True`. |
-| text_depth | Text Depth | Level at which text is extracted (applies before splitting). Support for 'block', 'line', 'span' varies by document type. Default: `document`. |
+| text_depth | Text Depth | The level at which text is extracted. Support for 'block', 'line', and 'span' varies by document type. Default: `document`. |
 | split_text | Split Text | Split text into smaller chunks. Default: `True`. |
-| split_by | Split By | How to split into chunks ('size' splits by number of characters). Default: `word`. |
+| split_by | Split By | How to split into chunks. 'size' splits by number of characters. Default: `word`. |
 | split_length | Split Length | The size of each chunk based on the 'split_by' method. Default: `200`. |
-| split_overlap | Split Overlap | Number of segments to overlap from previous chunk. Default: `20`. |
-| max_character_length | Max Character Length | Maximum number of characters in each chunk. Default: `1000`. |
-| sentence_window_size | Sentence Window Size | Number of sentences to include from previous and following chunks (when `split_by=sentence`). Default: `0`. |
+| split_overlap | Split Overlap | The number of segments to overlap from the previous chunk. Default: `20`. |
+| max_character_length | Max Character Length | The maximum number of characters in each chunk. Default: `1000`. |
+| sentence_window_size | Sentence Window Size | The number of sentences to include from previous and following chunks when `split_by=sentence`. Default: `0`. |
 
 ### Outputs
 
