@@ -5,7 +5,7 @@ slug: /integrations-nvidia-ingest
 
 The **NVIDIA Ingest** component integrates with the [NVIDIA nv-ingest](https://github.com/NVIDIA/nv-ingest) microservice for data ingestion, processing, and extraction of text files.
 
-The `nv-ingest` service supports multiple extraction methods for PDF, Docx, and pptx file types, and includes pre and post processing services like splitting, chunking, and embedding generation.
+The `nv-ingest` service supports multiple extraction methods for PDF, DOCX, and PPTX file types, and includes pre-  and post-processing services like splitting, chunking, and embedding generation.
 
 The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests files with requests to the NVIDIA ingest endpoint, and outputs the processed content as a list of [Data](/concepts-objects#data-object) objects. `Ingestor` accepts additional configuration options for data extraction from other text formats. To configure these options, see the [component parameters](/integrations-nvidia-ingest#parameters).
 
@@ -25,7 +25,7 @@ uv run langflow run
 The **NVIDIA Ingest** component accepts a **Message** inputs and outputs **Data**. The component uses the NVIDIA Ingest endpoint to ingest a local file and extract the text.
 
 To use the NVIDIA Ingest component in your flow, follow these steps:
-1. Click the **NVIDIA Ingest** component in the component library and drag it onto the canvas.
+1. In the component library, click the **NVIDIA Ingest** component, and then drag it onto the canvas.
 2. In the **NVIDIA Ingestion URL** field, enter the URL of the NVIDIA Ingest endpoint.
 Optionally, add the endpoint URL as a **Global variable**:
     1. Click **Settings**, and then click **Global Variables**.
