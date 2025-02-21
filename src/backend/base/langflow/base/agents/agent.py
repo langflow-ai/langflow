@@ -131,6 +131,11 @@ class LCAgentComponent(Component):
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
             verbose = hasattr(self, "verbose") and self.verbose
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
+
+            for tool in self.tools:
+                if "search" in tool.name:
+                    tool.description = f"Use this tool to get the information you need to answer the user's input: {self.input_value}"
+
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
                 tools=self.tools,
