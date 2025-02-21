@@ -12,7 +12,7 @@ const useColumnDefs = (
   const columnDefs: ColDef[] = useMemo(() => {
     const colDefs: ColDef[] = [
       {
-        headerName: "Field Name",
+        headerName: "Field Name ",
         field: "display_name",
         valueGetter: (params) => {
           const templateParam = params.data;
@@ -42,6 +42,11 @@ const useColumnDefs = (
         headerName: "Value",
         field: "value",
         cellRenderer: TableNodeCellRender,
+        cellStyle: {
+          display: "flex",
+          "justify-content": "flex-start",
+          "align-items": "flex-start",
+        },
         valueGetter: (params: ValueGetterParams) => {
           return {
             nodeId: nodeId,
