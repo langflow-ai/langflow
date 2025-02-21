@@ -4,6 +4,7 @@ from .twelvelabs_pegasus import TwelveLabsPegasus
 from .video_file import VideoFile
 from .twelve_labs_multi_text import TwelveLabsMultiTextInput
 from .twelve_labs_astra_upload import TwelveLabsAstraUpload
+from .twelve_labs_astra_text_video_search import TwelveLabsAstraTextVideoSearch
 
 __all__ = [
     "VideoFile",
@@ -11,5 +12,6 @@ __all__ = [
     "TwelveLabsTextEmbeddings",
     "TwelveLabsPegasus",
     "TwelveLabsMultiTextInput",
-    "TwelveLabsAstraUpload"
+    "TwelveLabsAstraUpload",
+    "TwelveLabsAstraTextVideoSearch"
 ]
