@@ -72,7 +72,26 @@ For more information, see the [NV-Ingest documentation](https://nvidia.github.io
 
 ### Outputs
 
-| Name | Type | Description |
-|------|------|-------------|
-| data | Data | List of [Data](/concepts-objects#data-object) objects containing processed content. Each Data object includes text content, file path, document type, and description. |
+The **NVIDIA Ingest** component outputs a list of [Data](/concepts-objects#data-object) objects where each object contains:
+- `text`: The extracted content.
+  - For text documents: The extracted text content.
+  - For tables and charts: The extracted table/chart content.
+- `file_path`: The source file name and path.
+- `document_type`: The type of the document ("text" or "structured").
+- `description`: Additional description of the content.
 
+The output varies based on the `document_type`:
+
+- Documents with `document_type: "text"` contain:
+  - Raw text content extracted from documents, for example, paragraphs from PDFs or DOCX files.
+  - Content stored directly in the `text` field.
+  - Content extracted using the `extract_text` parameter.
+
+- Documents with `document_type: "structured"` contain:
+  - Text extracted from tables and charts and processed to preserve structural information.
+  - Content extracted using the `extract_tables` and `extract_charts` parameters.
+  - Content stored in the `text` field after being processed from the `table_content` metadata.
+
+:::note
+Images are currently not supported and will be skipped during processing.
+:::
