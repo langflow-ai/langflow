@@ -11,7 +11,7 @@ The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests fi
 
 ## Prerequisites
 
-* An NVIDIA Ingest endpoint. For more information on setting up an NVIDIA ingest endpoint, see the [NVIDIA Ingest quickstart](https://github.com/NVIDIA/nv-ingest?tab=readme-ov-file#quickstart).
+* An NVIDIA Ingest endpoint. For more information on setting up an NVIDIA Ingest endpoint, see the [NVIDIA Ingest quickstart](https://github.com/NVIDIA/nv-ingest?tab=readme-ov-file#quickstart).
 
 * The **NVIDIA Ingest** component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands:
 ```bash
@@ -22,11 +22,17 @@ uv run langflow run
 
 ## Use the NVIDIA Ingest component in a flow
 
-The **NVIDIA Ingest** component accepts a **Message** inputs and outputs **Data**. The component uses the NVIDIA ingest endpoint to ingest a local file and extract the text.
+The **NVIDIA Ingest** component accepts a **Message** inputs and outputs **Data**. The component uses the NVIDIA Ingest endpoint to ingest a local file and extract the text.
 
 To use the NVIDIA Ingest component in your flow, follow these steps:
 1. Click the **NVIDIA Ingest** component in the component library and drag it onto the canvas.
-2. In the **NVIDIA Ingest endpoint** field, enter the URL of the NVIDIA ingest endpoint.
+2. In the **NVIDIA Ingestion URL** field, enter the URL of the NVIDIA Ingest endpoint.
+Optionally, add the endpoint URL as a **Global variable**:
+    1. Click **Settings**, and then click **Global Variables**.
+    2. Click **Add New**.
+    3. Name your variable. Paste your endpoint in the **Value** field.
+    4. In the **Apply To Fields** field, select the field you want to globally apply this variable to. In this case, select **NVIDIA Ingestion URL**.
+    5. Click **Save Variable**.
 3. In the **Path** field, enter the path to the file you want to ingest.
 4. Select which text type to extract from the file.
 The component supports text, charts, and tables.
