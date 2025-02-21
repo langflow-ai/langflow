@@ -1,19 +1,18 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/utils/utils";
 
 const SkeletonGroup = ({
   count = 2,
-  containerClassName = "flex flex-col gap-3 px-4 pt-4",
+  className = "",
 }: {
   count?: number;
-  containerClassName?: string;
+  className?: string;
 }) => {
   return (
-    <div className={containerClassName}>
-      {Array(count)
-        .fill(null)
-        .map((_, i) => (
-          <Skeleton key={i} className="my-0.5 h-7 w-full" />
-        ))}
+    <div>
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} className={cn("w-full", className)} />
+      ))}
     </div>
   );
 };

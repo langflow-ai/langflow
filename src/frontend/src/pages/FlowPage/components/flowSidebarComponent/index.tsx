@@ -327,15 +327,13 @@ export function FlowSidebarComponent({ isLoading }: { isLoading?: boolean }) {
       <SidebarContent>
         {isLoading ? (
           <div className="flex flex-col gap-2">
-            <SkeletonGroup
-              count={13}
-              containerClassName="flex flex-col gap-1 p-3"
-            />
+            <div className="flex flex-col gap-1 p-3">
+              <SkeletonGroup count={13} className="my-0.5 h-7" />
+            </div>
             <div className="h-[32px]" />
-            <SkeletonGroup
-              count={21}
-              containerClassName="flex flex-col gap-1 p-3"
-            />
+            <div className="flex flex-col gap-1 p-3">
+              <SkeletonGroup count={21} className="my-0.5 h-7" />
+            </div>
           </div>
         ) : (
           <>
