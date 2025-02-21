@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
@@ -31,7 +32,7 @@ class LangWatchTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
 
         try:
-            self._ready = self.setup_langwatch()
+            self._ready: bool = self.setup_langwatch() if "LANGWATCH_API_KEY" in os.environ else False
             if not self._ready:
                 return
 
