@@ -47,9 +47,9 @@ Modify the splitting parameters in the component's **Configuration** tab.
 10. Run the flow.
 Inspect your Astra DB vector database to view the processed data.
 
-## NVIDIA ingest component parameters {#parameters}
+## NVIDIA Ingest component parameters {#parameters}
 
-The NVIDIA ingest component has the following parameters.
+The **NVIDIA Ingest** component has the following parameters.
 
 For more information, see the [NV-Ingest documentation](https://nvidia.github.io/nv-ingest/user-guide/).
 
