@@ -30,7 +30,7 @@ The component accepts the following input types:
 |input_value|Text|The Message to be passed as input. Accepts text, data objects, messages, and dataframes.|
 |should_store_message|Store Messages|Store the message in the history.|
 |sender|Sender Type|The type of sender.|
-|sender_name|Sender Name|The nName of the sender.|
+|sender_name|Sender Name|The name of the sender.|
 |session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|
 |files|Files|The files to be sent with the message.|
 |background_color|Background Color|The background color of the icon.|
