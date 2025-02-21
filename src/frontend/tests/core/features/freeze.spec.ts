@@ -119,7 +119,7 @@ test(
     await urlOutput.hover();
     await page.mouse.down();
     const splitTextInputData = await page.getByTestId(
-      "handle-splittext-shownode-data inputs-left",
+      "handle-splittext-shownode-input documents-left",
     );
     await splitTextInputData.hover();
     await page.mouse.up();
@@ -189,15 +189,11 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const firstRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
       .textContent();
 
     await page.getByText("Close").last().click();
-
-    await page.getByTestId("btn-close-modal").click();
 
     await page.getByTestId("textarea_str_input_value").first().fill(",");
 
@@ -221,13 +217,10 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const secondRunWithoutFreezing = await page
       .getByPlaceholder("Empty")
       .textContent();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.getByText("Split Text", { exact: true }).last().click();
@@ -277,11 +270,8 @@ test(
       .first()
       .click();
 
-    await page.getByRole("gridcell").nth(4).click();
-
     const firstTextFreezed = await page.getByPlaceholder("Empty").textContent();
 
-    await page.getByText("Close").last().click();
     await page.getByText("Close").last().click();
 
     await page.getByText("Split Text", { exact: true }).click();
@@ -321,8 +311,6 @@ test(
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
-
-    await page.getByRole("gridcell").nth(4).click();
 
     const thirdTextWithoutFreezing = await page
       .getByPlaceholder("Empty")

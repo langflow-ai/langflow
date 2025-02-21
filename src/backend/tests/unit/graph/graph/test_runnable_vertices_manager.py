@@ -90,8 +90,9 @@ def test_is_vertex_runnable(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "A"
     is_active = True
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -100,8 +101,9 @@ def test_is_vertex_runnable__wrong_is_active(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "A"
     is_active = False
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -110,8 +112,9 @@ def test_is_vertex_runnable__wrong_vertices_to_run(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "D"
     is_active = True
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -120,8 +123,9 @@ def test_is_vertex_runnable__wrong_run_predecessors(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "C"
     is_active = True
+    is_loop = False
 
-    result = manager.is_vertex_runnable(vertex_id, is_active=is_active)
+    result = manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     assert result is False
 
@@ -129,8 +133,9 @@ def test_is_vertex_runnable__wrong_run_predecessors(data):
 def test_are_all_predecessors_fulfilled(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "A"
+    is_loop = False
 
-    result = manager.are_all_predecessors_fulfilled(vertex_id)
+    result = manager.are_all_predecessors_fulfilled(vertex_id, is_loop=is_loop)
 
     assert result is True
 
@@ -138,8 +143,9 @@ def test_are_all_predecessors_fulfilled(data):
 def test_are_all_predecessors_fulfilled__wrong(data):
     manager = RunnableVerticesManager.from_dict(data)
     vertex_id = "D"
+    is_loop = False
 
-    result = manager.are_all_predecessors_fulfilled(vertex_id)
+    result = manager.are_all_predecessors_fulfilled(vertex_id, is_loop=is_loop)
 
     assert result is False
 
