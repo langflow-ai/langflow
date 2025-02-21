@@ -302,8 +302,6 @@ jobs:
             file: ${{ matrix.dockerfile }}
             tags: ${{ matrix.tags }}
             provenance: false
-          attempt_limit: 3
-          attempt_delay: 5000
 
   restart-space:
     name: Restart HuggingFace Spaces
