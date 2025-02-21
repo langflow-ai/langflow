@@ -1580,7 +1580,7 @@
         "data": {
           "id": "note-d88zH",
           "node": {
-            "description": "# 🚀 ScrapeGraphAI Template 🔍  \n\nThis is the **official template** for using the **Search Point** endpoint from ScrapeGraphAI (https://scrapegraphai.com).  \n\n## 📜 Instructions  \n\n✅ **Step 1:** Get your API key from ScrapeGraphAI Dashboard: [https://dashboard.scrapegraphai.com](https://dashboard.scrapegraphai.com) 🔑  \n\n✅ **Step 2:** Add your **ScrapeGraphAI API key** 🛠️  \n\n✅ **Step 3:** Add your **OpenAI API key** to the agent 🤖  \n\nNow you're all set to power up your search agent with **ScrapeGraphAI**! 🚀✨",
+            "description": "## 🚀 ScrapeGraphAI Template 🔍\n\nThis template connects the **Search Point** endpoint from [ScrapeGraphAI](https://scrapegraphai.com) to an **Agent** component.\n\n## Prerequisites\n\n* [OpenAI API key](https://platform.openai.com/docs/overview)\n* [ScrapeGraphAI API key](https://dashboard.scrapegraphai.com)\n\n## Quickstart\n\n1. Add your **ScrapeGraphAI API key**  to the **ScrapeGraphSearchApi** component.\n\n2. Add your **OpenAI API key** to the **Agent** component.\n\n3. Open the **Playground** and ask your Agent a question. The Agent uses ScrapeGraph as a tool to answer you.",
             "display_name": "",
             "documentation": "",
             "template": {}
