@@ -17,7 +17,7 @@ class BaseTracer(ABC):
     trace_id: UUID
 
     @abstractmethod
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, user_id: str = None, session_id: str = None):
         raise NotImplementedError
 
     @property

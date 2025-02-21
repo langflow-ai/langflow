@@ -157,6 +157,8 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
         flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
         kwargs["flow_name"] = flow_name
     str_flow_id = str(flow_id)
+    session_id = kwargs.get("session_id") or str_flow_id
+    
     graph = Graph.from_payload(payload, str_flow_id, **kwargs)
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
@@ -164,23 +166,25 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg)
         if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": str_flow_id}, overwrite=True)
+            vertex.update_raw_params({"session_id": session_id}, overwrite=True)
 
+    graph.session_id = session_id
     await graph.initialize_run()
     return graph
 
 
-async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession):
+async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession, **kwargs):
     """Build and cache the graph."""
     flow: Flow | None = await session.get(Flow, flow_id)
     if not flow or not flow.data:
         msg = "Invalid flow ID"
         raise ValueError(msg)
-    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
+    user_id = kwargs.get("user_id") or str(flow.user_id)
+    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=user_id, **kwargs)
 
 
-async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService):
-    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session)
+async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService, **kwargs):
+    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session, **kwargs)
     await chat_service.set_cache(str(flow_id), graph)
     return graph
 

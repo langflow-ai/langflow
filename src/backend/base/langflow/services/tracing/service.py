@@ -155,6 +155,8 @@ class TracingService(Service):
             trace_type="chain",
             project_name=self.project_name,
             trace_id=self.run_id,
+            user_id=self.user_id,
+            session_id=self.session_id,
         )
 
     def _initialize_arize_phoenix_tracer(self) -> None:
