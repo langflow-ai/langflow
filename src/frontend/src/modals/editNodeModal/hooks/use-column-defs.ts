@@ -12,7 +12,7 @@ const useColumnDefs = (
   const columnDefs: ColDef[] = useMemo(() => {
     const colDefs: ColDef[] = [
       {
-        headerName: "Field Name ",
+        headerName: "Field Name",
         field: "display_name",
         valueGetter: (params) => {
           const templateParam = params.data;
