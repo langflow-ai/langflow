@@ -9,11 +9,11 @@ const SkeletonGroup = ({
   className?: string;
 }) => {
   return (
-    <div>
+    <>
       {Array.from({ length: count }, (_, i) => (
         <Skeleton key={i} className={cn("w-full", className)} />
       ))}
-    </div>
+    </>
   );
 };
 
