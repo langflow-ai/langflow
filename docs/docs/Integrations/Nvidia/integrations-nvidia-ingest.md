@@ -22,7 +22,7 @@ uv run langflow run
 
 ## Use the NVIDIA Ingest component in a flow
 
-The **NVIDIA Ingest** component accepts **Message** inputs and outputs **Data**. The component uses the NVIDIA Ingest endpoint to ingest a local file and extract the text.
+The **NVIDIA Ingest** component accepts **Message** inputs and outputs **Data**. The component calls a NVIDIA Ingest microservice's endpoint to ingest a local file and extract the text.
 
 To use the NVIDIA Ingest component in your flow, follow these steps:
 1. In the component library, click the **NVIDIA Ingest** component, and then drag it onto the canvas.
@@ -40,7 +40,7 @@ The component supports text, charts, and tables.
 Modify the splitting parameters in the component's **Configuration** tab.
 7. Click **Run** to ingest the file.
 8. To confirm the component is ingesting the file, open the **Logs** pane to view the output of the flow.
-9. To store the processed data in a vector database, add a **AstraDB Vector** component to your flow, and connect the **NVIDIA Ingest** component to the **AstraDB Vector** component with a **Data** output.
+9. To store the processed data in a vector database, add an **AstraDB Vector** component to your flow, and connect the **NVIDIA Ingest** component to the **AstraDB Vector** component with a **Data** output.
 
 ![NVIDIA Ingest component flow](nvidia-component-ingest-astra.png)
 
