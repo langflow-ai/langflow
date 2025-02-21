@@ -17,25 +17,25 @@ The Chat Input component creates a [Message](/concepts-objects) object that incl
 
 The component accepts the following input types:
 
-* Text (strings)
-* Data objects
-* DataFrame objects
-* Message objects
-* Lists
+* Text strings
+* [Data](/concepts-objects#data-object)
+* [DataFrame](/concepts-objects#dataframe-object)
+* [Message](/concepts-objects#message-object)
+* Lists of any of the above data types
 
 ### Inputs
 
-| Name | Display Name | Info | Type |
-|------|--------------|------|------|
-|input_value|Text|Message to be passed as input. Accepts text, data objects, messages, and dataframes.|MultilineInput|
-|should_store_message|Store Messages|Store the message in the history.|BoolInput|
-|sender|Sender Type|Type of sender.|DropdownInput|
-|sender_name|Sender Name|Name of the sender.|MessageTextInput|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|MessageTextInput|
-|files|Files|Files to be sent with the message.|FileInput|
-|background_color|Background Color|The background color of the icon.|MessageTextInput|
-|chat_icon|Icon|The icon of the message.|MessageTextInput|
-|text_color|Text Color|The text color of the name|MessageTextInput|
+| Name | Display Name | Info |
+|------|--------------|------|
+|input_value|Text|The Message to be passed as input. Accepts text, data objects, messages, and dataframes.|
+|should_store_message|Store Messages|Store the message in the history.|
+|sender|Sender Type|The type of sender.|
+|sender_name|Sender Name|The nName of the sender.|
+|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|
+|files|Files|The files to be sent with the message.|
+|background_color|Background Color|The background color of the icon.|
+|chat_icon|Icon|The icon of the message.|
+|text_color|Text Color|The text color of the name.|
 
 ### Outputs
 
@@ -51,9 +51,9 @@ The Text Input component offers one input field for text, while the Chat Input h
 
 ### Inputs
 
-| Name | Display Name | Info | Type |
-|------|--------------|------|------|
-|input_value|Text|Text to be passed as input.|MultilineInput|
+| Name | Display Name | Info |
+|------|--------------|------|
+|input_value|Text|The text to be passed as input.|
 
 ### Outputs
 
@@ -68,23 +68,24 @@ The Chat Output component creates a [Message](/concepts-objects) object that inc
 It can optionally store the message in a chat history and supports customization of the message appearance, including background color, icon, and text color.
 
 The component accepts the following input types.
-* Data objects
-* DataFrame objects
-* Message objects
+* [Data](/concepts-objects#data-object)
+* [DataFrame](/concepts-objects#dataframe-object)
+* [Message](/concepts-objects#message-object)
 
 ### Inputs
 
-| Name | Display Name | Info | Type |
-|------|--------------|------|------|
-|input_value|Text|Message to be passed as output.|MessageInput|
-|should_store_message|Store Messages|Store the message in the history.|BoolInput|
-|sender|Sender Type|Type of sender.|DropdownInput|
-|sender_name|Sender Name|Name of the sender.|MessageTextInput|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|MessageTextInput|
-|data_template|Data Template|Template to convert data to text. If left empty, it will be dynamically set to the data's text key.|MessageTextInput|
-|background_color|Background Color|The background color of the icon.|MessageTextInput|
-|chat_icon|Icon|The icon of the message.|MessageTextInput|
-|text_color|Text Color|The text color of the name|MessageTextInput|
+| Name | Display Name | Info |
+|------|--------------|------|
+|input_value|Text|The message to be passed as output.|
+|should_store_message|Store Messages|The flag to store the message in the history.|
+|sender|Sender Type|The type of sender.|
+|sender_name|Sender Name|The name of the sender.|
+|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|
+|data_template|Data Template|The template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.|
+|background_color|Background Color|The background color of the icon.|
+|chat_icon|Icon|The icon of the message.|
+|text_color|Text Color|The text color of the name.|
+|clean_data|Basic Clean Data|When enabled, `DataFrame` inputs are cleaned when converted to text. Cleaning removes empty rows, empty lines in cells, and multiple newlines.|
 
 ### Outputs
 
@@ -101,9 +102,9 @@ The component is simpler compared to the Chat Output but focuses solely on displ
 
 ### Inputs
 
-| Name | Display Name | Info | Type |
-|------|--------------|------|------|
-|input_value|Text|Text to be passed as output.|MultilineInput|
+| Name | Display Name | Info |
+|------|--------------|------|
+|input_value|Text|The text to be passed as output.|
 
 ### Outputs
 
