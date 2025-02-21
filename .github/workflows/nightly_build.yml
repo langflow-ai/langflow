@@ -8,7 +8,7 @@ on:
 
 env:
   POETRY_VERSION: "1.8.3"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   create-nightly-tag:
@@ -31,7 +31,7 @@ jobs:
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       - name: Generate main nightly tag
         id: generate_main_tag
@@ -139,7 +139,7 @@ jobs:
     needs: create-nightly-tag
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: '["3.10", "3.11", "3.12"]'
+      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
 
   # Not making nightly builds dependent on integration test success
   # due to inherent flakiness of 3rd party integrations
@@ -149,7 +149,7 @@ jobs:
   #   needs: create-nightly-tag
   #   uses: ./.github/workflows/integration_tests.yml
   #   with:
-  #     python-versions: '["3.10", "3.11", "3.12"]'
+  #     python-versions: '["3.10", "3.11", "3.12", "3.13"]'
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
