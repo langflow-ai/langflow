@@ -65,6 +65,7 @@ class TracingService(Service):
         self.worker_task: asyncio.Task | None = None
         self.end_trace_tasks: set[asyncio.Task] = set()
         self.deactivated = self.settings_service.settings.deactivate_tracing
+        self.user_id: str | None = None
         self.session_id: str | None = None
 
     async def log_worker(self) -> None:
@@ -172,6 +173,13 @@ class TracingService(Service):
 
     def set_run_id(self, run_id: UUID) -> None:
         self.run_id = run_id
+    
+    def set_session_id(self, session_id: str) -> None:
+        """Set the session ID for tracing."""
+        self.session_id = session_id
+
+    def set_user_id(self, user_id: str) -> None:
+        self.user_id = user_id
 
     def _start_traces(
         self,
@@ -288,7 +296,3 @@ class TracingService(Service):
             if langchain_callback:
                 callbacks.append(langchain_callback)
         return callbacks
-
-    def set_session_id(self, session_id: str) -> None:
-        """Set the session ID for tracing."""
-        self.session_id = session_id
