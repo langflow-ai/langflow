@@ -70,7 +70,9 @@ The **Astra DB Vector Store** component offers two methods for generating embedd
 
 2. **Astra Vectorize**: Use Astra DB's built-in embedding generation service. When creating a new collection, choose the embeddings provider and models, including NVIDIA's `NV-Embed-QA` model hosted by Datastax.
 
+:::important
 The embedding model selection is made when creating a new collection and cannot be changed later.
+:::
 
 For an example of using the **Astra DB Vector Store** component with an embedding model, see the [Vector Store RAG starter project](/starter-projects-vector-store-rag).
 
