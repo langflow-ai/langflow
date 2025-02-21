@@ -6,8 +6,8 @@ from loguru import logger
 from markdown import markdown
 
 from langflow.custom import Component
-from langflow.inputs import MessageTextInput, MultilineInput, SecretStrInput
-from langflow.schema import Data
+from langflow.inputs import DropdownInput, MultilineInput, SecretStrInput
+from langflow.schema import Data, dotdict
 from langflow.template import Output
 
 MIN_ROWS_IN_TABLE = 3
@@ -17,7 +17,7 @@ class AddContentToPage(Component):
     """A component that adds content to a Notion page by converting markdown to Notion blocks."""
 
     display_name: str = "Add Content to Page"
-    description: str = "Convert markdown text to Notion blocks and append them to a Notion page."
+    description: str = "Convert markdown text to Notion blocks and append them after the selected block."
     documentation: str = "https://developers.notion.com/reference/patch-block-children"
     icon: str = "NotionDirectoryLoader"
 
@@ -28,16 +28,29 @@ class AddContentToPage(Component):
             info="The markdown text to convert to Notion blocks.",
             tool_mode=True,
         ),
-        MessageTextInput(
-            name="block_id",
-            display_name="Page/Block ID",
-            info="The ID of the page/block to add the content.",
-            tool_mode=True,
-        ),
         SecretStrInput(
             name="notion_secret",
             display_name="Notion Secret",
             info="The Notion integration token.",
+            required=True,
+            real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="page_id",
+            display_name="Page",
+            info="Select a page to add content to",
+            options=["Loading pages..."],
+            value="Loading pages...",
+            real_time_refresh=True,
+            required=True,
+        ),
+        DropdownInput(
+            name="block_id",
+            display_name="Insert After Block",
+            info="Content will be added after this block",
+            options=["Top of Page"],
+            value="Top of Page",
+            real_time_refresh=True,
             required=True,
         ),
     ]
@@ -46,14 +59,166 @@ class AddContentToPage(Component):
         Output(name="data", display_name="Response Data", method="add_content_to_page"),
     ]
 
+    def fetch_pages(self) -> list[dict[str, Any]]:
+        """Fetch available pages from the Notion API."""
+        headers = {
+            "Authorization": f"Bearer {self.notion_secret}",
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-06-28",
+        }
+        try:
+            response = requests.post(
+                "https://api.notion.com/v1/search",
+                headers=headers,
+                json={"filter": {"value": "page", "property": "object"}},
+                timeout=10,
+            )
+            response.raise_for_status()
+
+            pages = []
+            for page in response.json().get("results", []):
+                title = "Untitled Page"
+                url = page.get("url", "")
+                if "properties" in page:
+                    title_prop = page["properties"].get("title", page["properties"].get("Name", {}))
+                    if title_prop and "title" in title_prop:
+                        title_parts = title_prop.get("title", [])
+                        if title_parts:
+                            title = "".join(part.get("plain_text", "") for part in title_parts)
+                pages.append({"id": page["id"], "title": title or "Untitled Page", "url": url})
+
+            return sorted(pages, key=lambda x: x["title"].lower())
+        except requests.exceptions.RequestException as e:
+            self.log(f"Error fetching pages: {e}")
+            return []
+
+    def fetch_blocks(self, page_id: str) -> list[dict[str, Any]]:
+        """Fetch blocks from a specific page."""
+        if not page_id:
+            return []
+
+        headers = {
+            "Authorization": f"Bearer {self.notion_secret}",
+            "Notion-Version": "2022-06-28",
+        }
+
+        blocks = []
+        has_more = True
+        cursor = None
+
+        try:
+            while has_more:
+                url = f"https://api.notion.com/v1/blocks/{page_id}/children"
+                params = {"page_size": 100}
+                if cursor:
+                    params["start_cursor"] = cursor
+
+                response = requests.get(url, headers=headers, params=params, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+
+                for block in data.get("results", []):
+                    block_content = self.get_block_content(block)
+                    if block_content:  # Only add blocks with content
+                        blocks.append(
+                            {"id": block["id"], "type": block.get("type", "unknown"), "content": block_content}
+                        )
+
+                has_more = data.get("has_more", False)
+                cursor = data.get("next_cursor")
+        except requests.exceptions.RequestException as e:
+            self.log(f"Error fetching blocks: {e}")
+            return []
+        else:
+            return blocks
+
+    def get_block_content(self, block: dict) -> str:
+        """Extract readable content from a block."""
+        block_type = block.get("type", "")
+        block_data = block.get(block_type, {})
+
+        if "rich_text" in block_data:
+            return " ".join(text.get("plain_text", "") for text in block_data["rich_text"])
+        if block_type == "child_page":
+            return block_data.get("title", "")
+        if "title" in block_data:
+            return " ".join(text.get("plain_text", "") for text in block_data["title"])
+
+        return ""
+
+    def update_build_config(self, build_config: dotdict, field_value: str, field_name: str | None = None) -> dotdict:
+        """Update the component build configuration."""
+        try:
+            # Update pages when notion_secret changes or component initializes
+            if field_name is None or field_name == "notion_secret":
+                pages = self.fetch_pages()
+                options = [page["title"] for page in pages]
+                build_config["page_id"]["options"] = options
+                if options:
+                    build_config["page_id"]["value"] = options[0]
+                tooltips = {page["title"]: page["id"] for page in pages}
+                build_config["page_id"]["tooltips"] = tooltips
+
+                # Reset block selection
+                build_config["block_id"]["options"] = ["Top of Page"]
+                build_config["block_id"]["value"] = "Top of Page"
+                build_config["block_id"]["tooltips"] = {}
+
+            # Update blocks when page_id changes
+            elif field_name == "page_id" and field_value != "Loading pages...":
+                pages = self.fetch_pages()
+                title_to_id = {page["title"]: page["id"] for page in pages}
+                page_id = title_to_id.get(field_value)
+
+                if page_id:
+                    blocks = self.fetch_blocks(page_id)
+                    options = [f"{b['type']}: {b['content'][:50]}..." for b in blocks]
+                    tooltips = {opt: block["id"] for opt, block in zip(options, blocks, strict=False)}
+
+                    build_config["block_id"]["options"] = ["Top of Page", *options]
+                    build_config["block_id"]["value"] = "Top of Page"
+                    build_config["block_id"]["tooltips"] = tooltips
+
+        except KeyError as e:
+            self.log(f"Error updating build config: {e}")
+        return build_config
+
+    def get_target_info(self) -> tuple[str, str, str]:
+        """Get the page ID, target block ID, and page URL."""
+        if not self.page_id or self.page_id == "Loading pages...":
+            return "", "", ""
+
+        pages = self.fetch_pages()
+        title_to_info = {page["title"]: (page["id"], page["url"]) for page in pages}
+        page_id, page_url = title_to_info.get(self.page_id, ("", ""))
+
+        # If Top of Page is selected, return page_id as target
+        if self.block_id == "Top of Page":
+            return page_id, "", page_url
+
+        # Otherwise, find the selected block's ID
+        blocks = self.fetch_blocks(page_id)
+        for block in blocks:
+            block_desc = f"{block['type']}: {block['content'][:50]}..."
+            if block_desc == self.block_id:
+                return page_id, block["id"], page_url
+
+        return page_id, "", page_url
+
     def add_content_to_page(self) -> Data:
-        """Convert markdown text to Notion blocks and append them to a Notion page."""
+        """Convert markdown text to Notion blocks and append them after the selected block."""
+        page_id, after_id, page_url = self.get_target_info()
+        if not page_id:
+            return Data(data={"error": "Please select a valid page"})
+
         try:
             html_text = markdown(self.markdown_text)
             soup = BeautifulSoup(html_text, "html.parser")
             blocks = self.process_node(soup)
 
-            url = f"https://api.notion.com/v1/blocks/{self.block_id}/children"
+            # If after_id is provided, add content after that block
+            # Otherwise, add to the top of the page
+            url = f"https://api.notion.com/v1/blocks/{page_id}/children"
             headers = {
                 "Authorization": f"Bearer {self.notion_secret}",
                 "Content-Type": "application/json",
@@ -64,20 +229,30 @@ class AddContentToPage(Component):
                 "children": blocks,
             }
 
+            if after_id:
+                data["after"] = after_id
+
             response = requests.patch(url, headers=headers, json=data, timeout=10)
             response.raise_for_status()
 
-            return Data(data=response.json())
+            response_data = response.json()
+            response_data["page_url"] = page_url
+            response_data["page_id"] = page_id
+            if after_id:
+                response_data["after_block"] = after_id
+
+            return Data(data=response_data)
         except requests.exceptions.RequestException as e:
-            error_message = f"Error: Failed to add content to Notion page. {e}"
+            error_message = f"Error: Failed to add content to Notion. {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
             return Data(data={"error": error_message})
         except Exception as e:  # noqa: BLE001
-            logger.opt(exception=True).debug("Error adding content to Notion page")
-            return Data(data={"error": f"An unexpected error occurred while adding content to Notion page. {e}"})
+            logger.opt(exception=True).debug("Error adding content to Notion")
+            return Data(data={"error": f"An unexpected error occurred while adding content. {e}"})
 
     def process_node(self, node):
+        """Process a BeautifulSoup node and convert it to Notion blocks."""
         blocks = []
         if isinstance(node, str):
             text = node.strip()
@@ -128,21 +303,25 @@ class AddContentToPage(Component):
         return blocks
 
     def extract_language_and_code(self, code_text):
+        """Extract language and code from a code block."""
         lines = code_text.split("\n")
         language = lines[0].strip()
         code = "\n".join(lines[1:]).strip()
         return language, code
 
     def is_code_block(self, text):
+        """Check if text is a code block."""
         return text.startswith("```")
 
     def extract_code_block(self, text):
+        """Extract language and code from a markdown code block."""
         lines = text.split("\n")
         language = lines[0].strip("`").strip()
         code = "\n".join(lines[1:]).strip("`").strip()
         return language, code
 
     def is_table(self, text):
+        """Check if text represents a markdown table."""
         rows = text.split("\n")
         if len(rows) < MIN_ROWS_IN_TABLE:
             return False
@@ -160,8 +339,9 @@ class AddContentToPage(Component):
         return has_separator
 
     def process_list(self, node, list_type):
+        """Process list nodes and convert them to Notion list blocks."""
         blocks = []
-        for item in node.find_all("li"):
+        for item in node.find_all("li", recursive=False):  # Only direct children
             item_text = item.get_text(strip=True)
             checked = item_text.startswith("[x]")
             is_checklist = item_text.startswith("[ ]") or checked
@@ -171,12 +351,30 @@ class AddContentToPage(Component):
                 blocks.append(self.create_block("to_do", item_text, checked=checked))
             else:
                 blocks.append(self.create_block(list_type, item_text))
+
+            # Process nested lists if any
+            nested_ul = item.find("ul")
+            if nested_ul:
+                blocks.extend(self.process_list(nested_ul, "bulleted_list_item"))
+            nested_ol = item.find("ol")
+            if nested_ol:
+                blocks.extend(self.process_list(nested_ol, "numbered_list_item"))
+
         return blocks
 
     def process_table(self, node):
+        """Process table nodes and convert them to Notion table blocks."""
         blocks = []
+        # Find header and body rows
         header_row = node.find("thead").find("tr") if node.find("thead") else None
         body_rows = node.find("tbody").find_all("tr") if node.find("tbody") else []
+
+        # If no tbody, try getting rows directly
+        if not body_rows and not header_row:
+            all_rows = node.find_all("tr")
+            if len(all_rows) > 1:  # First row as header if multiple rows
+                header_row = all_rows[0]
+                body_rows = all_rows[1:]
 
         if header_row or body_rows:
             table_width = max(
@@ -200,6 +398,7 @@ class AddContentToPage(Component):
         return blocks
 
     def create_block(self, block_type: str, content: str, **kwargs) -> dict[str, Any]:
+        """Create a Notion block with the specified type and content."""
         block: dict[str, Any] = {
             "object": "block",
             "type": block_type,
