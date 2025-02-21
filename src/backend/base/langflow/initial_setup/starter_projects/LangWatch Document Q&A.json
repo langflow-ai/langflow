@@ -2950,8 +2950,8 @@
       "zoom": 0.8424533278728016
     }
   },
-  "description": "Integrates PDF reading with a language model to provide accurate answers while ensuring quality and safety. Uses LangWatch evaluators for Answer Relevancy, Context Recall, PII Detection, and Content Safety, making it ideal for legal, technical, and research documents.",
-  "name": "LangWatch Document Q&A (1)",
+  "description": "Integrates PDF reading with a language model for accurate and high-quality answers, leveraging LangWatch's Answer Relevancy evaluation—ideal for legal, technical, and research documents",
+  "name": "LangWatch Document Q&A",
   "last_tested_version": "1.1.5",
   "endpoint_name": null,
   "is_component": false,
