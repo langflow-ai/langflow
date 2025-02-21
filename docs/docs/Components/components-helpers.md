@@ -139,6 +139,24 @@ It provides flexibility in managing message storage and retrieval within a chat 
 
 This component transforms LLM responses into structured data formats.
 
+In this example from the **Financial Support Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
+
+![Structured output example](/img/component-structured-output.png)
+
+The connected LLM model is prompted by the **Structured Output** component's `system_prompt` parameter to extract structured output from the unstructured text.
+
+In the **Structured Output** component, click the **Open table** button to view the `output_schema` table.
+The `output_schema` parameter defines the structure and data types for the model's output using a table with the following fields:
+
+* **Name**: The name of the output field.
+* **Description**: The purpose of the output field.
+* **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
+* **Multiple**: Set to `True` if you expect multiple values for a single field. For example, a `list` of `features` is set to `true` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
+
+The **Parse DataFrame** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
+
+For example, the template `EBITIDA: {EBITIDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}` presents the extracted values in the **Playground** as `EBITIDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion`.
+
 ### Inputs
 
 | Name | Display Name | Info |
@@ -146,8 +164,8 @@ This component transforms LLM responses into structured data formats.
 | llm | Language Model | The language model to use to generate the structured output. |
 | input_value | Input Message | The input message to the language model. |
 | system_prompt | Format Instructions | Instructions to the language model for formatting the output. |
-| schema_name | Schema Name | Provide a name for the output data schema. |
-| output_schema | Output Schema | Define the structure and data types for the model's output using a table with fields for name, description, type, and multiple values. |
+| schema_name | Schema Name | The name for the output data schema. |
+| output_schema | Output Schema | Defines the structure and data types for the model's output.|
 | multiple | Generate Multiple | [Deprecated] Always set to `True`. |
 
 ### Outputs
