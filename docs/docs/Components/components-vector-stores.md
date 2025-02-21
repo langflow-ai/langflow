@@ -37,23 +37,23 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| token | Astra DB Application Token | Authentication token for accessing Astra DB (required). |
+| token | Astra DB Application Token | The authentication token for accessing Astra DB (required). |
 | environment | Environment | The environment for the Astra DB API Endpoint. For example, `dev` or `prod`. |
 | database_name | Database | The database name for the Astra DB instance (required). |
-| api_endpoint | Astra DB API Endpoint | The API endpoint for the Astra DB instance. Supercedes database selection. |
+| api_endpoint | Astra DB API Endpoint | The API endpoint for the Astra DB instance. This supersedes the database selection. |
 | collection_name | Collection | The name of the collection within Astra DB where the vectors are stored (required). |
-| keyspace | Keyspace | Optional keyspace within Astra DB to use for the collection. |
-| embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra Vectorize. |
-| embedding_model | Embedding Model | Specify the embedding model. Not required for Astra Vectorize collections. |
+| keyspace | Keyspace | An optional keyspace within Astra DB to use for the collection. |
+| embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra vectorize. |
+| embedding_model | Embedding Model | Specify the embedding model. Not required for Astra vectorize collections. |
 | number_of_results | Number of Search Results | Number of search results to return (default: `4`). |
-| search_type | Search Type | Search type to use (options: `Similarity`, `Similarity with score threshold`, `MMR (Max Marginal Relevance)`). |
-| search_score_threshold | Search Score Threshold | Minimum similarity score threshold for search results (when using `Similarity with score threshold`). |
-| advanced_search_filter | Search Metadata Filter | Optional dictionary of filters to apply to the search query. |
-| autodetect_collection | Autodetect Collection | Boolean flag to determine whether to autodetect the collection. |
-| content_field | Content Field | Field to use as the text content field for the vector store. |
+| search_type | Search Type | The search type to use . The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
+| search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
+| advanced_search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
+| autodetect_collection | Autodetect Collection | A boolean flag to determine whether to autodetect the collection. |
+| content_field | Content Field | A field to use as the text content field for the vector store. |
 | deletion_field | Deletion Based On Field | When provided, documents in the target collection with metadata field values matching the input metadata field value are deleted before new data is loaded. |
-| ignore_invalid_documents | Ignore Invalid Documents | Boolean flag to determine whether to ignore invalid documents at runtime. |
-| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | Optional dictionary of additional parameters for the AstraDBVectorStore. |
+| ignore_invalid_documents | Ignore Invalid Documents | A boolean flag to determine whether to ignore invalid documents at runtime. |
+| astradb_vectorstore_kwargs | AstraDBVectorStore Parameters | An optional dictionary of additional parameters for the AstraDBVectorStore. |
 
 ### Outputs
 
