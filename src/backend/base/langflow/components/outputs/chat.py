@@ -1,17 +1,19 @@
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 from langflow.base.io.chat import ChatComponent
 from langflow.inputs.inputs import BoolInput, DropdownInput, HandleInput, MessageTextInput
-from langflow.template.field.base import Output
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from langflow.schema.properties import Source
+from langflow.template.field.base import Output
 from langflow.utils.constants import (
     MESSAGE_SENDER_AI,
     MESSAGE_SENDER_NAME_AI,
     MESSAGE_SENDER_USER,
 )
+
 
 def safe_convert(data: Message | Data | DataFrame | str, clean_data: bool) -> str:
     """Safely convert input data to string."""
@@ -36,7 +38,8 @@ def safe_convert(data: Message | Data | DataFrame | str, clean_data: bool) -> st
     except (ValueError, TypeError, AttributeError) as e:
         msg = f"Error converting data: {e!s}"
         raise ValueError(msg) from e
-    
+
+
 def build_source(id_: str | None, display_name: str | None, source: Any | str | None) -> Source:
     source_dict: dict[str, str | None] = {}
     if id_:
@@ -54,6 +57,7 @@ def build_source(id_: str | None, display_name: str | None, source: Any | str | 
         source_dict["source"] = str(source.model)
 
     return Source(**source_dict)
+
 
 class ChatOutput(ChatComponent):
     display_name = "Chat Output"
@@ -139,7 +143,9 @@ class ChatOutput(ChatComponent):
         ),
     ]
 
-    input_value: Message | Data | DataFrame | str | list[Message | Data | DataFrame | str] | Generator[Any, None, None] | None
+    input_value: (
+        Message | Data | DataFrame | str | list[Message | Data | DataFrame | str] | Generator[Any, None, None] | None
+    )
 
     async def message_response(self) -> Message:
         # Get source properties
@@ -189,4 +195,3 @@ class ChatOutput(ChatComponent):
         else:
             raise TypeError(f"Expected Message or Data or DataFrame or str, got {type(self.input_value).__name__}")
         return message
-    
