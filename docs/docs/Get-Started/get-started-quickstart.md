@@ -31,7 +31,7 @@ Continue to [Run the basic prompting flow](#run-basic-prompting-flow).
 
 The Basic Prompting flow will look like this when it's completed:
 
-![](/img/starter-flow-basic-prompting.png)
+![Completed basic prompting flow](/img/starter-flow-basic-prompting.png)
 
 To build the **Basic Prompting** flow, follow these steps:
 
@@ -46,7 +46,7 @@ The [OpenAI](components-models#openai) model component sends the user input and 
 
 You should now have a flow that looks like this:
 
-![](/img/quickstart-basic-prompt-no-connections.png)
+![Basic prompting flow with no connections](/img/quickstart-basic-prompt-no-connections.png)
 
 With no connections between them, the components won't interact with each other.
 You want data to flow from **Chat Input** to **Chat Output** through the connections between the components.
@@ -111,7 +111,7 @@ If you don't want to create a blank flow, click **New Flow**, and then select **
 
 Adding vector RAG to the basic prompting flow will look like this when completed:
 
-![](/img/quickstart-add-document-ingestion.png)
+![Add document ingestion to the basic prompting flow](/img/quickstart-add-document-ingestion.png)
 
 To build the flow, follow these steps:
 
@@ -120,17 +120,17 @@ To build the flow, follow these steps:
 The [Astra DB vector store](/components-vector-stores#astra-db-vector-store) component connects to your **Astra DB** database.
 3. Click **Data**, select the **File** component, and then drag it to the canvas.
 The [File](/components-data#file) component loads files from your local machine.
-3. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
+4. Click **Processing**, select the **Split Text** component, and then drag it to the canvas.
 The [Split Text](/components-processing#split-text) component splits the loaded text into smaller chunks.
-4. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
+5. Click **Processing**, select the **Parse Data** component, and then drag it to the canvas.
 The [Data to Message](/components-processing#data-to-message) component converts the data from the **Astra DB** component into plain text.
-5. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
+6. Click **Embeddings**, select the **OpenAI Embeddings** component, and then drag it to the canvas.
 The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) component generates embeddings for the user's input, which are compared to the vector data in the database.
-6. Connect the new components into the existing flow, so your flow looks like this:
+7. Connect the new components into the existing flow, so your flow looks like this:
 
-![](/img/quickstart-add-document-ingestion.png)
+![Add document ingestion to the basic prompting flow](/img/quickstart-add-document-ingestion.png)
 
-2. Configure the **Astra DB** component.
+8. Configure the **Astra DB** component.
 	1. In the **Astra DB Application Token** field, add your **Astra DB** application token.
 	The component connects to your database and populates the menus with existing databases and collections.
 	2. Select your **Database**.
@@ -138,10 +138,10 @@ The [OpenAI Embeddings](/components-embedding-models#openai-embeddings) componen
 	Complete the **Name**, **Cloud provider**, and **Region** fields, and then click **Create**. **Database creation takes a few minutes**.
 	3. Select your **Collection**. Collections are created in your [Astra DB deployment](https://astra.datastax.com) for storing vector data.
 	:::info
-	If you select a collection embedded with Nvidia through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the Nvidia `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
+	If you select a collection embedded with NVIDIA through Astra's vectorize service, the **Embedding Model** port is removed, because you have already generated embeddings for this collection with the NVIDIA `NV-Embed-QA` model. The component fetches the data from the collection, and uses the same embeddings for queries.
 	:::
 
-3. If you don't have a collection, create a new one within the component.
+9. If you don't have a collection, create a new one within the component.
 	1. Select **New collection**.
 	2. Complete the **Name**, **Embedding generation method**, **Embedding model**, and **Dimensions** fields, and then click **Create**.
 
