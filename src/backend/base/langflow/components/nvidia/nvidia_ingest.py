@@ -24,7 +24,7 @@ class NvidiaIngestComponent(Component):
     except ImportError:
         msg = (
             "NVIDIA Ingest dependencies missing. "
-            "Please install them using your package manager. (e.g. uv sync --extra nv-ingest)"
+            "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
         )
         logger.warning(msg)
         file_types = [msg]
@@ -126,7 +126,7 @@ class NvidiaIngestComponent(Component):
         except ImportError as e:
             msg = (
                 "NVIDIA Ingest dependencies missing. "
-                "Please install them using your package manager. (e.g. uv sync --extra nv-ingest)"
+                "Please install them using your package manager. (e.g. uv pip install langflow[nv-ingest])"
             )
             raise ImportError(msg) from e
 
