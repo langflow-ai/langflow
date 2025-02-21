@@ -155,11 +155,12 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     # Get flow name
     if "flow_name" not in kwargs:
         flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
-        kwargs["flow_name"] = flow_name
+    else: 
+        flow_name = kwargs["flow_name"]
     str_flow_id = str(flow_id)
     session_id = kwargs.get("session_id") or str_flow_id
     
-    graph = Graph.from_payload(payload, str_flow_id, **kwargs)
+    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:

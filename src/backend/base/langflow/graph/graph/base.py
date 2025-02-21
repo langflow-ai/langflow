@@ -635,15 +635,6 @@ class Graph:
             raise ValueError(msg)
         return self._run_id
 
-    def set_tracing_session_id(self) -> None:
-        """Sets the ID of the current session.
-
-        Args:
-            session_id (str): The session ID.
-        """
-        if self.tracing_service:
-            self.tracing_service.set_session_id(self._session_id)
-
     def set_run_id(self, run_id: uuid.UUID | None = None) -> None:
         """Sets the ID of the current run.
 
@@ -848,6 +839,8 @@ class Graph:
             inputs_components.append([])
         if types is None:
             types = []
+        if session_id:
+            self.session_id = session_id
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
         for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
