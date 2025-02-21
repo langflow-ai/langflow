@@ -654,22 +654,18 @@ class Graph:
             run_id = uuid.uuid4()
 
         self._run_id = str(run_id)
-        if self.tracing_service:
-            self.tracing_service.set_run_id(run_id)
-        if self._session_id and self.tracing_service is not None:
-            self.tracing_service.set_session_id(self.session_id)
-
-    def set_run_name(self) -> None:
-        # Given a flow name, flow_id
-        if not self.tracing_service:
-            return
-        name = f"{self.flow_name} - {self.flow_id}"
-
-        self.set_run_id()
-        self.tracing_service.set_run_name(name)
 
     async def initialize_run(self) -> None:
+        if not self._run_id:
+            self.set_run_id()
         if self.tracing_service:
+            self.tracing_service.set_run_id(uuid.UUID(self._run_id))
+
+            run_name = f"{self.flow_name} - {self.flow_id}"
+            self.tracing_service.set_run_name(run_name)
+
+            self.tracing_service.set_session_id(self.session_id)
+            self.tracing_service.set_user_id(self.user_id)
             await self.tracing_service.initialize_tracers()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
@@ -1052,7 +1048,6 @@ class Graph:
         self.state_manager = GraphStateManager()
         self.tracing_service = get_tracing_service()
         self.set_run_id(self._run_id)
-        self.set_run_name()
 
     @classmethod
     def from_payload(
@@ -1526,8 +1521,6 @@ class Graph:
         to_process = deque(first_layer)
         layer_index = 0
         chat_service = get_chat_service()
-        self.set_run_id()
-        self.set_run_name()
         await self.initialize_run()
         lock = asyncio.Lock()
         while to_process:

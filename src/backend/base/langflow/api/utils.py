@@ -166,9 +166,6 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
         if not vertex.raw_params.get("session_id"):
             vertex.update_raw_params({"session_id": str_flow_id}, overwrite=True)
 
-    run_id = uuid.uuid4()
-    graph.set_run_id(run_id)
-    graph.set_run_name()
     await graph.initialize_run()
     return graph
 
