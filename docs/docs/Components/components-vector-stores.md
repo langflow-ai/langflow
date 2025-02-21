@@ -45,8 +45,8 @@ For more information, see the [DataStax documentation](https://docs.datastax.com
 | keyspace | Keyspace | An optional keyspace within Astra DB to use for the collection. |
 | embedding_choice | Embedding Model or Astra Vectorize | Choose an embedding model or use Astra vectorize. |
 | embedding_model | Embedding Model | Specify the embedding model. Not required for Astra vectorize collections. |
-| number_of_results | Number of Search Results | Number of search results to return (default: `4`). |
-| search_type | Search Type | The search type to use . The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
+| number_of_results | Number of Search Results | The number of search results to return (default: `4`). |
+| search_type | Search Type | The search type to use. The options are `Similarity`, `Similarity with score threshold`, and `MMR (Max Marginal Relevance)`. |
 | search_score_threshold | Search Score Threshold | The minimum similarity score threshold for search results when using the `Similarity with score threshold` option. |
 | advanced_search_filter | Search Metadata Filter | An optional dictionary of filters to apply to the search query. |
 | autodetect_collection | Autodetect Collection | A boolean flag to determine whether to autodetect the collection. |
