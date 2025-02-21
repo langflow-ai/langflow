@@ -47,7 +47,7 @@ The **workspace** is where you create AI applications by connecting and running 
 The workspace controls allow you to adjust your view and lock your flows in place.
 
 * Add **Notes** to flows with the **Add Note** button, similar to commenting in code.
-* To access the [Settings](#settings) menu, click ⚙️ **Settings**.
+* To access the [Settings](#settings) menu, click <Icon name="Settings" aria-label="Gear icon" /> **Settings**.
 
 This menu contains configuration for **Global Variables**, **Langflow API**, **Shortcuts**, and **Messages**.
 
@@ -90,6 +90,21 @@ The **Logs** pane provides a detailed record of all component executions withi
 To access the **Logs** pane, click your **Flow Name**, and then select **Logs**.
 
 ![](/img/logs.png)
+
+Langflow stores logs at the location specified in the `LANGFLOW_CONFIG_DIR` environment variable.
+
+This directory's default location depends on your operating system.
+
+* **Linux/WSL**: `~/.cache/langflow/`
+* **macOS**: `/Users/<username>/Library/Caches/langflow/`
+* **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
+
+To modify the location of your log file:
+
+1. Add `LANGFLOW_LOG_FILE=path/to/logfile.log` in your `.env.` file.
+2. To start Langflow with the values from your `.env` file, start Langflow with `uv run langflow run --env-file .env`.
+
+An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
 
 ## Projects and folders
 

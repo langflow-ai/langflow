@@ -15,7 +15,9 @@ export type BaseInputProps<valueType = any> = {
   readonly?: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  tooltip?: string;
   metadata?: any;
+  nodeId?: string;
 };
 
 // Generic type for composing input props
@@ -81,6 +83,8 @@ export type DropDownComponentType = {
   combobox?: boolean;
   options: string[];
   name: string;
+  dialogInputs?: any;
+  optionsMetaData?: any[];
 };
 
 export type TextAreaComponentType = {

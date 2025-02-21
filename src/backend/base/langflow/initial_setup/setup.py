@@ -17,6 +17,7 @@ from uuid import UUID
 import anyio
 import httpx
 import orjson
+import sqlalchemy as sa
 from aiofile import async_open
 from emoji import demojize, purely_emoji
 from loguru import logger
@@ -29,18 +30,10 @@ from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBU
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.database.models.folder.model import Folder, FolderCreate
-from langflow.services.database.models.folder.utils import (
-    create_default_folder_if_it_doesnt_exist,
-    get_default_folder_id,
-)
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.database.models.user.crud import get_user_by_username
-from langflow.services.deps import (
-    get_settings_service,
-    get_storage_service,
-    get_variable_service,
-    session_scope,
-)
+from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
 from langflow.utils.util import escape_json_dump
 
@@ -393,10 +386,27 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
 
 
 async def copy_profile_pictures() -> None:
+    """Asynchronously copies profile pictures from the source directory to the target configuration directory.
+
+    This function copies profile pictures while optimizing I/O operations by:
+    1. Using a set to track existing files and avoid redundant filesystem checks
+    2. Performing bulk copy operations concurrently using asyncio.gather
+    3. Offloading blocking I/O to threads
+
+    The directory structure is:
+    profile_pictures/
+    ├── People/
+    │   └── [profile images]
+    └── Space/
+        └── [profile images]
+    """
+    # Get config directory from settings
     config_dir = get_storage_service().settings_service.settings.config_dir
     if config_dir is None:
         msg = "Config dir is not set in the settings"
         raise ValueError(msg)
+
+    # Setup source and target paths
     origin = anyio.Path(__file__).parent / "profile_pictures"
     target = anyio.Path(config_dir) / "profile_pictures"
 
@@ -404,15 +414,41 @@ async def copy_profile_pictures() -> None:
         msg = f"The source folder '{origin}' does not exist."
         raise ValueError(msg)
 
+    # Create target dir if needed
     if not await target.exists():
-        await target.mkdir(parents=True)
+        await target.mkdir(parents=True, exist_ok=True)
 
     try:
-        await asyncio.to_thread(shutil.copytree, str(origin), str(target), dirs_exist_ok=True)
-        logger.debug(f"Folder copied from '{origin}' to '{target}'")
+        # Get set of existing files in target to avoid redundant checks
+        target_files = {str(f.relative_to(target)) async for f in target.rglob("*") if await f.is_file()}
 
-    except Exception:  # noqa: BLE001
-        logger.exception("Error copying the folder")
+        # Define a helper coroutine to copy a single file concurrently
+        async def copy_file(src_file, dst_file, rel_path):
+            # Create parent directories if needed
+            await dst_file.parent.mkdir(parents=True, exist_ok=True)
+            # Offload blocking I/O to a thread
+            await asyncio.to_thread(shutil.copy2, str(src_file), str(dst_file))
+            logger.debug(f"Copied file '{rel_path}'")
+
+        tasks = []
+        async for src_file in origin.rglob("*"):
+            if not await src_file.is_file():
+                continue
+
+            rel_path = src_file.relative_to(origin)
+            if str(rel_path) not in target_files:
+                dst_file = target / rel_path
+                tasks.append(copy_file(src_file, dst_file, rel_path))
+            else:
+                logger.debug(f"Skipped existing file: '{rel_path}'")
+
+        if tasks:
+            await asyncio.gather(*tasks)
+
+    except Exception as exc:
+        logger.exception("Error copying profile pictures")
+        msg = "An error occurred while copying profile pictures."
+        raise RuntimeError(msg) from exc
 
 
 def get_project_data(project):
@@ -557,8 +593,12 @@ async def load_flows_from_directory() -> None:
         if user is None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
-        async for file_path in anyio.Path(flows_path).iterdir():
-            if not await file_path.is_file() or file_path.suffix != ".json":
+
+        # Ensure that the default folder exists for this user
+        _ = await get_or_create_default_folder(session, user.id)
+
+        for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
+            if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
@@ -669,11 +709,9 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
         existing.user_id = user_id
 
-        # Generally, folder_id should not be None, but we must check this due to the previous
-        # behavior where flows could be added and folder_id was None, orphaning
-        # them within Langflow.
+        # Ensure that the flow is associated with an existing default folder
         if existing.folder_id is None:
-            folder_id = await get_default_folder_id(session, user_id)
+            folder_id = await get_or_create_default_folder(session, user_id)
             existing.folder_id = folder_id
 
         if isinstance(existing.id, str):
@@ -687,11 +725,11 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
     else:
         logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
-        # Current behavior loads all new flows into default folder
-        folder_id = await get_default_folder_id(session, user_id)
+        # Assign the newly created flow to the default folder
+        folder = await get_or_create_default_folder(session, user_id)
         flow["user_id"] = user_id
-        flow["folder_id"] = folder_id
-        flow = Flow.model_validate(flow, from_attributes=True)
+        flow["folder_id"] = folder.id
+        flow = Flow.model_validate(flow)
         flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
 
         session.add(flow)
@@ -778,5 +816,42 @@ async def initialize_super_user_if_needed() -> None:
     async with session_scope() as async_session:
         super_user = await create_super_user(db=async_session, username=username, password=password)
         await get_variable_service().initialize_user_variables(super_user.id, async_session)
-        await create_default_folder_if_it_doesnt_exist(async_session, super_user.id)
+        _ = await get_or_create_default_folder(async_session, super_user.id)
     logger.info("Super user initialized")
+
+
+async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:
+    """Ensure the default folder exists for the given user_id. If it doesn't exist, create it.
+
+    Uses an idempotent insertion approach to handle concurrent creation gracefully.
+
+    This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
+
+    Args:
+        session (AsyncSession): The active database session.
+        user_id (UUID): The ID of the user who owns the folder.
+
+    Returns:
+        UUID: The ID of the default folder.
+    """
+    stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
+    result = await session.exec(stmt)
+    folder = result.first()
+    if folder:
+        return FolderRead.model_validate(folder, from_attributes=True)
+
+    try:
+        folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME)
+        session.add(folder_obj)
+        await session.commit()
+        await session.refresh(folder_obj)
+    except sa.exc.IntegrityError as e:
+        # Another worker may have created the folder concurrently.
+        await session.rollback()
+        result = await session.exec(stmt)
+        folder = result.first()
+        if folder:
+            return FolderRead.model_validate(folder, from_attributes=True)
+        msg = "Failed to get or create default folder"
+        raise ValueError(msg) from e
+    return FolderRead.model_validate(folder_obj, from_attributes=True)

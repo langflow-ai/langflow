@@ -65,6 +65,7 @@ class TracingService(Service):
         self.worker_task: asyncio.Task | None = None
         self.end_trace_tasks: set[asyncio.Task] = set()
         self.deactivated = self.settings_service.settings.deactivate_tracing
+        self.session_id: str | None = None
 
     async def log_worker(self) -> None:
         while self.running or not self.logs_queue.empty():
@@ -77,7 +78,7 @@ class TracingService(Service):
                 self.logs_queue.task_done()
 
     async def start(self) -> None:
-        if self.running or self.deactivated:
+        if self.running:
             return
         try:
             self.running = True
@@ -112,8 +113,11 @@ class TracingService(Service):
         self.outputs_metadata = defaultdict(dict)
 
     async def initialize_tracers(self) -> None:
+        if self.deactivated:
+            return
         try:
             await self.start()
+
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()
@@ -160,6 +164,7 @@ class TracingService(Service):
             trace_type="chain",
             project_name=self.project_name,
             trace_id=self.run_id,
+            session_id=self.session_id,
         )
 
     def set_run_name(self, name: str) -> None:
@@ -238,7 +243,7 @@ class TracingService(Service):
             trace_id,
             trace_name,
             trace_type,
-            self._cleanup_inputs(inputs),
+            inputs,
             metadata,
             component._vertex,
         )
@@ -283,3 +288,7 @@ class TracingService(Service):
             if langchain_callback:
                 callbacks.append(langchain_callback)
         return callbacks
+
+    def set_session_id(self, session_id: str) -> None:
+        """Set the session ID for tracing."""
+        self.session_id = session_id

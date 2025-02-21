@@ -33,7 +33,9 @@ export function ParameterRenderComponent({
   placeholder,
   isToolMode,
 }: {
-  handleOnNewValue: handleOnNewValueType;
+  handleOnNewValue:
+    | handleOnNewValueType
+    | ((value: string, key: string) => void);
   name: string;
   nodeId: string;
   templateData: Partial<InputFieldType>;
@@ -57,13 +59,14 @@ export function ParameterRenderComponent({
       id,
       value: templateValue,
       editNode,
-      handleOnNewValue,
+      handleOnNewValue: handleOnNewValue as handleOnNewValueType,
       disabled,
       nodeClass,
       handleNodeClass,
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
+      nodeId,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {

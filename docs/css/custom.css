@@ -199,8 +199,39 @@ body {
   width: 100%;
 }
 
+/* Add comprehensive image control */
+.markdown img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1rem auto;
+  max-height: 600px;
+  object-fit: contain;
+}
+
+/* Default size for most images */
+.markdown img:not(.resized-image) {
+  max-width: 600px;
+  width: auto;
+}
+
 .resized-image {
-  width: 400px;
+  width: 300px;
+  max-height: 500px;
+}
+
+/* Responsive images on mobile devices */
+@media (max-width: 768px) {
+  .markdown img:not(.resized-image) {
+    max-width: 100%;
+    max-height: 500px;
+  }
+  
+  .resized-image {
+    width: 100%;
+    max-width: 300px;
+    max-height: 400px;
+  }
 }
 
 /* Reduce width on mobile for Mendable Search */

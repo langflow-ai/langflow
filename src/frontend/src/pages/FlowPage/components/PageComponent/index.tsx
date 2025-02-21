@@ -2,7 +2,6 @@ import { DefaultEdge } from "@/CustomEdges";
 import NoteNode from "@/CustomNodes/NoteNode";
 
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import LoadingComponent from "@/components/common/loadingComponent";
 import CanvasControls, {
   CustomControlButton,
 } from "@/components/core/canvasControlsComponent";
@@ -14,6 +13,7 @@ import {
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
+import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
@@ -89,7 +89,6 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
   );
-
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const setReactFlowInstance = useFlowStore(
     (state) => state.setReactFlowInstance,
@@ -551,6 +550,7 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
             onReconnectEnd={onEdgeUpdateEnd}
             onNodeDragStart={onNodeDragStart}
             onSelectionDragStart={onSelectionDragStart}
+            elevateEdgesOnSelect={true}
             onSelectionEnd={onSelectionEnd}
             onSelectionStart={onSelectionStart}
             connectionRadius={30}
@@ -611,7 +611,9 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
                 <span className="text-foreground">Components</span>
               </SidebarTrigger>
             </Panel>
-            {componentsToUpdate.length > 0 && <UpdateAllComponents />}
+            <div className={cn(componentsToUpdate.length === 0 && "hidden")}>
+              <UpdateAllComponents />
+            </div>
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
@@ -630,12 +632,14 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
               backgroundColor: `${shadowBoxBackgroundColor}`,
               opacity: 0.7,
               pointerEvents: "none",
+              // Prevent shadow-box from showing unexpectedly during initial renders
+              display: "none",
             }}
           ></div>
         </div>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <LoadingComponent remSize={30} />
+          <CustomLoader remSize={30} />
         </div>
       )}
     </div>

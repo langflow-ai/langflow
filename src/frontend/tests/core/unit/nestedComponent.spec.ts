@@ -13,20 +13,22 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("api request");
+    await page.getByTestId("sidebar-search-input").fill("alter metadata");
 
-    await page.waitForSelector('[data-testid="dataAPI Request"]', {
+    await page.waitForSelector('[data-testid="processingAlter Metadata"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("dataAPI Request")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
+      .getByTestId("processingAlter Metadata")
+      .hover()
+      .then(async () => {
+        await page.getByTestId("add-component-button-alter-metadata").click();
+      });
 
     await adjustScreenView(page);
 
-    await page.getByTestId("dict_nesteddict_headers").first().click();
+    await page.getByTestId("dict_nesteddict_metadata").first().click();
     await page
       .getByText("{")
       .last()
@@ -62,7 +64,7 @@ test(
     await page.getByTestId("more-options-modal").click();
     await page.getByTestId("advanced-button-modal").click();
 
-    await page.getByTestId("dict_nesteddict_edit_headers").first().click();
+    await page.getByTestId("edit_dict_nesteddict_edit_metadata").last().click();
 
     expect(await page.getByText("keytest", { exact: true }).count()).toBe(1);
     expect(await page.getByText("keytest1", { exact: true }).count()).toBe(1);

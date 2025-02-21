@@ -10,13 +10,14 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 from loguru import logger
 
 from langflow.graph.schema import CHAT_COMPONENTS, RECORDS_COMPONENTS, InterfaceComponentTypes, ResultData
-from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path, serialize_field
+from langflow.graph.utils import UnbuiltObject, log_vertex_build, rewrite_file_path
 from langflow.graph.vertex.base import Vertex
 from langflow.graph.vertex.exceptions import NoComponentInstanceError
 from langflow.schema import Data
 from langflow.schema.artifact import ArtifactType
 from langflow.schema.message import Message
 from langflow.schema.schema import INPUT_FIELD_NAME
+from langflow.serialization import serialize
 from langflow.template.field.base import UNDEFINED, Output
 from langflow.utils.schemas import ChatOutputResponse, DataOutputResponse
 from langflow.utils.util import unescape_string
@@ -97,14 +98,17 @@ class ComponentVertex(Vertex):
         """
         flow_id = self.graph.flow_id
         if not self.built:
-            default_value = UNDEFINED
+            default_value: Any = UNDEFINED
             for edge in self.get_edge_with_target(requester.id):
                 # We need to check if the edge is a normal edge
                 if edge.is_cycle and edge.target_param:
-                    default_value = requester.get_value_from_template_dict(edge.target_param)
+                    if edge.target_param in requester.output_names:
+                        default_value = None
+                    else:
+                        default_value = requester.get_value_from_template_dict(edge.target_param)
 
             if flow_id:
-                self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
+                await self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="error")
             if default_value is not UNDEFINED:
                 return default_value
             msg = f"Component {self.display_name} has not been built yet"
@@ -143,7 +147,7 @@ class ComponentVertex(Vertex):
             msg = f"Result not found for {edge.source_handle.name} in {edge}"
             raise ValueError(msg)
         if flow_id:
-            self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
+            await self._log_transaction_async(source=self, target=requester, flow_id=str(flow_id), status="success")
         return result
 
     def extract_messages_from_artifacts(self, artifacts: dict[str, Any]) -> list[dict]:
@@ -475,6 +479,6 @@ class StateVertex(ComponentVertex):
 
 
 def dict_to_codeblock(d: dict) -> str:
-    serialized = {key: serialize_field(val) for key, val in d.items()}
+    serialized = {key: serialize(val) for key, val in d.items()}
     json_str = json.dumps(serialized, indent=4)
     return f"```json\n{json_str}\n```"

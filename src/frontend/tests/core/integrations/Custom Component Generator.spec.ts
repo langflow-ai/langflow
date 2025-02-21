@@ -1,23 +1,19 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { addNewApiKeys } from "../../utils/add-new-api-keys";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
-import { selectGptModel } from "../../utils/select-gpt-model";
-import { updateOldComponents } from "../../utils/update-old-components";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-test(
+withEventDeliveryModes(
   "Custom Component Generator",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.ANTHROPIC_API_KEY,
-      "OPENAI_API_KEY required to run this test",
+      "ANTHROPIC_API_KEY required to run this test",
     );
 
     if (!process.env.CI) {
@@ -35,16 +31,22 @@ test(
       timeout: 100000,
     });
 
-    await initialGPTsetup(page);
-
-    const apiKeyInput = page.getByTestId(
-      "popover-anchor-input-anthropic_api_key",
-    );
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
-
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.ANTHROPIC_API_KEY ?? "");
+    try {
+      await page
+        .getByTestId("anchor-popover-anchor-input-api_key")
+        .last()
+        .fill(process.env.ANTHROPIC_API_KEY ?? "");
+    } catch (e) {
+      console.log("There's API already added");
     }
+
+    await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
+      timeout: 5000,
+    });
+
+    await page.getByTestId("dropdown_str_model_name").click();
+
+    await page.keyboard.press("Enter");
 
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
@@ -63,7 +65,9 @@ test(
 
     const textContents = await getAllResponseMessage(page);
     expect(textContents.length).toBeGreaterThan(100);
-    expect(await page.getByTestId("chat-code-tab").isVisible()).toBe(true);
+    expect(await page.getByTestId("chat-code-tab").last().isVisible()).toBe(
+      true,
+    );
     expect(textContents).toContain("langflow");
   },
 );

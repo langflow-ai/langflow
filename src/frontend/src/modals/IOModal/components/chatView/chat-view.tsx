@@ -23,14 +23,13 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.chat.id === nextProps.chat.id &&
     prevProps.chat.session === nextProps.chat.session &&
     prevProps.chat.content_blocks === nextProps.chat.content_blocks &&
-    prevProps.chat.properties === nextProps.chat.properties
+    prevProps.chat.properties === nextProps.chat.properties &&
+    prevProps.lastMessage === nextProps.lastMessage
   );
 });
 
 export default function ChatView({
   sendMessage,
-  lockChat,
-  setLockChat,
   visibleSession,
   focusChat,
   closeChat,
@@ -49,6 +48,8 @@ export default function ChatView({
   const displayLoadingMessage = useMessagesStore(
     (state) => state.displayLoadingMessage,
   );
+
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
@@ -98,7 +99,7 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (messages.length === 0 && !lockChat && chatInputNode && isTabHidden) {
+    if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
         chatInputNode.data.node.template["input_value"].value ?? "",
       );
@@ -163,12 +164,10 @@ export default function ChatView({
     >
       <div ref={messagesRef} className="chat-message-div">
         {chatHistory &&
-          (lockChat || chatHistory?.length > 0 ? (
+          (isBuilding || chatHistory?.length > 0 ? (
             <>
               {chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
-                  setLockChat={setLockChat}
-                  lockChat={lockChat}
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
                   key={`${chat.id}-${index}`}
@@ -223,7 +222,6 @@ export default function ChatView({
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
           noInput={!inputTypes.includes("ChatInput")}
-          lockChat={lockChat}
           sendMessage={({ repeat, files }) => {
             sendMessage({ repeat, files });
             track("Playground Message Sent");
