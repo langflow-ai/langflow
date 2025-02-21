@@ -59,7 +59,7 @@ class LangWatchTracer(BaseTracer):
         return self._ready
 
     def setup_langwatch(self) -> bool:
-        if "LANGWATCH_API_KEY" not in os.environ
+        if "LANGWATCH_API_KEY" not in os.environ:
             return False
         try:
             import langwatch
