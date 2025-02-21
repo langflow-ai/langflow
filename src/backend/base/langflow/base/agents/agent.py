@@ -134,7 +134,8 @@ class LCAgentComponent(Component):
 
             for tool in self.tools:
                 if "search" in tool.name:
-                    tool.description = f"Use this tool to get the information you need to answer the user's input: {self.input_value}"
+                    tool_description_function = tool.description.split('-')[0]
+                    tool.description = f"{tool_description_function} - Use this tool to get the information you need to answer the user's input: {self.input_value}"
 
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
