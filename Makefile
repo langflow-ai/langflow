@@ -34,11 +34,11 @@ all: help
 CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
 
 # increment the patch version of the current package
-patch: ## bump the version in langflow and langflow-base
+patch: ## bump the version in langflow and langflow-base # uv do not support yet so use uvx instead
 	@echo 'Patching the version'
-	@poetry version patch
+	@uvx poetry version patch
 	@echo 'Patching the version in langflow-base'
-	@cd src/backend/base && poetry version patch
+	@cd src/backend/base && uvx poetry version patch
 	@make lock
 
 # check for required tools
@@ -114,7 +114,7 @@ clean_npm_cache:
 clean_all: clean_python_cache clean_npm_cache # clean all caches and temporary directories
 	@echo "$(GREEN)All caches and temporary directories cleaned.$(NC)"
 
-setup_uv: ## install poetry using pipx
+setup_uv: ## install uv using pipx
 	pipx install uv
 
 add:
@@ -190,12 +190,12 @@ tests: ## run unit, integration, coverage tests
 ######################
 
 codespell: ## run codespell to check spelling
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml
+	@uv pip install codespell
+	uv run -- codespell --toml pyproject.toml
 
 fix_codespell: ## run codespell to fix spelling errors
-	@poetry install --with spelling
-	poetry run codespell --toml pyproject.toml --write
+	@uv pip install codespell
+	uv run -- codespell --toml pyproject.toml --write
 
 format_backend: ## backend code formatters
 	@uv run ruff check . --fix --ignore EXE002 --ignore A005
@@ -420,19 +420,6 @@ endif
 
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
-
-ifdef base
-	#TODO: replace with uvx twine upload dist/*
-	poetry config repositories.test-pypi https://test.pypi.org/legacy/
-	make publish_base_testpypi
-endif
-
-ifdef main
-	#TODO: replace with uvx twine upload dist/*
-	poetry config repositories.test-pypi https://test.pypi.org/legacy/
-	make publish_langflow_testpypi
-endif
-
 
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
