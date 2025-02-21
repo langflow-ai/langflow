@@ -1609,7 +1609,7 @@ class Graph:
                 raise result
             if isinstance(result, VertexBuildResult):
                 await log_vertex_build(
-                    flow_id=self.flow_id,
+                    flow_id=self.flow_id or "",
                     vertex_id=result.vertex.id,
                     valid=result.valid,
                     params=result.params,
