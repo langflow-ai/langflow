@@ -36,23 +36,23 @@ export default function UpdateAllComponents({}: {}) {
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  const numberOfEdgesBeforeUpdate = useRef({
-    numberOfEdges: 0,
+  const edgesUpdateRef = useRef({
+    numberOfEdgesBeforeUpdate: 0,
     updateComponent: false,
   });
 
   useMemo(() => {
     if (
-      numberOfEdgesBeforeUpdate.current.numberOfEdges > 0 &&
-      edges.length !== numberOfEdgesBeforeUpdate.current.numberOfEdges &&
-      numberOfEdgesBeforeUpdate.current.updateComponent
+      edgesUpdateRef.current.numberOfEdgesBeforeUpdate > 0 &&
+      edges.length !== edgesUpdateRef.current.numberOfEdgesBeforeUpdate &&
+      edgesUpdateRef.current.updateComponent
     ) {
       useAlertStore.getState().setNoticeData({
         title: ERROR_MESSAGE_EDGES_LOST,
       });
 
-      numberOfEdgesBeforeUpdate.current = {
-        numberOfEdges: 0,
+      edgesUpdateRef.current = {
+        numberOfEdgesBeforeUpdate: 0,
         updateComponent: false,
       };
     }
@@ -65,8 +65,8 @@ export default function UpdateAllComponents({}: {}) {
   };
 
   const handleUpdateAllComponents = () => {
-    numberOfEdgesBeforeUpdate.current = {
-      numberOfEdges: edges.length,
+    edgesUpdateRef.current = {
+      numberOfEdgesBeforeUpdate: edges.length,
       updateComponent: true,
     };
 
