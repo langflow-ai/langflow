@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 from langchain_core.language_models import BaseLanguageModel
 from pydantic import BaseModel, Field
+from typing import Callable
 from typing_extensions import override
 
 
@@ -9,7 +10,7 @@ class MockLanguageModel(BaseLanguageModel, BaseModel):
     """A mock language model for testing purposes."""
 
     tools: list = Field(default_factory=list)
-    response_generator: callable = Field(default_factory=lambda: lambda msg: f"Response for {msg}")
+    response_generator: Callable = Field(default_factory=lambda: lambda msg: f"Response for {msg}")
 
     def __init__(self, response_generator=None, **kwargs):
         """Initialize the mock model with an optional response generator function."""
