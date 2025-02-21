@@ -79,7 +79,13 @@ const edgeTypes = {
   default: DefaultEdge,
 };
 
-export default function Page({ view }: { view?: boolean }): JSX.Element {
+export default function Page({
+  view,
+  setIsLoading,
+}: {
+  view?: boolean;
+  setIsLoading: (isLoading: boolean) => void;
+}): JSX.Element {
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
   const types = useTypesStore((state) => state.types);
@@ -183,6 +189,10 @@ export default function Page({ view }: { view?: boolean }): JSX.Element {
     Object.keys(templates).length > 0 &&
     Object.keys(types).length > 0 &&
     !isFetching;
+
+  useEffect(() => {
+    setIsLoading(!showCanvas);
+  }, [showCanvas]);
 
   useEffect(() => {
     useFlowStore.setState({ autoSaveFlow });
