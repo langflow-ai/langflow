@@ -33,14 +33,6 @@ all: help
 # See https://code.visualstudio.com/remote/advancedcontainers/improve-performance
 CLEAR_DIRS = $(foreach dir,$1,$(shell mkdir -p $(dir) && find $(dir) -mindepth 1 -delete))
 
-# increment the patch version of the current package
-patch: ## bump the version in langflow and langflow-base # uv do not support yet so use uvx instead
-	@echo 'Patching the version'
-	@uvx poetry version patch
-	@echo 'Patching the version in langflow-base'
-	@cd src/backend/base && uvx poetry version patch
-	@make lock
-
 # check for required tools
 check_tools:
 	@command -v uv >/dev/null 2>&1 || { echo >&2 "$(RED)uv is not installed. Aborting.$(NC)"; exit 1; }
