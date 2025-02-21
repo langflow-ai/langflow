@@ -401,8 +401,9 @@ async def client_fixture(
 
 
 @pytest.fixture
-def runner():
-    return CliRunner()
+def runner(tmp_path):
+    env = {"LANGFLOW_DATABASE_URL": f"sqlite:///{tmp_path}/test.db"}
+    return CliRunner(env=env)
 
 
 @pytest.fixture

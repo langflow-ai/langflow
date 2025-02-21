@@ -1,6 +1,3 @@
-import asyncio
-from pathlib import Path
-
 import anyio
 from aiofile import async_open
 from loguru import logger
@@ -91,9 +88,8 @@ class LocalStorageService(StorageService):
             msg = f"Flow {flow_id} directory does not exist."
             raise FileNotFoundError(msg)
 
-        files = [
-            file.name for file in await asyncio.to_thread(Path(folder_path).iterdir) if await anyio.Path(file).is_file()
-        ]
+        files = [file.name async for file in anyio.Path(folder_path).iterdir() if await anyio.Path(file).is_file()]
+
         logger.info(f"Listed {len(files)} files in flow {flow_id}.")
         return files
 
