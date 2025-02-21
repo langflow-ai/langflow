@@ -19,7 +19,7 @@ class NotionListPages(Component):
     icon: str = "NotionDirectoryLoader"
 
     # Store database properties globally
-    _database_properties = {}
+    _database_properties: dict[str, Any] = {}
 
     inputs = [
         SecretStrInput(

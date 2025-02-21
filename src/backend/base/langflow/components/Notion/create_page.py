@@ -22,7 +22,7 @@ class NotionPageCreator(Component):
     MAX_PROPERTIES = 10
 
     # Store database properties globally
-    _database_properties = {}
+    _database_properties: dict[str, Any] = {}
 
     inputs = [
         SecretStrInput(
@@ -160,7 +160,7 @@ class NotionPageCreator(Component):
         except (ValueError, TypeError) as e:
             self.log(f"Error formatting property {prop_name}: {e!s}")
             # Returns empty value appropriate for the type
-            empty_values = {
+            empty_values: dict[str, dict[str, Any]] = {
                 "title": {"title": []},
                 "rich_text": {"rich_text": []},
                 "select": {"select": None},
@@ -174,7 +174,8 @@ class NotionPageCreator(Component):
                 "files": {"files": []},
                 "status": {"status": None},
             }
-            return empty_values.get(prop_type, {"rich_text": []})
+            default_value: dict[str, Any] = {"rich_text": []}
+            return empty_values.get(prop_type, default_value)
 
     def create_page(self) -> Data:
         """Create a new page in a Notion database."""
@@ -277,7 +278,7 @@ class NotionPageCreator(Component):
                 return Data(data={"error": error_msg})
 
             response.raise_for_status()
-            return Data(data=response.json())
+            return Data(data={"page": response.json()})
         except requests.exceptions.RequestException as e:
             error_msg = f"Error creating page: {e!s}"
             self.log(error_msg)

@@ -50,6 +50,20 @@ class NotionSearch(Component):
         Output(name="results", display_name="Search Results", method="search"),
     ]
 
+    def get_page_title(self, page: dict) -> str:
+        """Extract the title from a page object."""
+        # Try to get title from properties
+        if "properties" in page:
+            # Look for title property
+            for prop in page["properties"].values():
+                if prop["type"] == "title":
+                    title_array = prop.get("title", [])
+                    if title_array:
+                        return "".join(part.get("plain_text", "") for part in title_array)
+
+        # If still no title found, return "Untitled"
+        return "Untitled"
+
     def search(self) -> DataFrame:
         """Search Notion pages and databases."""
         url = "https://api.notion.com/v1/search"
@@ -58,7 +72,6 @@ class NotionSearch(Component):
             "Content-Type": "application/json",
             "Notion-Version": "2022-06-28",
         }
-
         data = {
             "query": self.query,
             "filter": {"value": self.filter_value, "property": "object"},
@@ -80,18 +93,24 @@ class NotionSearch(Component):
                 }
 
                 if result["object"] == "page":
-                    result_data["title_or_url"] = result["url"]
+                    result_data["title"] = self.get_page_title(result)
+                    result_data["url"] = result.get("url", "N/A")
                 elif result["object"] == "database":
                     if "title" in result and isinstance(result["title"], list) and len(result["title"]) > 0:
-                        result_data["title_or_url"] = result["title"][0]["plain_text"]
+                        result_data["title"] = result["title"][0]["plain_text"]
                     else:
-                        result_data["title_or_url"] = "N/A"
+                        result_data["title"] = "Untitled Database"
+                    result_data["url"] = result.get("url", "N/A")
 
                 search_results.append(result_data)
 
             # Convert to DataFrame with ordered columns
             search_results_df = pd.DataFrame(search_results)
-            column_order = ["id", "type", "title_or_url", "last_edited_time"]
+            column_order = ["id", "type", "title", "url", "last_edited_time"]
+            # Ensure all columns exist
+            for col in column_order:
+                if col not in search_results_df.columns:
+                    search_results_df[col] = "N/A"
             search_results_df = search_results_df[column_order]
 
             return DataFrame(search_results_df)
