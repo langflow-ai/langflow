@@ -301,6 +301,7 @@ jobs:
               LANGFLOW_IMAGE=${{ matrix.langflow_image }}
             file: ${{ matrix.dockerfile }}
             tags: ${{ matrix.tags }}
+            # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
             provenance: false
 
   restart-space:
