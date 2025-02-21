@@ -2951,7 +2951,7 @@
     }
   },
   "description": "Integrates PDF reading with a language model for accurate and high-quality answers, leveraging LangWatch's Answer Relevancy evaluation—ideal for legal, technical, and research documents",
-  "name": "LangWatch Document Q&A",
+  "name": "LLM Document Q&A Eval",
   "last_tested_version": "1.1.5",
   "endpoint_name": null,
   "is_component": false,
