@@ -330,7 +330,7 @@ export function FlowSidebarComponent({ isLoading }: { isLoading?: boolean }) {
             <div className="flex flex-col gap-1 p-3">
               <SkeletonGroup count={13} className="my-0.5 h-7" />
             </div>
-            <div className="h-[32px]" />
+            <div className="h-8" />
             <div className="flex flex-col gap-1 px-3 pt-2">
               <SkeletonGroup count={21} className="my-0.5 h-7" />
             </div>
