@@ -23,7 +23,15 @@ if TYPE_CHECKING:
 class LangFuseTracer(BaseTracer):
     flow_id: str
 
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, user_id: str = None, session_id: str = None):
+    def __init__(
+        self,
+        trace_name: str,
+        trace_type: str,
+        project_name: str,
+        trace_id: UUID,
+        user_id: str = None,
+        session_id: str = None,
+    ):
         self.project_name = project_name
         self.trace_name = trace_name
         self.trace_type = trace_type
@@ -47,7 +55,9 @@ class LangFuseTracer(BaseTracer):
             from langfuse.callback.langchain import LangchainCallbackHandler
 
             self._client = Langfuse(**config)
-            self.trace = self._client.trace(id=str(self.trace_id), name=self.flow_id, user_id=self.user_id, session_id=self.session_id)
+            self.trace = self._client.trace(
+                id=str(self.trace_id), name=self.flow_id, user_id=self.user_id, session_id=self.session_id
+            )
 
             config |= {
                 "trace_name": self.flow_id,

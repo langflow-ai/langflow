@@ -175,7 +175,7 @@ class TracingService(Service):
 
     def set_run_id(self, run_id: UUID) -> None:
         self.run_id = run_id
-    
+
     def set_session_id(self, session_id: str) -> None:
         """Set the session ID for tracing."""
         self.session_id = session_id
