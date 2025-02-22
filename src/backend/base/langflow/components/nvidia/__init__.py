@@ -1,4 +1,4 @@
-from .nemo_guardrails import NVIDIANeMoGuardrailsComponent
+from .nemo_guardrails import NvidiaNeMoGuardrailsComponent
 from .nvidia_ingest import NvidiaIngestComponent
 from .nvidia_rerank import NvidiaRerankComponent
 

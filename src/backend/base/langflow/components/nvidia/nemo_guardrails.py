@@ -8,11 +8,11 @@ from langflow.io import FileInput, MultilineInput, Output
 from langflow.schema import Data
 
 
-class NVIDIANeMoGuardrailsComponent(Component):
-    display_name = "Guardrails"
-    description = """Framework for enforcing constraints and safety in conversational AI."""
+class NvidiaNeMoGuardrailsComponent(Component):
+    display_name = "NeMo Guardrails"
+    description = """NVIDIA NeMo framework for enforcing constraints and safety in conversational AI."""
     icon = "NVIDIA"
-    name = "NVIDIANemoGuardrails"
+    name = "NVIDIANeMoGuardrails"
     beta = True
 
     file_types = ["yaml"]
