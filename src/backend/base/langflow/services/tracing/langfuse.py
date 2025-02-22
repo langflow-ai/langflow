@@ -29,9 +29,9 @@ class LangFuseTracer(BaseTracer):
         trace_type: str,
         project_name: str,
         trace_id: UUID,
-        user_id: str = None,
-        session_id: str = None,
-    ):
+        user_id: str | None = None,
+        session_id: str | None = None,
+    ) -> None:
         self.project_name = project_name
         self.trace_name = trace_name
         self.trace_type = trace_type
@@ -56,7 +56,10 @@ class LangFuseTracer(BaseTracer):
 
             self._client = Langfuse(**config)
             self.trace = self._client.trace(
-                id=str(self.trace_id), name=self.flow_id, user_id=self.user_id, session_id=self.session_id
+                id=str(self.trace_id),
+                name=self.flow_id,
+                user_id=self.user_id,
+                session_id=self.session_id,
             )
 
             config |= {

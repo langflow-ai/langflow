@@ -23,9 +23,9 @@ class BaseTracer(ABC):
         trace_type: str,
         project_name: str,
         trace_id: UUID,
-        user_id: str = None,
-        session_id: str = None,
-    ):
+        user_id: str | None = None,
+        session_id: str | None = None,
+    ) -> None:
         raise NotImplementedError
 
     @property
