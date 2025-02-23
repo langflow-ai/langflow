@@ -271,6 +271,7 @@ src/frontend/playwright-report/index.html
 prof/*
 
 src/frontend/temp
+src/frontend/package-lock.json
 *-shm
 *-wal
 .history

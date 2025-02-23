@@ -16,8 +16,8 @@ from starlette.websockets import WebSocket
 
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import get_user_by_id, get_user_by_username, update_user_last_login_at
-from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_db_service, get_session, get_settings_service
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_session, get_settings_service
 from langflow.services.settings.service import SettingsService
 
 if TYPE_CHECKING:
@@ -37,40 +37,40 @@ MINIMUM_KEY_LENGTH = 32
 async def api_key_security(
     query_param: Annotated[str, Security(api_key_query)],
     header_param: Annotated[str, Security(api_key_header)],
-) -> UserRead | None:
+    db: Annotated[AsyncSession, Depends(get_session)],
+) -> User | None:
     settings_service = get_settings_service()
     result: ApiKey | User | None
 
-    async with get_db_service().with_session() as db:
-        if settings_service.auth_settings.AUTO_LOGIN:
-            # Get the first user
-            if not settings_service.auth_settings.SUPERUSER:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Missing first superuser credentials",
-                )
-
-            result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
-
-        elif not query_param and not header_param:
+    if settings_service.auth_settings.AUTO_LOGIN:
+        # Get the first user
+        if not settings_service.auth_settings.SUPERUSER:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="An API key must be passed as query or header",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing first superuser credentials",
             )
 
-        elif query_param:
-            result = await check_key(db, query_param)
+        result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
 
-        else:
-            result = await check_key(db, header_param)
+    elif not query_param and not header_param:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="An API key must be passed as query or header",
+        )
 
-        if not result:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid or missing API key",
-            )
-        if isinstance(result, User):
-            return UserRead.model_validate(result, from_attributes=True)
+    elif query_param:
+        result = await check_key(db, query_param)
+
+    else:
+        result = await check_key(db, header_param)
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing API key",
+        )
+    if isinstance(result, User):
+        return result
     msg = "Invalid result type"
     raise ValueError(msg)
 
@@ -83,7 +83,7 @@ async def get_current_user(
 ) -> User:
     if token:
         return await get_current_user_by_jwt(token, db)
-    user = await api_key_security(query_param, header_param)
+    user = await api_key_security(query_param, header_param, db)
     if user:
         return user
 
@@ -164,7 +164,7 @@ async def get_current_user_for_websocket(
     if token:
         return await get_current_user_by_jwt(token, db)
     if api_key:
-        return await api_key_security(api_key, query_param)
+        return await api_key_security(api_key, query_param, db)
     return None
 
 
