@@ -1,4 +1,3 @@
-# noqa: A005
 from .logger import configure, logger
 from .setup import disable_logging, enable_logging
 

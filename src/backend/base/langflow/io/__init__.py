@@ -1,4 +1,3 @@
-# noqa: A005
 from langflow.inputs import (
     BoolInput,
     CodeInput,
@@ -54,4 +53,3 @@ __all__ = [
     "StrInput",
     "TableInput",
 ]
-
