@@ -1,10 +1,11 @@
 import pytest
+
 from langflow.helpers.data import data_to_text_list
 from langflow.schema import Data
 
 
 @pytest.mark.parametrize(
-    "template,data,expected_text",
+    ("template", "data", "expected_text"),
     [
         # Test basic string data
         (
