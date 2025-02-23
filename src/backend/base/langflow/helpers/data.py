@@ -1,4 +1,6 @@
 from langchain_core.documents import Document
+from collections import defaultdict
+from typing import Union, Tuple, List
 
 from langflow.schema import Data
 from langflow.schema.message import Message
@@ -16,47 +18,91 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
     return [Data.from_document(document) for document in documents]
 
 
-def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
-    r"""Formats `text` within Data objects based on a given template.
+def data_to_text_list(template: str, data: Union[Data, List[Data]]) -> Tuple[List[str], List[Data]]:
+    """Format text from Data objects using a template string.
 
-    Converts a Data object or a list of Data objects into a tuple containing a list of formatted strings
-    and a list of Data objects based on a given template.
+    This function processes Data objects and formats their content using a template string.
+    It handles various data structures and ensures consistent text formatting across different
+    input types.
+
+    Key Features:
+    - Supports single Data object or list of Data objects
+    - Handles nested dictionaries and extracts text from various locations
+    - Uses safe string formatting with fallback for missing keys
+    - Preserves original Data objects in output
 
     Args:
-        template (str): The format string template to be used for formatting the data.
-        data (Data | list[Data]): A single Data object or a list of Data objects to be formatted.
+        template: Format string with placeholders (e.g., "Hello {text}")
+                 Placeholders are replaced with values from Data objects
+        data: Either a single Data object or a list of Data objects to format
+              Each object can contain text, dictionaries, or nested data
 
     Returns:
-        tuple[list[str], list[Data]]: A tuple containing a list of formatted strings based on the
-                                      provided template and data, and a list of Data objects.
+        A tuple containing:
+        - List[str]: Formatted strings based on the template
+        - List[Data]: Original Data objects in the same order
+
+    Raises:
+        ValueError: If template is None
+        TypeError: If template is not a string
+
+    Examples:
+        >>> result = data_to_text_list("Hello {text}", Data(text="world"))
+        >>> assert result == (["Hello world"], [Data(text="world")])
+
+        >>> result = data_to_text_list(
+        ...     "{name} is {age}",
+        ...     Data(data={"name": "Alice", "age": 25})
+        ... )
+        >>> assert result == (["Alice is 25"], [Data(data={"name": "Alice", "age": 25})])
     """
     if data is None:
         return [], []
 
     if template is None:
-        msg = "Template must be a string, but got None."
-        raise ValueError(msg)
+        raise ValueError("Template must be a string, but got None.")
 
     if not isinstance(template, str):
-        msg = f"Template must be a string, but got {type(template)}"
-        raise TypeError(msg)
+        raise TypeError(f"Template must be a string, but got {type(template)}")
 
-    if isinstance(data, (Data)):
-        data = [data]
-    # Check if there are any format strings in the template
-    data_ = [
-        # If it is not a record, create one with the key "text"
-        Data(text=value) if not isinstance(value, Data) else value
-        for value in data
+    formatted_text: List[str] = []
+    processed_data: List[Data] = []
+
+    data_list = [data] if isinstance(data, Data) else data
+
+    data_objects = [
+        item if isinstance(item, Data) else Data(text=str(item))
+        for item in data_list
     ]
-    formatted_text = []
-    for value in data_:
-        # Prevent conflict with 'data' keyword in template formatting
-        kwargs = value.data.copy()
-        data = kwargs.pop("data", value.data)
-        formatted_text.append(template.format(data=data, **kwargs))
 
-    return formatted_text, data_
+    for data_obj in data_objects:
+        format_dict = {}
+
+        if isinstance(data_obj.data, str):
+            format_dict['text'] = data_obj.data
+
+        elif isinstance(data_obj.data, dict):
+            format_dict.update(data_obj.data)
+
+            if isinstance(data_obj.data.get('data'), dict):
+                format_dict.update(data_obj.data['data'])
+
+            if 'text' in format_dict:
+                format_dict['text'] = format_dict['text']
+            elif 'error' in format_dict:
+                format_dict['text'] = format_dict['error']
+
+        format_dict['data'] = data_obj.data
+
+        safe_dict = defaultdict(str, format_dict)
+
+        try:
+            formatted_text.append(template.format_map(safe_dict))
+            processed_data.append(data_obj)
+        except ValueError as e:
+            raise ValueError(f"Error formatting template: {str(e)}") from e
+
+    return formatted_text, processed_data
 
 
 def data_to_text(template: str, data: Data | list[Data], sep: str = "\n") -> str:
