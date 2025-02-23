@@ -202,7 +202,7 @@ class DataFrameOperationsComponent(Component):
         return DataFrame(df.rename(columns={self.column_name: self.new_column_name}))
 
     def add_column(self, df: DataFrame, df_add: DataFrame) -> DataFrame:
-        df[self.new_column_name] = df_add[self.source_column_name] #* len(df)
+        df[self.new_column_name] = df_add[self.source_column_name]  # * len(df)
         return DataFrame(df)
 
     def select_columns(self, df: DataFrame) -> DataFrame:
