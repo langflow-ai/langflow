@@ -99,7 +99,8 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
             formatted_text.append(template.format_map(safe_dict))
             processed_data.append(data_obj)
         except ValueError as e:
-            raise ValueError(f"Error formatting template: {e!s}") from e
+            msg = f"Error formatting template: {e!s}"
+            raise ValueError(msg) from e
 
     return formatted_text, processed_data
 
