@@ -72,10 +72,7 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
 
     data_list = [data] if isinstance(data, Data) else data
 
-    data_objects = [
-        item if isinstance(item, Data) else Data(text=str(item))
-        for item in data_list
-    ]
+    data_objects = [item if isinstance(item, Data) else Data(text=str(item)) for item in data_list]
 
     for data_obj in data_objects:
         format_dict = {}
@@ -102,8 +99,7 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
             formatted_text.append(template.format_map(safe_dict))
             processed_data.append(data_obj)
         except ValueError as e:
-            msg = f"Error formatting template: {e!s}"
-            raise ValueError(msg) from e
+            raise ValueError(f"Error formatting template: {e!s}") from e
 
     return formatted_text, processed_data
 

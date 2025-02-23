@@ -114,18 +114,9 @@ def test_data_to_text_list_mixed_data_types():
 def test_data_to_text_list_complex_nested_data():
     """Test handling of complex nested data structures."""
     template = "Name: {name}, Info: {text}, Status: {status}"
-    data = Data(data={
-        "name": "Test",
-        "data": {
-            "text": "Nested text",
-            "status": "active"
-        }
-    })
+    data = Data(data={"name": "Test", "data": {"text": "Nested text", "status": "active"}})
     result = data_to_text_list(template, data)
-    expected = (
-        ["Name: Test, Info: Nested text, Status: active"],
-        [data]
-    )
+    expected = (["Name: Test, Info: Nested text, Status: active"], [data])
     assert result == expected
 
 
