@@ -1,6 +1,6 @@
-from langchain_core.documents import Document
 from collections import defaultdict
-from typing import Union, Tuple, List
+
+from langchain_core.documents import Document
 
 from langflow.schema import Data
 from langflow.schema.message import Message
@@ -18,7 +18,7 @@ def docs_to_data(documents: list[Document]) -> list[Data]:
     return [Data.from_document(document) for document in documents]
 
 
-def data_to_text_list(template: str, data: Union[Data, List[Data]]) -> Tuple[List[str], List[Data]]:
+def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str], list[Data]]:
     """Format text from Data objects using a template string.
 
     This function processes Data objects and formats their content using a template string.
@@ -60,13 +60,15 @@ def data_to_text_list(template: str, data: Union[Data, List[Data]]) -> Tuple[Lis
         return [], []
 
     if template is None:
-        raise ValueError("Template must be a string, but got None.")
+        msg = "Template must be a string, but got None."
+        raise ValueError(msg)
 
     if not isinstance(template, str):
-        raise TypeError(f"Template must be a string, but got {type(template)}")
+        msg = f"Template must be a string, but got {type(template)}"
+        raise TypeError(msg)
 
-    formatted_text: List[str] = []
-    processed_data: List[Data] = []
+    formatted_text: list[str] = []
+    processed_data: list[Data] = []
 
     data_list = [data] if isinstance(data, Data) else data
 
@@ -79,20 +81,20 @@ def data_to_text_list(template: str, data: Union[Data, List[Data]]) -> Tuple[Lis
         format_dict = {}
 
         if isinstance(data_obj.data, str):
-            format_dict['text'] = data_obj.data
+            format_dict["text"] = data_obj.data
 
         elif isinstance(data_obj.data, dict):
             format_dict.update(data_obj.data)
 
-            if isinstance(data_obj.data.get('data'), dict):
-                format_dict.update(data_obj.data['data'])
+            if isinstance(data_obj.data.get("data"), dict):
+                format_dict.update(data_obj.data["data"])
 
-            if 'text' in format_dict:
-                format_dict['text'] = format_dict['text']
-            elif 'error' in format_dict:
-                format_dict['text'] = format_dict['error']
+            if "text" in format_dict:
+                format_dict["text"] = format_dict["text"]
+            elif "error" in format_dict:
+                format_dict["text"] = format_dict["error"]
 
-        format_dict['data'] = data_obj.data
+        format_dict["data"] = data_obj.data
 
         safe_dict = defaultdict(str, format_dict)
 
@@ -100,7 +102,8 @@ def data_to_text_list(template: str, data: Union[Data, List[Data]]) -> Tuple[Lis
             formatted_text.append(template.format_map(safe_dict))
             processed_data.append(data_obj)
         except ValueError as e:
-            raise ValueError(f"Error formatting template: {str(e)}") from e
+            msg = f"Error formatting template: {e!s}"
+            raise ValueError(msg) from e
 
     return formatted_text, processed_data
 
