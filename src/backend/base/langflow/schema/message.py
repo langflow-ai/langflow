@@ -92,12 +92,19 @@ class Message(Data):
         try:
             # Try parsing with timezone
             try:
+                # Try parsing with millisecond
                 return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
             except ValueError:
+                # Try parsing without millisecond
                 return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
         except ValueError:
             # Try parsing without timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+            try:
+                # Try parsing with millisecond    
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+            except ValueError:
+                # Try parsing without millisecond
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
 
     @field_validator("files", mode="before")
     @classmethod
