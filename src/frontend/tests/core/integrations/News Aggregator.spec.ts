@@ -6,7 +6,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
-  "Price Deal Finder",
+  "News Aggregator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
@@ -19,19 +19,15 @@ withEventDeliveryModes(
       "OPENAI_API_KEY required to run this test",
     );
 
-    test.skip(
-      !process?.env?.TAVILY_API_KEY,
-      "TAVILY_API_KEY required to run this test",
-    );
-
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
 
+    await page.goto("/");
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Price Deal Finder" }).click();
+    await page.getByRole("heading", { name: "News Aggregator" }).click();
 
     await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
@@ -46,16 +42,11 @@ withEventDeliveryModes(
     await page
       .getByTestId("popover-anchor-input-api_key")
       .nth(0)
-      .fill(process?.env?.TAVILY_API_KEY ?? "");
-
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .nth(1)
       .fill(process?.env?.AGENTQL_API_KEY ?? "");
 
     await page
       .getByTestId("popover-anchor-input-api_key")
-      .nth(2)
+      .nth(1)
       .fill(process?.env?.OPENAI_API_KEY ?? "");
 
     await page.getByTestId("playground-btn-flow-io").click();
@@ -64,21 +55,11 @@ withEventDeliveryModes(
       timeout: 3000,
     });
 
-    const product = randomProduct();
-
-    await page.getByTestId("input-chat-playground").fill(product);
+    await page.getByTestId("input-chat-playground").fill("what is langflow?");
 
     await page.getByTestId("button-send").click();
 
-    try {
-      await page.waitForSelector('[data-testid="button-stop"]', {
-        timeout: 180000,
-        state: "hidden",
-      });
-    } catch (error) {
-      console.log("Timeout error");
-      test.skip(true, "Timeout error");
-    }
+    await page.waitForSelector("text=Finished", { timeout: 10000 });
 
     await page.waitForSelector(".markdown", { timeout: 3000 });
 
@@ -87,27 +68,12 @@ withEventDeliveryModes(
       .last()
       .allTextContents();
 
-    const concatAllText = textContents.join(" ").toLowerCase();
+    const concatAllText = textContents.join(" ");
 
     expect(concatAllText.length).toBeGreaterThan(100);
 
-    const zeldaChapter = product.split(" ")[1];
-    expect(concatAllText).toContain(zeldaChapter);
+    expect(concatAllText).toContain("Langflow");
+    expect(concatAllText).toContain("open-source");
+    expect(concatAllText).toContain("framework");
   },
 );
-
-const randomProduct = () => {
-  const products = [
-    "Zelda Tears of the Kingdom",
-    "Zelda Ocarina of Time",
-    "Zelda Majora's Mask",
-    "Zelda The Wind Waker",
-    "Zelda Twilight Princess",
-    "Zelda Skyward Sword",
-    "Zelda Breath of the Wild",
-    "Zelda Link's Awakening",
-    "Zelda Link to the Past",
-  ];
-
-  return products[Math.floor(Math.random() * products.length)].toLowerCase();
-};
