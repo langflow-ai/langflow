@@ -153,9 +153,11 @@ class TessAIExecuteAgentComponent(Component):
     def _collect_dynamic_parameters(self) -> dict:
         parameters = {}
         suffix = self.FIELD_SUFFIX
+        suffix_length = len(suffix)
+
         for key in self._parameters:
             if key.endswith(suffix):
-                param_name = key[: -len(suffix)]
+                param_name = key[: -suffix_length]
                 value = self._parameters[key]
 
                 if param_name == "messages":
@@ -163,9 +165,8 @@ class TessAIExecuteAgentComponent(Component):
                         "role": "user",
                         "content": value
                     }]
+                elif isinstance(value, list):
+                    parameters[param_name] = ','.join(value)
                 else:
-                    if isinstance(value, list):
-                        parameters[param_name] = ','.join(value)
-                    else:
-                        parameters[param_name] = value
+                    parameters[param_name] = value
         return parameters
