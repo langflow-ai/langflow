@@ -184,11 +184,8 @@
             "fieldName": "input_value",
             "id": "ChatOutput-Jj8M6",
             "inputTypes": [
-<<<<<<< HEAD
-=======
               "Data",
               "DataFrame",
->>>>>>> main
               "Message"
             ],
             "type": "str"
@@ -1162,11 +1159,8 @@
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "input_types": [
-<<<<<<< HEAD
-=======
                   "Data",
                   "DataFrame",
->>>>>>> main
                   "Message"
                 ],
                 "list": false,
@@ -1488,12 +1482,8 @@
                 "name": "format",
                 "options": [
                   "Text",
-<<<<<<< HEAD
                   "Raw HTML",
                   "JSON"
-=======
-                  "Raw HTML"
->>>>>>> main
                 ],
                 "placeholder": "",
                 "required": false,
@@ -1686,12 +1676,8 @@
                 "name": "format",
                 "options": [
                   "Text",
-<<<<<<< HEAD
                   "Raw HTML",
                   "JSON"
-=======
-                  "Raw HTML"
->>>>>>> main
                 ],
                 "placeholder": "",
                 "required": false,
@@ -1890,12 +1876,8 @@
                 "name": "format",
                 "options": [
                   "Text",
-<<<<<<< HEAD
                   "Raw HTML",
                   "JSON"
-=======
-                  "Raw HTML"
->>>>>>> main
                 ],
                 "placeholder": "",
                 "required": false,
@@ -2053,11 +2035,7 @@
                 "input_types": [
                   "Message"
                 ],
-<<<<<<< HEAD
-                "load_from_db": false,
-=======
                 "load_from_db": true,
->>>>>>> main
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
