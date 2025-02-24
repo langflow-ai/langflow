@@ -1,13 +1,14 @@
 import json
 from typing import Any
 
+import pandas as pd
 import requests
 
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.io import Output
-from langflow.schema import Data, dotdict
+from langflow.schema import DataFrame, dotdict
 
 
 class NotionPageCreator(Component):
@@ -34,8 +35,8 @@ class NotionPageCreator(Component):
         ),
         DropdownInput(
             name="database_id",
-            display_name="Database",
-            info="Select a database",
+            display_name="Database Name",
+            info="Select a database by name",
             options=["Loading databases..."],
             value="Loading databases...",
             real_time_refresh=True,
@@ -53,7 +54,7 @@ class NotionPageCreator(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Page Data", method="create_page"),
+        Output(name="dataframe", display_name="Page Data", method="create_page_as_dataframe"),
     ]
 
     def fetch_databases(self) -> list[dict[str, Any]]:
@@ -79,6 +80,10 @@ class NotionPageCreator(Component):
 
     def fetch_database_properties(self, database_id: str) -> dict[str, Any]:
         """Fetch properties of a specific database."""
+        # Extract the pure ID if it's in the format "Name (ID)"
+        if "(" in database_id and database_id.endswith(")"):
+            database_id = database_id.split("(")[-1].rstrip(")")
+
         if not database_id or database_id == "Loading databases...":
             return {}
 
@@ -109,24 +114,26 @@ class NotionPageCreator(Component):
                 return {"rich_text": [{"type": "text", "text": {"content": str(value)}}]}
 
             if prop_type == "select":
-                # Select should be a single object, not an array
+                if not value:
+                    return {"select": None}
                 return {"select": {"name": str(value)}}
 
             if prop_type == "multi_select":
-                # Multi-select is an array of objects with "name"
                 values = [v.strip() for v in str(value).split(",")]
                 return {"multi_select": [{"name": v} for v in values if v]}
 
             if prop_type == "date":
-                # Tries to interpret if it is a date range
+                if not value:
+                    return {"date": None}
                 if " to " in value:
                     start, end = value.split(" to ")
                     return {"date": {"start": start.strip(), "end": end.strip()}}
                 return {"date": {"start": str(value)}}
 
             if prop_type == "number":
+                if not value:
+                    return {"number": None}
                 try:
-                    # Converts to float to accept decimals
                     return {"number": float(value)}
                 except ValueError:
                     return {"number": 0}
@@ -135,52 +142,225 @@ class NotionPageCreator(Component):
                 return {"checkbox": str(value).lower() in ("true", "1", "yes", "y", "on")}
 
             elif prop_type == "url":
-                return {"url": str(value)}
+                return {"url": str(value) if value else None}
 
             elif prop_type == "email":
-                return {"email": str(value)}
+                return {"email": str(value) if value else None}
 
             elif prop_type == "phone_number":
-                return {"phone_number": str(value)}
+                return {"phone_number": str(value) if value else None}
 
             elif prop_type == "files":
-                # If it is a URL, create as external file
+                if not value:
+                    return {"files": []}
                 if value.startswith(("http://", "https://")):
                     return {"files": [{"name": value.split("/")[-1], "type": "external", "external": {"url": value}}]}
                 return {"files": []}
 
+            elif prop_type == "relation":
+                import re
+
+                uuid_regex = re.compile(
+                    r"^[0-9a-fA-F]{8}-"
+                    r"[0-9a-fA-F]{4}-"
+                    r"[0-9a-fA-F]{4}-"
+                    r"[0-9a-fA-F]{4}-"
+                    r"[0-9a-fA-F]{12}$"
+                )
+                relation_values = [v.strip() for v in str(value).split(",") if v.strip()]
+                valid_ids = [v for v in relation_values if uuid_regex.match(v)]
+                if relation_values and not valid_ids:
+                    error_message = f"Invalid relation id(s) provided for property {prop_name}: {value}"
+                    raise ValueError(error_message)
+                return {"relation": [{"id": rid} for rid in valid_ids]}
+
             elif prop_type == "status":
+                if not value:
+                    return {"status": None}
                 return {"status": {"name": str(value)}}
 
+            elif prop_type == "people":
+                # Handle people type - this requires user IDs
+                import re
+
+                uuid_regex = re.compile(
+                    r"^[0-9a-fA-F]{8}-"
+                    r"[0-9a-fA-F]{4}-"
+                    r"[0-9a-fA-F]{4}-"
+                    r"[0-9a-fA-F]{4}-"
+                    r"[0-9a-fA-F]{12}$"
+                )
+                # Check if value looks like UUID
+                if not value:
+                    return {"people": []}
+
+                people_values = [v.strip() for v in str(value).split(",") if v.strip()]
+                valid_ids = []
+
+                for person_value in people_values:
+                    if uuid_regex.match(person_value):
+                        # It's a user ID
+                        valid_ids.append({"id": person_value})
+                    else:
+                        # For non-UUID values, log a warning
+                        self.log(
+                            f"Warning: '{person_value}' doesn't appear to be a valid user ID. "
+                            f"People properties require Notion user IDs, not names."
+                        )
+
+                return {"people": valid_ids}
+
+            elif prop_type == "formula":
+                # Formula properties are calculated by Notion and cannot be set
+                self.log(f"Skipping formula property {prop_name} as it cannot be set manually")
+                return {}  # Return empty dict instead of None
+
+            elif prop_type == "rollup":
+                # Rollup properties are calculated by Notion and cannot be set
+                self.log(f"Skipping rollup property {prop_name} as it cannot be set manually")
+                return {}  # Return empty dict instead of None
+
+            elif prop_type in {"created_by", "last_edited_by", "created_time", "last_edited_time"}:
+                # These are system properties and cannot be set
+                self.log(f"Skipping system property {prop_name} as it cannot be set manually")
+                return {}  # Return empty dict instead of None
+
             else:
-                # For unknown types, use rich_text
-                self.log(f"Unknown property type {prop_type}, defaulting to rich_text")
-                return {"rich_text": [{"type": "text", "text": {"content": str(value)}}]}
+                # Log unknown property type
+                self.log(
+                    f"Unknown property type '{prop_type}' for property '{prop_name}'. "
+                    f"Please check your Notion database schema."
+                )
+                return {}  # Return empty dict instead of None
 
         except (ValueError, TypeError) as e:
             self.log(f"Error formatting property {prop_name}: {e!s}")
-            # Returns empty value appropriate for the type
+            # Returns empty value or None based on type
             empty_values: dict[str, dict[str, Any]] = {
                 "title": {"title": []},
                 "rich_text": {"rich_text": []},
                 "select": {"select": None},
                 "multi_select": {"multi_select": []},
                 "date": {"date": None},
-                "number": {"number": 0},
+                "number": {"number": None},
                 "checkbox": {"checkbox": False},
-                "url": {"url": ""},
-                "email": {"email": ""},
-                "phone_number": {"phone_number": ""},
+                "url": {"url": None},
+                "email": {"email": None},
+                "phone_number": {"phone_number": None},
                 "files": {"files": []},
                 "status": {"status": None},
+                "people": {"people": []},
+                "relation": {"relation": []},
             }
-            default_value: dict[str, Any] = {"rich_text": []}
-            return empty_values.get(prop_type, default_value)
+            return empty_values.get(prop_type, {}) if prop_type in empty_values else {"value": None}
 
-    def create_page(self) -> Data:
-        """Create a new page in a Notion database."""
+    def create_page_as_dataframe(self) -> DataFrame:
+        """Create a new page in a Notion database and return as DataFrame."""
+        page_response = self._create_notion_page()
+
+        # If error, return DataFrame with error information
+        if "error" in page_response:
+            error_df = pd.DataFrame({"error": [page_response["error"]]})
+            return DataFrame(error_df)
+
+        # Extract the important information from the page response
+        page_data = {
+            "page_id": [page_response.get("id", "")],
+            "url": [page_response.get("url", "")],
+            "created_time": [page_response.get("created_time", "")],
+            "last_edited_time": [page_response.get("last_edited_time", "")],
+        }
+
+        # Extract property values in a user-friendly format
+        properties = page_response.get("properties", {})
+        for prop_name, prop_content in properties.items():
+            prop_type = next(iter(prop_content)) if prop_content else ""
+
+            # Format the property based on its type
+            if prop_type == "title" and prop_content.get("title"):
+                text_content = []
+                text_content = [
+                    item["text"]["content"]
+                    for item in prop_content.get("title", [])
+                    if item.get("type") == "text" and item.get("text", {}).get("content")
+                ]
+                page_data[f"{prop_name}"] = [" ".join(text_content) if text_content else ""]
+
+            elif prop_type == "rich_text" and prop_content.get("rich_text"):
+                text_content = []
+                text_content = [
+                    item["text"]["content"]
+                    for item in prop_content.get("rich_text", [])
+                    if item.get("type") == "text" and "text" in item and "content" in item["text"]
+                ]
+                page_data[f"{prop_name}"] = [" ".join(text_content) if text_content else ""]
+
+            elif prop_type == "select" and prop_content.get("select"):
+                page_data[f"{prop_name}"] = [prop_content["select"].get("name", "")]
+
+            elif prop_type == "multi_select" and prop_content.get("multi_select"):
+                multi_select_values = [item.get("name", "") for item in prop_content.get("multi_select", [])]
+                page_data[f"{prop_name}"] = [", ".join(multi_select_values)]
+
+            elif prop_type == "date" and prop_content.get("date"):
+                date_info = prop_content["date"]
+                date_value = date_info.get("start", "")
+                if date_info.get("end"):
+                    date_value += f" to {date_info['end']}"
+                page_data[f"{prop_name}"] = [date_value]
+
+            elif prop_type == "checkbox":
+                page_data[f"{prop_name}"] = [str(prop_content.get("checkbox", False))]
+
+            elif prop_type in ["number", "url", "email", "phone_number"]:
+                page_data[f"{prop_name}"] = [str(prop_content.get(prop_type, ""))]
+
+            elif prop_type == "status" and prop_content.get("status"):
+                page_data[f"{prop_name}"] = [prop_content["status"].get("name", "")]
+
+            elif prop_type == "relation":
+                relation_ids = [item.get("id", "") for item in prop_content.get("relation", [])]
+                page_data[f"{prop_name}"] = [", ".join(relation_ids)]
+
+            # Add other property types as needed
+
+        # Add database info and additional metadata
+        page_data["database_id"] = [page_response.get("parent", {}).get("database_id", "")]
+        page_data["database_name"] = [self.database_id.split(" (")[0] if "(" in self.database_id else self.database_id]
+        page_data["created_by"] = [page_response.get("created_by", {}).get("id", "")]
+        page_data["last_edited_by"] = [page_response.get("last_edited_by", {}).get("id", "")]
+
+        # Add the full JSON response as a column for debugging/advanced use
+        page_data["api_response"] = [json.dumps(page_response)]
+
+        # Create DataFrame
+        result_df = pd.DataFrame(page_data)
+
+        # Order columns: metadata first, then properties
+        metadata_cols = [
+            "page_id",
+            "database_id",
+            "database_name",
+            "url",
+            "created_time",
+            "last_edited_time",
+            "created_by",
+            "last_edited_by",
+        ]
+        property_cols = [col for col in result_df.columns if col not in metadata_cols and col != "api_response"]
+
+        # Put api_response at the end
+        ordered_cols = metadata_cols + sorted(property_cols) + ["api_response"]
+
+        # Filter out columns that don't exist in the dataframe
+        existing_cols = [col for col in ordered_cols if col in result_df.columns]
+
+        return DataFrame(result_df[existing_cols])
+
+    def _create_notion_page(self) -> dict:
+        """Internal method to create the Notion page and return the API response."""
         if not self.database_id or self.database_id == "Loading databases...":
-            return Data(data={"error": "Please select a valid database first."})
+            return {"error": "Please select a valid database first."}
 
         # Debug logs
         self.log(f"Creating page in database: {self.database_id}")
@@ -230,6 +410,15 @@ class NotionPageCreator(Component):
 
             self.log(f"Property info: {prop_info}")
 
+            # Get detailed info about this property type
+            prop_type = prop_info["type"]
+            self.log(f"Property type: {prop_type}")
+
+            # Skip system properties that can't be set
+            if prop_type in ["formula", "rollup", "created_by", "last_edited_by", "created_time", "last_edited_time"]:
+                self.log(f"Skipping system/computed property {property_name} of type {prop_type}")
+                continue
+
             # Format the value
             formatted_value = self.format_property_value(
                 property_name, prop_info, property_value if property_value else ""
@@ -237,13 +426,13 @@ class NotionPageCreator(Component):
 
             self.log(f"Formatted value: {formatted_value}")
 
-            # Add to properties
-            if formatted_value:
+            # Add to properties if we got a valid formatted value
+            if formatted_value is not None:
                 properties[property_name] = formatted_value
                 self.log(f"Added property {property_name}")
 
             # Check if this is the title property
-            if prop_info["type"] == "title":
+            if prop_type == "title":
                 title_property = None  # We already have a title set
 
         # Add default title if needed
@@ -254,10 +443,12 @@ class NotionPageCreator(Component):
         # Final check
         if not properties:
             self.log("No properties were created!")
-            return Data(data={"error": "No valid properties defined. Please check the logs for details."})
+            return {"error": "No valid properties defined. Please check the logs for details."}
 
         # Create page data
-        data = {"parent": {"database_id": self.database_id}, "properties": properties}
+        # Extract the pure database ID before sending to the API
+        clean_db_id = self.database_id.split("(")[-1].rstrip(")") if "(" in self.database_id else self.database_id
+        data = {"parent": {"database_id": clean_db_id}, "properties": properties}
 
         self.log(f"Final request data: {json.dumps(data, indent=2)}")
 
@@ -275,14 +466,14 @@ class NotionPageCreator(Component):
                     f"Request data: {json.dumps(data, indent=2)}"
                 )
                 self.log(error_msg)
-                return Data(data={"error": error_msg})
+                return {"error": error_msg}
 
             response.raise_for_status()
-            return Data(data={"page": response.json()})
+            return response.json()
         except requests.exceptions.RequestException as e:
             error_msg = f"Error creating page: {e!s}"
             self.log(error_msg)
-            return Data(data={"error": error_msg})
+            return {"error": error_msg}
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on field updates."""
@@ -290,15 +481,26 @@ class NotionPageCreator(Component):
             # When notion_secret is updated or initially loaded
             if field_name is None or field_name == "notion_secret":
                 databases = self.fetch_databases()
-                build_config["database_id"]["options"] = [db["id"] for db in databases]
-                if databases:
-                    build_config["database_id"]["value"] = databases[0]["id"]
+                # Format options as "Name (ID)"
+                formatted_dbs: list[str] = []  # Add type annotation
+                for db in databases:
+                    db_name = db.get("title", [{}])[0].get("text", {}).get("content", "Untitled")
+                    db_id = db["id"]
+                    formatted_name: str = f"{db_name} ({db_id})"
+                    formatted_dbs.append(formatted_name)
 
-                # Add tooltips with database titles
-                tooltips = {
-                    db["id"]: db.get("title", [{}])[0].get("text", {}).get("content", "Untitled") for db in databases
-                }
-                build_config["database_id"]["tooltips"] = tooltips
+                build_config["database_id"]["options"] = formatted_dbs
+                if databases:
+                    build_config["database_id"]["value"] = formatted_dbs[0]
+
+                # Map formatted names to original IDs for API calls
+                id_mapping: dict[str, str] = {}
+                for db in databases:
+                    db_name = db.get("title", [{}])[0].get("text", {}).get("content", "Untitled")
+                    db_id = db["id"]
+                    formatted_key = f"{db_name} ({db_id})"
+                    id_mapping[formatted_key] = db_id
+                build_config["database_id"]["tooltips"] = id_mapping
 
             # When database_id changes
             if field_name == "database_id":
@@ -374,6 +576,24 @@ class NotionPageCreator(Component):
                             if prop_type == "multi_select":
                                 info_text += "\nFor multiple values, separate with commas"
 
+                        elif prop_type == "people":
+                            info_text = (
+                                "Enter Notion user IDs (not names) for people. Separate multiple IDs with commas."
+                            )
+
+                        elif prop_type == "relation":
+                            info_text = "Enter page IDs to link to. Separate multiple IDs with commas."
+
+                        elif prop_type in [
+                            "formula",
+                            "rollup",
+                            "created_by",
+                            "last_edited_by",
+                            "created_time",
+                            "last_edited_time",
+                        ]:
+                            info_text = "This property is computed by Notion and cannot be set manually."
+
                     # Add the value input field
                     build_config[value_key] = MessageTextInput(
                         name=value_key,
@@ -386,6 +606,7 @@ class NotionPageCreator(Component):
 
         except (ValueError, KeyError) as e:
             self.log(f"Error updating build config: {e!s}")
+
             build_config["database_id"]["options"] = ["Error loading databases"]
             build_config["database_id"]["value"] = "Error loading databases"
             build_config["number_of_properties"]["advanced"] = True
