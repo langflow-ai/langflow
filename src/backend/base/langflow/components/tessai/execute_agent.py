@@ -1,3 +1,4 @@
+import json
 import requests
 from copy import deepcopy
 from langflow.custom import Component
@@ -34,21 +35,23 @@ class TessAIExecuteAgentComponent(Component):
     def execute_agent(self) -> str:
         headers = self._get_headers()
         execute_endpoint = f"{self.BASE_URL}/api/agents/{self.agent_id.strip()}/execute?waitExecution=true"
-
+    
         parameters = self._collect_dynamic_parameters()
-
+    
         try:
             response = requests.post(execute_endpoint, headers=headers, json=parameters)
             response.raise_for_status()
             execution_data = response.json()
-
+    
             if execution_data["responses"][0]["status"] not in ["succeeded", "failed", "error"]:
-                raise ValueError(f"Unexpected status: {execution_data.get('status', None)}")
-
+                raise ValueError(json.dumps(execution_data))
+    
             response_id = execution_data["responses"][0]["id"]
             return self._get_agent_response(headers, response_id)
         except requests.RequestException as e:
-            raise RuntimeError(f"Error executing agent: {e!s}") from e
+            error_json = e.response.json() if e.response is not None else {"error": str(e)}
+            raise RuntimeError(json.dumps(error_json)) from e
+
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
@@ -69,11 +72,10 @@ class TessAIExecuteAgentComponent(Component):
     def _get_agent_questions(self, agent_id):
         endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
         response = requests.get(endpoint, headers=self._get_headers())
-        
-        if response.status_code == 404:
-            return []
-        elif response.status_code != 200:
-            raise Exception(f"Error getting information for agent {agent_id}: {response.json()}")
+
+        if response.status_code not in [200, 404]:
+            raise Exception(json.dumps(response.json()))
+
         
         template = response.json()
         return template.get("questions", [])
@@ -101,7 +103,8 @@ class TessAIExecuteAgentComponent(Component):
             response.raise_for_status()
             return response.json().get("output", "")
         except requests.RequestException as e:
-            raise RuntimeError(f"Error getting agent response: {e!s}") from e
+            error_json = e.response.json() if e.response is not None else {"error": str(e)}
+            raise RuntimeError(json.dumps(error_json)) from e
 
     def _create_field(self, key: str, question: dict, value: str | None = None) -> dict:
         field_type = question.get("type", "text")
@@ -124,8 +127,7 @@ class TessAIExecuteAgentComponent(Component):
             input_class = MultilineInput
         elif field_type == "select":
             input_class = DropdownInput
-            args["options"] = [opt.split(":")[-1] for opt in question.get("options", [])]
-
+            args["options"] = question.get("options", [])
             if value and value in args["options"]:
                 args["value"] = value
             elif args["required"]:
