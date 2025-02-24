@@ -54,6 +54,7 @@ export default function TextModal({
               readonly={!editable}
               onChange={(text) => setInternalValue(text)}
               value={internalValue}
+              resizable={false}
               left={false}
             />
           </div>
