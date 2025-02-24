@@ -25,14 +25,20 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Research Translation Loop" })
       .click();
 
-    try {
-      await page
-        .getByTestId("anchor-popover-anchor-input-api_key")
-        .last()
-        .fill(process.env.ANTHROPIC_API_KEY ?? "");
-    } catch (e) {
-      console.log("There's API already added");
-    }
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
+
+    await initialGPTsetup(page, {
+      skipAdjustScreenView: true,
+      skipAddNewApiKeys: true,
+      skipSelectGptModel: true,
+    });
+
+    await page
+      .getByTestId("popover-anchor-input-api_key")
+      .last()
+      .fill(process.env.ANTHROPIC_API_KEY ?? "");
 
     await page.waitForSelector('[data-testid="dropdown_str_model_name"]', {
       timeout: 5000,
@@ -43,6 +49,10 @@ withEventDeliveryModes(
     await page.keyboard.press("Enter");
 
     await page.getByTestId("playground-btn-flow-io").click();
+
+    await page.waitForSelector('[data-testid="button-send"]', {
+      timeout: 3000,
+    });
 
     await page.getByTestId("input-chat-playground").fill("This is a test");
 
