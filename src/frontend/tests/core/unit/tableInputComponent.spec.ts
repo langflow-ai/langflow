@@ -25,6 +25,10 @@ test(
       },
     );
 
+    await page.waitForSelector('[data-testid="zoom_out"]', {
+      timeout: 3000,
+    });
+
     await page.getByTestId("sidebar-custom-component-button").click();
 
     await page.getByTestId("zoom_out").click();
@@ -164,7 +168,7 @@ class CustomComponent(Component):
     numberOfCopiedRows = await page.getByText(thirdRandomText).count();
     expect(numberOfCopiedRows).toBe(0);
 
-    await page.getByText("Close").last().click();
+    await page.getByText("Save").last().click();
 
     await page.waitForSelector("text=Open table", {
       timeout: 3000,
