@@ -205,15 +205,17 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and Push to Docker Hub
-        uses: docker/build-push-action@v6
+        uses: Wandalen/wretry.action@master
         with:
-          context: .
-          push: true
-          file: ${{ needs.setup.outputs.file }}
-          tags: ${{ needs.setup.outputs.docker_tags }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          action: docker/build-push-action@v6
+          with: |
+            context: .
+            push: true
+            file: ${{ needs.setup.outputs.file }}
+            tags: ${{ needs.setup.outputs.docker_tags }}
+            platforms: linux/amd64,linux/arm64
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
 
       - name: Login to Github Container Registry
         uses: docker/login-action@v3
@@ -223,15 +225,17 @@ jobs:
           password: ${{ secrets.TEMP_GHCR_TOKEN}}
 
       - name: Build and push to Github Container Registry
-        uses: docker/build-push-action@v6
+        uses: Wandalen/wretry.action@master
         with:
-          context: .
-          push: true
-          file: ${{ needs.setup.outputs.file }}
-          tags: ${{ needs.setup.outputs.ghcr_tags }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          action: docker/build-push-action@v6
+          with: |
+            context: .
+            push: true
+            file: ${{ needs.setup.outputs.file }}
+            tags: ${{ needs.setup.outputs.ghcr_tags }}
+            platforms: linux/amd64,linux/arm64
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
 
   build_components:
     if: ${{ inputs.release_type == 'main' }}
@@ -287,16 +291,18 @@ jobs:
         run: sleep 120
 
       - name: Build and push ${{ matrix.component }}
-        uses: docker/build-push-action@v6
+        uses: Wandalen/wretry.action@master
         with:
-          context: .
-          push: true
-          build-args: |
-            LANGFLOW_IMAGE=${{ matrix.langflow_image }}
-          file: ${{ matrix.dockerfile }}
-          tags: ${{ matrix.tags }}
-          # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
-          provenance: false
+          action: docker/build-push-action@v6
+          with: |
+            context: .
+            push: true
+            build-args: |
+              LANGFLOW_IMAGE=${{ matrix.langflow_image }}
+            file: ${{ matrix.dockerfile }}
+            tags: ${{ matrix.tags }}
+            # provenance: false will result in a single manifest for all platforms which makes the image pullable from arm64 machines via the emulation (e.g. Apple Silicon machines)
+            provenance: false
 
   restart-space:
     name: Restart HuggingFace Spaces
@@ -306,7 +312,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.12"
+          - "3.13"
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v4
@@ -314,6 +320,8 @@ jobs:
           ref: ${{ inputs.ref || inputs.main_version || github.ref }}
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Restart HuggingFace Spaces Build
         run: |
