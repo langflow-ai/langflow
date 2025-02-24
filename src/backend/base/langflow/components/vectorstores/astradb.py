@@ -222,6 +222,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "before new data is loaded.",
             advanced=True,
         ),
+        StrInput(
+            name="id_field",
+            display_name="ID Field",
+            info="When this parameter is provided, the ids should be available on all records "
+            "and will be used to update the collection.",
+            advanced=True,
+        ),
         BoolInput(
             name="ignore_invalid_documents",
             display_name="Ignore Invalid Documents",
@@ -704,8 +711,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store) -> None:
         documents = []
+        ids = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
+                if self.id_field:
+                    ids.append(_input.data[self.id_field])                
                 documents.append(_input.to_lc_document())
             else:
                 msg = "Vector Store Inputs must be Data objects."
@@ -724,9 +734,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 raise ValueError(msg) from e
 
         if documents:
-            self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
-                vector_store.add_documents(documents)
+                if len(documents) == len(ids):
+                    self.log(f"Updating {len(documents)} documents to the Vector Store.")
+                    vector_store.add_documents(documents, ids=ids)
+                else:
+                    self.log(f"Adding {len(documents)} documents to the Vector Store.")
+                    vector_store.add_documents(documents)
             except Exception as e:
                 msg = f"Error adding documents to AstraDBVectorStore: {e}"
                 raise ValueError(msg) from e
