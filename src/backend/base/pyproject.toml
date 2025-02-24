@@ -68,7 +68,6 @@ dependencies = [
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.15.4,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
-    "spider-client>=0.0.27,<1.0.0",
     "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
@@ -81,6 +80,7 @@ dependencies = [
     "mcp>=1.1.2",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
+    "json_repair==0.30.3",
 ]
 
 [dependency-groups]
@@ -211,34 +211,216 @@ pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:spl
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-
-
-
+[project.scripts]
+langflow-base = "langflow.__main__:main"
 
 [project.urls]
 Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
-
-# Optional dependencies for uv
+# Optional dependencies
 [project.optional-dependencies]
+# Core deployment dependencies
 deploy = [
-    "celery>=5.3.1",
-    "redis>=4.6.0",
-    "flower>=1.0.0"
-]
-local = [
-    "llama-cpp-python>=0.2.0",
-    "sentence-transformers>=2.0.0",
-    "ctransformers>=0.2"
-]
-all = [
-    "celery>=5.3.1",
-    "redis>=4.6.0",
-    "flower>=1.0.0",
-    "llama-cpp-python>=0.2.0",
-    "sentence-transformers>=2.0.0",
-    "ctransformers>=0.2"
+    "celery[redis]>=5.3.6",
+    "flower>=2.0.0"
 ]
 
-[project.scripts]
-langflow-base = "langflow.__main__:main"
+# Individual database providers
+couchbase = ["couchbase>=4.2.1"]
+cassandra = ["cassio>=0.1.7"]
+clickhouse = ["clickhouse-connect==0.7.19"]
+mongodb = ["pymongo==4.10.1"]
+supabase = ["supabase==2.6.0"]
+redis = ["redis==5.2.1"]
+elasticsearch = ["elasticsearch==8.16.0", "langchain_elasticsearch==0.3.2"]
+
+# Individual vector store providers
+faiss = ["faiss-cpu==1.9.0.post1"]
+qdrant = ["qdrant-client==1.9.2"]
+weaviate = ["weaviate-client==4.10.2"]
+chroma = [
+    "chromadb==0.5.23",
+    "langchain-chroma==0.1.4"
+]
+upstash = ["upstash-vector==0.6.0"]
+pinecone = ["langchain-pinecone==0.2.2"]
+milvus = ["langchain-milvus==0.1.7"]
+mongodb-vectors = ["langchain-mongodb==0.2.0"]
+astradb = ["langchain-astradb==0.5.2"]
+
+# Individual LLM providers
+openai = ["langchain-openai==0.2.12"]
+anthropic = ["langchain-anthropic==0.3.0"]
+cohere = ["langchain-cohere==0.3.3"]
+google = [
+    "langchain-google-genai==2.0.6",
+    "langchain-google-vertexai==2.0.7",
+    "langchain-google-community==2.0.3",
+    "langchain-google-calendar-tools==0.0.1"
+]
+ollama = ["langchain-ollama==0.2.1"]
+nvidia = ["langchain-nvidia-ai-endpoints==0.3.8"]
+mistral = ["langchain-mistralai==0.2.3"]
+sambanova = ["langchain-sambanova==0.1.0"]
+groq = ["langchain-groq==0.2.1"]
+
+# Individual local LLM providers
+llama-cpp = ["llama-cpp-python~=0.2.0"]
+sentence-transformers = ["sentence-transformers>=2.3.1"]
+ctransformers = ["ctransformers>=0.2.10"]
+
+# Individual monitoring providers
+langfuse = ["langfuse==2.53.9"]
+langwatch = ["langwatch==0.1.16"]
+langsmith = ["langsmith==0.1.147"]
+arize = ["arize-phoenix-otel>=0.6.1"]
+
+# Individual document loaders
+pypdf = ["pypdf~=5.1.0"]
+docx = ["python-docx>=1.1.0"]
+pytube = ["pytube==15.0.0"]
+
+# Individual agent frameworks
+crewai = ["crewai==0.102.0"]
+dspy = ["dspy-ai==2.5.41"]
+smolagents = ["smolagents>=1.8.0"]
+
+# Individual tools
+beautifulsoup = ["beautifulsoup4==4.12.3"]
+serpapi = ["google-search-results>=2.4.1,<3.0.0"]
+google-api = ["google-api-python-client==2.154.0"]
+wikipedia = ["wikipedia==1.4.0"]
+fake-useragent = ["fake-useragent==1.5.1"]
+duckduckgo = ["duckduckgo_search==7.2.1"]
+yfinance = ["yfinance==0.2.50"]
+wolframalpha = ["wolframalpha==5.1.3"]
+
+# Individual utilities
+pyarrow = ["pyarrow==19.0.0"]
+fastavro = ["fastavro==1.9.7"]
+gitpython = ["GitPython==3.1.43"]
+nltk = ["nltk==3.9.1"]
+lark = ["lark==1.2.2"]
+
+# Additional dependencies from requirements
+huggingface = ["huggingface-hub[inference]>=0.23.2,<1.0.0"]
+metaphor = ["metaphor-python==0.1.23"]
+metal = ["metal_sdk==2.5.1"]
+markup = ["MarkupSafe==3.0.2"]
+aws = ["boto3==1.34.162"]
+numexpr = ["numexpr==2.10.2"]
+qianfan = ["qianfan==0.3.5"]
+pgvector = ["pgvector==0.3.6"]
+litellm = ["litellm==1.60.2"]
+zep = ["zep-python==2.0.2"]
+youtube = ["youtube-transcript-api==0.6.3"]
+markdown = ["Markdown==3.7"]
+kubernetes = ["kubernetes==31.0.0"]
+json-repair = ["json_repair==0.30.3"]
+astra = ["astra-assistants[tools]~=2.2.9"]
+composio = [
+    "composio-langchain==0.7.1",
+    "composio-core==0.7.1"
+]
+ragstack = ["ragstack-ai-knowledge-store==0.2.1"]
+opensearch = ["opensearch-py==2.8.0"]
+atlassian = ["atlassian-python-api==3.41.16"]
+mem0 = ["mem0ai==0.1.34"]
+needle = ["needle-python>=0.4.0"]
+sseclient = ["sseclient-py==1.8.0"]
+openinference = ["openinference-instrumentation-langchain>=0.1.29"]
+mcp = ["mcp>=0.9.1"]
+ag2 = ["ag2>=0.1.0"]
+scrapegraph = ["scrapegraph-py>=1.12.0"]
+pydantic-ai = ["pydantic-ai>=0.0.19"]
+apify = ["apify-client>=1.8.1"]
+spider = ["spider-client>=0.0.27,<1.0.0"]
+
+# Complete installation
+complete = [
+    "langflow-base[deploy]",
+    "langflow-base[couchbase]",
+    "langflow-base[cassandra]",
+    "langflow-base[clickhouse]",
+    "langflow-base[mongodb]",
+    "langflow-base[supabase]",
+    "langflow-base[redis]",
+    "langflow-base[elasticsearch]",
+    "langflow-base[faiss]",
+    "langflow-base[qdrant]",
+    "langflow-base[weaviate]",
+    "langflow-base[chroma]",
+    "langflow-base[upstash]",
+    "langflow-base[pinecone]",
+    "langflow-base[milvus]",
+    "langflow-base[mongodb-vectors]",
+    "langflow-base[astradb]",
+    "langflow-base[openai]",
+    "langflow-base[anthropic]",
+    "langflow-base[cohere]",
+    "langflow-base[google]",
+    "langflow-base[ollama]",
+    "langflow-base[nvidia]",
+    "langflow-base[mistral]",
+    "langflow-base[sambanova]",
+    "langflow-base[groq]",
+    "langflow-base[langfuse]",
+    "langflow-base[langwatch]",
+    "langflow-base[langsmith]",
+    "langflow-base[arize]",
+    "langflow-base[pypdf]",
+    "langflow-base[docx]",
+    "langflow-base[pytube]",
+    "langflow-base[crewai]",
+    "langflow-base[dspy]",
+    "langflow-base[smolagents]",
+    "langflow-base[beautifulsoup]",
+    "langflow-base[serpapi]",
+    "langflow-base[google-api]",
+    "langflow-base[wikipedia]",
+    "langflow-base[fake-useragent]",
+    "langflow-base[duckduckgo]",
+    "langflow-base[yfinance]",
+    "langflow-base[wolframalpha]",
+    "langflow-base[pyarrow]",
+    "langflow-base[fastavro]",
+    "langflow-base[gitpython]",
+    "langflow-base[nltk]",
+    "langflow-base[lark]",
+    "langflow-base[huggingface]",
+    "langflow-base[metaphor]",
+    "langflow-base[metal]",
+    "langflow-base[markup]",
+    "langflow-base[aws]",
+    "langflow-base[numexpr]",
+    "langflow-base[qianfan]",
+    "langflow-base[pgvector]",
+    "langflow-base[litellm]",
+    "langflow-base[zep]",
+    "langflow-base[youtube]",
+    "langflow-base[markdown]",
+    "langflow-base[kubernetes]",
+    "langflow-base[json-repair]",
+    "langflow-base[astra]",
+    "langflow-base[composio]",
+    "langflow-base[ragstack]",
+    "langflow-base[opensearch]",
+    "langflow-base[atlassian]",
+    "langflow-base[mem0]",
+    "langflow-base[needle]",
+    "langflow-base[sseclient]",
+    "langflow-base[openinference]",
+    "langflow-base[mcp]",
+    "langflow-base[ag2]",
+    "langflow-base[scrapegraph]",
+    "langflow-base[pydantic-ai]",
+    "langflow-base[apify]",
+    "langflow-base[spider]",
+]
+
+all = [
+    "langflow-base[complete]",
+    "langflow-base[dev]",
+    "langflow-base[deploy]",
+]
+
