@@ -42,7 +42,7 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(tz=datetime.now().astimezone().tzinfo).isoformat(timespec="milliseconds")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
