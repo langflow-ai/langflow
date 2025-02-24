@@ -1,7 +1,9 @@
 import requests
+
 from langflow.custom import Component
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.io import Output
+
 
 class TessAIExecuteAgentComponent(Component):
     display_name = "Execute Agent"
@@ -90,16 +92,16 @@ class TessAIExecuteAgentComponent(Component):
                 self._clear_dynamic_fields(build_config)
 
         return build_config
-    
+
     def _get_agent_questions(self, agent_id):
         endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
         response = requests.get(endpoint, headers=self._get_headers())
-        
+
         if response.status_code == 404:
             return []
-        elif response.status_code != 200:
+        if response.status_code != 200:
             raise Exception(f"Error getting information for agent {agent_id}: {response.status_code}")
-        
+
         template = response.json()
         return template.get("questions", [])
 
