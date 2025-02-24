@@ -77,10 +77,7 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
     for data_obj in data_objects:
         format_dict = {}
 
-        if isinstance(data_obj.data, str):
-            format_dict["text"] = data_obj.data
-
-        elif isinstance(data_obj.data, dict):
+        if isinstance(data_obj.data, dict):
             format_dict.update(data_obj.data)
 
             if isinstance(data_obj.data.get("data"), dict):
