@@ -536,9 +536,9 @@ def create_new_project(
     session.add(db_flow)
 
 
-async def get_all_flows_similar_to_project(session, folder_id):
+async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUID) -> list[Flow]:
     stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == folder_id)
-    return (await session.exec(stmt)).first().flows
+    return list((await session.exec(stmt)).first().flows)
 
 
 async def delete_start_projects(session, folder_id) -> None:
@@ -597,8 +597,8 @@ async def load_flows_from_directory() -> None:
         # Ensure that the default folder exists for this user
         _ = await get_or_create_default_folder(session, user.id)
 
-        async for file_path in anyio.Path(flows_path).iterdir():
-            if not await file_path.is_file() or file_path.suffix != ".json":
+        for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
+            if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
@@ -785,7 +785,8 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     # We also need to update the project data in the file
                     await update_project_file(project_path, project, updated_project_data)
             if do_create and project_name and project_data:
-                for existing_project in await get_all_flows_similar_to_project(session, new_folder.id):
+                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+                for existing_project in existing_flows:
                     await session.delete(existing_project)
 
                 create_new_project(

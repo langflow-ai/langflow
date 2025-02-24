@@ -47,7 +47,7 @@ jobs:
     name: CI
     uses: ./.github/workflows/ci.yml
     with:
-      python-versions: "['3.10', '3.11', '3.12']"
+      python-versions: "['3.10', '3.11', '3.12', '3.13']"
       frontend-tests-folder: "tests"
       release: true
 
@@ -65,7 +65,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Check Version
         id: check-version
         run: |
@@ -129,7 +129,7 @@ jobs:
       - name: Setup Environment
         uses: ./.github/actions/setup-uv
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
 
       # If pre-release is true, we need to check if  ["a", "b", "rc", "dev", "post"] is in the version string
       # if the version string is incorrect, we need to exit the workflow
