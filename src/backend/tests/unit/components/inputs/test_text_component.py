@@ -1,11 +1,10 @@
 import pytest
+
 from langflow.components.inputs import TextInputComponent
+from tests.base import ComponentTestBaseWithoutClient
 
-from tests.base import ComponentTestBaseWithClient
 
-
-@pytest.mark.usefixtures("client")
-class TestTextInputComponent(ComponentTestBaseWithClient):
+class TestTextInputComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         return TextInputComponent
@@ -17,7 +16,9 @@ class TestTextInputComponent(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return [
-            {"version": "1.0.0", "module": "text_input", "file_name": "TextInput"},
+            {"version": "1.0.19", "module": "inputs", "file_name": "TextInput"},
+            {"version": "1.1.0", "module": "inputs", "file_name": "text"},
+            {"version": "1.1.1", "module": "inputs", "file_name": "text"},
         ]
 
     def test_text_response(self, component_class, default_kwargs):
@@ -34,5 +35,7 @@ class TestTextInputComponent(ComponentTestBaseWithClient):
     async def test_latest_version(self, component_class, default_kwargs):
         """Test that the component works with the latest version."""
         component_instance = await self.component_setup(component_class, default_kwargs)
+
         result = await component_instance.run()
+
         assert result is not None, "Component returned None for the latest version."
