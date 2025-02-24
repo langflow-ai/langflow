@@ -100,6 +100,7 @@ module.exports = {
       type: "category",
       label: "Integrations",
       items: [
+        "Integrations/Apify/integrations-apify",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
@@ -120,6 +121,13 @@ module.exports = {
             "Integrations/Notion/integrations-notion",
             "Integrations/Notion/notion-agent-conversational",
             "Integrations/Notion/notion-agent-meeting-notes",
+          ],
+        },
+        {
+          type: "category",
+          label: "NVIDIA",
+          items: [
+            "Integrations/Nvidia/integrations-nvidia-ingest",
           ],
         },
       ],
