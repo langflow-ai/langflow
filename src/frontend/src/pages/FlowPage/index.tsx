@@ -6,7 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import { customStringify } from "@/utils/reactflowUtils";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useBlocker, useParams } from "react-router-dom";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
@@ -18,7 +18,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const [isLoading, setIsLoading] = useState(false);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -155,10 +154,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
             <SidebarProvider width="17.5rem" defaultOpen={!isMobile}>
-              {!view && <FlowSidebarComponent isLoading={isLoading} />}
+              {!view && <FlowSidebarComponent />}
               <main className="flex w-full overflow-hidden">
                 <div className="h-full w-full">
-                  <Page setIsLoading={setIsLoading} />
+                  <Page />
                 </div>
               </main>
             </SidebarProvider>

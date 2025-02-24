@@ -133,7 +133,7 @@ class LangFuseTracer(BaseTracer):
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
             return None
-        return self._callback
+        return None  # self._callback
 
     @staticmethod
     def _get_config() -> dict:
