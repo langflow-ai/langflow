@@ -91,7 +91,10 @@ class Message(Data):
     def serialize_timestamp(self, value):
         try:
             # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+            try:
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+            except ValueError:
+                return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
         except ValueError:
             # Try parsing without timezone
             return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
