@@ -227,6 +227,16 @@ class Data(BaseModel):
     def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
+    def validate_text_key(self, text_key: str) -> None:
+        """Validates the text key.
+
+        Args:
+            text_key: The text key to validate
+        """
+        if text_key not in self.data:
+            msg = f"Text key '{text_key}' not found in Data"
+            raise ValueError(msg)
+
 
 def custom_serializer(obj):
     if isinstance(obj, datetime):
@@ -245,3 +255,5 @@ def custom_serializer(obj):
 
 def serialize_data(data):
     return json.dumps(data, indent=4, default=custom_serializer)
+
+

@@ -165,3 +165,13 @@ class DataFrame(pandas_DataFrame):
             DataFrame: A new DataFrame with the converted Documents
         """
         return DataFrame(docs)
+
+    def validate_text_key(self, text_key: str) -> None:
+        """Validates the text key.
+
+        Args:
+            text_key: The text key to validate
+        """
+        if text_key not in self.columns:
+            msg = f"Text key '{text_key}' not found in DataFrame columns"
+            raise ValueError(msg)

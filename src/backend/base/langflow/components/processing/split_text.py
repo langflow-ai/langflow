@@ -65,7 +65,7 @@ class SplitTextComponent(Component):
             if not len(self.data_inputs):
                 msg = "DataFrame is empty"
                 raise TypeError(msg)
-
+            self.data_inputs.validate_text_key(self.text_key)
             self.data_inputs.text_key = self.text_key
             try:
                 documents = self.data_inputs.to_lc_documents()
@@ -79,6 +79,7 @@ class SplitTextComponent(Component):
 
             documents = []
             if isinstance(self.data_inputs, Data):
+                self.data_inputs.validate_text_key(self.text_key)
                 self.data_inputs.text_key = self.text_key
                 documents = [self.data_inputs.to_lc_document()]
             else:
