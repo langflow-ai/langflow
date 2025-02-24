@@ -136,6 +136,9 @@ import {
   MessageSquare,
   MessageSquareMore,
   MessagesSquare,
+  Mic,
+  Mic2,
+  MicOff,
   Minimize2,
   Minus,
   Monitor,
@@ -959,4 +962,7 @@ export const nodeIconsLucide: iconsType = {
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
+  Mic,
+  MicOff,
+  Mic2,
 };

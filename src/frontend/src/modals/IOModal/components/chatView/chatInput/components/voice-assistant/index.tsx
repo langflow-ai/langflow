@@ -4,9 +4,10 @@ import useFlowStore from "@/stores/flowStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AudioLines } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import APIKeyModal from "../../modals/apiKeyModal";
-import { useStoreStore } from "../../stores/storeStore";
-import { Button } from "../ui/button";
+import { Button } from "../../../../../../../components/ui/button";
+import { useStoreStore } from "../../../../../../../stores/storeStore";
+import APIKeyModal from "../../../../../../apiKeyModal";
+import { VoiceButton } from "./components/voice-button";
 import { workletCode } from "./streamProcessor";
 import { base64ToFloat32Array } from "./utils";
 
@@ -19,7 +20,6 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-
   const audioContextRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const processorRef = useRef<AudioWorkletNode | null>(null);
@@ -28,8 +28,22 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const messagesStore = useMessagesStore();
-  const validApiKey = useStoreStore((state) => state.validApiKey);
-  const hasApiKey = useStoreStore((state) => state.hasApiKey);
+  const lockChat = useFlowStore((state) => state.lockChat);
+  const setLockChat = useFlowStore((state) => state.setLockChat);
+  const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
+  const edges = useFlowStore((state) => state.edges);
+  const setEdges = useFlowStore((state) => state.setEdges);
+  const updateBuildStatus = useFlowStore((state) => state.updateBuildStatus);
+  const addDataToFlowPool = useFlowStore((state) => state.addDataToFlowPool);
+  const updateEdgesRunningByNodes = useFlowStore(
+    (state) => state.updateEdgesRunningByNodes,
+  );
+  const revertBuiltStatusFromBuilding = useFlowStore(
+    (state) => state.revertBuiltStatusFromBuilding,
+  );
+  const clearEdgesRunningByNodes = useFlowStore(
+    (state) => state.clearEdgesRunningByNodes,
+  );
 
   const { mutate: mutateAddApiKey } = usePostAddApiKey();
 
@@ -169,7 +183,6 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
 
   const handleWebSocketMessage = (event: MessageEvent) => {
     const data = JSON.parse(event.data);
-    const flowStore = useFlowStore.getState();
 
     switch (data.type) {
       case "response.content_part.added":
@@ -211,32 +224,25 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
         const buildData = data.data;
         switch (buildData.event) {
           case "start":
-            flowStore.setIsBuilding(true);
-            flowStore.setLockChat(true);
+            setIsBuilding(true);
+            setLockChat(true);
             break;
 
           case "start_vertex":
-            flowStore.updateBuildStatus(
-              [buildData.vertex_id],
-              BuildStatus.BUILDING,
-            );
-            const edges = flowStore.edges;
+            updateBuildStatus([buildData.vertex_id], BuildStatus.BUILDING);
             const newEdges = edges.map((edge) => {
-              if (buildData.vertex_id === edge.data.targetHandle.id) {
+              if (buildData.vertex_id === edge.data?.targetHandle.id) {
                 edge.animated = true;
                 edge.className = "running";
               }
               return edge;
             });
-            flowStore.setEdges(newEdges);
+            setEdges(newEdges);
             break;
 
           case "end_vertex":
-            flowStore.updateBuildStatus(
-              [buildData.vertex_id],
-              BuildStatus.BUILT,
-            );
-            flowStore.addDataToFlowPool(
+            updateBuildStatus([buildData.vertex_id], BuildStatus.BUILT);
+            addDataToFlowPool(
               {
                 ...buildData.data.build_data,
                 run_id: buildData.run_id,
@@ -245,22 +251,19 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
               },
               buildData.vertex_id,
             );
-            flowStore.updateEdgesRunningByNodes([buildData.vertex_id], false);
+            updateEdgesRunningByNodes([buildData.vertex_id], false);
             break;
 
           case "error":
-            flowStore.updateBuildStatus(
-              [buildData.vertex_id],
-              BuildStatus.ERROR,
-            );
-            flowStore.updateEdgesRunningByNodes([buildData.vertex_id], false);
+            updateBuildStatus([buildData.vertex_id], BuildStatus.ERROR);
+            updateEdgesRunningByNodes([buildData.vertex_id], false);
             break;
 
           case "end":
-            flowStore.setIsBuilding(false);
-            flowStore.setLockChat(false);
-            flowStore.revertBuiltStatusFromBuilding();
-            flowStore.clearEdgesRunningByNodes();
+            setIsBuilding(false);
+            setLockChat(false);
+            revertBuiltStatusFromBuilding();
+            clearEdgesRunningByNodes();
             break;
 
           case "add_message":
@@ -348,14 +351,13 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   }, []);
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <Button
-        variant={isRecording ? "destructive" : "default"}
-        onClick={toggleRecording}
-        className="gap-2"
-      >
-        {isRecording ? <AudioLines size={16} /> : <AudioLines size={16} />}
-      </Button>
+    <div className="">
+      <VoiceButton
+        isRecording={isRecording}
+        toggleRecording={toggleRecording}
+        lockChat={lockChat}
+      />
+
       {status && <div className="text-sm text-gray-600">{status}</div>}
       {message && <div className="text-sm">{message}</div>}
       <APIKeyModal
