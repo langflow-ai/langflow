@@ -37,6 +37,8 @@ class MessageBase(SQLModel):
     def validate_timestamp(cls, value):
         if isinstance(value, str):
             return datetime.fromisoformat(value)
+        if isinstance(value, datetime) and value.tzinfo is None:
+           return value.replace(tzinfo=timezone.utc)
         return value
 
     @field_validator("files", mode="before")
