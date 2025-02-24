@@ -113,32 +113,26 @@ class CustomComponent(Component):
       await expect(page.getByText(text).last()).toBeVisible();
     }
 
-    await page.locator(".ag-cell-value").first().click();
-
-    await page.getByPlaceholder("Empty").fill(randomText);
-    await page.getByText("Save").last().click();
-    await expect(page.getByTestId("icon-Type")).toBeHidden({
-      timeout: 2000,
-    });
-    await page.locator(".ag-cell-value").nth(12).click();
-
-    await page.getByPlaceholder("Empty").fill(secondRandomText);
-    await page.getByText("Save").last().click();
-    await expect(page.getByTestId("icon-Type")).toBeHidden({
-      timeout: 2000,
+    await page.locator(".ag-cell-value").first().dblclick({
+      force: true,
     });
 
-    await page.locator(".ag-cell-value").nth(24).click();
-    await expect(page.getByTestId("icon-Type")).toBeVisible({
-      timeout: 2000,
+    await page.getByLabel("Input Editor").fill(randomText);
+    await page.keyboard.press("Enter");
+
+    await page.locator(".ag-cell-value").nth(12).dblclick({
+      force: true,
     });
 
-    await page.getByPlaceholder("Empty").fill(thirdRandomText);
-    await page.getByText("Save").last().click();
+    await page.getByLabel("Input Editor").fill(secondRandomText);
+    await page.keyboard.press("Enter");
 
-    await expect(page.getByTestId("icon-Type")).toBeHidden({
-      timeout: 2000,
+    await page.locator(".ag-cell-value").nth(24).dblclick({
+      force: true,
     });
+
+    await page.getByLabel("Input Editor").fill(thirdRandomText);
+    await page.keyboard.press("Enter");
 
     expect(page.getByText(randomText)).toBeVisible();
     expect(page.getByText(secondRandomText)).toBeVisible();

@@ -14,6 +14,7 @@ export enum FormatterType {
   text = "text",
   number = "number",
   json = "json",
+  boolean = "boolean",
 }
 
 export interface ColumnField {
