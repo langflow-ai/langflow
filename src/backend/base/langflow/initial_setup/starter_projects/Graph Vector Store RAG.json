@@ -6,8 +6,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-<<<<<<< HEAD
-=======
             "dataType": "OpenAIEmbeddings",
             "id": "OpenAIEmbeddings-jyvkr",
             "name": "embeddings",
@@ -92,7 +90,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
->>>>>>> main
             "dataType": "ParseData",
             "id": "ParseData-alciW",
             "name": "text",
@@ -102,11 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-<<<<<<< HEAD
-            "id": "Prompt-rmO8w",
-=======
             "id": "Prompt-2M2d5",
->>>>>>> main
             "inputTypes": [
               "Message",
               "Text"
@@ -119,7 +112,7 @@
         "source": "ParseData-alciW",
         "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-alciWœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-rmO8w",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-rmO8wœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-2M2d5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -135,11 +128,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-<<<<<<< HEAD
-            "id": "Prompt-rmO8w",
-=======
             "id": "Prompt-2M2d5",
->>>>>>> main
             "inputTypes": [
               "Message",
               "Text"
@@ -152,7 +141,7 @@
         "source": "ChatInput-DA114",
         "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DA114œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-rmO8w",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-rmO8wœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-2M2d5œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -168,11 +157,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
-            "id": "OpenAIModel-LnWKb",
-=======
             "id": "OpenAIModel-a26gL",
->>>>>>> main
             "inputTypes": [
               "Message"
             ],
@@ -184,7 +169,7 @@
         "source": "Prompt-rmO8w",
         "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-rmO8wœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "OpenAIModel-LnWKb",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-LnWKbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-a26gLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -200,15 +185,10 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-<<<<<<< HEAD
-            "id": "ChatOutput-KIkbc",
-            "inputTypes": [
-=======
             "id": "ChatOutput-XL9ho",
             "inputTypes": [
               "Data",
               "DataFrame",
->>>>>>> main
               "Message"
             ],
             "type": "str"
@@ -216,17 +196,10 @@
         },
         "id": "reactflow__edge-OpenAIModel-LnWKb{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-LnWKbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KIkbc{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KIkbcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-<<<<<<< HEAD
-        "source": "OpenAIModel-LnWKb",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-LnWKbœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-KIkbc",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-KIkbcœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-=======
         "source": "OpenAIModel-a26gL",
         "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-a26gLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-XL9ho",
         "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XL9hoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
->>>>>>> main
       },
       {
         "animated": false,
@@ -242,11 +215,7 @@
           },
           "targetHandle": {
             "fieldName": "data_input",
-<<<<<<< HEAD
-            "id": "LanguageRecursiveTextSplitter-KDtC3",
-=======
             "id": "LanguageRecursiveTextSplitter-jefpx",
->>>>>>> main
             "inputTypes": [
               "Document",
               "Data"
@@ -259,7 +228,7 @@
         "source": "URL-qOh1r",
         "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-qOh1rœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "LanguageRecursiveTextSplitter-KDtC3",
-        "targetHandle": "{œfieldNameœ: œdata_inputœ, œidœ: œLanguageRecursiveTextSplitter-KDtC3œ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputœ, œidœ: œLanguageRecursiveTextSplitter-jefpxœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -275,11 +244,7 @@
           },
           "targetHandle": {
             "fieldName": "data_input",
-<<<<<<< HEAD
-            "id": "HtmlLinkExtractor-LWuvQ",
-=======
             "id": "HtmlLinkExtractor-exHgk",
->>>>>>> main
             "inputTypes": [
               "Document",
               "Data"
@@ -292,33 +257,15 @@
         "source": "LanguageRecursiveTextSplitter-KDtC3",
         "sourceHandle": "{œdataTypeœ: œLanguageRecursiveTextSplitterœ, œidœ: œLanguageRecursiveTextSplitter-KDtC3œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "HtmlLinkExtractor-LWuvQ",
-        "targetHandle": "{œfieldNameœ: œdata_inputœ, œidœ: œHtmlLinkExtractor-LWuvQœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdata_inputœ, œidœ: œHtmlLinkExtractor-exHgkœ, œinputTypesœ: [œDocumentœ, œDataœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
           "sourceHandle": {
-<<<<<<< HEAD
-            "dataType": "ChatInput",
-            "id": "ChatInput-DA114",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "search_query",
-            "id": "AstraDBGraph-xJiDN",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-=======
             "dataType": "HtmlLinkExtractor",
             "id": "HtmlLinkExtractor-exHgk",
             "name": "data",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "ingest_data",
@@ -327,14 +274,13 @@
               "Data"
             ],
             "type": "other"
->>>>>>> main
           }
         },
         "id": "xy-edge__ChatInput-DA114{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DA114œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDBGraph-xJiDN{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDBGraph-xJiDNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ChatInput-DA114",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DA114œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œHtmlLinkExtractorœ, œidœ: œHtmlLinkExtractor-exHgkœ, œnameœ: œdataœ, œoutput_typesœ: []}",
         "target": "AstraDBGraph-xJiDN",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDBGraph-xJiDNœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDBGraph-FX0tAœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -348,11 +294,7 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-<<<<<<< HEAD
-            "id": "AstraDBGraph-xJiDN",
-=======
             "id": "AstraDBGraph-FX0tA",
->>>>>>> main
             "inputTypes": [
               "Embeddings"
             ],
@@ -363,7 +305,7 @@
         "source": "OpenAIEmbeddings-fcwMC",
         "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-fcwMCœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDBGraph-xJiDN",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDBGraph-xJiDNœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDBGraph-FX0tAœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -1247,8 +1189,6 @@
       },
       {
         "data": {
-<<<<<<< HEAD
-=======
           "description": "Implementation of Graph Vector Store using Astra DB",
           "display_name": "Astra DB Graph",
           "id": "AstraDBGraph-jr8pY",
@@ -1746,6 +1686,24 @@
                 "type": "str",
                 "value": "Sync"
               },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "token": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
@@ -1785,7 +1743,6 @@
       },
       {
         "data": {
->>>>>>> main
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
           "id": "ParseData-alciW",
@@ -2630,11 +2587,8 @@
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "input_types": [
-<<<<<<< HEAD
-=======
                   "Data",
                   "DataFrame",
->>>>>>> main
                   "Message"
                 ],
                 "list": false,
@@ -2944,9 +2898,6 @@
           "node": {
             "base_classes": [
               "Data"
-<<<<<<< HEAD
-            ],
-=======
             ],
             "beta": false,
             "category": "vectorstores",
@@ -3437,6 +3388,24 @@
                 "type": "str",
                 "value": "Sync"
               },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "token": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
@@ -3482,7 +3451,6 @@
             "base_classes": [
               "Data"
             ],
->>>>>>> main
             "beta": false,
             "category": "langchain_utilities",
             "conditional_paths": [],
