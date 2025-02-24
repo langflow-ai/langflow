@@ -656,6 +656,8 @@ export const nodeIconsLucide: iconsType = {
   FacebookChatLoader: FBIcon,
   FirecrawlCrawlApi: FirecrawlIcon,
   FirecrawlScrapeApi: FirecrawlIcon,
+  FirecrawlMapApi: FirecrawlIcon,
+  FirecrawlExtractApi: FirecrawlIcon,
   GitbookLoader: GitBookIcon,
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,

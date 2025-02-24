@@ -1,9 +1,7 @@
 import uuid
-
 from langflow.custom import Component
 from langflow.io import DataInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
-
 
 class FirecrawlCrawlApi(Component):
     display_name: str = "FirecrawlCrawlApi"
@@ -11,7 +9,7 @@ class FirecrawlCrawlApi(Component):
     name = "FirecrawlCrawlApi"
 
     output_types: list[str] = ["Document"]
-    documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/crawl-post"
+    documentation: str = "https://docs.firecrawl.dev/v1/api-reference/endpoint/crawl-post"
 
     inputs = [
         SecretStrInput(
@@ -57,7 +55,7 @@ class FirecrawlCrawlApi(Component):
 
     def crawl(self) -> Data:
         try:
-            from firecrawl.firecrawl import FirecrawlApp
+            from firecrawl import FirecrawlApp
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
@@ -66,6 +64,20 @@ class FirecrawlCrawlApi(Component):
         scrape_options_dict = self.scrapeOptions.__dict__["data"] if self.scrapeOptions else {}
         if scrape_options_dict:
             params["scrapeOptions"] = scrape_options_dict
+
+        # Set default values for new parameters in v1
+        params.setdefault("maxDepth", 2)
+        params.setdefault("limit", 10000)
+        params.setdefault("allowExternalLinks", False)
+        params.setdefault("allowBackwardLinks", False)
+        params.setdefault("ignoreSitemap", False)
+        params.setdefault("ignoreQueryParameters", False)
+
+        # Ensure onlyMainContent is explicitly set if not provided
+        if "scrapeOptions" in params:
+            params["scrapeOptions"].setdefault("onlyMainContent", True)
+        else:
+            params["scrapeOptions"] = {"onlyMainContent": True}
 
         if not self.idempotency_key:
             self.idempotency_key = str(uuid.uuid4())
