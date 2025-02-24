@@ -9,11 +9,11 @@ from langflow.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient
 
+
 @pytest.mark.skipif(
     not os.environ.get("AWS_ACCESS_KEY_ID") or not os.environ.get("AWS_SECRET_ACCESS_KEY"),
     reason="Environment variable AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY is not defined.",
 )
-
 class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
@@ -26,7 +26,7 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def default_kwargs(self):
-        """ Return an empty dictionary since this component doesn't have any default arguments."""
+        """Return an empty dictionary since this component doesn't have any default arguments."""
         return {}
 
     @pytest.fixture
