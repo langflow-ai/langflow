@@ -4,7 +4,7 @@ description: "Checks out code, installs uv, and sets up Python environment"
 inputs:
   python-version:
     description: "Python version to use"
-    default: "3.12"
+    default: "3.13"
 
 runs:
   using: "composite"

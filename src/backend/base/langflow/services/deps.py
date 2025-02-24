@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
     from langflow.services.event_bus.service import EventBusService
+    from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
     from langflow.services.socket.service import SocketIOService
@@ -262,3 +263,10 @@ def get_event_bus_service() -> EventBusService:
     from langflow.services.event_bus.factory import EventBusServiceFactory
 
     return get_service(ServiceType.EVENTBUS_SERVICE, EventBusServiceFactory())
+
+
+def get_queue_service() -> JobQueueService:
+    """Retrieves the QueueService instance from the service manager."""
+    from langflow.services.job_queue.factory import JobQueueServiceFactory
+
+    return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
