@@ -518,7 +518,7 @@ def layered_topological_sort(
 
     layers: list[list[str]] = []
     visited = set()
-    cycle_counts = {vertex: 0 for vertex in vertices_ids}
+    cycle_counts = dict.fromkeys(vertices_ids, 0)
     current_layer = 0
 
     # Process the first layer separately to avoid duplicates

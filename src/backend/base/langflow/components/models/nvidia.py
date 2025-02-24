@@ -78,7 +78,7 @@ class NVIDIAModelComponent(LCModelComponent):
         return [model.id for model in build_model.available_models]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 ids = self.get_models(self.tool_model_enabled)
                 build_config["model_name"]["options"] = ids
