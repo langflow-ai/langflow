@@ -59,6 +59,11 @@ export default function UpdateAllComponents({}: {}) {
   }, [edges]);
 
   const getSuccessTitle = (updatedCount: number) => {
+    edgesUpdateRef.current = {
+      numberOfEdgesBeforeUpdate: 0,
+      updateComponent: false,
+    };
+
     return `Successfully updated ${updatedCount} component${
       updatedCount > 1 ? "s" : ""
     }`;
