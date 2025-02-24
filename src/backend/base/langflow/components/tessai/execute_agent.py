@@ -1,6 +1,6 @@
 import requests
 from langflow.custom import Component
-from langflow.inputs import SecretStrInput, StrInput
+from langflow.inputs import DropdownInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
 
 class TessAIExecuteAgentComponent(Component):
@@ -49,6 +49,25 @@ class TessAIExecuteAgentComponent(Component):
         except requests.RequestException as e:
             raise RuntimeError(f"Error executing agent: {e!s}") from e
 
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        print(dir(self.api_key))
+        if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
+            try:
+                for key in list(build_config.keys()):
+                    if key.endswith(self.FIELD_SUFFIX):
+                        del build_config[key]
+
+                questions = self._get_agent_questions(field_value)
+
+                for question in questions:
+                    config = self._create_field_config(question)
+                    build_config[config.name] = config
+
+            except requests.RequestException:
+                self._clear_dynamic_fields(build_config)
+
+        return build_config
+
     def _get_headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_key}", "accept": "*/*", "Content-Type": "application/json"}
 
@@ -75,25 +94,6 @@ class TessAIExecuteAgentComponent(Component):
                 else:
                     parameters[param_name] = self._parameters[key]
         return parameters
-
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
-            try:
-                for key in list(build_config.keys()):
-                    if key.endswith(self.FIELD_SUFFIX):
-                        del build_config[key]
-
-                questions = self._get_agent_questions(field_value)
-
-                for question in questions:
-                    key = f"{question['name']}{self.FIELD_SUFFIX}"
-                    config = self._create_field_config(question)
-                    build_config[key] = config
-
-            except requests.RequestException:
-                self._clear_dynamic_fields(build_config)
-
-        return build_config
     
     def _get_agent_questions(self, agent_id):
         endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
@@ -109,94 +109,32 @@ class TessAIExecuteAgentComponent(Component):
 
     def _create_field_config(self, question: dict) -> dict:
         field_type = question.get("type", "text")
-        common = {
+        key = f"{question['name']}{self.FIELD_SUFFIX}"
+        name = question["name"].replace("_", " ").capitalize()
+    
+        args = {
+            "name": key,
+            "display_name": name,
             "required": question.get("required", False),
-            "placeholder": question.get("placeholder", ""),
-            "show": True,
-            "name": question["name"],
-            "value": question.get("default", ""),
-            "display_name": question["name"].replace("_", " ").capitalize(),
-            "advanced": False,
-            "dynamic": False,
             "info": question.get("description", ""),
+            "placeholder": question.get("placeholder", ""),
         }
-
+    
         if field_type == "textarea":
-            return {
-                **common,
-                "tool_mode": False,
-                "trace_as_input": True,
-                "multiline": True,
-                "trace_as_metadata": True,
-                "load_from_db": False,
-                "list": False,
-                "list_add_label": "Add More",
-                "input_types": ["Message"],
-                "real_time_refresh": True,
-                "title_case": False,
-                "type": "str",
-                "_input_type": "MultilineInput",
-            }
-        if field_type == "select":
-            return {
-                **common,
-                "tool_mode": False,
-                "trace_as_metadata": True,
-                "options": [opt.split(":")[-1] for opt in question.get("options", [])],
-                "combobox": False,
-                "type": "str",
-                "_input_type": "DropdownInput",
-            }
-        if field_type == "multiselect":
-            return {
-                **common,
-                "tool_mode": False,
-                "trace_as_metadata": True,
-                "options": [opt.split(":")[-1].strip() for opt in question.get("description", "").split(",")],
-                "combobox": False,
-                "list": True,
-                "list_add_label": "Add More",
-                "type": "list",
-                "_input_type": "MultiselectInput",
-            }
-        if field_type == "file":
-            return {
-                **common,
-                "trace_as_metadata": True,
-                "file_path": "",
-                "fileTypes": [
-                    "pdf",
-                    "docx",
-                    "txt",
-                    "csv",
-                    "xlsx",
-                    "xls",
-                    "ppt",
-                    "pptx",
-                    "png",
-                    "jpg",
-                    "jpeg",
-                    "gif",
-                    "bmp",
-                    "tiff",
-                    "ico",
-                    "webp",
-                ],
-                "list": False,
-                "title_case": False,
-                "type": "file",
-                "_input_type": "FileInput",
-            }
-        return {
-            **common,
-            "tool_mode": False,
-            "trace_as_input": True,
-            "input_types": ["Message"],
-            "real_time_refresh": True,
-            "title_case": False,
-            "type": "str",
-            "_input_type": "Input",
-        }
+            input_class = MultilineInput
+        elif field_type == "select":
+            input_class = DropdownInput
+            args["options"] = [opt.split(":")[-1] for opt in question.get("options", [])]
+        elif field_type == "multiselect":
+            input_class = MultiselectInput
+            args["options"] = [opt.split(":")[-1].strip() for opt in question.get("description", "").split(",")]
+        else:
+            input_class = StrInput
+            if field_type == "file":
+                args["display_name"] += " (direct URL)"
+            args["input_types"] = ["Message"]
+    
+        return input_class(**args)
 
     def _clear_dynamic_fields(self, build_config: dict):
         for key in list(build_config.keys()):
