@@ -4,6 +4,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useAddComponent } from "@/hooks/useAddComponent";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useStoreStore } from "@/stores/storeStore";
@@ -41,11 +42,12 @@ const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
 
 interface FlowSidebarComponentProps {
+  isLoading?: boolean;
   showLegacy: boolean;
   setShowLegacy: (value: boolean) => void;
 }
 
-export function FlowSidebarComponent() {
+export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const { data, templates } = useTypesStore(
     useCallback(
       (state) => ({
@@ -330,39 +332,55 @@ export function FlowSidebarComponent() {
         setFilterData={setFilterData}
         data={data}
       />
+
       <SidebarContent>
-        {hasResults ? (
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1 p-3">
+              <SkeletonGroup count={13} className="my-0.5 h-7" />
+            </div>
+            <div className="h-8" />
+            <div className="flex flex-col gap-1 px-3 pt-2">
+              <SkeletonGroup count={21} className="my-0.5 h-7" />
+            </div>
+          </div>
+        ) : (
           <>
-            <CategoryGroup
-              dataFilter={dataFilter}
-              sortedCategories={sortedCategories}
-              CATEGORIES={CATEGORIES}
-              openCategories={openCategories}
-              setOpenCategories={setOpenCategories}
-              search={search}
-              nodeColors={nodeColors}
-              uniqueInputsComponents={uniqueInputsComponents}
-              onDragStart={onDragStart}
-              sensitiveSort={sensitiveSort}
-            />
-            {hasBundleItems && (
-              <MemoizedSidebarGroup
-                BUNDLES={BUNDLES}
-                search={search}
-                sortedCategories={sortedCategories}
-                dataFilter={dataFilter}
-                nodeColors={nodeColors}
-                uniqueInputsComponents={uniqueInputsComponents}
-                onDragStart={onDragStart}
-                sensitiveSort={sensitiveSort}
-                openCategories={openCategories}
-                setOpenCategories={setOpenCategories}
-                handleKeyDownInput={handleKeyDownInput}
-              />
+            {hasResults ? (
+              <>
+                <CategoryGroup
+                  dataFilter={dataFilter}
+                  sortedCategories={sortedCategories}
+                  CATEGORIES={CATEGORIES}
+                  openCategories={openCategories}
+                  setOpenCategories={setOpenCategories}
+                  search={search}
+                  nodeColors={nodeColors}
+                  onDragStart={onDragStart}
+                  sensitiveSort={sensitiveSort}
+                  uniqueInputsComponents={uniqueInputsComponents}
+                />
+
+                {hasBundleItems && (
+                  <MemoizedSidebarGroup
+                    BUNDLES={BUNDLES}
+                    search={search}
+                    sortedCategories={sortedCategories}
+                    dataFilter={dataFilter}
+                    nodeColors={nodeColors}
+                    onDragStart={onDragStart}
+                    sensitiveSort={sensitiveSort}
+                    openCategories={openCategories}
+                    setOpenCategories={setOpenCategories}
+                    handleKeyDownInput={handleKeyDownInput}
+                    uniqueInputsComponents={uniqueInputsComponents}
+                  />
+                )}
+              </>
+            ) : (
+              <NoResultsMessage onClearSearch={handleClearSearch} />
             )}
           </>
-        ) : (
-          <NoResultsMessage onClearSearch={handleClearSearch} />
         )}
       </SidebarContent>
       <SidebarFooter className="border-t p-4 py-3">
@@ -370,6 +388,7 @@ export function FlowSidebarComponent() {
           hasStore={hasStore}
           customComponent={customComponent}
           addComponent={addComponent}
+          isLoading={isLoading}
         />
       </SidebarFooter>
     </Sidebar>
