@@ -192,7 +192,7 @@ clickhouse-connect = [
     "clickhouse-connect==0.7.19"
 ]
 nemo-guardrails = [
-    "nemoguardrails==0.11.0"
+    "../NeMo-Guardrails/"
 ]
 
 nv-ingest = [
