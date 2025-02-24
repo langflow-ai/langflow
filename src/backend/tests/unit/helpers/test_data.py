@@ -88,16 +88,18 @@ def test_data_to_text_list__template_wrong_placeholder():
     template = "My favorite color is {color}"
     data = Data(data={"fruit": "apple"})
 
-    with pytest.raises(KeyError):
-        data_to_text_list(template, data)
+    # Should not raise KeyError due to defaultdict behavior
+    result = data_to_text_list(template, data)
+    assert result == (["My favorite color is "], [data])
 
 
 def test_data_to_text_list__data_with_data_attribute_empty():
     template = "My favorite color is {color}"
     data = Data(data={})
 
-    with pytest.raises(KeyError):
-        data_to_text_list(template, data)
+    # Should not raise KeyError due to defaultdict behavior
+    result = data_to_text_list(template, data)
+    assert result == (["My favorite color is "], [data])
 
 
 def test_data_to_text_list__data_contains_nested_data_key():
