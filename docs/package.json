@@ -4,7 +4,7 @@
   "private": false,
   "scripts": {
     "clear-docs": "rimraf ./docs/",
-    "pull": "npm run clear-docs && npx @sillsdev/docu-notion -n $NOTION_TOKEN -r $NOTION_DOCS_ROOT_PAGE_ID",
+    "pull": "yarn clear-docs && yarn dlx @sillsdev/docu-notion -n $NOTION_TOKEN -r $NOTION_DOCS_ROOT_PAGE_ID",
     "start": "docusaurus start",
     "build": "docusaurus build",
     "deploy": "docusaurus deploy",
@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@code-hike/mdx": "^0.9.0",
-    "@docusaurus/core": "^3.7.0",
+    "@docusaurus/core": "3.7.0",
     "@docusaurus/plugin-client-redirects": "^3.7.0",
     "@docusaurus/plugin-google-tag-manager": "^3.7.0",
-    "@docusaurus/preset-classic": "^3.7.0",
+    "@docusaurus/preset-classic": "3.7.0",
     "@easyops-cn/docusaurus-search-local": "^0.45.0",
     "@mdx-js/react": "^3.0.1",
     "@mendable/search": "^0.0.206",

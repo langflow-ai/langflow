@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-xB9zW",
+            "id": "Memory-v5bRq",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "CHAT_HISTORY",
-            "id": "Prompt-t7tN0",
+            "id": "Prompt-QIyYT",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-xB9zW{œdataTypeœ:œMemoryœ,œidœ:œMemory-xB9zWœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-t7tN0{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-t7tN0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Memory-v5bRq{œdataTypeœ:œMemoryœ,œidœ:œMemory-v5bRqœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-xB9zW",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-xB9zWœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-t7tN0",
-        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-t7tN0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "Memory-v5bRq",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-v5bRqœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-QIyYT",
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-g2Y61",
+            "id": "ChatInput-Z88lk",
             "name": "message",
             "output_types": [
               "Message"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "USER_INPUT",
-            "id": "Prompt-t7tN0",
+            "id": "Prompt-QIyYT",
             "inputTypes": [
               "Message",
               "Text"
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-g2Y61{œdataTypeœ:œChatInputœ,œidœ:œChatInput-g2Y61œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-t7tN0{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-t7tN0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Z88lk{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Z88lkœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-g2Y61",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-g2Y61œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-t7tN0",
-        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-t7tN0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Z88lk",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Z88lkœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-QIyYT",
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-l7pdF",
+            "id": "URL-wNOPd",
             "name": "text",
             "output_types": [
               "Message"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "EXAMPLE_COMPONENTS",
-            "id": "Prompt-t7tN0",
+            "id": "Prompt-QIyYT",
             "inputTypes": [
               "Message",
               "Text"
@@ -81,11 +81,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-l7pdF{œdataTypeœ:œURLœ,œidœ:œURL-l7pdFœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-t7tN0{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-t7tN0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-l7pdF",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-l7pdFœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-t7tN0",
-        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-t7tN0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-wNOPd{œdataTypeœ:œURLœ,œidœ:œURL-wNOPdœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-wNOPd",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-wNOPdœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-QIyYT",
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-vp2La",
+            "id": "URL-pFAuR",
             "name": "text",
             "output_types": [
               "Message"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "BASE_COMPONENT_CODE",
-            "id": "Prompt-t7tN0",
+            "id": "Prompt-QIyYT",
             "inputTypes": [
               "Message",
               "Text"
@@ -109,11 +109,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-vp2La{œdataTypeœ:œURLœ,œidœ:œURL-vp2Laœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-t7tN0{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-t7tN0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-vp2La",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-vp2Laœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-t7tN0",
-        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-t7tN0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-pFAuR{œdataTypeœ:œURLœ,œidœ:œURL-pFAuRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-pFAuR",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-pFAuRœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-QIyYT",
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-ak8Jx",
+            "id": "URL-KARv3",
             "name": "text",
             "output_types": [
               "Message"
@@ -129,7 +129,7 @@
           },
           "targetHandle": {
             "fieldName": "CUSTOM_COMPONENT_CODE",
-            "id": "Prompt-t7tN0",
+            "id": "Prompt-QIyYT",
             "inputTypes": [
               "Message",
               "Text"
@@ -137,17 +137,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-ak8Jx{œdataTypeœ:œURLœ,œidœ:œURL-ak8Jxœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-t7tN0{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-t7tN0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-ak8Jx",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ak8Jxœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-t7tN0",
-        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-t7tN0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-KARv3{œdataTypeœ:œURLœ,œidœ:œURL-KARv3œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "URL-KARv3",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-KARv3œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-QIyYT",
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-t7tN0",
+            "id": "Prompt-QIyYT",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -155,24 +156,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-L37Qm",
+            "id": "AnthropicModel-RQQCm",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-t7tN0{œdataTypeœ:œPromptœ,œidœ:œPrompt-t7tN0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-L37Qm{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-L37Qmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-t7tN0",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-t7tN0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-L37Qm",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-L37Qmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-QIyYT{œdataTypeœ:œPromptœ,œidœ:œPrompt-QIyYTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-RQQCm{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-RQQCmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-QIyYT",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-QIyYTœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-RQQCm",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-RQQCmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-L37Qm",
+            "id": "AnthropicModel-RQQCm",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -180,18 +182,20 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-y7MoT",
+            "id": "ChatOutput-Jj8M6",
             "inputTypes": [
+              "Data",
+              "DataFrame",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__AnthropicModel-L37Qm{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-L37Qmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-y7MoT{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-y7MoTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "AnthropicModel-L37Qm",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-L37Qmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-y7MoT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-y7MoTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-AnthropicModel-RQQCm{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-RQQCmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Jj8M6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Jj8M6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "AnthropicModel-RQQCm",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-RQQCmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Jj8M6",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Jj8M6œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -199,7 +203,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-g2Y61",
+          "id": "ChatInput-Z88lk",
           "node": {
             "base_classes": [
               "Message"
@@ -481,10 +485,10 @@
         },
         "dragging": false,
         "height": 231,
-        "id": "ChatInput-g2Y61",
+        "id": "ChatInput-Z88lk",
         "measured": {
           "height": 231,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1436.7228707197569,
@@ -502,7 +506,7 @@
         "data": {
           "description": "Retrieves stored chat messages from Langflow tables or an external memory.",
           "display_name": "Chat Memory",
-          "id": "Memory-xB9zW",
+          "id": "Memory-v5bRq",
           "node": {
             "base_classes": [
               "Data",
@@ -731,10 +735,10 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "Memory-xB9zW",
+        "id": "Memory-v5bRq",
         "measured": {
           "height": 262,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1830.6888981898887,
@@ -752,7 +756,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-t7tN0",
+          "id": "Prompt-QIyYT",
           "node": {
             "base_classes": [
               "Message"
@@ -979,10 +983,10 @@
         },
         "dragging": false,
         "height": 685,
-        "id": "Prompt-t7tN0",
+        "id": "Prompt-QIyYT",
         "measured": {
           "height": 685,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 2219.5265974825707,
@@ -1000,7 +1004,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-y7MoT",
+          "id": "ChatOutput-Jj8M6",
           "node": {
             "base_classes": [
               "Message"
@@ -1090,6 +1094,24 @@
                 "type": "str",
                 "value": ""
               },
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean the data",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -1106,7 +1128,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            source_dict[\"source\"] = source\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return (\n                    data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n                    .applymap(lambda x: (str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x))\n                    .to_markdown(index=False)\n                )\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -1137,13 +1159,15 @@
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "input_types": [
+                  "Data",
+                  "DataFrame",
                   "Message"
                 ],
                 "list": false,
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "trace_as_input": true,
@@ -1261,10 +1285,10 @@
         },
         "dragging": false,
         "height": 232,
-        "id": "ChatOutput-y7MoT",
+        "id": "ChatOutput-Jj8M6",
         "measured": {
           "height": 232,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 2947.267779013826,
@@ -1280,7 +1304,7 @@
       },
       {
         "data": {
-          "id": "note-T4gpA",
+          "id": "note-M2lYQ",
           "node": {
             "description": "# Fetch Components code \n\nUsing the URL component we are extracting from Github, the code from a few classes to provide as example to the LLM. \n\nThis ensures we are always up to date with recent information from the codebase.",
             "display_name": "",
@@ -1291,10 +1315,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-T4gpA",
+        "id": "note-M2lYQ",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 1430.2014058924922,
@@ -1310,7 +1334,7 @@
       },
       {
         "data": {
-          "id": "note-SQ4yw",
+          "id": "note-nxR1T",
           "node": {
             "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n### 1. 💭 Tell Me What You Want to Build\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n### 2. 📚 Share Any Relevant Information\nIf you're working with a specific:\n- 🔑 API or service (just share the documentation link or main endpoints)\n- 📄 File format\n- 🔄 Data structure\n- 🔧 Existing component you want to modify\n\n### 3. 🎨 Let Me Help Design It\nI'll help by:\n- 📊 Breaking down complex requirements into manageable pieces\n- 💡 Suggesting the best way to structure inputs and outputs\n- ⚙️ Creating the component code\n- 📝 Explaining how to use it\n\n### 4. 🔄 Iterative Refinement\nWe can then:\n- ✅ Test and refine the component\n- ⭐ Add features\n- 🔧 Modify behavior\n- 🛡️ Improve error handling\n- 📖 Add documentation\n\n## 🚀 What I Can Help With\n\nI can help create components that:\n- 📊 Process different file types (CSV, JSON, Excel, etc.)\n- 🔌 Integrate with external APIs\n- 🔄 Transform data\n- 🔀 Route messages\n- 🌐 Handle web requests\n- 🎯 Parse structured data\n- ✨ And much more!\n\n## 💡 Tips for Best Results\n\n1. **Be Specific** 🎯: The more details you provide about what you want to accomplish, the better I can help.\n\n2. **Share Examples** 📋: If you have example data or specific use cases, share them.\n\n3. **Ask Questions** ❓: Don't hesitate to ask for clarification or modifications.\n\nJust start by telling me what kind of component you'd like to create, and I'll guide you through the process! \n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
@@ -1321,10 +1345,10 @@
         },
         "dragging": false,
         "height": 573,
-        "id": "note-SQ4yw",
+        "id": "note-nxR1T",
         "measured": {
           "height": 573,
-          "width": 328
+          "width": 324
         },
         "position": {
           "x": 807.6293964045135,
@@ -1335,17 +1359,17 @@
           "y": 605.6504562080672
         },
         "resizing": false,
-        "selected": false,
+        "selected": true,
         "style": {
           "height": 573,
-          "width": 564
+          "width": 324
         },
         "type": "noteNode",
-        "width": 564
+        "width": 324
       },
       {
         "data": {
-          "id": "URL-vp2La",
+          "id": "URL-pFAuR",
           "node": {
             "base_classes": [
               "Data",
@@ -1482,10 +1506,10 @@
         },
         "dragging": false,
         "height": 365,
-        "id": "URL-vp2La",
+        "id": "URL-pFAuR",
         "measured": {
           "height": 365,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1436.3617127766433,
@@ -1501,7 +1525,7 @@
       },
       {
         "data": {
-          "id": "URL-l7pdF",
+          "id": "URL-wNOPd",
           "node": {
             "base_classes": [
               "Data",
@@ -1644,10 +1668,10 @@
         },
         "dragging": false,
         "height": 661,
-        "id": "URL-l7pdF",
+        "id": "URL-wNOPd",
         "measured": {
           "height": 661,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1831.5895760156684,
@@ -1663,7 +1687,7 @@
       },
       {
         "data": {
-          "id": "URL-ak8Jx",
+          "id": "URL-KARv3",
           "node": {
             "base_classes": [
               "Data",
@@ -1800,10 +1824,10 @@
         },
         "dragging": false,
         "height": 365,
-        "id": "URL-ak8Jx",
+        "id": "URL-KARv3",
         "measured": {
           "height": 365,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1436.982480021523,
@@ -1819,7 +1843,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-L37Qm",
+          "id": "AnthropicModel-RQQCm",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1906,7 +1930,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ANTHROPIC_API_KEY"
               },
               "base_url": {
                 "_input_type": "MessageTextInput",
@@ -2084,7 +2108,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "admin@admin.com"
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -2140,10 +2164,10 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "id": "AnthropicModel-L37Qm",
+        "id": "AnthropicModel-RQQCm",
         "measured": {
-          "height": 896,
-          "width": 360
+          "height": 797,
+          "width": 320
         },
         "position": {
           "x": 2585.5577736139826,
@@ -2154,9 +2178,9 @@
       }
     ],
     "viewport": {
-      "x": -637.4755295542625,
-      "y": -182.36005379554103,
-      "zoom": 0.5837207970729746
+      "x": -366.41363591649906,
+      "y": 264.64346206947675,
+      "zoom": 0.5351858410044688
     }
   },
   "description": "Generates well-structured code for custom components following Langflow's specifications.",

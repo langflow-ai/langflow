@@ -174,6 +174,7 @@ textarea[class^="ag-"]:focus {
 
 .json-view {
   height: 370px !important;
+  overflow-y: auto !important;
   border-radius: 10px !important;
   padding: 10px !important;
 }
@@ -280,4 +281,8 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .react-flow__background pattern circle {
   fill: hsl(var(--canvas-dot)) !important;
+}
+
+.markdown td {
+  min-width: 78px;
 }

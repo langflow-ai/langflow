@@ -1,8 +1,8 @@
 [project]
 name = "langflow-base"
-version = "0.1.3"
+version = "0.1.5"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -37,14 +37,14 @@ dependencies = [
     "cachetools>=5.5.0,<6.0.0",
     "platformdirs>=4.2.0,<5.0.0",
     "python-multipart>=0.0.12,<1.0.0",
-    "orjson==3.10.0",
+    "orjson==3.10.15",
     "alembic>=1.13.0,<2.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
-    "pillow>=10.2.0,<11.0.0",
+    "pillow>=11.1.0,<12.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "python-jose>=3.3.0,<4.0.0",
-    "pandas==2.2.2",
+    "pandas==2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
     "duckdb>=1.0.0,<2.0.0",
     "python-docx>=1.1.0,<2.0.0",
@@ -81,6 +81,45 @@ dependencies = [
     "mcp>=1.1.2",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
+]
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
+    "pytest-codspeed>=3.0.0",
+    "pytest-github-actions-annotate-failures>=0.2.0",
+    "types-aiofiles>=24.1.0.20240626",
+    "types-redis>=4.6.0.5",
+    "ipykernel>=6.29.0",
+    "mypy>=1.11.0",
+    "ruff>=0.6.2",
+    "httpx[http2]>=0.27",
+    "pytest>=8.2.0",
+    "types-requests>=2.32.0",
+    "requests>=2.32.0",
+    "pytest-cov>=5.0.0",
+    "pandas-stubs>=2.1.4.231227",
+    "types-pillow>=10.2.0.20240213",
+    "types-pyyaml>=6.0.12.8",
+    "types-python-jose>=3.3.4.8",
+    "types-passlib>=1.7.7.13",
+    "pytest-mock>=3.14.0",
+    "pytest-xdist>=3.6.0",
+    "types-pywin32>=306.0.0.4",
+    "types-google-cloud-ndb>=2.2.0.0",
+    "pytest-sugar>=1.0.0",
+    "respx>=0.21.1",
+    "pytest-instafail>=0.5.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-profiling>=1.7.0",
+    "pre-commit>=3.7.0",
+    "vulture>=2.11",
+    "dictdiffer>=0.9.0",
+    "pytest-split>=0.9.0",
+    "devtools>=0.12.2",
+    "pytest-flakefinder>=1.1.0",
+    "types-markdown>=3.7.0.20240822",
+    "codeflash>=0.8.4"
 ]
 
 
@@ -158,19 +197,12 @@ ignore = [
     "S301", # Use of pickle
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "asgi-lifespan>=2.1.0",
-    "pytest-codspeed>=3.0.0",
-    "pytest-github-actions-annotate-failures>=0.2.0",
-    "types-aiofiles>=24.1.0.20240626",
-]
 [tool.codeflash]
 # All paths are relative to this pyproject.toml's directory.
 module-root = "langflow"
 tests-root = "../tests/unit"
 test-framework = "pytest"
-ignore-paths = []
+ignore-paths = ["src/backend/base/langflow/components/"]
 formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
 #disable plugins that might interfere with runtime measurement
 pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
@@ -206,41 +238,6 @@ all = [
     "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
     "ctransformers>=0.2"
-]
-
-# Development dependencies
-dev = [
-    "types-redis>=4.6.0.5",
-    "ipykernel>=6.29.0",
-    "mypy>=1.11.0",
-    "ruff>=0.6.2",
-    "httpx[http2]>=0.27",
-    "pytest>=8.2.0",
-    "types-requests>=2.32.0",
-    "requests>=2.32.0",
-    "pytest-cov>=5.0.0",
-    "pandas-stubs>=2.1.4.231227",
-    "types-pillow>=10.2.0.20240213",
-    "types-pyyaml>=6.0.12.8",
-    "types-python-jose>=3.3.4.8",
-    "types-passlib>=1.7.7.13",
-    "pytest-mock>=3.14.0",
-    "pytest-xdist>=3.6.0",
-    "types-pywin32>=306.0.0.4",
-    "types-google-cloud-ndb>=2.2.0.0",
-    "pytest-sugar>=1.0.0",
-    "respx>=0.21.1",
-    "pytest-instafail>=0.5.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-profiling>=1.7.0",
-    "pre-commit>=3.7.0",
-    "vulture>=2.11",
-    "dictdiffer>=0.9.0",
-    "pytest-split>=0.9.0",
-    "devtools>=0.12.2",
-    "pytest-flakefinder>=1.1.0",
-    "types-markdown>=3.7.0.20240822",
-    "codeflash>=0.8.4"
 ]
 
 [project.scripts]

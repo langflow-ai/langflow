@@ -82,7 +82,7 @@ test(
     await urlOutput.hover();
     await page.mouse.down();
     const splitTextInputData = await page.getByTestId(
-      "handle-splittext-shownode-data inputs-left",
+      "handle-splittext-shownode-input documents-left",
     );
     await splitTextInputData.hover();
     await page.mouse.up();
@@ -144,7 +144,7 @@ import time
 class CustomComponent(Component):
     display_name = "Custom Component"
     description = "Use as a template to create your own component."
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "custom_components"
     name = "CustomComponent"
 

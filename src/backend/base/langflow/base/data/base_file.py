@@ -100,7 +100,10 @@ class BaseFileComponent(Component, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Dynamically update FileInput to include valid extensions and bundles
-        self._base_inputs[0].file_types = [*self.valid_extensions, *self.SUPPORTED_BUNDLE_EXTENSIONS]
+        self._base_inputs[0].file_types = [
+            *self.valid_extensions,
+            *self.SUPPORTED_BUNDLE_EXTENSIONS,
+        ]
 
         file_types = ", ".join(self.valid_extensions)
         bundles = ", ".join(self.SUPPORTED_BUNDLE_EXTENSIONS)
@@ -342,8 +345,13 @@ class BaseFileComponent(Component, ABC):
 
         if self.path and not file_path:
             # Wrap self.path into a Data object
-            data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: self.path})
-            add_file(data=data_obj, path=self.path, delete_after_processing=False)
+            if isinstance(self.path, list):
+                for path in self.path:
+                    data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: path})
+                    add_file(data=data_obj, path=path, delete_after_processing=False)
+            else:
+                data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: self.path})
+                add_file(data=data_obj, path=self.path, delete_after_processing=False)
         elif file_path:
             for obj in file_path:
                 server_file_path = obj.data.get(self.SERVER_FILE_PATH_FIELDNAME)
@@ -384,7 +392,11 @@ class BaseFileComponent(Component, ABC):
                 # Recurse into directories
                 collected_files.extend(
                     [
-                        BaseFileComponent.BaseFile(data, sub_path, delete_after_processing=delete_after_processing)
+                        BaseFileComponent.BaseFile(
+                            data,
+                            sub_path,
+                            delete_after_processing=delete_after_processing,
+                        )
                         for sub_path in path.rglob("*")
                         if sub_path.is_file()
                     ]
@@ -399,7 +411,11 @@ class BaseFileComponent(Component, ABC):
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
                 collected_files.extend(
                     [
-                        BaseFileComponent.BaseFile(data, sub_path, delete_after_processing=delete_after_processing)
+                        BaseFileComponent.BaseFile(
+                            data,
+                            sub_path,
+                            delete_after_processing=delete_after_processing,
+                        )
                         for sub_path in subpaths
                     ]
                 )
@@ -476,7 +492,7 @@ class BaseFileComponent(Component, ABC):
                 self.log(f"Not a file: {file.path.name}")
                 continue
 
-            if file.path.suffix[1:] not in self.valid_extensions:
+            if file.path.suffix[1:].lower() not in self.valid_extensions:
                 if self.ignore_unsupported_extensions:
                     ignored_files.append(file.path.name)
                     continue
