@@ -1,5 +1,4 @@
 import { APIDataType } from "@/types/api";
-import { FuseResult } from "fuse.js";
 
 export const filteredDataFn = (
   data: APIDataType,

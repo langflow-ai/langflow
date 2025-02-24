@@ -199,7 +199,7 @@ async def test_list_files(files_client, files_created_api_key, files_flow):
 
     # Then list the files
     response = await files_client.get(f"api/v1/files/list/{files_flow.id}", headers=headers)
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.json()}"
     files = response.json()["files"]
     assert len(files) == 1
     assert files[0].endswith("test.txt")

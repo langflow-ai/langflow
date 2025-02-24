@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeCommentsComponent",
-            "id": "YouTubeCommentsComponent-10bJT",
+            "id": "YouTubeCommentsComponent-5DgSV",
             "name": "comments",
             "output_types": [
               "DataFrame"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "BatchRunComponent-Y6Aec",
+            "id": "BatchRunComponent-s2QTv",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeCommentsComponent-10bJT{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-10bJTœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-Y6Aec{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-Y6Aecœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeCommentsComponent-5DgSV{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-5DgSVœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-s2QTv{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-s2QTvœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeCommentsComponent-10bJT",
-        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-10bJTœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "BatchRunComponent-Y6Aec",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-Y6Aecœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "YouTubeCommentsComponent-5DgSV",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-5DgSVœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "BatchRunComponent-s2QTv",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-s2QTvœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-QgyC5",
+            "id": "OpenAIModel-ZVATe",
             "name": "model_output",
             "output_types": [
               "LanguageModel"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "model",
-            "id": "BatchRunComponent-Y6Aec",
+            "id": "BatchRunComponent-s2QTv",
             "inputTypes": [
               "LanguageModel"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-QgyC5{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-QgyC5œ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-Y6Aec{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-Y6Aecœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-OpenAIModel-ZVATe{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ZVATeœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-s2QTv{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-s2QTvœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIModel-QgyC5",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-QgyC5œ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
-        "target": "BatchRunComponent-Y6Aec",
-        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-Y6Aecœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
+        "source": "OpenAIModel-ZVATe",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-ZVATeœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
+        "target": "BatchRunComponent-s2QTv",
+        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-s2QTvœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "BatchRunComponent",
-            "id": "BatchRunComponent-Y6Aec",
+            "id": "BatchRunComponent-s2QTv",
             "name": "batch_results",
             "output_types": [
               "DataFrame"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "df",
-            "id": "ParseDataFrame-Ni6HW",
+            "id": "ParseDataFrame-pJJ7Z",
             "inputTypes": [
               "DataFrame"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-BatchRunComponent-Y6Aec{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-Y6Aecœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParseDataFrame-Ni6HW{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-Ni6HWœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-BatchRunComponent-s2QTv{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-s2QTvœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParseDataFrame-pJJ7Z{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-pJJ7Zœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "BatchRunComponent-Y6Aec",
-        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-Y6Aecœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
-        "target": "ParseDataFrame-Ni6HW",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-Ni6HWœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "source": "BatchRunComponent-s2QTv",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-s2QTvœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
+        "target": "ParseDataFrame-pJJ7Z",
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-pJJ7Zœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseDataFrame",
-            "id": "ParseDataFrame-Ni6HW",
+            "id": "ParseDataFrame-pJJ7Z",
             "name": "text",
             "output_types": [
               "Message"
@@ -99,19 +99,19 @@
           },
           "targetHandle": {
             "fieldName": "analysis",
-            "id": "Prompt-ozK70",
+            "id": "Prompt-Kn7x9",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseDataFrame-Ni6HW{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-Ni6HWœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-ozK70{œfieldNameœ:œanalysisœ,œidœ:œPrompt-ozK70œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ParseDataFrame-pJJ7Z{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-pJJ7Zœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Kn7x9{œfieldNameœ:œanalysisœ,œidœ:œPrompt-Kn7x9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ParseDataFrame-Ni6HW",
-        "sourceHandle": "{œdataTypeœ: œParseDataFrameœ, œidœ: œParseDataFrame-Ni6HWœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ozK70",
-        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-ozK70œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ParseDataFrame-pJJ7Z",
+        "sourceHandle": "{œdataTypeœ: œParseDataFrameœ, œidœ: œParseDataFrame-pJJ7Zœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Kn7x9",
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-Kn7x9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -119,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-ozK70",
+            "id": "Prompt-Kn7x9",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -127,19 +127,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-U1bxR",
+            "id": "Agent-Px7Zt",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-ozK70{œdataTypeœ:œPromptœ,œidœ:œPrompt-ozK70œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-U1bxR{œfieldNameœ:œinput_valueœ,œidœ:œAgent-U1bxRœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-Kn7x9{œdataTypeœ:œPromptœ,œidœ:œPrompt-Kn7x9œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-Px7Zt{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Px7Ztœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-ozK70",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-ozK70œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-U1bxR",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-U1bxRœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-Kn7x9",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Kn7x9œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-Px7Zt",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Px7Ztœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -147,7 +147,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-U1bxR",
+            "id": "Agent-Px7Zt",
             "name": "response",
             "output_types": [
               "Message"
@@ -155,19 +155,21 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-BILzx",
+            "id": "ChatOutput-W5R97",
             "inputTypes": [
+              "Data",
+              "DataFrame",
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-U1bxR{œdataTypeœ:œAgentœ,œidœ:œAgent-U1bxRœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-BILzx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BILzxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-Px7Zt{œdataTypeœ:œAgentœ,œidœ:œAgent-Px7Ztœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-W5R97{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-W5R97œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-U1bxR",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-U1bxRœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-BILzx",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-BILzxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-Px7Zt",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Px7Ztœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-W5R97",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-W5R97œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -175,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YouTubeTranscripts",
-            "id": "YouTubeTranscripts-wPf1w",
+            "id": "YouTubeTranscripts-ppAJD",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -183,19 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-U1bxR",
+            "id": "Agent-Px7Zt",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YouTubeTranscripts-wPf1w{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-wPf1wœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-U1bxR{œfieldNameœ:œtoolsœ,œidœ:œAgent-U1bxRœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YouTubeTranscripts-ppAJD{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-ppAJDœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Px7Zt{œfieldNameœ:œtoolsœ,œidœ:œAgent-Px7Ztœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YouTubeTranscripts-wPf1w",
-        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-wPf1wœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-U1bxR",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-U1bxRœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YouTubeTranscripts-ppAJD",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-ppAJDœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-Px7Zt",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Px7Ztœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -203,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-VrWjf",
+            "id": "ChatInput-Aprv5",
             "name": "message",
             "output_types": [
               "Message"
@@ -211,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "input_text",
-            "id": "ConditionalRouter-CfANV",
+            "id": "ConditionalRouter-NmX80",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-VrWjf{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VrWjfœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-CfANV{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-CfANVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Aprv5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Aprv5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-NmX80{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-NmX80œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-VrWjf",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VrWjfœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-CfANV",
-        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-CfANVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Aprv5",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Aprv5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ConditionalRouter-NmX80",
+        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-NmX80œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -231,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-VrWjf",
+            "id": "ChatInput-Aprv5",
             "name": "message",
             "output_types": [
               "Message"
@@ -239,19 +241,19 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "ConditionalRouter-CfANV",
+            "id": "ConditionalRouter-NmX80",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-VrWjf{œdataTypeœ:œChatInputœ,œidœ:œChatInput-VrWjfœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-CfANV{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-CfANVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-Aprv5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Aprv5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-NmX80{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-NmX80œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-VrWjf",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-VrWjfœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ConditionalRouter-CfANV",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-CfANVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-Aprv5",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Aprv5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ConditionalRouter-NmX80",
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-NmX80œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -259,7 +261,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-CfANV",
+            "id": "ConditionalRouter-NmX80",
             "name": "true_result",
             "output_types": [
               "Message"
@@ -267,19 +269,19 @@
           },
           "targetHandle": {
             "fieldName": "video_url",
-            "id": "YouTubeCommentsComponent-10bJT",
+            "id": "YouTubeCommentsComponent-5DgSV",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ConditionalRouter-CfANV{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-CfANVœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-10bJT{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-10bJTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ConditionalRouter-NmX80{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-NmX80œ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-5DgSV{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-5DgSVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ConditionalRouter-CfANV",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-CfANVœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "YouTubeCommentsComponent-10bJT",
-        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-10bJTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ConditionalRouter-NmX80",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-NmX80œ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "YouTubeCommentsComponent-5DgSV",
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-5DgSVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -287,7 +289,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ConditionalRouter",
-            "id": "ConditionalRouter-CfANV",
+            "id": "ConditionalRouter-NmX80",
             "name": "true_result",
             "output_types": [
               "Message"
@@ -295,25 +297,25 @@
           },
           "targetHandle": {
             "fieldName": "url",
-            "id": "Prompt-ozK70",
+            "id": "Prompt-Kn7x9",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ConditionalRouter-CfANV{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-CfANVœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-ozK70{œfieldNameœ:œurlœ,œidœ:œPrompt-ozK70œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ConditionalRouter-NmX80{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-NmX80œ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-Kn7x9{œfieldNameœ:œurlœ,œidœ:œPrompt-Kn7x9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ConditionalRouter-CfANV",
-        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-CfANVœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-ozK70",
-        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-ozK70œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ConditionalRouter-NmX80",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-NmX80œ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Kn7x9",
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-Kn7x9œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "BatchRunComponent-Y6Aec",
+          "id": "BatchRunComponent-s2QTv",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -375,11 +377,11 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\nfrom langflow.custom import Component\nfrom langflow.io import DataFrameInput, HandleInput, MultilineInput, Output, StrInput\nfrom langflow.schema import DataFrame\n\nif TYPE_CHECKING:\n    from langchain_core.runnables import Runnable\n\n\nclass BatchRunComponent(Component):\n    display_name = \"Batch Run\"\n    description = (\n        \"Runs a language model over each row of a DataFrame's text column and returns a new \"\n        \"DataFrame with two columns: 'text_input' (the original text) and 'model_response' \"\n        \"containing the model's response.\"\n    )\n    icon = \"List\"\n    beta = True\n\n    inputs = [\n        HandleInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Connect the 'Language Model' output from your LLM component here.\",\n            input_types=[\"LanguageModel\"],\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"Multi-line system instruction for all rows in the DataFrame.\",\n            required=False,\n        ),\n        DataFrameInput(\n            name=\"df\",\n            display_name=\"DataFrame\",\n            info=\"The DataFrame whose column (specified by 'column_name') we'll treat as text messages.\",\n        ),\n        StrInput(\n            name=\"column_name\",\n            display_name=\"Column Name\",\n            info=\"The name of the DataFrame column to treat as text messages. Default='text'.\",\n            value=\"text\",\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Batch Results\",\n            name=\"batch_results\",\n            method=\"run_batch\",\n            info=\"A DataFrame with two columns: 'text_input' and 'model_response'.\",\n        ),\n    ]\n\n    async def run_batch(self) -> DataFrame:\n        \"\"\"For each row in df[column_name], combine that text with system_message, then invoke the model asynchronously.\n\n        Returns a new DataFrame of the same length, with columns 'text_input' and 'model_response'.\n        \"\"\"\n        model: Runnable = self.model\n        system_msg = self.system_message or \"\"\n        df: DataFrame = self.df\n        col_name = self.column_name or \"text\"\n\n        if col_name not in df.columns:\n            msg = f\"Column '{col_name}' not found in the DataFrame.\"\n            raise ValueError(msg)\n\n        # Convert the specified column to a list of strings\n        user_texts = df[col_name].astype(str).tolist()\n\n        # Prepare the batch of conversations\n        conversations = [\n            [{\"role\": \"system\", \"content\": system_msg}, {\"role\": \"user\", \"content\": text}]\n            if system_msg\n            else [{\"role\": \"user\", \"content\": text}]\n            for text in user_texts\n        ]\n        model = model.with_config(\n            {\n                \"run_name\": self.display_name,\n                \"project_name\": self.get_project_name(),\n                \"callbacks\": self.get_langchain_callbacks(),\n            }\n        )\n\n        responses = await model.abatch(conversations)\n\n        # Build the final data, each row has 'text_input' + 'model_response'\n        rows = []\n        for original_text, response in zip(user_texts, responses, strict=False):\n            resp_text = response.content if hasattr(response, \"content\") else str(response)\n\n            row = {\"text_input\": original_text, \"model_response\": resp_text}\n            rows.append(row)\n\n        # Convert to a new DataFrame\n        return DataFrame(rows)  # Langflow DataFrame from a list of dicts\n"
+                "value": "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING, Any\n\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    BoolInput,\n    DataFrameInput,\n    HandleInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema import DataFrame\n\nif TYPE_CHECKING:\n    from langchain_core.runnables import Runnable\n\n\nclass BatchRunComponent(Component):\n    display_name = \"Batch Run\"\n    description = (\n        \"Runs a language model over each row of a DataFrame's text column and returns a new \"\n        \"DataFrame with three columns: '**text_input**' (the original text),  \"\n        \"'**model_response**' (the model's response),and '**batch_index**' (the processing order).\"\n    )\n    icon = \"List\"\n    beta = True\n\n    inputs = [\n        HandleInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Connect the 'Language Model' output from your LLM component here.\",\n            input_types=[\"LanguageModel\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"Multi-line system instruction for all rows in the DataFrame.\",\n            required=False,\n        ),\n        DataFrameInput(\n            name=\"df\",\n            display_name=\"DataFrame\",\n            info=\"The DataFrame whose column (specified by 'column_name') we'll treat as text messages.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"column_name\",\n            display_name=\"Column Name\",\n            info=\"The name of the DataFrame column to treat as text messages. Default='text'.\",\n            value=\"text\",\n            required=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"enable_metadata\",\n            display_name=\"Enable Metadata\",\n            info=\"If True, add metadata to the output DataFrame.\",\n            value=True,\n            required=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Batch Results\",\n            name=\"batch_results\",\n            method=\"run_batch\",\n            info=\"A DataFrame with columns: 'text_input', 'model_response', 'batch_index', and 'metadata'.\",\n        ),\n    ]\n\n    def _create_base_row(self, text_input: str = \"\", model_response: str = \"\", batch_index: int = -1) -> dict[str, Any]:\n        \"\"\"Create a base row with optional metadata.\"\"\"\n        return {\n            \"text_input\": text_input,\n            \"model_response\": model_response,\n            \"batch_index\": batch_index,\n        }\n\n    def _add_metadata(\n        self, row: dict[str, Any], *, success: bool = True, system_msg: str = \"\", error: str | None = None\n    ) -> None:\n        \"\"\"Add metadata to a row if enabled.\"\"\"\n        if not self.enable_metadata:\n            return\n\n        if success:\n            row[\"metadata\"] = {\n                \"has_system_message\": bool(system_msg),\n                \"input_length\": len(row[\"text_input\"]),\n                \"response_length\": len(row[\"model_response\"]),\n                \"processing_status\": \"success\",\n            }\n        else:\n            row[\"metadata\"] = {\n                \"error\": error,\n                \"processing_status\": \"failed\",\n            }\n\n    async def run_batch(self) -> DataFrame:\n        \"\"\"Process each row in df[column_name] with the language model asynchronously.\n\n        Returns:\n            DataFrame: A new DataFrame containing:\n                - text_input: The original input text\n                - model_response: The model's response\n                - batch_index: The processing order\n                - metadata: Additional processing information\n\n        Raises:\n            ValueError: If the specified column is not found in the DataFrame\n            TypeError: If the model is not compatible or input types are wrong\n        \"\"\"\n        model: Runnable = self.model\n        system_msg = self.system_message or \"\"\n        df: DataFrame = self.df\n        col_name = self.column_name or \"text\"\n\n        # Validate inputs first\n        if not isinstance(df, DataFrame):\n            msg = f\"Expected DataFrame input, got {type(df)}\"\n            raise TypeError(msg)\n\n        if col_name not in df.columns:\n            msg = f\"Column '{col_name}' not found in the DataFrame. Available columns: {', '.join(df.columns)}\"\n            raise ValueError(msg)\n\n        try:\n            # Convert the specified column to a list of strings\n            user_texts = df[col_name].astype(str).tolist()\n            total_rows = len(user_texts)\n\n            logger.info(f\"Processing {total_rows} rows with batch run\")\n\n            # Prepare the batch of conversations\n            conversations = [\n                [{\"role\": \"system\", \"content\": system_msg}, {\"role\": \"user\", \"content\": text}]\n                if system_msg\n                else [{\"role\": \"user\", \"content\": text}]\n                for text in user_texts\n            ]\n\n            # Configure the model with project info and callbacks\n            model = model.with_config(\n                {\n                    \"run_name\": self.display_name,\n                    \"project_name\": self.get_project_name(),\n                    \"callbacks\": self.get_langchain_callbacks(),\n                }\n            )\n\n            # Process batches and track progress\n            responses_with_idx = [\n                (idx, response)\n                for idx, response in zip(\n                    range(len(conversations)), await model.abatch(list(conversations)), strict=True\n                )\n            ]\n\n            # Sort by index to maintain order\n            responses_with_idx.sort(key=lambda x: x[0])\n\n            # Build the final data with enhanced metadata\n            rows: list[dict[str, Any]] = []\n            for idx, response in responses_with_idx:\n                resp_text = response.content if hasattr(response, \"content\") else str(response)\n                row = self._create_base_row(\n                    text_input=user_texts[idx],\n                    model_response=resp_text,\n                    batch_index=idx,\n                )\n                self._add_metadata(row, success=True, system_msg=system_msg)\n                rows.append(row)\n\n                # Log progress\n                if (idx + 1) % max(1, total_rows // 10) == 0:\n                    logger.info(f\"Processed {idx + 1}/{total_rows} rows\")\n\n            logger.info(\"Batch processing completed successfully\")\n            return DataFrame(rows)\n\n        except (KeyError, AttributeError) as e:\n            # Handle data structure and attribute access errors\n            logger.error(f\"Data processing error: {e!s}\")\n            error_row = self._create_base_row()\n            self._add_metadata(error_row, success=False, error=str(e))\n            return DataFrame([error_row])\n"
               },
               "column_name": {
                 "_input_type": "StrInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Column Name",
                 "dynamic": false,
                 "info": "The name of the DataFrame column to treat as text messages. Default='text'.",
@@ -388,7 +390,7 @@
                 "load_from_db": false,
                 "name": "column_name",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
@@ -409,7 +411,7 @@
                 "list_add_label": "Add More",
                 "name": "df",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
@@ -417,6 +419,24 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
+              },
+              "enable_metadata": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Enable Metadata",
+                "dynamic": false,
+                "info": "If True, add metadata to the output DataFrame.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "enable_metadata",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
               },
               "model": {
                 "_input_type": "HandleInput",
@@ -431,7 +451,7 @@
                 "list_add_label": "Add More",
                 "name": "model",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "trace_as_metadata": true,
@@ -469,10 +489,10 @@
           "type": "BatchRunComponent"
         },
         "dragging": false,
-        "id": "BatchRunComponent-Y6Aec",
+        "id": "BatchRunComponent-s2QTv",
         "measured": {
-          "height": 477,
-          "width": 320
+          "height": 446,
+          "width": 360
         },
         "position": {
           "x": 635.0665302273813,
@@ -483,7 +503,7 @@
       },
       {
         "data": {
-          "id": "YouTubeCommentsComponent-10bJT",
+          "id": "YouTubeCommentsComponent-5DgSV",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -540,7 +560,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -548,7 +568,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "YOUTUBE_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -675,10 +695,10 @@
           "type": "YouTubeCommentsComponent"
         },
         "dragging": false,
-        "id": "YouTubeCommentsComponent-10bJT",
+        "id": "YouTubeCommentsComponent-5DgSV",
         "measured": {
-          "height": 493,
-          "width": 320
+          "height": 556,
+          "width": 360
         },
         "position": {
           "x": 191.60600144515274,
@@ -689,7 +709,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-QgyC5",
+          "id": "OpenAIModel-ZVATe",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1058,10 +1078,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-QgyC5",
+        "id": "OpenAIModel-ZVATe",
         "measured": {
-          "height": 651,
-          "width": 320
+          "height": 734,
+          "width": 360
         },
         "position": {
           "x": 192.79820011992825,
@@ -1072,7 +1092,7 @@
       },
       {
         "data": {
-          "id": "ParseDataFrame-Ni6HW",
+          "id": "ParseDataFrame-pJJ7Z",
           "node": {
             "base_classes": [
               "Message"
@@ -1207,10 +1227,10 @@
           "type": "ParseDataFrame"
         },
         "dragging": false,
-        "id": "ParseDataFrame-Ni6HW",
+        "id": "ParseDataFrame-pJJ7Z",
         "measured": {
-          "height": 331,
-          "width": 320
+          "height": 352,
+          "width": 360
         },
         "position": {
           "x": 993.5819211529395,
@@ -1221,7 +1241,7 @@
       },
       {
         "data": {
-          "id": "Agent-U1bxR",
+          "id": "Agent-Px7Zt",
           "node": {
             "base_classes": [
               "Message"
@@ -1871,10 +1891,10 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-U1bxR",
+        "id": "Agent-Px7Zt",
         "measured": {
-          "height": 618,
-          "width": 320
+          "height": 698,
+          "width": 360
         },
         "position": {
           "x": 1982.1085644220088,
@@ -1885,7 +1905,7 @@
       },
       {
         "data": {
-          "id": "Prompt-ozK70",
+          "id": "Prompt-Kn7x9",
           "node": {
             "base_classes": [
               "Message"
@@ -2047,10 +2067,10 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-ozK70",
+        "id": "Prompt-Kn7x9",
         "measured": {
-          "height": 417,
-          "width": 320
+          "height": 448,
+          "width": 360
         },
         "position": {
           "x": 1575.3649919098807,
@@ -2061,7 +2081,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-BILzx",
+          "id": "ChatOutput-W5R97",
           "node": {
             "base_classes": [
               "Message"
@@ -2158,6 +2178,24 @@
                 "type": "str",
                 "value": ""
               },
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean the data",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -2174,7 +2212,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            source_dict[\"source\"] = source\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -2206,6 +2244,8 @@
                 "dynamic": false,
                 "info": "Message to be passed as output.",
                 "input_types": [
+                  "Data",
+                  "DataFrame",
                   "Message"
                 ],
                 "list": false,
@@ -2213,7 +2253,7 @@
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
-                "required": false,
+                "required": true,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
@@ -2339,10 +2379,10 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-BILzx",
+        "id": "ChatOutput-W5R97",
         "measured": {
-          "height": 228,
-          "width": 320
+          "height": 257,
+          "width": 360
         },
         "position": {
           "x": 2365.8487393880428,
@@ -2353,17 +2393,17 @@
       },
       {
         "data": {
-          "id": "YouTubeTranscripts-wPf1w",
+          "id": "YouTubeTranscripts-ppAJD",
           "node": {
             "base_classes": [
+              "Data",
               "DataFrame",
               "Message"
             ],
             "beta": false,
-            "category": "youtube",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Extracts spoken content from YouTube videos with both DataFrame and text output options.",
+            "description": "Extracts spoken content from YouTube videos with multiple output options.",
             "display_name": "YouTube Transcripts",
             "documentation": "",
             "edited": false,
@@ -2374,9 +2414,7 @@
             ],
             "frozen": false,
             "icon": "YouTube",
-            "key": "YouTubeTranscripts",
             "legacy": false,
-            "lf_version": "1.1.3",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2398,7 +2436,6 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-6,
             "template": {
               "_type": "Component",
               "chunk_size_seconds": {
@@ -2435,7 +2472,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import pandas as pd\nimport youtube_transcript_api\nfrom langchain_community.document_loaders import YoutubeLoader\nfrom langchain_community.document_loaders.youtube import TranscriptFormat\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DropdownInput, IntInput, MultilineInput\nfrom langflow.schema import DataFrame, Message\nfrom langflow.template import Output\n\n\nclass YouTubeTranscriptsComponent(Component):\n    \"\"\"A component that extracts spoken content from YouTube videos as transcripts.\"\"\"\n\n    display_name: str = \"YouTube Transcripts\"\n    description: str = \"Extracts spoken content from YouTube videos with both DataFrame and text output options.\"\n    icon: str = \"YouTube\"\n    name = \"YouTubeTranscripts\"\n\n    inputs = [\n        MultilineInput(\n            name=\"url\",\n            display_name=\"Video URL\",\n            info=\"Enter the YouTube video URL to get transcripts from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_size_seconds\",\n            display_name=\"Chunk Size (seconds)\",\n            value=60,\n            info=\"The size of each transcript chunk in seconds.\",\n        ),\n        DropdownInput(\n            name=\"translation\",\n            display_name=\"Translation Language\",\n            advanced=True,\n            options=[\"\", \"en\", \"es\", \"fr\", \"de\", \"it\", \"pt\", \"ru\", \"ja\", \"ko\", \"hi\", \"ar\", \"id\"],\n            info=\"Translate the transcripts to the specified language. Leave empty for no translation.\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"dataframe\", display_name=\"Chunks\", method=\"get_dataframe_output\"),\n        Output(name=\"message\", display_name=\"Transcript\", method=\"get_message_output\"),\n    ]\n\n    def _load_transcripts(self, *, as_chunks: bool = True):\n        \"\"\"Internal method to load transcripts from YouTube.\"\"\"\n        loader = YoutubeLoader.from_youtube_url(\n            self.url,\n            transcript_format=TranscriptFormat.CHUNKS if as_chunks else TranscriptFormat.TEXT,\n            chunk_size_seconds=self.chunk_size_seconds,\n            translation=self.translation or None,\n        )\n        return loader.load()\n\n    def get_dataframe_output(self) -> DataFrame:\n        \"\"\"Provides transcript output as a DataFrame with timestamp and text columns.\"\"\"\n        try:\n            transcripts = self._load_transcripts(as_chunks=True)\n\n            # Create DataFrame with timestamp and text columns\n            data = []\n            for doc in transcripts:\n                start_seconds = int(doc.metadata[\"start_seconds\"])\n                start_minutes = start_seconds // 60\n                start_seconds %= 60\n                timestamp = f\"{start_minutes:02d}:{start_seconds:02d}\"\n                data.append({\"timestamp\": timestamp, \"text\": doc.page_content})\n            return DataFrame(pd.DataFrame(data))\n\n        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:\n            return DataFrame(pd.DataFrame({\"error\": [f\"Failed to get YouTube transcripts: {exc!s}\"]}))\n\n    def get_message_output(self) -> Message:\n        \"\"\"Provides transcript output as continuous text.\"\"\"\n        try:\n            transcripts = self._load_transcripts(as_chunks=False)\n            result = transcripts[0].page_content\n            return Message(text=result)\n\n        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return Message(text=error_msg)\n"
+                "value": "import pandas as pd\nimport youtube_transcript_api\nfrom langchain_community.document_loaders import YoutubeLoader\nfrom langchain_community.document_loaders.youtube import TranscriptFormat\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DropdownInput, IntInput, MultilineInput\nfrom langflow.schema import Data, DataFrame, Message\nfrom langflow.template import Output\n\n\nclass YouTubeTranscriptsComponent(Component):\n    \"\"\"A component that extracts spoken content from YouTube videos as transcripts.\"\"\"\n\n    display_name: str = \"YouTube Transcripts\"\n    description: str = \"Extracts spoken content from YouTube videos with multiple output options.\"\n    icon: str = \"YouTube\"\n    name = \"YouTubeTranscripts\"\n\n    inputs = [\n        MultilineInput(\n            name=\"url\",\n            display_name=\"Video URL\",\n            info=\"Enter the YouTube video URL to get transcripts from.\",\n            tool_mode=True,\n            required=True,\n        ),\n        IntInput(\n            name=\"chunk_size_seconds\",\n            display_name=\"Chunk Size (seconds)\",\n            value=60,\n            info=\"The size of each transcript chunk in seconds.\",\n        ),\n        DropdownInput(\n            name=\"translation\",\n            display_name=\"Translation Language\",\n            advanced=True,\n            options=[\"\", \"en\", \"es\", \"fr\", \"de\", \"it\", \"pt\", \"ru\", \"ja\", \"ko\", \"hi\", \"ar\", \"id\"],\n            info=\"Translate the transcripts to the specified language. Leave empty for no translation.\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"dataframe\", display_name=\"Chunks\", method=\"get_dataframe_output\"),\n        Output(name=\"message\", display_name=\"Transcript\", method=\"get_message_output\"),\n        Output(name=\"data_output\", display_name=\"Transcript + Source\", method=\"get_data_output\"),\n    ]\n\n    def _load_transcripts(self, *, as_chunks: bool = True):\n        \"\"\"Internal method to load transcripts from YouTube.\"\"\"\n        loader = YoutubeLoader.from_youtube_url(\n            self.url,\n            transcript_format=TranscriptFormat.CHUNKS if as_chunks else TranscriptFormat.TEXT,\n            chunk_size_seconds=self.chunk_size_seconds,\n            translation=self.translation or None,\n        )\n        return loader.load()\n\n    def get_dataframe_output(self) -> DataFrame:\n        \"\"\"Provides transcript output as a DataFrame with timestamp and text columns.\"\"\"\n        try:\n            transcripts = self._load_transcripts(as_chunks=True)\n\n            # Create DataFrame with timestamp and text columns\n            data = []\n            for doc in transcripts:\n                start_seconds = int(doc.metadata[\"start_seconds\"])\n                start_minutes = start_seconds // 60\n                start_seconds %= 60\n                timestamp = f\"{start_minutes:02d}:{start_seconds:02d}\"\n                data.append({\"timestamp\": timestamp, \"text\": doc.page_content})\n\n            return DataFrame(pd.DataFrame(data))\n\n        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:\n            return DataFrame(pd.DataFrame({\"error\": [f\"Failed to get YouTube transcripts: {exc!s}\"]}))\n\n    def get_message_output(self) -> Message:\n        \"\"\"Provides transcript output as continuous text.\"\"\"\n        try:\n            transcripts = self._load_transcripts(as_chunks=False)\n            result = transcripts[0].page_content\n            return Message(text=result)\n\n        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:\n            error_msg = f\"Failed to get YouTube transcripts: {exc!s}\"\n            return Message(text=error_msg)\n\n    def get_data_output(self) -> Data:\n        \"\"\"Creates a structured data object with transcript and metadata.\n\n        Returns a Data object containing transcript text, video URL, and any error\n        messages that occurred during processing. The object includes:\n        - 'transcript': continuous text from the entire video (concatenated if multiple parts)\n        - 'video_url': the input YouTube URL\n        - 'error': error message if an exception occurs\n        \"\"\"\n        default_data = {\"transcript\": \"\", \"video_url\": self.url, \"error\": None}\n\n        try:\n            transcripts = self._load_transcripts(as_chunks=False)\n            if not transcripts:\n                default_data[\"error\"] = \"No transcripts found.\"\n                return Data(data=default_data)\n\n            # Combine all transcript parts\n            full_transcript = \" \".join(doc.page_content for doc in transcripts)\n            return Data(data={\"transcript\": full_transcript, \"video_url\": self.url})\n\n        except (\n            youtube_transcript_api.TranscriptsDisabled,\n            youtube_transcript_api.NoTranscriptFound,\n            youtube_transcript_api.CouldNotRetrieveTranscript,\n        ) as exc:\n            default_data[\"error\"] = str(exc)\n            return Data(data=default_data)\n"
               },
               "tools_metadata": {
                 "_input_type": "TableInput",
@@ -2478,6 +2515,7 @@
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "name",
                       "sortable": false,
                       "type": "text"
@@ -2489,6 +2527,7 @@
                       "edit_mode": "popover",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "description",
                       "sortable": false,
                       "type": "text"
@@ -2500,6 +2539,7 @@
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": true,
                       "name": "tags",
                       "sortable": false,
                       "type": "text"
@@ -2514,17 +2554,24 @@
                 "type": "table",
                 "value": [
                   {
-                    "description": "get_dataframe_output(url: Message) - Extracts spoken content from YouTube videos with both DataFrame and text output options.",
+                    "description": "get_dataframe_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
                     "name": "YouTubeTranscripts-get_dataframe_output",
                     "tags": [
                       "YouTubeTranscripts-get_dataframe_output"
                     ]
                   },
                   {
-                    "description": "get_message_output(url: Message) - Extracts spoken content from YouTube videos with both DataFrame and text output options.",
+                    "description": "get_message_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
                     "name": "YouTubeTranscripts-get_message_output",
                     "tags": [
                       "YouTubeTranscripts-get_message_output"
+                    ]
+                  },
+                  {
+                    "description": "get_data_output(url: Message) - Extracts spoken content from YouTube videos with multiple output options.",
+                    "name": "YouTubeTranscripts-get_data_output",
+                    "tags": [
+                      "YouTubeTranscripts-get_data_output"
                     ]
                   }
                 ]
@@ -2594,10 +2641,10 @@
           "type": "YouTubeTranscripts"
         },
         "dragging": false,
-        "id": "YouTubeTranscripts-wPf1w",
+        "id": "YouTubeTranscripts-ppAJD",
         "measured": {
-          "height": 413,
-          "width": 320
+          "height": 466,
+          "width": 360
         },
         "position": {
           "x": 1577.7800211610804,
@@ -2608,7 +2655,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-VrWjf",
+          "id": "ChatInput-Aprv5",
           "node": {
             "base_classes": [
               "Message"
@@ -2905,10 +2952,10 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-VrWjf",
+        "id": "ChatInput-Aprv5",
         "measured": {
-          "height": 227,
-          "width": 320
+          "height": 257,
+          "width": 360
         },
         "position": {
           "x": -894.6710448870117,
@@ -2919,7 +2966,7 @@
       },
       {
         "data": {
-          "id": "note-n9LmZ",
+          "id": "note-fVy2q",
           "node": {
             "description": "# Batch Run component\n\nThis component processes a DataFrame by running each row through a Language Model (LLM). Perfect for batch analysis, sentiment scoring, or content generation at scale.\n\n## How It Works\n1. Accepts a DataFrame with text data.\n2. Routes each row through your chosen LLM.\n3. Returns new DataFrame with `text_input` and `model_response`.\n\n",
             "display_name": "",
@@ -2932,10 +2979,10 @@
         },
         "dragging": false,
         "height": 522,
-        "id": "note-n9LmZ",
+        "id": "note-fVy2q",
         "measured": {
           "height": 522,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 631.7137680312561,
@@ -2948,7 +2995,7 @@
       },
       {
         "data": {
-          "id": "note-piUDG",
+          "id": "note-ib6pc",
           "node": {
             "description": "## Set up the YouTube API\n1. Go to [Google Cloud Console](https://console.cloud.google.com).\n2. Create a new project or select existing one.\n3. Enable YouTube Data API v3:\n   - Navigate to APIs & Services > Library.\n   - Search \"YouTube Data API v3\".\n   - Click Enable.\n4. Create credentials:\n   - Go to APIs & Services > Credentials.\n   - Click Create Credentials > API Key.\n5. Copy your new API key for use in the component.\n\n⚠️ Remember to:\n- Restrict the API key to YouTube Data API v3 only.\n- Set appropriate quotas and restrictions.\n",
             "display_name": "",
@@ -2961,10 +3008,10 @@
         },
         "dragging": false,
         "height": 486,
-        "id": "note-piUDG",
+        "id": "note-ib6pc",
         "measured": {
           "height": 486,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 1579.119903578572,
@@ -2977,7 +3024,7 @@
       },
       {
         "data": {
-          "id": "note-qq8Uo",
+          "id": "note-dhEu8",
           "node": {
             "description": "# 🎥 YouTube Video Analysis\nThis flow performs comprehensive analysis of YouTube videos.\n1.  Extract video comments and transcripts.\n2.  Run sentiment analysis on comments using LLM.\n3.  Combine transcript content and comment sentiment for comprehensive video analysis.\n\n## Prerequisites\n-  OpenAI API Key\n-  YouTube Data API v3 key",
             "display_name": "",
@@ -2990,10 +3037,10 @@
         },
         "dragging": false,
         "height": 454,
-        "id": "note-qq8Uo",
+        "id": "note-dhEu8",
         "measured": {
           "height": 454,
-          "width": 433
+          "width": 436
         },
         "position": {
           "x": -1366.105596485301,
@@ -3006,7 +3053,7 @@
       },
       {
         "data": {
-          "id": "ConditionalRouter-CfANV",
+          "id": "ConditionalRouter-NmX80",
           "node": {
             "base_classes": [
               "Message"
@@ -3249,10 +3296,10 @@
           "type": "ConditionalRouter"
         },
         "dragging": false,
-        "id": "ConditionalRouter-CfANV",
+        "id": "ConditionalRouter-NmX80",
         "measured": {
-          "height": 541,
-          "width": 320
+          "height": 658,
+          "width": 360
         },
         "position": {
           "x": -352.80314888328695,
@@ -3263,9 +3310,9 @@
       }
     ],
     "viewport": {
-      "x": 437.31759577518767,
-      "y": -4009.9990846628743,
-      "zoom": 0.6745353230252618
+      "x": 505.76519965138317,
+      "y": -1259.3934784241562,
+      "zoom": 0.301928683991489
     }
   },
   "description": "The YouTube Analysis flow extracts video comments and transcripts, analyzing sentiment patterns and content themes.",
