@@ -1,7 +1,9 @@
 import requests
+
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
+
 
 class TessAIExecuteAgentComponent(Component):
     display_name = "Execute Agent"
@@ -61,7 +63,7 @@ class TessAIExecuteAgentComponent(Component):
                 for question in questions:
                     field = self._create_field_config(question)
                     config = field.model_dump(by_alias=True, exclude_none=True)
-                    
+
                     self.inputs.append(field)
                     build_config[field.name] = config
 
@@ -92,23 +94,20 @@ class TessAIExecuteAgentComponent(Component):
             if key.endswith(suffix):
                 param_name = key[: -len(suffix)]
                 if param_name == "messages":
-                    parameters[param_name] = [{
-                        "role": "user",
-                        "content": self._parameters[key]
-                    }]
+                    parameters[param_name] = [{"role": "user", "content": self._parameters[key]}]
                 else:
                     parameters[param_name] = self._parameters[key]
         return parameters
-    
+
     def _get_agent_questions(self, agent_id):
         endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
         response = requests.get(endpoint, headers=self._get_headers())
-        
+
         if response.status_code == 404:
             return []
-        elif response.status_code != 200:
+        if response.status_code != 200:
             raise Exception(f"Error getting information for agent {agent_id}: {response.status_code}")
-        
+
         template = response.json()
         return template.get("questions", [])
 
@@ -116,7 +115,7 @@ class TessAIExecuteAgentComponent(Component):
         field_type = question.get("type", "text")
         key = f"{question['name']}{self.FIELD_SUFFIX}"
         name = question["name"].replace("_", " ").capitalize()
-    
+
         args = {
             "name": key,
             "display_name": name,
@@ -124,10 +123,10 @@ class TessAIExecuteAgentComponent(Component):
             "info": question.get("description", ""),
             "placeholder": question.get("placeholder", ""),
         }
-        
+
         if question.get("default") and args["required"]:
             args["value"] = question.get("default")
-    
+
         if field_type == "textarea":
             input_class = MultilineInput
         elif field_type == "select":
@@ -143,7 +142,7 @@ class TessAIExecuteAgentComponent(Component):
             if field_type == "file":
                 args["display_name"] += " (direct URL)"
             args["input_types"] = ["Message"]
-    
+
         return input_class(**args)
 
     def _clear_dynamic_fields(self, build_config: dict):
