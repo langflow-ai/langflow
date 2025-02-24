@@ -76,6 +76,7 @@
     "react18-json-view": "^0.2.8",
     "reactflow": "^11.11.3",
     "rehype-mathjax": "^4.0.3",
+    "rehype-raw": "^6.1.1",
     "remark-gfm": "3.0.1",
     "remark-math": "^6.0.0",
     "shadcn-ui": "^0.9.4",

@@ -536,9 +536,9 @@ def create_new_project(
     session.add(db_flow)
 
 
-async def get_all_flows_similar_to_project(session, folder_id):
+async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUID) -> list[Flow]:
     stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == folder_id)
-    return (await session.exec(stmt)).first().flows
+    return list((await session.exec(stmt)).first().flows)
 
 
 async def delete_start_projects(session, folder_id) -> None:
@@ -785,7 +785,8 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     # We also need to update the project data in the file
                     await update_project_file(project_path, project, updated_project_data)
             if do_create and project_name and project_data:
-                for existing_project in await get_all_flows_similar_to_project(session, new_folder.id):
+                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+                for existing_project in existing_flows:
                     await session.delete(existing_project)
 
                 create_new_project(
