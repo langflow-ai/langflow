@@ -68,8 +68,8 @@ class TessAIExecuteAgentComponent(Component):
             except requests.RequestException:
                 self._clear_dynamic_fields(build_config)
 
-            self.map_inputs(self.inputs)
-            self.build_inputs()
+        self.map_inputs(self.inputs)
+        self.build_inputs()
 
         return build_config
 
