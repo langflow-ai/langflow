@@ -1,0 +1,175 @@
+const SvgPotpie = (props) => (
+  <svg
+    width="1.5em"
+    height="1.5em"
+    viewBox="0 0 100 100"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <g clip-path="url(#clip0_2509_127)">
+      <g filter="url(#filter0_f_2509_127)">
+        <rect x="10" y="10" width="80" height="80" rx="10" fill="#AEB9FF" />
+      </g>
+      <g filter="url(#filter1_i_2509_127)">
+        <rect
+          x="12"
+          y="12"
+          width="76"
+          height="76"
+          rx="10"
+          fill="url(#paint0_linear_2509_127)"
+        />
+        <g filter="url(#filter2_d_2509_127)">
+          <path
+            d="M29.2266 50.2422L32.2317 63.927C32.2983 64.2673 32.4348 64.5657 32.6209 64.7778C32.807 64.9899 33.0328 65.1044 33.2648 65.1044H67.2428C67.4748 65.1044 67.7006 64.9899 67.8866 64.7778C68.0727 64.5657 68.2092 64.2673 68.2758 63.927L71.2799 50.2422"
+            fill="#FFFBF0"
+          />
+        </g>
+        <path
+          d="M29.3162 44.9798C32.4496 39.5417 40.5221 36.0625 49.9835 36.0625C59.4449 36.0625 67.5099 39.5385 70.6454 44.9733H70.6368C71.62 45.0446 72.561 45.4014 73.3444 45.9997C74.1279 46.5981 74.7196 47.4121 75.0471 48.342C75.3745 49.2718 75.4235 50.2769 75.188 51.2342C74.9524 52.1914 74.4426 53.0591 73.7211 53.7308C72.9996 54.4026 72.0977 54.8491 71.1261 55.0156C70.1545 55.1822 69.1553 55.0615 68.2513 54.6685C67.3472 54.2754 66.5776 53.6271 66.0367 52.8029C65.4958 51.9788 65.2072 51.0147 65.2062 50.0289C65.2062 51.3731 64.6723 52.6623 63.7217 53.6129C62.7712 54.5634 61.482 55.0974 60.1378 55.0974C58.7935 55.0974 57.5043 54.5634 56.5538 53.6129C55.6033 52.6623 55.0693 51.3731 55.0693 50.0289C55.0693 51.3731 54.5353 52.6623 53.5847 53.6129C52.6342 54.5634 51.345 55.0974 50.0008 55.0974C48.6565 55.0974 47.3673 54.5634 46.4168 53.6129C45.4663 52.6623 44.9323 51.3731 44.9323 50.0289C44.9323 51.373 44.3983 52.662 43.4479 53.6125C42.4975 54.5629 41.2084 55.0968 39.8643 55.0968C38.5202 55.0968 37.2311 54.5629 36.2807 53.6125C35.3303 52.662 34.7963 51.373 34.7963 50.0289C34.7955 51.0126 34.5083 51.9748 33.9696 52.7979C33.4309 53.621 32.6642 54.2694 31.763 54.6638C30.8619 55.0583 29.8654 55.1818 28.8952 55.0193C27.925 54.8567 27.0232 54.4151 26.2999 53.7484C25.5766 53.0816 25.0631 52.2187 24.8222 51.265C24.5813 50.3112 24.6234 49.308 24.9433 48.3778C25.2632 47.4475 25.8471 46.6306 26.6237 46.0268C27.4003 45.423 28.3359 45.0584 29.3162 44.9776V44.9798Z"
+          fill="url(#paint1_linear_2509_127)"
+        />
+        <path
+          d="M50.002 40.5859V42.8864"
+          stroke="white"
+          stroke-width="0.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M43.8292 40.5859L41.0859 42.8864"
+          stroke="white"
+          stroke-width="0.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M56.1738 40.5859L58.9171 42.8864"
+          stroke="white"
+          stroke-width="0.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </g>
+    </g>
+    <defs>
+      <filter
+        id="filter0_f_2509_127"
+        x="0"
+        y="0"
+        width="100"
+        height="100"
+        filterUnits="userSpaceOnUse"
+        color-interpolation-filters="sRGB"
+      >
+        <feFlood flood-opacity="0" result="BackgroundImageFix" />
+        <feBlend
+          mode="normal"
+          in="SourceGraphic"
+          in2="BackgroundImageFix"
+          result="shape"
+        />
+        <feGaussianBlur
+          stdDeviation="5"
+          result="effect1_foregroundBlur_2509_127"
+        />
+      </filter>
+      <filter
+        id="filter1_i_2509_127"
+        x="12"
+        y="12"
+        width="76"
+        height="80"
+        filterUnits="userSpaceOnUse"
+        color-interpolation-filters="sRGB"
+      >
+        <feFlood flood-opacity="0" result="BackgroundImageFix" />
+        <feBlend
+          mode="normal"
+          in="SourceGraphic"
+          in2="BackgroundImageFix"
+          result="shape"
+        />
+        <feColorMatrix
+          in="SourceAlpha"
+          type="matrix"
+          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+          result="hardAlpha"
+        />
+        <feOffset dy="4" />
+        <feGaussianBlur stdDeviation="2" />
+        <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
+        <feColorMatrix
+          type="matrix"
+          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"
+        />
+        <feBlend
+          mode="normal"
+          in2="shape"
+          result="effect1_innerShadow_2509_127"
+        />
+      </filter>
+      <filter
+        id="filter2_d_2509_127"
+        x="25.2266"
+        y="50.2422"
+        width="50.0527"
+        height="22.8594"
+        filterUnits="userSpaceOnUse"
+        color-interpolation-filters="sRGB"
+      >
+        <feFlood flood-opacity="0" result="BackgroundImageFix" />
+        <feColorMatrix
+          in="SourceAlpha"
+          type="matrix"
+          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+          result="hardAlpha"
+        />
+        <feOffset dy="4" />
+        <feGaussianBlur stdDeviation="2" />
+        <feComposite in2="hardAlpha" operator="out" />
+        <feColorMatrix
+          type="matrix"
+          values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.41 0"
+        />
+        <feBlend
+          mode="normal"
+          in2="BackgroundImageFix"
+          result="effect1_dropShadow_2509_127"
+        />
+        <feBlend
+          mode="normal"
+          in="SourceGraphic"
+          in2="effect1_dropShadow_2509_127"
+          result="shape"
+        />
+      </filter>
+      <linearGradient
+        id="paint0_linear_2509_127"
+        x1="12"
+        y1="22.2415"
+        x2="88"
+        y2="77.7585"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stop-color="#315AFF" />
+        <stop offset="1" stop-color="#151982" />
+      </linearGradient>
+      <linearGradient
+        id="paint1_linear_2509_127"
+        x1="50.0013"
+        y1="36.0625"
+        x2="50.0013"
+        y2="55.0974"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stop-color="#FE8585" />
+        <stop offset="1" stop-color="#FFDA85" />
+      </linearGradient>
+      <clipPath id="clip0_2509_127">
+        <rect width="100" height="100" fill="white" />
+      </clipPath>
+    </defs>
+  </svg>
+);
+export default SvgPotpie;
