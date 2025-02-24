@@ -72,6 +72,9 @@ class DataFrame(pandas_DataFrame):
 
     @text_key.setter
     def text_key(self, value: str) -> None:
+        if value not in self.columns:
+            msg = f"Text key '{value}' not found in DataFrame columns"
+            raise ValueError(msg)
         self._text_key = value
 
     @property
@@ -165,14 +168,3 @@ class DataFrame(pandas_DataFrame):
             DataFrame: A new DataFrame with the converted Documents
         """
         return DataFrame(docs)
-
-    @property
-    def text_key(self) -> str:
-        return self._text_key
-
-    @text_key.setter
-    def text_key(self, value: str) -> None:
-        if value not in self.columns:
-            msg = f"Text key '{value}' not found in DataFrame columns"
-            raise ValueError(msg)
-        self._text_key = value
