@@ -5,16 +5,18 @@ from datetime import datetime
 import pytest
 from httpx import AsyncClient
 from langflow.services.database.models.task.model import TaskCreate, TaskUpdate
-from langflow.services.deps import get_db_service, get_event_bus_service, get_settings_service
+from langflow.services.deps import get_event_bus_service, get_settings_service
 from langflow.services.task_orchestration.service import TaskOrchestrationService
 
 
 @pytest.fixture
 async def task_orchestration_service(client: AsyncClient):  # noqa: ARG001
     settings_service = get_settings_service()
-    db_service = get_db_service()
     event_bus_service = get_event_bus_service()
-    service = TaskOrchestrationService(settings_service, db_service, event_bus_service)
+    service = TaskOrchestrationService(
+        settings_service=settings_service,
+        event_bus_service=event_bus_service,
+    )
     await service.start()
     yield service
     await service.stop()
