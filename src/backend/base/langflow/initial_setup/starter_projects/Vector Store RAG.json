@@ -3620,26 +3620,7 @@
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [
-                  {
-                    "api_endpoint": "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com",
-                    "collections": 4,
-                    "icon": "data",
-                    "status": null
-                  },
-                  {
-                    "api_endpoint": "https://154321d9-bdbc-465e-a517-845c772036dd-us-east-2.apps.astra.datastax.com",
-                    "collections": 3,
-                    "icon": "data",
-                    "status": null
-                  },
-                  {
-                    "api_endpoint": "https://ec9b1099-a394-471c-80b7-57a3893f95f0-us-east-2.apps.astra.datastax.com",
-                    "collections": 0,
-                    "icon": "data",
-                    "status": null
-                  }
-                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -4337,26 +4318,7 @@
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [
-                  {
-                    "api_endpoint": "https://f3166ac4-3e2f-4b32-880c-231d1f9e3f3e-us-east-2.apps.astra.datastax.com",
-                    "collections": 4,
-                    "icon": "data",
-                    "status": null
-                  },
-                  {
-                    "api_endpoint": "https://154321d9-bdbc-465e-a517-845c772036dd-us-east-2.apps.astra.datastax.com",
-                    "collections": 3,
-                    "icon": "data",
-                    "status": null
-                  },
-                  {
-                    "api_endpoint": "https://ec9b1099-a394-471c-80b7-57a3893f95f0-us-east-2.apps.astra.datastax.com",
-                    "collections": 0,
-                    "icon": "data",
-                    "status": null
-                  }
-                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
