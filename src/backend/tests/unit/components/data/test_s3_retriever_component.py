@@ -10,11 +10,11 @@ from langflow.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient
 
+
 @pytest.mark.skipif(
     not os.environ.get("AWS_ACCESS_KEY_ID") or not os.environ.get("AWS_SECRET_ACCESS_KEY"),
     reason="Environment variable AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY is not defined.",
 )
-
 class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
