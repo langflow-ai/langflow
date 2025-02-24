@@ -100,7 +100,7 @@ class Message(Data):
         except ValueError:
             # Try parsing without timezone
             try:
-                # Try parsing with millisecond    
+                # Try parsing with millisecond
                 return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
             except ValueError:
                 # Try parsing without millisecond
