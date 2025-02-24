@@ -1,4 +1,3 @@
-from ast import Attribute
 from langflow.custom import Component
 from langflow.helpers.data import data_to_text
 from langflow.inputs import HandleInput
@@ -85,9 +84,7 @@ class MemoryComponent(Component):
 
         if not hasattr(self.memory, "aget_messages"):
             memory_name = type(self.memory).__name__
-            raise AttributeError(
-                f"External Memory object ({memory_name}) must have 'aget_messages' method."
-            )
+            raise AttributeError(f"External Memory object ({memory_name}) must have 'aget_messages' method.")
 
         if self.memory:
             # override session_id
