@@ -112,6 +112,7 @@ class TwelveLabsVideoEmbeddings(Component):
     def generate_embeddings(self) -> Data:
         try:
             if not self.videodata or not isinstance(self.videodata, list):
+                self.log(f"Invalid video data format: {self.videodata}", "ERROR")
                 return Data(value={"error": "Invalid video data format"})
             if not self.api_key:
                 return Data(value={"error": "No API key provided"})
@@ -121,11 +122,29 @@ class TwelveLabsVideoEmbeddings(Component):
             all_tasks = []  # Track all task IDs
             
             for video_data in self.videodata:
-                if not hasattr(video_data, 'data') or 'path' not in video_data.data:
-                    self.log("Skipping: No video path found", "ERROR")
+                # Add more detailed logging and validation
+                self.log(f"Processing video data: {video_data}")
+                
+                # Handle different possible video data formats
+                video_path = None
+                if isinstance(video_data, str):
+                    video_path = video_data
+                elif isinstance(video_data, dict):
+                    if 'data' in video_data and 'paths' in video_data['data']:
+                        video_path = video_data['data']['paths'][0]  # Take first path if multiple
+                elif hasattr(video_data, 'data'):
+                    if isinstance(video_data.data, dict):
+                        if 'paths' in video_data.data:
+                            video_path = video_data.data['paths'][0]  # Take first path if multiple
+                        elif 'path' in video_data.data:
+                            video_path = video_data.data['path']
+                    elif isinstance(video_data.data, str):
+                        video_path = video_data.data
+
+                if not video_path:
+                    self.log(f"Skipping: No video path found in data: {video_data}", "ERROR")
                     continue
 
-                video_path = video_data.data['path']
                 if not os.path.exists(video_path):
                     self.log(f"Skipping: File not found - {video_path}", "ERROR")
                     continue

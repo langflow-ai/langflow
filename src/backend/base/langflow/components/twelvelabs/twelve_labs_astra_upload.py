@@ -35,6 +35,12 @@ class TwelveLabsAstraUpload(Component):
             display_name="Collection Name",
             info="Name of the collection to store embeddings",
             required=True
+        ),
+        StrInput(
+            name="environment",
+            display_name="Environment",
+            info="The environment for the Astra DB API Endpoint",
+            advanced=True
         )
     ]
 

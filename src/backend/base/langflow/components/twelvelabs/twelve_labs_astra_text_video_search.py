@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.inputs import SecretStrInput, StrInput, DataInput, IntInput
+from langflow.inputs import SecretStrInput, StrInput, DataInput, IntInput, MessageInput
 from langflow.io import Output
 from langflow.schema import Data
 from astrapy import DataAPIClient
@@ -16,6 +16,12 @@ class TwelveLabsAstraSearch(Component):
             display_name="Embeddings",
             info="Twelve Labs text embeddings to use for video search",
             required=True
+        ),
+        MessageInput(
+            name="message",
+            display_name="Message",
+            info="Random message to get this to run",
+            required=False
         ),
         SecretStrInput(
             name="token",
@@ -41,6 +47,12 @@ class TwelveLabsAstraSearch(Component):
             info="Maximum number of results to return",
             value=10,
             required=True
+        ),
+        StrInput(
+            name="environment",
+            display_name="Environment",
+            info="The environment for the Astra DB API Endpoint",
+            advanced=True
         )
     ]
 
@@ -112,6 +124,7 @@ class TwelveLabsAstraSearch(Component):
 
             return Data(value={
                 "status": "success",
+                "message": self.message if hasattr(self, "message") else None,
                 "results": query_results,
                 "total_queries": len(query_results)
             })
