@@ -12,8 +12,11 @@ from uuid import UUID, uuid4
 from loguru import logger
 from pydantic import BaseModel
 
+from langflow.graph.graph.base import Graph
+from langflow.processing.process import run_graph
 from langflow.services.base import Service
 from langflow.services.database.models.task.model import TaskCreate, TaskRead, TaskUpdate
+from langflow.services.deps import get_task_service
 
 if TYPE_CHECKING:
     from langflow.services.event_bus.service import EventBusService
@@ -34,7 +37,7 @@ class TaskNotification(BaseModel):
 
 
 class TaskOrchestrationService(Service):
-    """Simplified task orchestration service using in-memory storage."""
+    """Task orchestration service using in-memory storage with actual task processing."""
 
     name = "task_orchestration_service"
 
@@ -48,6 +51,7 @@ class TaskOrchestrationService(Service):
         self.event_bus_service = event_bus_service
         self._tasks: dict[UUID, dict[str, Any]] = {}  # In-memory task storage
         self._processing_tasks: dict[UUID, asyncio.Task[Any]] = {}
+        self.task_service = get_task_service()
 
     async def start(self):
         """Start the task orchestration service."""
@@ -185,10 +189,13 @@ class TaskOrchestrationService(Service):
         del self._tasks[task_id]
 
     async def _process_task(self, task_id: UUID):
-        """Process a task asynchronously.
+        """Process a task asynchronously using the graph processor.
 
-        This is a simplified version that simulates task processing.
-        In a real implementation, this would handle the actual task execution.
+        This implementation processes the task by:
+        1. Getting the task data including flow and input information
+        2. Creating and validating the graph
+        3. Running the graph with the provided inputs
+        4. Handling the results or any errors that occur
 
         Args:
             task_id: Task identifier
@@ -197,23 +204,41 @@ class TaskOrchestrationService(Service):
             # Update task to processing
             await self.update_task(task_id, TaskUpdate(status="processing"))
 
-            # Simulate some work
-            await asyncio.sleep(2)
-
             # Get the task data
             task_data = self._tasks[task_id]
 
             try:
-                # Here you would actually process the task
-                # For now, we just simulate success
-                result = {"message": "Task completed successfully"}
+                # Extract flow data and input request
+                flow_data = task_data.get("flow_data")
+                input_request = task_data.get("input_request", {})
 
-                # Update task as completed
+                if not flow_data:
+                    msg = "No flow data provided for task processing"
+                    raise ValueError(msg)
+
+                # Create graph from flow data
+                graph = Graph.from_payload(flow_data)
+
+                # Get input parameters
+                input_value = input_request.get("input_value", "")
+                input_type = input_request.get("type", "text")  # Default to text
+
+                # Process the graph
+                results = await run_graph(
+                    graph=graph,
+                    input_value=input_value,
+                    input_type=input_type,
+                    output_type="any",  # or specify based on task requirements
+                    session_id=str(task_id),
+                    fallback_to_env_vars=True,
+                )
+
+                # Update task as completed with results
                 await self.update_task(
                     task_id,
                     TaskUpdate(
                         status="completed",
-                        result=result,
+                        result={"outputs": [r.dict() for r in results]},
                     ),
                 )
 
@@ -223,11 +248,11 @@ class TaskOrchestrationService(Service):
                     {
                         "task_id": str(task_id),
                         "flow_id": str(task_data.get("flow_id")),
-                        "result": result,
+                        "result": results,
                     },
                 )
 
-            except ValueError as e:
+            except Exception as e:  # noqa: BLE001
                 # Handle any processing errors
                 error_result = {"error": str(e)}
                 await self.update_task(
@@ -252,7 +277,7 @@ class TaskOrchestrationService(Service):
             # Handle task cancellation
             await self.update_task(task_id, TaskUpdate(status="cancelled"))
             raise
-        except ValueError as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Error processing task {task_id}: {e}")
             # Ensure task is marked as failed
             try:
