@@ -1,6 +1,6 @@
 import React, { forwardRef } from "react";
 import SvgApifyLogo from "./Apify";
-import ApifyWhiteImage from "./apify_white.png"
+import ApifyWhiteImage from "./apify_white.png";
 
 export const ApifyIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
@@ -8,8 +8,9 @@ export const ApifyIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   },
 );
 
-export const ApifyWhiteIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
-  (props, ref) => {
-    return <img src={ApifyWhiteImage} alt="Apify White Logo" {...props} />;
-  },
-);
+export const ApifyWhiteIcon = forwardRef<
+  SVGSVGElement,
+  React.PropsWithChildren<{}>
+>((props, ref) => {
+  return <img src={ApifyWhiteImage} alt="Apify White Logo" {...props} />;
+});
