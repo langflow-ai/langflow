@@ -50,7 +50,6 @@ class TessAIExecuteAgentComponent(Component):
             raise RuntimeError(f"Error executing agent: {e!s}") from e
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        print(dir(self.api_key))
         if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
             try:
                 for key in list(build_config.keys()):
@@ -60,11 +59,17 @@ class TessAIExecuteAgentComponent(Component):
                 questions = self._get_agent_questions(field_value)
 
                 for question in questions:
-                    config = self._create_field_config(question)
-                    build_config[config.name] = config
+                    field = self._create_field_config(question)
+                    config = field.model_dump(by_alias=True, exclude_none=True)
+                    
+                    self.inputs.append(field)
+                    build_config[field.name] = config
 
             except requests.RequestException:
                 self._clear_dynamic_fields(build_config)
+
+            self.map_inputs(self.inputs)
+            self.build_inputs()
 
         return build_config
 
@@ -119,12 +124,17 @@ class TessAIExecuteAgentComponent(Component):
             "info": question.get("description", ""),
             "placeholder": question.get("placeholder", ""),
         }
+        
+        if question.get("default") and args["required"]:
+            args["value"] = question.get("default")
     
         if field_type == "textarea":
             input_class = MultilineInput
         elif field_type == "select":
             input_class = DropdownInput
             args["options"] = [opt.split(":")[-1] for opt in question.get("options", [])]
+            if args["required"]:
+                args["value"] = args.get("default", args["options"][0])
         elif field_type == "multiselect":
             input_class = MultiselectInput
             args["options"] = [opt.split(":")[-1].strip() for opt in question.get("description", "").split(",")]
