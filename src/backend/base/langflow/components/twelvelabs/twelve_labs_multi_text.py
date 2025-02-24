@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from langflow.io import MessageTextInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -10,18 +10,13 @@ class TwelveLabsMultiTextInput(Component):
     name = "TwelveLabsMultiTextInput"
 
     inputs = [
-        MessageTextInput(
+        StrInput(
             name="texts",
             display_name="Text Inputs",
             is_list=True,
-            tool_mode=True,
             placeholder="Enter text...",
             list_add_label="Add Text",
-        ),
-        MessageTextInput(
-            name="message",
-            display_name="Message",
-        ),
+        )
     ]
 
     outputs = [

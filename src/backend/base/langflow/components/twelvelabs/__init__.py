@@ -8,6 +8,7 @@ from .twelve_labs_astra_text_video_search import TwelveLabsAstraTextVideoSearch
 
 __all__ = [
     "VideoFile",
+    "VideoDirectoryComponent",
     "TwelveLabsVideoEmbeddings",
     "TwelveLabsTextEmbeddings",
     "TwelveLabsPegasus",

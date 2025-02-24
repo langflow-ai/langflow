@@ -17,12 +17,14 @@ class TwelveLabsTextEmbeddings(Component):
             name="textdata", 
             display_name="Text Data", 
             info="Text data to embed",
-            is_list=True
+            is_list=True,
+            required=True
         ),
         SecretStrInput(
             name="api_key",
             display_name="Twelve Labs API Key",
-            info="Enter your Twelve Labs API Key."
+            info="Enter your Twelve Labs API Key.",
+            required=True
         )
     ]
 
