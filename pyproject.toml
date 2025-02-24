@@ -155,6 +155,7 @@ dev = [
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust>=2.32.9",
+    "fakeredis>=2.27.0",
 ]
 
 [tool.uv.sources]
