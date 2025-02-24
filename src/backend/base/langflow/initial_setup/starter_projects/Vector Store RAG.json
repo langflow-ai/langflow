@@ -276,8 +276,8 @@
           "width": 320
         },
         "position": {
-          "x": 743.9745420290319,
-          "y": 463.6977510207854
+          "x": 741.9155057321848,
+          "y": 453.4025695365494
         },
         "positionAbsolute": {
           "x": 743.9745420290319,
@@ -1492,7 +1492,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -2028,7 +2028,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "openai_api_type": {
                 "_input_type": "MessageTextInput",
@@ -3549,6 +3549,24 @@
                 "type": "str",
                 "_input_type": "DropdownInput"
               },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "token": {
                 "load_from_db": true,
                 "required": true,
@@ -4253,6 +4271,24 @@
                 "title_case": false,
                 "type": "str",
                 "_input_type": "DropdownInput"
+              },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
               },
               "token": {
                 "load_from_db": true,
