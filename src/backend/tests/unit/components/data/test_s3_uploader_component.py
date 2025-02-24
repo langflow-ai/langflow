@@ -19,7 +19,6 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
-        return []
 
     @pytest.fixture
     def temp_files(self):
