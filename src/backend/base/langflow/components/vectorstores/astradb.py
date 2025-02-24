@@ -715,7 +715,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
                 if self.id_field:
-                    ids.append(_input.data[self.id_field])                
+                    ids.append(_input.data[self.id_field])
                 documents.append(_input.to_lc_document())
             else:
                 msg = "Vector Store Inputs must be Data objects."
