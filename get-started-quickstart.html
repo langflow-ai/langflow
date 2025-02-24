@@ -16,7 +16,7 @@
 
 
 <link rel="search" type="application/opensearchdescription+xml" title="Langflow Documentation" href="/opensearch.xml"><link rel="stylesheet" href="/assets/css/styles.e5a88218.css">
-<script src="/assets/js/runtime~main.bd0ec986.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.102072de.js" defer="defer"></script>
 <script src="/assets/js/main.9f3f6452.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -33,8 +33,8 @@
 <li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
 <li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with:<!-- -->
 <ul>
-<li>An AstraDB application token</li>
-<li><a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">A collection in Astra</a></li>
+<li>An Astra DB application token scoped to read and write to the database</li>
+<li>A collection created in <a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">Astra</a> or a new collection created in the <strong>Astra DB</strong> component</li>
 </ul>
 </li>
 </ul>
@@ -54,7 +54,7 @@ Continue to <a href="#run-basic-prompting-flow">Run the basic prompting flow</a>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="build-the-basic-prompting-flow">Build the basic prompting flow<a href="#build-the-basic-prompting-flow" class="hash-link" aria-label="Direct link to Build the basic prompting flow" title="Direct link to Build the basic prompting flow">​</a></h2>
 <p>The Basic Prompting flow will look like this when it&#x27;s completed:</p>
-<p><img decoding="async" loading="lazy" src="/assets/images/starter-flow-basic-prompting-09331815d7282bd6a3feedf84838ba20.png" width="2500" height="1528" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Completed basic prompting flow" src="/assets/images/starter-flow-basic-prompting-09331815d7282bd6a3feedf84838ba20.png" width="2500" height="1528" class="img_ev3q"></p>
 <p>To build the <strong>Basic Prompting</strong> flow, follow these steps:</p>
 <ol>
 <li>Click <strong>Inputs</strong>, select the <strong>Chat Input</strong> component, and then drag it to the canvas.
@@ -67,7 +67,7 @@ The <a href="/components-io#chat-output">Chat Output</a> component prints the fl
 The <a href="/components-models#openai">OpenAI</a> model component sends the user input and prompt to the OpenAI API and receives a response.</li>
 </ol>
 <p>You should now have a flow that looks like this:</p>
-<p><img decoding="async" loading="lazy" src="/assets/images/quickstart-basic-prompt-no-connections-f5887f67c3448c39b74f7e28b65a0b18.png" width="2528" height="1530" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Basic prompting flow with no connections" src="/assets/images/quickstart-basic-prompt-no-connections-f5887f67c3448c39b74f7e28b65a0b18.png" width="2528" height="1530" class="img_ev3q"></p>
 <p>With no connections between them, the components won&#x27;t interact with each other.
 You want data to flow from <strong>Chat Input</strong> to <strong>Chat Output</strong> through the connections between the components.
 Each component accepts inputs on its left side, and sends outputs on its right side.
@@ -119,7 +119,7 @@ If you&#x27;re unsure, use <code>Answer the user as if you were a GenAI expert, 
 <p>Add document ingestion to your basic prompting flow, with the <strong>Astra DB</strong> component as the vector store.</p>
 <div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>tip</div><div class="admonitionContent_BuS1"><p>If you don&#x27;t want to create a blank flow, click <strong>New Flow</strong>, and then select <strong>Vector RAG</strong> for a pre-built flow.</p></div></div>
 <p>Adding vector RAG to the basic prompting flow will look like this when completed:</p>
-<p><img decoding="async" loading="lazy" src="/assets/images/quickstart-add-document-ingestion-5f9756b0a4b7e232b1507e12f335b15e.png" width="2848" height="1324" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Add document ingestion to the basic prompting flow" src="/assets/images/quickstart-add-document-ingestion-5f9756b0a4b7e232b1507e12f335b15e.png" width="2848" height="1324" class="img_ev3q"></p>
 <p>To build the flow, follow these steps:</p>
 <ol>
 <li>Disconnect the <strong>Chat Input</strong> component from the <strong>OpenAI</strong> component by double-clicking on the connecting line.</li>
@@ -135,17 +135,36 @@ The <a href="/components-processing#data-to-message">Data to Message</a> compone
 The <a href="/components-embedding-models#openai-embeddings">OpenAI Embeddings</a> component generates embeddings for the user&#x27;s input, which are compared to the vector data in the database.</li>
 <li>Connect the new components into the existing flow, so your flow looks like this:</li>
 </ol>
-<p><img decoding="async" loading="lazy" src="/assets/images/quickstart-add-document-ingestion-5f9756b0a4b7e232b1507e12f335b15e.png" width="2848" height="1324" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Add document ingestion to the basic prompting flow" src="/assets/images/quickstart-add-document-ingestion-5f9756b0a4b7e232b1507e12f335b15e.png" width="2848" height="1324" class="img_ev3q"></p>
 <ol start="8">
-<li>Configure the <strong>Astra DB</strong> component.<!-- -->
+<li>
+<p>Configure the <strong>Astra DB</strong> component.</p>
 <ol>
 <li>In the <strong>Astra DB Application Token</strong> field, add your <strong>Astra DB</strong> application token.
 The component connects to your database and populates the menus with existing databases and collections.</li>
-<li>Select your <strong>Database</strong>.</li>
-<li>Select your <strong>Collection</strong>. Collections are created in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a> for storing vector data.
-If you don&#x27;t have a collection, see the <a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">DataStax Astra DB Serverless documentation</a>.</li>
-<li>Select <strong>Embedding Model</strong> to bring your own embeddings model, which is the connected <strong>OpenAI Embeddings</strong> component.
-The <strong>Dimensions</strong> value must match the dimensions of your collection. This value can be found in your <strong>Collection</strong> in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a>.</li>
+<li>Select your <strong>Database</strong>.
+If you don&#x27;t have a collection, select <strong>New database</strong>.
+Complete the <strong>Name</strong>, <strong>Cloud provider</strong>, and <strong>Region</strong> fields, and then click <strong>Create</strong>. <strong>Database creation takes a few minutes</strong>.</li>
+<li>Select your <strong>Collection</strong>. Collections are created in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a> for storing vector data.</li>
+</ol>
+<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>If you select a collection embedded with NVIDIA through Astra&#x27;s vectorize service, the <strong>Embedding Model</strong> port is removed, because you have already generated embeddings for this collection with the NVIDIA <code>NV-Embed-QA</code> model. The component fetches the data from the collection, and uses the same embeddings for queries.</p></div></div>
+</li>
+<li>
+<p>If you don&#x27;t have a collection, create a new one within the component.</p>
+<ol>
+<li>
+<p>Select <strong>New collection</strong>.</p>
+</li>
+<li>
+<p>Complete the <strong>Name</strong>, <strong>Embedding generation method</strong>, <strong>Embedding model</strong>, and <strong>Dimensions</strong> fields, and then click <strong>Create</strong>.</p>
+<p>Your choice for the <strong>Embedding generation method</strong> and <strong>Embedding model</strong> depends on whether you want to use embeddings generated by a provider through Astra&#x27;s vectorize service, or generated by a component in Langflow.</p>
+<ul>
+<li>To use embeddings generated by a provider through Astra&#x27;s vectorize service, select the model from the <strong>Embedding generation method</strong> dropdown menu, and then select the model from the <strong>Embedding model</strong> dropdown menu.</li>
+<li>To use embeddings generated by a component in Langflow, select <strong>Bring your own</strong> for both the <strong>Embedding generation method</strong> and <strong>Embedding model</strong> fields. In this starter project, the option for the embeddings method and model is the <strong>OpenAI Embeddings</strong> component connected to the <strong>Astra DB</strong> component.</li>
+<li>The <strong>Dimensions</strong> value must match the dimensions of your collection. This field is <strong>not required</strong> if you use embeddings generated through Astra&#x27;s vectorize service. You can find this value in the <strong>Collection</strong> in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a>.</li>
+</ul>
+<p>For more information, see the <a href="https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html" target="_blank" rel="noopener noreferrer">DataStax Astra DB Serverless documentation</a>.</p>
+</li>
 </ol>
 </li>
 </ol>

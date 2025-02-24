@@ -16,7 +16,7 @@
 
 
 <link rel="search" type="application/opensearchdescription+xml" title="Langflow Documentation" href="/opensearch.xml"><link rel="stylesheet" href="/assets/css/styles.e5a88218.css">
-<script src="/assets/js/runtime~main.bd0ec986.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.102072de.js" defer="defer"></script>
 <script src="/assets/js/main.9f3f6452.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -32,10 +32,10 @@
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites">​</a></h2>
 <ul>
 <li><a href="https://platform.openai.com/" target="_blank" rel="noopener noreferrer">An OpenAI API key</a></li>
-<li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with:<!-- -->
+<li><a href="https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html" target="_blank" rel="noopener noreferrer">An Astra DB vector database</a> with the following:<!-- -->
 <ul>
-<li>An Astra DB application token</li>
-<li><a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">A collection in Astra</a></li>
+<li>An Astra DB application token scoped to read and write to the database</li>
+<li>A collection created in <a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">Astra</a> or a new collection created in the <strong>Astra DB</strong> component</li>
 </ul>
 </li>
 </ul>
@@ -62,7 +62,8 @@ It ingests data from a local file, splits it into chunks, indexes it in Astra DB
 <li><strong>Chat Output</strong> returns the response to the <strong>Playground</strong>.</li>
 </ul>
 <ol>
-<li>Configure the <strong>OpenAI</strong> model component.<!-- -->
+<li>
+<p>Configure the <strong>OpenAI</strong> model component.</p>
 <ol>
 <li>To create a global variable for the <strong>OpenAI</strong> component, in the <strong>OpenAI API Key</strong> field, click the <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe" aria-label="Globe"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg> <strong>Globe</strong> button, and then click <strong>Add New Variable</strong>.</li>
 <li>In the <strong>Variable Name</strong> field, enter <code>openai_api_key</code>.</li>
@@ -70,15 +71,34 @@ It ingests data from a local file, splits it into chunks, indexes it in Astra DB
 <li>Click <strong>Save Variable</strong>.</li>
 </ol>
 </li>
-<li>Configure the <strong>Astra DB</strong> component.<!-- -->
+<li>
+<p>Configure the <strong>Astra DB</strong> component.</p>
 <ol>
 <li>In the <strong>Astra DB Application Token</strong> field, add your <strong>Astra DB</strong> application token.
 The component connects to your database and populates the menus with existing databases and collections.</li>
-<li>Select your <strong>Database</strong>.</li>
-<li>Select your <strong>Collection</strong>. Collections are created in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a> for storing vector data.
-If you don&#x27;t have a collection, see the <a href="https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection" target="_blank" rel="noopener noreferrer">DataStax Astra DB Serverless documentation</a>.</li>
-<li>Select <strong>Embedding Model</strong> to bring your own embeddings model, which is the connected <strong>OpenAI Embeddings</strong> component.
-The <strong>Dimensions</strong> value must match the dimensions of your collection. You can find this value in the <strong>Collection</strong> in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a>.</li>
+<li>Select your <strong>Database</strong>.
+If you don&#x27;t have a collection, select <strong>New database</strong>.
+Complete the <strong>Name</strong>, <strong>Cloud provider</strong>, and <strong>Region</strong> fields, and then click <strong>Create</strong>. <strong>Database creation takes a few minutes</strong>.</li>
+<li>Select your <strong>Collection</strong>. Collections are created in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a> for storing vector data.</li>
+</ol>
+<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>If you select a collection embedded with Nvidia through Astra&#x27;s vectorize service, the <strong>Embedding Model</strong> port is removed, because you have already generated embeddings for this collection with the Nvidia <code>NV-Embed-QA</code> model. The component fetches the data from the collection, and uses the same embeddings for queries.</p></div></div>
+</li>
+<li>
+<p>If you don&#x27;t have a collection, create a new one within the component.</p>
+<ol>
+<li>
+<p>Select <strong>New collection</strong>.</p>
+</li>
+<li>
+<p>Complete the <strong>Name</strong>, <strong>Embedding generation method</strong>, <strong>Embedding model</strong>, and <strong>Dimensions</strong> fields, and then click <strong>Create</strong>.</p>
+<p>Your choice for the <strong>Embedding generation method</strong> and <strong>Embedding model</strong> depends on whether you want to use embeddings generated by a provider through Astra&#x27;s vectorize service, or generated by a component in Langflow.</p>
+<ul>
+<li>To use embeddings generated by a provider through Astra&#x27;s vectorize service, select the model from the <strong>Embedding generation method</strong> dropdown menu, and then select the model from the <strong>Embedding model</strong> dropdown menu.</li>
+<li>To use embeddings generated by a component in Langflow, select <strong>Bring your own</strong> for both the <strong>Embedding generation method</strong> and <strong>Embedding model</strong> fields. In this starter project, the option for the embeddings method and model is the <strong>OpenAI Embeddings</strong> component connected to the <strong>Astra DB</strong> component.</li>
+<li>The <strong>Dimensions</strong> value must match the dimensions of your collection. This field is <strong>not required</strong> if you use embeddings generated through Astra&#x27;s vectorize service. You can find this value in the <strong>Collection</strong> in your <a href="https://astra.datastax.com" target="_blank" rel="noopener noreferrer">Astra DB deployment</a>.</li>
+</ul>
+<p>For more information, see the <a href="https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html" target="_blank" rel="noopener noreferrer">DataStax Astra DB Serverless documentation</a>.</p>
+</li>
 </ol>
 </li>
 </ol>
