@@ -4,6 +4,8 @@ This module provides a simplified task orchestration functionality for LangFlow,
 handling task lifecycle management and notifications using in-memory storage.
 """
 
+from __future__ import annotations
+
 import asyncio
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
@@ -12,13 +14,15 @@ from uuid import UUID, uuid4
 from loguru import logger
 from pydantic import BaseModel
 
-from langflow.graph.graph.base import Graph
-from langflow.processing.process import run_graph
+from langflow.graph.graph.state_model import create_output_state_model_from_graph
 from langflow.services.base import Service
 from langflow.services.database.models.task.model import TaskCreate, TaskRead, TaskUpdate
-from langflow.services.deps import get_task_service
+from langflow.services.deps import get_chat_service, get_task_service
 
 if TYPE_CHECKING:
+    from langflow.api.v1.schemas import InputValueRequest
+    from langflow.events.event_manager import EventManager
+    from langflow.graph import Graph
     from langflow.services.event_bus.service import EventBusService
     from langflow.services.settings.service import SettingsService
 
@@ -43,8 +47,8 @@ class TaskOrchestrationService(Service):
 
     def __init__(
         self,
-        settings_service: "SettingsService",
-        event_bus_service: "EventBusService",
+        settings_service: SettingsService,
+        event_bus_service: EventBusService,
     ):
         """Initialize task orchestration service with in-memory storage."""
         self.settings_service = settings_service
@@ -52,6 +56,7 @@ class TaskOrchestrationService(Service):
         self._tasks: dict[UUID, dict[str, Any]] = {}  # In-memory task storage
         self._processing_tasks: dict[UUID, asyncio.Task[Any]] = {}
         self.task_service = get_task_service()
+        self.chat_service = get_chat_service()
 
     async def start(self):
         """Start the task orchestration service."""
@@ -192,53 +197,72 @@ class TaskOrchestrationService(Service):
         """Process a task asynchronously using the graph processor.
 
         This implementation processes the task by:
-        1. Getting the task data including flow and input information
-        2. Creating and validating the graph
-        3. Running the graph with the provided inputs
-        4. Handling the results or any errors that occur
+        1. Building and preparing the graph
+        2. Creating an output state model to track output states
+        3. Running the graph asynchronously
+        4. Collecting results and output states
 
         Args:
             task_id: Task identifier
         """
+        from langflow.api.utils import build_graph_from_data
+
         try:
             # Update task to processing
             await self.update_task(task_id, TaskUpdate(status="processing"))
 
             # Get the task data
             task_data = self._tasks[task_id]
+            flow_data = task_data.get("flow_data")
+            input_request = task_data.get("input_request", {})
+
+            if not flow_data:
+                msg = "No flow data provided for task processing"
+                raise ValueError(msg)
 
             try:
-                # Extract flow data and input request
-                flow_data = task_data.get("flow_data")
-                input_request = task_data.get("input_request", {})
-
-                if not flow_data:
-                    msg = "No flow data provided for task processing"
-                    raise ValueError(msg)
-
-                # Create graph from flow data
-                graph = Graph.from_payload(flow_data)
-
-                # Get input parameters
-                input_value = input_request.get("input_value", "")
-                input_type = input_request.get("type", "text")  # Default to text
-
-                # Process the graph
-                results = await run_graph(
-                    graph=graph,
-                    input_value=input_value,
-                    input_type=input_type,
-                    output_type="any",  # or specify based on task requirements
-                    session_id=str(task_id),
-                    fallback_to_env_vars=True,
+                # Build the graph
+                graph = await build_graph_from_data(
+                    flow_id=str(task_id),
+                    payload=flow_data,
+                    user_id=str(task_data.get("author_id")),
+                    flow_name=task_data.get("title", "Untitled Flow"),
                 )
 
-                # Update task as completed with results
+                # Create input value request and set it in the graph
+                input_request.get("input_value", "")
+
+                # Prepare the graph for processing
+                graph.prepare()
+
+                # Create output state model for tracking
+                output_state_model = create_output_state_model_from_graph(graph)()
+
+                # Process the graph
+                results = []
+                async for result in graph.async_start():
+                    if hasattr(result, "vertex") and result.vertex.is_output:
+                        # Get the output state for this vertex
+                        vertex_state = getattr(output_state_model, result.vertex.id, None)
+                        results.append(
+                            {
+                                "id": result.vertex.id,
+                                "type": result.vertex.vertex_type,
+                                "value": result.vertex.built_object,
+                                "output_state": vertex_state.model_dump() if vertex_state else None,
+                            }
+                        )
+
+                if not results:
+                    # If no explicit outputs, get the output state model
+                    results = [{"output_state": output_state_model.model_dump(), "type": "output_state"}]
+
+                # Update task as completed
                 await self.update_task(
                     task_id,
                     TaskUpdate(
                         status="completed",
-                        result={"outputs": [r.dict() for r in results]},
+                        result={"outputs": results},
                     ),
                 )
 
@@ -253,8 +277,10 @@ class TaskOrchestrationService(Service):
                 )
 
             except Exception as e:  # noqa: BLE001
-                # Handle any processing errors
+                logger.error(f"Error processing graph: {e!s}")
                 error_result = {"error": str(e)}
+
+                # Update task as failed
                 await self.update_task(
                     task_id,
                     TaskUpdate(
@@ -274,12 +300,12 @@ class TaskOrchestrationService(Service):
                 )
 
         except asyncio.CancelledError:
-            # Handle task cancellation
+            logger.info(f"Task {task_id} was cancelled")
             await self.update_task(task_id, TaskUpdate(status="cancelled"))
             raise
+
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Error processing task {task_id}: {e}")
-            # Ensure task is marked as failed
+            logger.error(f"Error in task processing: {e!s}")
             try:
                 await self.update_task(
                     task_id,
@@ -290,3 +316,57 @@ class TaskOrchestrationService(Service):
                 )
             except ValueError as update_error:
                 logger.error(f"Error updating failed task {task_id}: {update_error}")
+
+    async def _build_vertex(
+        self,
+        vertex_id: str,
+        graph: Graph,
+        event_manager: EventManager,
+        inputs: InputValueRequest,
+    ) -> None:
+        """Build a single vertex and handle its downstream effects.
+
+        Args:
+            vertex_id: The ID of the vertex to build
+            graph: The graph instance
+            event_manager: Event manager for this task
+            inputs: Input values for the vertex
+        """
+        try:
+            # Build the vertex
+            vertex_build_result = await graph.build_vertex(
+                vertex_id=vertex_id,
+                user_id=str(graph.user_id),
+                inputs_dict=inputs.model_dump(),
+                get_cache=self.chat_service.get_cache,
+                set_cache=self.chat_service.set_cache,
+                event_manager=event_manager,
+            )
+
+            if vertex_build_result.valid:
+                # Get next vertices to process
+                async with self.chat_service.async_cache_locks[str(graph.id)]:
+                    next_vertices = await graph.get_next_runnable_vertices(
+                        self.chat_service.async_cache_locks[str(graph.id)],
+                        vertex=graph.get_vertex(vertex_id),
+                        cache=False,
+                    )
+
+                # Process next vertices
+                if next_vertices:
+                    tasks = []
+                    for next_vertex_id in next_vertices:
+                        task = asyncio.create_task(
+                            self._build_vertex(
+                                vertex_id=next_vertex_id,
+                                graph=graph,
+                                event_manager=event_manager,
+                                inputs=inputs,
+                            )
+                        )
+                        tasks.append(task)
+                    await asyncio.gather(*tasks)
+
+        except Exception as e:
+            logger.error(f"Error building vertex {vertex_id}: {e!s}")
+            raise
