@@ -2,7 +2,7 @@ import json
 import requests
 from copy import deepcopy
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.inputs import DropdownInput, FileInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
 
 class TessAIExecuteAgentComponent(Component):
@@ -139,10 +139,13 @@ class TessAIExecuteAgentComponent(Component):
                 args["value"] = [val for val in value.split(",") if val in args["options"]]
             else:
                 args["value"] = []
+        elif field_type == "file":
+            input_class = FileInput
+            args["file_path"] = ""
+            args["fileTypes"] = ['pdf', 'docx', 'txt', 'csv', 'xlsx', 'xls', 'ppt', 'pptx', 
+                             'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'ico', 'webp']
         else:
             input_class = StrInput
-            if field_type == "file":
-                args["display_name"] += " (direct URL)"
             args["input_types"] = ["Message"]
     
         return input_class(**args)
