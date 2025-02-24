@@ -166,12 +166,13 @@ class DataFrame(pandas_DataFrame):
         """
         return DataFrame(docs)
 
-    def validate_text_key(self, text_key: str) -> None:
-        """Validates the text key.
+    @property
+    def text_key(self) -> str:
+        return self._text_key
 
-        Args:
-            text_key: The text key to validate
-        """
-        if text_key not in self.columns:
-            msg = f"Text key '{text_key}' not found in DataFrame columns"
+    @text_key.setter
+    def text_key(self, value: str) -> None:
+        if value not in self.columns:
+            msg = f"Text key '{value}' not found in DataFrame columns"
             raise ValueError(msg)
+        self._text_key = value
