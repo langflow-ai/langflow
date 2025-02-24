@@ -86,21 +86,13 @@ class TessAIExecuteAgentComponent(Component):
                 del build_config[key]
 
         for question in questions:
-            field = self._create_field(question)
-            old_config = old_build_config.get(field.name, {})
+            key = f"{question['name']}{self.FIELD_SUFFIX}"
+            old_config = old_build_config.get(key, {})
+            field = self._create_field(key, question, old_config.get("value"))
             config = field.model_dump(by_alias=True, exclude_none=True)
 
-            if old_config.get("value"):
-                field_type = question.get("type", "text")
-                if field_type == "select" and old_config["value"] in config.get("options", []):
-                    config["value"] = old_config["value"]
-                elif field_type == "multiselect":
-                    config["value"] = ",".join([option for option in old_config["value"].split(",") if option in config.get("options", [])])
-                else:
-                    config["value"] = old_config["value"]
-
             self.inputs.append(field)
-            build_config[field.name] = config
+            build_config[key] = config
 
     def _get_agent_response(self, headers: dict, response_id: str) -> str:
         endpoint = f"{self.BASE_URL}/api/agent-responses/{response_id}"
@@ -111,9 +103,8 @@ class TessAIExecuteAgentComponent(Component):
         except requests.RequestException as e:
             raise RuntimeError(f"Error getting agent response: {e!s}") from e
 
-    def _create_field(self, question: dict) -> dict:
+    def _create_field(self, key: str, question: dict, value: str | None = None) -> dict:
         field_type = question.get("type", "text")
-        key = f"{question['name']}{self.FIELD_SUFFIX}"
         name = question["name"].replace("_", " ").capitalize()
     
         args = {
@@ -124,7 +115,9 @@ class TessAIExecuteAgentComponent(Component):
             "placeholder": question.get("placeholder", ""),
         }
         
-        if question.get("default") and args["required"]:
+        if value:
+            args["value"] = value
+        elif question.get("default"):
             args["value"] = question.get("default")
     
         if field_type == "textarea":
@@ -132,11 +125,18 @@ class TessAIExecuteAgentComponent(Component):
         elif field_type == "select":
             input_class = DropdownInput
             args["options"] = [opt.split(":")[-1] for opt in question.get("options", [])]
-            if args["required"]:
+
+            if value and value in args["options"]:
+                args["value"] = value
+            elif args["required"]:
                 args["value"] = args.get("default", args["options"][0])
         elif field_type == "multiselect":
             input_class = MultiselectInput
-            args["options"] = [opt.split(":")[-1].strip() for opt in question.get("description", "").split(",")]
+            args["options"] = [opt.split(":")[-1].strip() for opt in question.get("description", "").strip().split(",")]
+            if value:
+                args["value"] = [val for val in value.split(",") if val in args["options"]]
+            else:
+                args["value"] = []
         else:
             input_class = StrInput
             if field_type == "file":
@@ -156,11 +156,16 @@ class TessAIExecuteAgentComponent(Component):
         for key in self._parameters:
             if key.endswith(suffix):
                 param_name = key[: -len(suffix)]
+                value = self._parameters[key]
+
                 if param_name == "messages":
                     parameters[param_name] = [{
                         "role": "user",
-                        "content": self._parameters[key]
+                        "content": value
                     }]
                 else:
-                    parameters[param_name] = self._parameters[key]
+                    if isinstance(value, list):
+                        parameters[param_name] = ','.join(value)
+                    else:
+                        parameters[param_name] = value
         return parameters
