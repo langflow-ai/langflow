@@ -1,9 +1,8 @@
 import requests
-
+from copy import deepcopy
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
-
 
 class TessAIExecuteAgentComponent(Component):
     display_name = "Execute Agent"
@@ -54,19 +53,8 @@ class TessAIExecuteAgentComponent(Component):
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
             try:
-                for key in list(build_config.keys()):
-                    if key.endswith(self.FIELD_SUFFIX):
-                        del build_config[key]
-
                 questions = self._get_agent_questions(field_value)
-
-                for question in questions:
-                    field = self._create_field_config(question)
-                    config = field.model_dump(by_alias=True, exclude_none=True)
-
-                    self.inputs.append(field)
-                    build_config[field.name] = config
-
+                self._update_dynamic_fields(build_config, questions)
             except requests.RequestException:
                 self._clear_dynamic_fields(build_config)
 
@@ -77,6 +65,42 @@ class TessAIExecuteAgentComponent(Component):
 
     def _get_headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_key}", "accept": "*/*", "Content-Type": "application/json"}
+    
+    def _get_agent_questions(self, agent_id):
+        endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
+        response = requests.get(endpoint, headers=self._get_headers())
+        
+        if response.status_code == 404:
+            return []
+        elif response.status_code != 200:
+            raise Exception(f"Error getting information for agent {agent_id}: {response.json()}")
+        
+        template = response.json()
+        return template.get("questions", [])
+
+    def _update_dynamic_fields(self, build_config: dict, questions: list[dict]):
+        old_build_config = deepcopy(dict(build_config))
+
+        for key in list(build_config.keys()):
+            if key.endswith(self.FIELD_SUFFIX):
+                del build_config[key]
+
+        for question in questions:
+            field = self._create_field(question)
+            old_config = old_build_config.get(field.name, {})
+            config = field.model_dump(by_alias=True, exclude_none=True)
+
+            if old_config.get("value"):
+                field_type = question.get("type", "text")
+                if field_type == "select" and old_config["value"] in config.get("options", []):
+                    config["value"] = old_config["value"]
+                elif field_type == "multiselect":
+                    config["value"] = ",".join([option for option in old_config["value"].split(",") if option in config.get("options", [])])
+                else:
+                    config["value"] = old_config["value"]
+
+            self.inputs.append(field)
+            build_config[field.name] = config
 
     def _get_agent_response(self, headers: dict, response_id: str) -> str:
         endpoint = f"{self.BASE_URL}/api/agent-responses/{response_id}"
@@ -87,35 +111,11 @@ class TessAIExecuteAgentComponent(Component):
         except requests.RequestException as e:
             raise RuntimeError(f"Error getting agent response: {e!s}") from e
 
-    def _collect_dynamic_parameters(self) -> dict:
-        parameters = {}
-        suffix = self.FIELD_SUFFIX
-        for key in self._parameters:
-            if key.endswith(suffix):
-                param_name = key[: -len(suffix)]
-                if param_name == "messages":
-                    parameters[param_name] = [{"role": "user", "content": self._parameters[key]}]
-                else:
-                    parameters[param_name] = self._parameters[key]
-        return parameters
-
-    def _get_agent_questions(self, agent_id):
-        endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
-        response = requests.get(endpoint, headers=self._get_headers())
-
-        if response.status_code == 404:
-            return []
-        if response.status_code != 200:
-            raise Exception(f"Error getting information for agent {agent_id}: {response.status_code}")
-
-        template = response.json()
-        return template.get("questions", [])
-
-    def _create_field_config(self, question: dict) -> dict:
+    def _create_field(self, question: dict) -> dict:
         field_type = question.get("type", "text")
         key = f"{question['name']}{self.FIELD_SUFFIX}"
         name = question["name"].replace("_", " ").capitalize()
-
+    
         args = {
             "name": key,
             "display_name": name,
@@ -123,10 +123,10 @@ class TessAIExecuteAgentComponent(Component):
             "info": question.get("description", ""),
             "placeholder": question.get("placeholder", ""),
         }
-
+        
         if question.get("default") and args["required"]:
             args["value"] = question.get("default")
-
+    
         if field_type == "textarea":
             input_class = MultilineInput
         elif field_type == "select":
@@ -142,10 +142,25 @@ class TessAIExecuteAgentComponent(Component):
             if field_type == "file":
                 args["display_name"] += " (direct URL)"
             args["input_types"] = ["Message"]
-
+    
         return input_class(**args)
 
     def _clear_dynamic_fields(self, build_config: dict):
         for key in list(build_config.keys()):
             if key.endswith(self.FIELD_SUFFIX):
                 del build_config[key]
+
+    def _collect_dynamic_parameters(self) -> dict:
+        parameters = {}
+        suffix = self.FIELD_SUFFIX
+        for key in self._parameters:
+            if key.endswith(suffix):
+                param_name = key[: -len(suffix)]
+                if param_name == "messages":
+                    parameters[param_name] = [{
+                        "role": "user",
+                        "content": self._parameters[key]
+                    }]
+                else:
+                    parameters[param_name] = self._parameters[key]
+        return parameters
