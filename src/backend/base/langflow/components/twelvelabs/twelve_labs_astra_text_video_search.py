@@ -3,12 +3,10 @@ from langflow.inputs import SecretStrInput, StrInput, DataInput, IntInput
 from langflow.io import Output
 from langflow.schema import Data
 from astrapy import DataAPIClient
-from typing import Dict, Any, List
 
 class TwelveLabsAstraSearch(Component):
     display_name = "Twelve Labs Astra Search"
     description = "Search Twelve Labs embeddings in Astra DB using vector similarity"
-    documentation = "https://docs.langflow.org/"
     icon = "search"
     name = "TwelveLabsAstraSearch"
 
@@ -16,7 +14,7 @@ class TwelveLabsAstraSearch(Component):
         DataInput(
             name="embeddings",
             display_name="Embeddings",
-            info="Embeddings from Twelve Labs to search with",
+            info="Twelve Labs text embeddings to use for video search",
             required=True
         ),
         SecretStrInput(
@@ -41,7 +39,8 @@ class TwelveLabsAstraSearch(Component):
             name="limit",
             display_name="Result Limit",
             info="Maximum number of results to return",
-            value=10
+            value=10,
+            required=True
         )
     ]
 

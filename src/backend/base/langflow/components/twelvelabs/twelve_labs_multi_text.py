@@ -1,5 +1,5 @@
 from langflow.custom import Component
-from langflow.io import MessageTextInput, Output, StrInput
+from langflow.io import Output, StrInput
 from langflow.schema import Data
 
 
@@ -16,11 +16,12 @@ class TwelveLabsMultiTextInput(Component):
             is_list=True,
             placeholder="Enter text...",
             list_add_label="Add Text",
+            required=True
         )
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="process_texts"),
+        Output(display_name="Text Data", name="data", method="process_texts"),
     ]
 
     def process_texts(self) -> list[Data]:

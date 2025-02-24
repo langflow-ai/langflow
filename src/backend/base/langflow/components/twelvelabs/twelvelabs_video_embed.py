@@ -1,6 +1,6 @@
 # from langflow.field_typing import Data
 from langflow.custom import Component
-from langflow.inputs import DataInput, SecretStrInput, MessageInput
+from langflow.inputs import DataInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data
 from typing import Dict, Any
@@ -13,7 +13,6 @@ import json
 class TwelveLabsVideoEmbeddings(Component):
     display_name = "Twelve Labs Video Embeddings"
     description = "Converts video content to embeddings using Twelve Labs API."
-    documentation: str = "https://docs.langflow.org/"
     icon = "video"
     name = "TwelveLabsVideoEmbeddings"
 
@@ -22,17 +21,19 @@ class TwelveLabsVideoEmbeddings(Component):
             name="videodata", 
             display_name="Video Data", 
             info="Video Data",
-            is_list=True
+            is_list=True,
+            required=True
         ),
         SecretStrInput(
             name="api_key",
             display_name="Twelve Labs API Key",
-            info="Enter your Twelve Labs API Key."
+            info="Enter your Twelve Labs API Key.",
+            required=True
         )
     ]
 
     outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="generate_embeddings"),
+        Output(display_name="Embeddings Data", name="embeddings", method="generate_embeddings"),
     ]
 
     def wait_for_task_completion(

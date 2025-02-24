@@ -2,14 +2,12 @@ from langflow.custom import Component
 from langflow.inputs import SecretStrInput, StrInput, DataInput
 from langflow.io import Output
 from langflow.schema import Data
-from astrapy import AstraDBAdmin, DataAPIClient
+from astrapy import DataAPIClient
 from typing import Dict, Any, List
-import json
 
 class TwelveLabsAstraUpload(Component):
     display_name = "Twelve Labs Astra Upload"
     description = "Upload Twelve Labs embeddings to Astra DB"
-    documentation = "https://docs.langflow.org/"
     icon = "upload"
     name = "TwelveLabsAstraUpload"
 
@@ -37,12 +35,6 @@ class TwelveLabsAstraUpload(Component):
             display_name="Collection Name",
             info="Name of the collection to store embeddings",
             required=True
-        ),
-        StrInput(
-            name="environment",
-            display_name="Environment",
-            info="The environment for the Astra DB API Endpoint",
-            advanced=True
         )
     ]
 

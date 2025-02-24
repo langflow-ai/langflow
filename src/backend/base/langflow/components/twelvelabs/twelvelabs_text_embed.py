@@ -8,7 +8,6 @@ from twelvelabs import TwelveLabs
 class TwelveLabsTextEmbeddings(Component):
     display_name = "Twelve Labs Text Embeddings"
     description = "Converts text content to embeddings using Twelve Labs API."
-    documentation = "https://docs.langflow.org/"
     icon = "text"
     name = "TwelveLabsTextEmbeddings"
 
@@ -29,7 +28,7 @@ class TwelveLabsTextEmbeddings(Component):
     ]
 
     outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="generate_embeddings"),
+        Output(display_name="Embeddings Data", name="embeddings", method="generate_embeddings"),
     ]
 
     def generate_embeddings(self) -> Data:

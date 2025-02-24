@@ -10,14 +10,11 @@ import time
 import os
 import subprocess
 import json
-import aiohttp
-import asyncio
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 class TwelveLabsPegasus(Component):
     display_name = "Twelve Labs Pegasus"
     description = "Chat with videos using Twelve Labs Pegasus API."
-    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "video"
     name = "TwelveLabsPegasus"
 
@@ -31,13 +28,14 @@ class TwelveLabsPegasus(Component):
         SecretStrInput(
             name="api_key",
             display_name="Twelve Labs API Key",
-            info="Enter your Twelve Labs API Key."
+            info="Enter your Twelve Labs API Key.",
+            required=True
         ),
         MessageInput(
             name="message",
             display_name="Message",
             info="Message to chat with the video.",
-            required=False,
+            required=True,
         )
     ]
 
