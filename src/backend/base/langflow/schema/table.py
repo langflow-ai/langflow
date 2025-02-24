@@ -134,10 +134,6 @@ class TableOptions(BaseModel):
     block_hide: bool | list[str] = Field(default=False)
     block_select: bool = Field(default=False)
     hide_options: bool = Field(default=False)
-    field_validators: (
-        dict[str, list[FieldValidatorType] | FieldValidatorType] | None
-    ) = Field(default=None)
-    field_parsers: dict[str, list[FieldParserType] | FieldParserType] | None = Field(
-        default=None
-    )
+    field_validators: dict[str, list[FieldValidatorType] | FieldValidatorType] | None = Field(default=None)
+    field_parsers: dict[str, list[FieldParserType] | FieldParserType] | None = Field(default=None)
     description: str | None = Field(default=None)
