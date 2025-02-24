@@ -31,8 +31,8 @@ class NotionListPages(Component):
         ),
         DropdownInput(
             name="database_id",
-            display_name="Database",
-            info="Select a database",
+            display_name="Database Name",
+            info="Select a database by name",
             options=["Loading databases..."],
             value="Loading databases...",
             real_time_refresh=True,
@@ -88,6 +88,7 @@ class NotionListPages(Component):
     ]
 
     def fetch_databases(self) -> list[dict[str, Any]]:
+        """Fetch available databases from Notion API."""
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Content-Type": "application/json",
@@ -108,6 +109,11 @@ class NotionListPages(Component):
             return []
 
     def fetch_database_properties(self, database_id: str) -> dict[str, Any]:
+        """Fetch properties of a specific database."""
+        # Extract the pure ID if it's in the format "Name (ID)"
+        if "(" in database_id and database_id.endswith(")"):
+            database_id = database_id.split("(")[-1].rstrip(")")
+
         if not database_id or database_id == "Loading databases...":
             return {}
 
@@ -127,6 +133,7 @@ class NotionListPages(Component):
     def build_filter_condition(
         self, property_name: str, property_type: str, operator: str, value: str
     ) -> dict[str, Any]:
+        """Build a Notion filter condition based on property type and operator."""
         if not value.strip():
             return {}
 
@@ -153,13 +160,23 @@ class NotionListPages(Component):
         else:
             return {"property": property_name, "rich_text": {operator: value}}
 
+    def get_actual_database_id(self) -> str:
+        """Extract the database ID from the selected database name format: 'Name (ID)'."""
+        if "(" in self.database_id and self.database_id.endswith(")"):
+            return self.database_id.split("(")[-1].rstrip(")")
+        return self.database_id  # Fallback
+
     def list_pages(self) -> DataFrame:
+        """Query pages from the selected Notion database with filtering and sorting."""
         if not self.database_id or self.database_id == "Loading databases...":
             return DataFrame(pd.DataFrame({"error": ["Please select a valid database."]}))
 
+        # Get the actual database ID from the formatted database name
+        actual_database_id = self.get_actual_database_id()
+
         # Ensure we have database properties
         if not self._database_properties:
-            self._database_properties = self.fetch_database_properties(self.database_id)
+            self._database_properties = self.fetch_database_properties(actual_database_id)
 
         # Build query payload
         query_payload = {"page_size": self.page_size}
@@ -182,7 +199,7 @@ class NotionListPages(Component):
         # Make the request
         try:
             response = requests.post(
-                f"https://api.notion.com/v1/databases/{self.database_id}/query",
+                f"https://api.notion.com/v1/databases/{actual_database_id}/query",
                 headers={
                     "Authorization": f"Bearer {self.notion_secret}",
                     "Content-Type": "application/json",
@@ -229,6 +246,7 @@ class NotionListPages(Component):
             return DataFrame(pd.DataFrame({"error": [f"Error processing database response: {e}"]}))
 
     def format_property_value(self, prop_value: dict[str, Any]) -> str:
+        """Format a Notion property value for display in the DataFrame."""
         prop_type = prop_value["type"]
 
         if prop_type in ("title", "rich_text"):
@@ -273,6 +291,7 @@ class NotionListPages(Component):
         return str(prop_value.get(prop_type, ""))
 
     def get_operators_for_type(self, prop_type: str) -> list[str]:
+        """Get valid filter operators for a given property type."""
         base_operators = {
             "title": ["equals", "does_not_equal", "contains", "does_not_contain", "starts_with", "ends_with"],
             "rich_text": ["equals", "does_not_equal", "contains", "does_not_contain", "starts_with", "ends_with"],
@@ -298,24 +317,39 @@ class NotionListPages(Component):
         return base_operators.get(prop_type, ["equals", "does_not_equal", "contains", "does_not_contain"])
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
+        """Update build configuration based on field updates."""
         try:
             # When notion_secret is updated or initially loaded
             if field_name is None or field_name == "notion_secret":
                 databases = self.fetch_databases()
-                build_config["database_id"]["options"] = [db["id"] for db in databases]
-                if databases:
-                    build_config["database_id"]["value"] = databases[0]["id"]
+                # Format options as "Name (ID)"
+                formatted_dbs = []
+                for db in databases:
+                    # Extract title from Notion's response structure
+                    db_name = ""
+                    title_array = db.get("title", [])
+                    for title_part in title_array:
+                        if "plain_text" in title_part:
+                            db_name += title_part["plain_text"]
 
-                # Add tooltips with database titles
-                tooltips = {
-                    db["id"]: db.get("title", [{}])[0].get("text", {}).get("content", "Untitled") for db in databases
-                }
-                build_config["database_id"]["tooltips"] = tooltips
+                    # Use "Untitled" if no title found
+                    if not db_name:
+                        db_name = "Untitled"
+
+                    db_id = db["id"]
+                    formatted_name = f"{db_name} ({db_id})"
+                    formatted_dbs.append(formatted_name)
+
+                build_config["database_id"]["options"] = formatted_dbs
+                if databases:
+                    build_config["database_id"]["value"] = formatted_dbs[0]
 
             # When database_id changes
             if field_name == "database_id":
                 if field_value and field_value != "Loading databases...":
-                    self._database_properties = self.fetch_database_properties(field_value)
+                    # Extract actual database ID
+                    actual_db_id = self.get_actual_database_id()
+                    self._database_properties = self.fetch_database_properties(actual_db_id)
 
                     # Update property options for filter and sort
                     property_options = list(self._database_properties.keys())
