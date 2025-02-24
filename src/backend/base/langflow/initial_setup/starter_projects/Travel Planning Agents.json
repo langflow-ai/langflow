@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-8PETJ",
+            "id": "Agent-e5naw",
             "name": "response",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-1fycm",
+            "id": "ChatOutput-NdG8s",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -24,11 +24,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-8PETJ{œdataTypeœ:œAgentœ,œidœ:œAgent-8PETJœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-1fycm{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-1fycmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-8PETJ",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-8PETJœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-1fycm",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-1fycmœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-e5naw{œdataTypeœ:œAgentœ,œidœ:œAgent-e5nawœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-NdG8s{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-NdG8sœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-e5naw",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-e5nawœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-NdG8s",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-NdG8sœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Mb2Ep",
+            "id": "Agent-PWZOu",
             "name": "response",
             "output_types": [
               "Message"
@@ -44,18 +44,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-8PETJ",
+            "id": "Agent-e5naw",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-Mb2Ep{œdataTypeœ:œAgentœ,œidœ:œAgent-Mb2Epœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-8PETJ{œfieldNameœ:œinput_valueœ,œidœ:œAgent-8PETJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-Mb2Ep",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Mb2Epœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-8PETJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-8PETJœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-PWZOu{œdataTypeœ:œAgentœ,œidœ:œAgent-PWZOuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-e5naw{œfieldNameœ:œinput_valueœ,œidœ:œAgent-e5nawœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-PWZOu",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-PWZOuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-e5naw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-e5nawœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-VEG7r",
+            "id": "Agent-3H5qa",
             "name": "response",
             "output_types": [
               "Message"
@@ -71,18 +71,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Mb2Ep",
+            "id": "Agent-PWZOu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-VEG7r{œdataTypeœ:œAgentœ,œidœ:œAgent-VEG7rœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-Mb2Ep{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Mb2Epœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-VEG7r",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-VEG7rœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Mb2Ep",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Mb2Epœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-3H5qa{œdataTypeœ:œAgentœ,œidœ:œAgent-3H5qaœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-PWZOu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-PWZOuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-3H5qa",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3H5qaœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-PWZOu",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-PWZOuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -90,7 +90,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Nbu0b",
+            "id": "ChatInput-LIxJY",
             "name": "message",
             "output_types": [
               "Message"
@@ -98,18 +98,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-VEG7r",
+            "id": "Agent-3H5qa",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Nbu0b{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Nbu0bœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-VEG7r{œfieldNameœ:œinput_valueœ,œidœ:œAgent-VEG7rœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-Nbu0b",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Nbu0bœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-VEG7r",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-VEG7rœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-LIxJY{œdataTypeœ:œChatInputœ,œidœ:œChatInput-LIxJYœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-3H5qa{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3H5qaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-LIxJY",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-LIxJYœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-3H5qa",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3H5qaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -117,7 +117,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-hJKTA",
+            "id": "URL-XDhvs",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -125,18 +125,18 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Mb2Ep",
+            "id": "Agent-PWZOu",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-hJKTA{œdataTypeœ:œURLœ,œidœ:œURL-hJKTAœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Mb2Ep{œfieldNameœ:œtoolsœ,œidœ:œAgent-Mb2Epœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "URL-hJKTA",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-hJKTAœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Mb2Ep",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Mb2Epœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-URL-XDhvs{œdataTypeœ:œURLœ,œidœ:œURL-XDhvsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-PWZOu{œfieldNameœ:œtoolsœ,œidœ:œAgent-PWZOuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "URL-XDhvs",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-XDhvsœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-PWZOu",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-PWZOuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -144,7 +144,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-T0153",
+            "id": "CalculatorComponent-N83tJ",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -152,18 +152,18 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-8PETJ",
+            "id": "Agent-e5naw",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-T0153{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-T0153œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-8PETJ{œfieldNameœ:œtoolsœ,œidœ:œAgent-8PETJœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-T0153",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-T0153œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-8PETJ",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-8PETJœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-CalculatorComponent-N83tJ{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-N83tJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-e5naw{œfieldNameœ:œtoolsœ,œidœ:œAgent-e5nawœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "CalculatorComponent-N83tJ",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-N83tJœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-e5naw",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-e5nawœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -171,7 +171,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SearchComponent",
-            "id": "SearchComponent-a9OCR",
+            "id": "SearchComponent-fF95b",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -179,24 +179,24 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-VEG7r",
+            "id": "Agent-3H5qa",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-SearchComponent-a9OCR{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-a9OCRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-VEG7r{œfieldNameœ:œtoolsœ,œidœ:œAgent-VEG7rœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "SearchComponent-a9OCR",
-        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-a9OCRœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-VEG7r",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-VEG7rœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-SearchComponent-fF95b{œdataTypeœ:œSearchComponentœ,œidœ:œSearchComponent-fF95bœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3H5qa{œfieldNameœ:œtoolsœ,œidœ:œAgent-3H5qaœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "SearchComponent-fF95b",
+        "sourceHandle": "{œdataTypeœ: œSearchComponentœ, œidœ: œSearchComponent-fF95bœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-3H5qa",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3H5qaœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-Nbu0b",
+          "id": "ChatInput-LIxJY",
           "node": {
             "base_classes": [
               "Message"
@@ -467,10 +467,10 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "ChatInput-Nbu0b",
+        "id": "ChatInput-LIxJY",
         "measured": {
           "height": 262,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 1756.77096149088,
@@ -488,7 +488,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-1fycm",
+          "id": "ChatOutput-NdG8s",
           "node": {
             "base_classes": [
               "Message"
@@ -770,10 +770,10 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "ChatOutput-1fycm",
+        "id": "ChatOutput-NdG8s",
         "measured": {
           "height": 262,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 4349.229697347143,
@@ -791,7 +791,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "City Selection Agent",
-          "id": "Agent-VEG7r",
+          "id": "Agent-3H5qa",
           "node": {
             "base_classes": [
               "Message"
@@ -1390,10 +1390,10 @@
         },
         "dragging": true,
         "height": 725,
-        "id": "Agent-VEG7r",
+        "id": "Agent-3H5qa",
         "measured": {
           "height": 725,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 2472.7748760933105,
@@ -1411,7 +1411,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Local Expert Agent",
-          "id": "Agent-Mb2Ep",
+          "id": "Agent-PWZOu",
           "node": {
             "base_classes": [
               "Message"
@@ -2010,10 +2010,10 @@
         },
         "dragging": false,
         "height": 725,
-        "id": "Agent-Mb2Ep",
+        "id": "Agent-PWZOu",
         "measured": {
           "height": 725,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 3185.66991544494,
@@ -2031,7 +2031,7 @@
         "data": {
           "description": "Define the agent's instructions, then enter a task to complete using tools.",
           "display_name": "Travel Concierge Agent",
-          "id": "Agent-8PETJ",
+          "id": "Agent-e5naw",
           "node": {
             "base_classes": [
               "Message"
@@ -2630,10 +2630,10 @@
         },
         "dragging": false,
         "height": 725,
-        "id": "Agent-8PETJ",
+        "id": "Agent-e5naw",
         "measured": {
           "height": 725,
-          "width": 320
+          "width": 360
         },
         "position": {
           "x": 3889.695953842898,
@@ -2649,7 +2649,7 @@
       },
       {
         "data": {
-          "id": "note-qGsTQ",
+          "id": "note-qLmmh",
           "node": {
             "description": "# Travel Planning Agents \n\nThe travel planning system is a smart setup that uses several specialized \"agents\" to help plan incredible trips. Imagine each agent as a travel expert focusing on a part of your journey. Here's how it works:\n\n- **User-Friendly Start:** You start by telling the system about your travel needs—where you want to go and what you love to do.\n\n- **Data Collection:** The agents uses its tools to gather current info about various destinations, like the best travel times, weather, and costs.\n\n- **Three Key Agents:**\n  - **City Selection Agent:** Picks the best places to visit based on your likes and current data.\n  - **Local Expert Agent:** Gathers interesting details about what to do and see in the chosen city.\n  - **Travel Concierge Agent:** Builds a day-by-day plan that includes where to stay, eat, and explore!\n\n- **Tools and Data:** Each agent uses tools to find and organize the latest information so you get recommendations that are both accurate and exciting.\n\n- **Final Plan:** Once everything is put together, you receive a complete, easy-to-follow travel itinerary, perfect for your adventure!\n",
             "display_name": "",
@@ -2660,10 +2660,10 @@
         },
         "dragging": false,
         "height": 603,
-        "id": "note-qGsTQ",
+        "id": "note-qLmmh",
         "measured": {
           "height": 603,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 1319.2860379588103,
@@ -2674,7 +2674,7 @@
           "y": 92.06058855045646
         },
         "resizing": false,
-        "selected": true,
+        "selected": false,
         "style": {
           "height": 636,
           "width": 324
@@ -2684,7 +2684,7 @@
       },
       {
         "data": {
-          "id": "note-8T0vy",
+          "id": "note-lZk3i",
           "node": {
             "description": "# **City Selection Agent**\n   - **Purpose:** This agent evaluates potential travel destinations based on user input and external data sources.\n   - **Core Functions:** Analyzes factors such as weather, local events, and travel costs to recommend optimal cities.\n   - **Tools Utilized:** Employs APIs and data-fetching tools to gather real-time information for decision-making.\n",
             "display_name": "",
@@ -2697,10 +2697,10 @@
         },
         "dragging": false,
         "height": 334,
-        "id": "note-8T0vy",
+        "id": "note-lZk3i",
         "measured": {
           "height": 334,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 2122.4146132377227,
@@ -2721,7 +2721,7 @@
       },
       {
         "data": {
-          "id": "note-FZGo4",
+          "id": "note-twqCP",
           "node": {
             "description": "# **Local Expert Agent**\n   - **Purpose:** Focused on gathering and providing an in-depth guide to the selected city.\n   - **Core Functions:** Compiles insights into cultural attractions, local customs, and unique experiences.\n   - **Tools Utilized:** Uses web content fetchers and data APIs to collect detailed local insights and enhance the user understanding with hidden gems.\n",
             "display_name": "",
@@ -2734,10 +2734,10 @@
         },
         "dragging": false,
         "height": 342,
-        "id": "note-FZGo4",
+        "id": "note-twqCP",
         "measured": {
           "height": 342,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 2827.660803823376,
@@ -2758,7 +2758,7 @@
       },
       {
         "data": {
-          "id": "note-FAKzZ",
+          "id": "note-bhmU0",
           "node": {
             "description": "# **Travel Concierge Agent**\n   - **Purpose:** Crafts detailed travel itineraries that are customized to the traveler's interests and needs.\n   - **Core Functions:** Offers a comprehensive daily schedule, including accommodations, dining spots, and activities.\n   - **Tools Utilized:** Integrates calculators and data tools for accurate budget planning and itinerary logistics.",
             "display_name": "",
@@ -2771,10 +2771,10 @@
         },
         "dragging": false,
         "height": 336,
-        "id": "note-FAKzZ",
+        "id": "note-bhmU0",
         "measured": {
           "height": 336,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 3536.084279543714,
@@ -2795,7 +2795,7 @@
       },
       {
         "data": {
-          "id": "note-aM3pJ",
+          "id": "note-pFFw3",
           "node": {
             "description": "## Configure the agent by obtaining your OpenAI API key from [platform.openai.com](https://platform.openai.com). Under \"Model Provider\", choose:\n- OpenAI: Default, requires only API key\n- Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect model and input API key before running the flow.",
             "display_name": "",
@@ -2808,10 +2808,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-aM3pJ",
+        "id": "note-pFFw3",
         "measured": {
           "height": 324,
-          "width": 325
+          "width": 328
         },
         "position": {
           "x": 2463.3881993480218,
@@ -2828,7 +2828,9 @@
       },
       {
         "data": {
-          "id": "URL-hJKTA",
+          "description": "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
+          "display_name": "URL",
+          "id": "URL-XDhvs",
           "node": {
             "base_classes": [
               "Data",
@@ -2836,22 +2838,21 @@
               "Message"
             ],
             "beta": false,
-            "category": "data",
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Load and retrive data from specified URLs.",
+            "description": "Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
             "display_name": "URL",
             "documentation": "",
             "edited": false,
             "field_order": [
               "urls",
-              "format"
+              "format",
+              "separator",
+              "clean_extra_whitespace"
             ],
             "frozen": false,
             "icon": "layout-template",
-            "key": "URL",
             "legacy": false,
-            "lf_version": "1.1.1",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2865,6 +2866,7 @@
                 "name": "component_as_tool",
                 "required_inputs": null,
                 "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
@@ -2872,9 +2874,26 @@
               }
             ],
             "pinned": false,
-            "score": 2.220446049250313e-16,
             "template": {
               "_type": "Component",
+              "clean_extra_whitespace": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Clean Extra Whitespace",
+                "dynamic": false,
+                "info": "Whether to clean excessive blank lines in the text output. Only applies to 'Text' format.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_extra_whitespace",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
@@ -2891,7 +2910,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Load and retrive data from specified URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Message\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.fetch_content())\n"
+                "value": "import asyncio\nimport json\nimport re\n\nimport aiohttp\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.io import BoolInput, DropdownInput, MessageTextInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = (\n        \"Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, \"\n        \"or JSON, with options for cleaning and separating multiple outputs.\"\n    )\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=(\n                \"Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML \"\n                \"content, or 'JSON' to extract JSON from the HTML.\"\n            ),\n            options=[\"Text\", \"Raw HTML\", \"JSON\"],\n            value=\"Text\",\n            real_time_refresh=True,\n        ),\n        StrInput(\n            name=\"separator\",\n            display_name=\"Separator\",\n            value=\"\\n\\n\",\n            show=True,\n            info=(\n                \"Specify the separator to use between multiple outputs. Default for Text is '\\\\n\\\\n'. \"\n                \"Default for Raw HTML is '\\\\n<!-- Separator -->\\\\n'.\"\n            ),\n        ),\n        BoolInput(\n            name=\"clean_extra_whitespace\",\n            display_name=\"Clean Extra Whitespace\",\n            value=True,\n            show=True,\n            info=\"Whether to clean excessive blank lines in the text output. Only applies to 'Text' format.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    async def validate_json_content(self, url: str) -> bool:\n        \"\"\"Validates if the URL content is actually JSON.\"\"\"\n        try:\n            async with aiohttp.ClientSession() as session, session.get(url) as response:\n                http_ok = 200\n                if response.status != http_ok:\n                    return False\n\n                content = await response.text()\n                try:\n                    json.loads(content)\n                except json.JSONDecodeError:\n                    return False\n                else:\n                    return True\n        except (aiohttp.ClientError, asyncio.TimeoutError):\n            # Log specific error for debugging if needed\n            return False\n\n    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:\n        \"\"\"Dynamically update fields based on selected format.\"\"\"\n        if field_name == \"format\":\n            is_text_mode = field_value == \"Text\"\n            is_json_mode = field_value == \"JSON\"\n            build_config[\"separator\"][\"value\"] = \"\\n\\n\" if is_text_mode else \"\\n<!-- Separator -->\\n\"\n            build_config[\"clean_extra_whitespace\"][\"show\"] = is_text_mode\n            build_config[\"separator\"][\"show\"] = not is_json_mode\n        return build_config\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a valid URL.\"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"\n            r\"(www\\.)?\"\n            r\"([a-zA-Z0-9.-]+)\"\n            r\"(\\.[a-zA-Z]{2,})?\"\n            r\"(:\\d+)?\"\n            r\"(\\/[^\\s]*)?$\",\n            re.IGNORECASE,\n        )\n\n        error_msg = \"Invalid URL - \" + string\n        if not url_regex.match(string):\n            raise ValueError(error_msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        \"\"\"Fetch content based on selected format.\"\"\"\n        urls = list({self.ensure_url(url.strip()) for url in self.urls if url.strip()})\n\n        no_urls_msg = \"No valid URLs provided.\"\n        if not urls:\n            raise ValueError(no_urls_msg)\n\n        # If JSON format is selected, validate JSON content first\n        if self.format == \"JSON\":\n            for url in urls:\n                is_json = asyncio.run(self.validate_json_content(url))\n                if not is_json:\n                    error_msg = \"Invalid JSON content from URL - \" + url\n                    raise ValueError(error_msg)\n\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n\n        docs = loader.load()\n\n        if self.format == \"JSON\":\n            data = []\n            for doc in docs:\n                try:\n                    json_content = json.loads(doc.page_content)\n                    data_dict = {\"text\": json.dumps(json_content, indent=2), **json_content, **doc.metadata}\n                    data.append(Data(**data_dict))\n                except json.JSONDecodeError as err:\n                    source = doc.metadata.get(\"source\", \"unknown URL\")\n                    error_msg = \"Invalid JSON content from \" + source\n                    raise ValueError(error_msg) from err\n            return data\n\n        return [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n\n    def fetch_content_text(self) -> Message:\n        \"\"\"Fetch content and return as formatted text.\"\"\"\n        data = self.fetch_content()\n\n        if self.format == \"JSON\":\n            text_list = [item.text for item in data]\n            result = \"\\n\".join(text_list)\n        else:\n            text_list = [item.text for item in data]\n            if self.format == \"Text\" and self.clean_extra_whitespace:\n                text_list = [re.sub(r\"\\n{3,}\", \"\\n\\n\", text) for text in text_list]\n            result = self.separator.join(text_list)\n\n        self.status = result\n        return Message(text=result)\n\n    def as_dataframe(self) -> DataFrame:\n        \"\"\"Return fetched content as a DataFrame.\"\"\"\n        return DataFrame(self.fetch_content())\n"
               },
               "format": {
                 "_input_type": "DropdownInput",
@@ -2900,14 +2919,16 @@
                 "dialog_inputs": {},
                 "display_name": "Output Format",
                 "dynamic": false,
-                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
+                "info": "Output Format. Use 'Text' to extract text from the HTML, 'Raw HTML' for the raw HTML content, or 'JSON' to extract JSON from the HTML.",
                 "name": "format",
                 "options": [
                   "Text",
-                  "Raw HTML"
+                  "Raw HTML",
+                  "JSON"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": true,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -2915,6 +2936,25 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Text"
+              },
+              "separator": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "Specify the separator to use between multiple outputs. Default for Text is '\\n\\n'. Default for Raw HTML is '\\n<!-- Separator -->\\n'.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "langflow"
               },
               "tools_metadata": {
                 "_input_type": "TableInput",
@@ -2951,37 +2991,43 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
                       "edit_mode": "popover",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     }
                   ]
                 },
@@ -2993,21 +3039,21 @@
                 "type": "table",
                 "value": [
                   {
-                    "description": "fetch_content() - Load and retrive data from specified URLs.",
+                    "description": "fetch_content() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
                     "name": "URL-fetch_content",
                     "tags": [
                       "URL-fetch_content"
                     ]
                   },
                   {
-                    "description": "fetch_content_text() - Load and retrive data from specified URLs.",
+                    "description": "fetch_content_text() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
                     "name": "URL-fetch_content_text",
                     "tags": [
                       "URL-fetch_content_text"
                     ]
                   },
                   {
-                    "description": "as_dataframe() - Load and retrive data from specified URLs.",
+                    "description": "as_dataframe() - Load and retrieve data from specified URLs. Supports output in plain text, raw HTML, or JSON, with options for cleaning and separating multiple outputs.",
                     "name": "URL-as_dataframe",
                     "tags": [
                       "URL-as_dataframe"
@@ -3045,10 +3091,10 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-hJKTA",
+        "id": "URL-XDhvs",
         "measured": {
-          "height": 403,
-          "width": 320
+          "height": 660,
+          "width": 360
         },
         "position": {
           "x": 2829.4526852839367,
@@ -3059,7 +3105,7 @@
       },
       {
         "data": {
-          "id": "CalculatorComponent-T0153",
+          "id": "CalculatorComponent-N83tJ",
           "node": {
             "base_classes": [
               "Data"
@@ -3236,10 +3282,10 @@
           "type": "CalculatorComponent"
         },
         "dragging": false,
-        "id": "CalculatorComponent-T0153",
+        "id": "CalculatorComponent-N83tJ",
         "measured": {
-          "height": 333,
-          "width": 320
+          "height": 374,
+          "width": 360
         },
         "position": {
           "x": 3540.356346381247,
@@ -3250,7 +3296,7 @@
       },
       {
         "data": {
-          "id": "SearchComponent-a9OCR",
+          "id": "SearchComponent-fF95b",
           "node": {
             "base_classes": [
               "Data",
@@ -3290,6 +3336,7 @@
                 "name": "component_as_tool",
                 "required_inputs": null,
                 "selected": "Tool",
+                "tool_mode": true,
                 "types": [
                   "Tool"
                 ],
@@ -3474,37 +3521,43 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
                       "edit_mode": "popover",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     }
                   ]
                 },
@@ -3538,10 +3591,10 @@
           "type": "SearchComponent"
         },
         "dragging": false,
-        "id": "SearchComponent-a9OCR",
+        "id": "SearchComponent-fF95b",
         "measured": {
-          "height": 477,
-          "width": 320
+          "height": 536,
+          "width": 360
         },
         "position": {
           "x": 2089.0393126914205,
@@ -3552,9 +3605,9 @@
       }
     ],
     "viewport": {
-      "x": -452.59655672949,
-      "y": 325.42241573046994,
-      "zoom": 0.392950977749874
+      "x": -473.30523608095336,
+      "y": 166.93251319338754,
+      "zoom": 0.41164535038506667
     }
   },
   "description": "Create a travel planning chatbot that uses specialized agents to craft personalized trip itineraries.",
