@@ -1,9 +1,7 @@
 import requests
-
 from langflow.custom import Component
 from langflow.inputs import SecretStrInput, StrInput
 from langflow.io import Output
-
 
 class TessAIExecuteAgentComponent(Component):
     display_name = "Execute Agent"
@@ -30,11 +28,11 @@ class TessAIExecuteAgentComponent(Component):
     outputs = [Output(display_name="Output", name="output", method="execute_agent")]
 
     BASE_URL = "https://tess.pareto.io"
-    FIELD_SUFFIX = "tess_ai_dynamic_field"
+    FIELD_SUFFIX = "_tess_ai_dynamic_field"
 
     def execute_agent(self) -> str:
         headers = self._get_headers()
-        execute_endpoint = f"{self.BASE_URL}/api/agents/{self.agent_id}/execute?waitExecution=true"
+        execute_endpoint = f"{self.BASE_URL}/api/agents/{self.agent_id.strip()}/execute?waitExecution=true"
 
         parameters = self._collect_dynamic_parameters()
 
@@ -66,15 +64,20 @@ class TessAIExecuteAgentComponent(Component):
     def _collect_dynamic_parameters(self) -> dict:
         parameters = {}
         suffix = self.FIELD_SUFFIX
-        for attr_name in dir(self):
-            if attr_name.endswith(suffix):
-                param_name = attr_name[: -len(suffix)]
-                parameters[param_name] = getattr(self, attr_name)
+        for key in self._parameters:
+            if key.endswith(suffix):
+                param_name = key[: -len(suffix)]
+                if param_name == "messages":
+                    parameters[param_name] = [{
+                        "role": "user",
+                        "content": self._parameters[key]
+                    }]
+                else:
+                    parameters[param_name] = self._parameters[key]
         return parameters
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
-            print(f"Updating build config for agent {field_value}")
             try:
                 for key in list(build_config.keys()):
                     if key.endswith(self.FIELD_SUFFIX):
@@ -85,23 +88,22 @@ class TessAIExecuteAgentComponent(Component):
                 for question in questions:
                     key = f"{question['name']}{self.FIELD_SUFFIX}"
                     config = self._create_field_config(question)
-                    print(f"Creating field config for question {question['name']}")
                     build_config[key] = config
 
             except requests.RequestException:
                 self._clear_dynamic_fields(build_config)
 
         return build_config
-
+    
     def _get_agent_questions(self, agent_id):
         endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
         response = requests.get(endpoint, headers=self._get_headers())
-
+        
         if response.status_code == 404:
             return []
-        if response.status_code != 200:
+        elif response.status_code != 200:
             raise Exception(f"Error getting information for agent {agent_id}: {response.status_code}")
-
+        
         template = response.json()
         return template.get("questions", [])
 
@@ -199,5 +201,4 @@ class TessAIExecuteAgentComponent(Component):
     def _clear_dynamic_fields(self, build_config: dict):
         for key in list(build_config.keys()):
             if key.endswith(self.FIELD_SUFFIX):
-                print(f"Clearing dynamic field {key}")
                 del build_config[key]
