@@ -1,13 +1,14 @@
 import { BuildStatus } from "@/constants/enums";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import useFlowStore from "@/stores/flowStore";
+import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { AudioLines } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../../../../../../components/ui/button";
 import { useStoreStore } from "../../../../../../../stores/storeStore";
-import APIKeyModal from "../../../../../../apiKeyModal";
-import { VoiceButton } from "./components/voice-button";
+import APIKeyModal from "./components/api-key-popup";
+import VoiceButton from "./components/voice-button";
 import { workletCode } from "./streamProcessor";
 import { base64ToFloat32Array } from "./utils";
 
@@ -44,6 +45,14 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const clearEdgesRunningByNodes = useFlowStore(
     (state) => state.clearEdgesRunningByNodes,
   );
+
+  const variables = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries,
+  );
+
+  const hasOpenAIAPIKey = useMemo(() => {
+    return !variables?.find((variable) => variable === "OPENAI_API_KEY");
+  }, [variables]);
 
   const { mutate: mutateAddApiKey } = usePostAddApiKey();
 
@@ -317,6 +326,11 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   };
 
   const toggleRecording = () => {
+    if (!hasOpenAIAPIKey) {
+      setShowApiKeyModal(true);
+      return;
+    }
+
     if (!isRecording) {
       initializeAudio();
     } else {
