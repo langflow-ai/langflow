@@ -20,7 +20,7 @@ We've chosen [Astra DB](https://astra.datastax.com/signup?utm_source=langflow-p
 ## Prerequisites
 
 * [An OpenAI API key](https://platform.openai.com/)
-* [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with:
+* [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with the following:
 	* An Astra DB application token scoped to read and write to the database
 	* A collection created in [Astra](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html#create-collection) or a new collection created in the **Astra DB** component
 
