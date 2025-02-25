@@ -1,19 +1,20 @@
 from typing import Any
 
+import pandas as pd
 import requests
 from loguru import logger
 
 from langflow.custom import Component
 from langflow.inputs import DropdownInput, SecretStrInput
-from langflow.schema import Data, dotdict
-from langflow.template import Output
+from langflow.io import Output
+from langflow.schema import DataFrame, dotdict
 
 
 class NotionDatabaseProperties(Component):
     """A component that retrieves properties of a Notion database."""
 
     display_name: str = "List Database Properties"
-    description: str = "Retrieve properties of a Notion database."
+    description: str = "Retrieve properties of a Notion database as a structured table."
     documentation: str = "https://docs.langflow.org/integrations/notion/list-database-properties"
     icon: str = "NotionDirectoryLoader"
 
@@ -27,8 +28,8 @@ class NotionDatabaseProperties(Component):
         ),
         DropdownInput(
             name="database_id",
-            display_name="Database",
-            info="Select a database",
+            display_name="Database Name",
+            info="Select a database by name",
             options=["Loading databases..."],
             value="Loading databases...",
             real_time_refresh=True,
@@ -37,7 +38,7 @@ class NotionDatabaseProperties(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Database Properties", method="get_database_properties"),
+        Output(name="dataframe", display_name="Database Properties", method="get_properties_as_dataframe"),
     ]
 
     def fetch_databases(self) -> list[dict[str, Any]]:
@@ -56,83 +57,58 @@ class NotionDatabaseProperties(Component):
                 timeout=10,
             )
             response.raise_for_status()
-
-            databases = []
-            for db in response.json().get("results", []):
-                # Extracts the title from the title array
-                title_array = db.get("title", [])
-                title = ""
-                for title_part in title_array:
-                    # Use plain_text that already comes correctly formatted
-                    if "plain_text" in title_part:
-                        title += title_part["plain_text"]
-
-                # If no title is found, use a default
-                if not title:
-                    title = "Untitled Database"
-
-                databases.append({"id": db["id"], "title": title})
-
-            return sorted(databases, key=lambda x: x["title"].lower())
-
+            return response.json().get("results", [])
         except requests.exceptions.RequestException as e:
             self.log(f"Error fetching databases: {e!s}")
             return []
 
-    def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None) -> dotdict:
+    def update_build_config(self, build_config: dotdict, _: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on field updates."""
         try:
             # When notion_secret is updated or initially loaded
             if field_name is None or field_name == "notion_secret":
-                # Fetch the databases
                 databases = self.fetch_databases()
+                # Format options as "Name (ID)"
+                formatted_dbs = []
+                for db in databases:
+                    db_name = db.get("title", [{}])[0].get("text", {}).get("content", "Untitled")
+                    db_id = db["id"]
+                    formatted_name = f"{db_name} ({db_id})"
+                    formatted_dbs.append(formatted_name)
 
-                # Prepare the dropdown options using the titles
-                options = [db["title"] for db in databases]
-                # Create mapping of title to ID
-                id_map = {db["title"]: db["id"] for db in databases}
+                build_config["database_id"]["options"] = formatted_dbs
+                if databases:
+                    build_config["database_id"]["value"] = formatted_dbs[0]
 
-                # Update the dropdown
-                build_config["database_id"] = {
-                    "name": "database_id",
-                    "type": "str",
-                    "required": True,
-                    "show": True,
-                    "display_name": "Database",
-                    "options": options,
-                    "value": options[0] if options else "",
-                    "id_map": id_map,  # Stores the mapping for later use
-                }
+                # Map formatted names to original IDs for API calls
+                id_mapping = {}
+                for db in databases:
+                    db_name = db.get("title", [{}])[0].get("text", {}).get("content", "Untitled")
+                    db_id = db["id"]
+                    formatted_key = f"{db_name} ({db_id})"
+                    id_mapping[formatted_key] = db_id
+                build_config["database_id"]["tooltips"] = id_mapping
 
-        except (requests.exceptions.RequestException, KeyError) as e:
+        except (ValueError, KeyError) as e:
             self.log(f"Error updating build config: {e!s}")
-            build_config["database_id"] = {
-                "name": "database_id",
-                "type": "str",
-                "required": True,
-                "show": True,
-                "display_name": "Database",
-                "options": ["Error loading databases"],
-                "value": "Error loading databases",
-            }
+
+            build_config["database_id"]["options"] = ["Error loading databases"]
+            build_config["database_id"]["value"] = "Error loading databases"
 
         return build_config
 
-    def get_database_properties(self) -> Data:
-        """Retrieve properties of a Notion database."""
+    def get_properties_as_dataframe(self) -> DataFrame:
+        """Retrieve properties of a Notion database as a DataFrame."""
         if not self.database_id or self.database_id == "Loading databases...":
-            return Data(data={"error": "Please select a valid database."})
+            # Return an empty DataFrame with an error message
+            error_df = pd.DataFrame([{"error": "Please select a valid database."}])
+            return DataFrame(error_df)
 
         try:
-            # Fetch databases again to have the updated mapping
-            databases = self.fetch_databases()
-            title_to_id = {db["title"]: db["id"] for db in databases}
-
-            # Use the selected title to get the ID
-            database_id = title_to_id.get(self.database_id)
-
-            if not database_id:
-                return Data(data={"error": f"Database not found: {self.database_id}"})
+            # Extract the pure ID if it's in the format "Name (ID)"
+            database_id = self.database_id
+            if "(" in database_id and database_id.endswith(")"):
+                database_id = database_id.split("(")[-1].rstrip(")")
 
             headers = {
                 "Authorization": f"Bearer {self.notion_secret}",
@@ -143,29 +119,61 @@ class NotionDatabaseProperties(Component):
             response.raise_for_status()
             data = response.json()
 
-            # Transform the properties into a friendlier format
-            properties = {}
+            # Prepare data for DataFrame rows
+            rows = []
             for prop_name, prop_info in data.get("properties", {}).items():
                 prop_type = prop_info["type"]
-                prop_data = {"type": prop_type, "name": prop_name}
+                prop_id = prop_info.get("id", "")
+
+                row = {
+                    "name": prop_name,
+                    "type": prop_type,
+                    "id": prop_id,
+                }
 
                 # Add specific type information
                 if prop_type == "select":
-                    prop_data["options"] = [opt["name"] for opt in prop_info.get("select", {}).get("options", [])]
+                    options = [opt["name"] for opt in prop_info.get("select", {}).get("options", [])]
+                    row["options"] = ", ".join(options) if options else ""
                 elif prop_type == "multi_select":
-                    prop_data["options"] = [opt["name"] for opt in prop_info.get("multi_select", {}).get("options", [])]
+                    options = [opt["name"] for opt in prop_info.get("multi_select", {}).get("options", [])]
+                    row["options"] = ", ".join(options) if options else ""
                 elif prop_type == "status":
-                    prop_data["options"] = [opt["name"] for opt in prop_info.get("status", {}).get("options", [])]
+                    options = [opt["name"] for opt in prop_info.get("status", {}).get("options", [])]
+                    row["options"] = ", ".join(options) if options else ""
+                elif prop_type == "relation":
+                    # Get relation database ID
+                    relation_id = prop_info.get("relation", {}).get("database_id")
+                    if relation_id:
+                        row["relation_database_id"] = relation_id
 
-                properties[prop_name] = prop_data
+                rows.append(row)
 
-            return Data(data=properties)
+            # Create DataFrame
+            if not rows:
+                # Return empty DataFrame with column headers
+                empty_df = pd.DataFrame(columns=["name", "type", "id", "options", "relation_database_id"])
+                return DataFrame(empty_df)
+
+            # Convert to pandas DataFrame and sort by name
+            properties_df = pd.DataFrame(rows).sort_values("name").reset_index(drop=True)
+
+            # Ensure all expected columns exist
+            for col in ["options", "relation_database_id"]:
+                if col not in properties_df.columns:
+                    properties_df[col] = ""
+
+            # Return as DataFrame
+            return DataFrame(properties_df)
 
         except requests.exceptions.RequestException as e:
             error_message = f"Error fetching Notion database properties: {e}"
             if hasattr(e, "response") and e.response is not None:
                 error_message += f" Status code: {e.response.status_code}, Response: {e.response.text}"
-            return Data(data={"error": error_message})
+            error_df = pd.DataFrame([{"error": error_message}])
+            return DataFrame(error_df)
         except KeyError as e:
             logger.opt(exception=True).debug("Error processing Notion database properties")
-            return Data(data={"error": f"Error processing database properties: {e}"})
+            error_message = f"Error processing database properties: {e}"
+            error_df = pd.DataFrame([{"error": error_message}])
+            return DataFrame(error_df)
