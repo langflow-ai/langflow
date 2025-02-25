@@ -15,6 +15,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { GmailIcon } from "@/icons/gmail";
 import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import {
@@ -522,6 +523,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -607,6 +609,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Gmail: GmailIcon,
   LMStudio: LMStudioIcon,
   Notify: Bell,
   ListFlows: Group,
