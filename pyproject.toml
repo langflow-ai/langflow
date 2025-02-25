@@ -191,10 +191,9 @@ local = [
 clickhouse-connect = [
     "clickhouse-connect==0.7.19"
 ]
-nemo-guardrails = [
-    "../NeMo-Guardrails/"
-]
-
+# nemo-guardrails = [
+#     "git+https://github.com/NVIDIA/NeMo-Guardrails.git@3c955bd3380c169ef8600ace0c60b1bd413b691a#egg=nemoguardrails"
+# ]
 nv-ingest = [
     # nv-ingest-client 2025.2.7.dev0 does not correctly install its
     # dependencies, so we need to install some manually.
