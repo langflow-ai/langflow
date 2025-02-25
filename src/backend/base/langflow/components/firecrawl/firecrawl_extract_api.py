@@ -16,7 +16,6 @@ class FirecrawlExtractApi(Component):
     description: str = "Firecrawl Extract API."
     name = "FirecrawlExtractApi"
 
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/extract"
 
     inputs = [

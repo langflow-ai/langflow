@@ -13,7 +13,6 @@ class FirecrawlMapApi(Component):
     description: str = "Firecrawl Map API."
     name = "FirecrawlMapApi"
 
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/map"
 
     inputs = [

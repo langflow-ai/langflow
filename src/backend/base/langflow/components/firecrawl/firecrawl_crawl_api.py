@@ -10,7 +10,6 @@ class FirecrawlCrawlApi(Component):
     description: str = "Firecrawl Crawl API."
     name = "FirecrawlCrawlApi"
 
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/v1/api-reference/endpoint/crawl-post"
 
     inputs = [
