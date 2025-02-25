@@ -1,4 +1,3 @@
-import { GmailIcon } from "../icons/Gmail";
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
@@ -16,6 +15,7 @@ import { ZepMemoryIcon } from "@/icons/ZepMemory";
 import { AthenaIcon } from "@/icons/athena/index";
 import { freezeAllIcon } from "@/icons/freezeAll";
 import { GlobeOkIcon } from "@/icons/globe-ok";
+import { GmailIcon } from "@/icons/gmail";
 import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import {
