@@ -143,15 +143,15 @@ In this example from the **Financial Support Parser** template, the **Structured
 
 ![Structured output example](/img/component-structured-output.png)
 
-The connected LLM model is prompted by the **Structured Output** component's `system_prompt` parameter to extract structured output from the unstructured text.
+The connected LLM model is prompted by the **Structured Output** component's `Format Instructions` parameter to extract structured output from the unstructured text. `Format Instructions` is utilized as the system prompt for the **Structured Output** component.
 
-In the **Structured Output** component, click the **Open table** button to view the `output_schema` table.
-The `output_schema` parameter defines the structure and data types for the model's output using a table with the following fields:
+In the **Structured Output** component, click the **Open table** button to view the `Output Schema` table.
+The `Output Schema` parameter defines the structure and data types for the model's output using a table with the following fields:
 
 * **Name**: The name of the output field.
 * **Description**: The purpose of the output field.
 * **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
-* **Multiple**: Set to `True` if you expect multiple values for a single field. For example, a `list` of `features` is set to `true` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
+* **Multiple**: Deprecated feature, currently by default, it is set to `True` if you expect multiple values for a single field. For example, a `list` of `features` is set to `true` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
 
 The **Parse DataFrame** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
 
@@ -172,6 +172,6 @@ For example, the template `EBITIDA: {EBITIDA}  ,  Net Income: {NET_INCOME} , GRO
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| structured_output | Structured Output | The structured output based on the defined schema. |
+| structured_output | Structured Output | The structured output is a Data object based on the defined schema. |
 | structured_output_dataframe | DataFrame | The structured output converted to a [DataFrame](/concepts-objects#dataframe-object) format. |
 

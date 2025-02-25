@@ -15,19 +15,13 @@ This component collects user input from the chat.
 
 The Chat Input component creates a [Message](/concepts-objects) object that includes the input text, sender information, session ID, file attachments, and styling properties.
 
-The component accepts the following input types:
-
-* Text strings
-* [Data](/concepts-objects#data-object)
-* [DataFrame](/concepts-objects#dataframe-object)
-* [Message](/concepts-objects#message-object)
-* Lists of any of the above data types
+The component accepts Text strings
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-|input_value|Text|The Message to be passed as input. Accepts text, data objects, messages, and dataframes.|
+|input_value|Text|The Message to be passed as input. 
 |should_store_message|Store Messages|Store the message in the history.|
 |sender|Sender Type|The type of sender.|
 |sender_name|Sender Name|The name of the sender.|
@@ -53,7 +47,7 @@ The Text Input component offers one input field for text, while the Chat Input h
 
 | Name | Display Name | Info |
 |------|--------------|------|
-|input_value|Text|The text to be passed as input.|
+|input_value|Text|The text/content to be passed as output.|
 
 ### Outputs
 
