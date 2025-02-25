@@ -222,7 +222,7 @@ class Settings(BaseSettings):
     mcp_server_enable_progress_notifications: bool = False
     """If set to False, Langflow will not send progress notifications in the MCP server."""
 
-    event_delivery: Literal["polling", "streaming"] = "streaming"
+    event_delivery: Literal["polling", "streaming"] = "polling"
     """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
 
     @field_validator("dev")
