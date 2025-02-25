@@ -377,3 +377,10 @@ class ConfigResponse(BaseModel):
     health_check_max_retries: int
     max_file_size_upload: int
     event_delivery: Literal["polling", "streaming"]
+
+
+class CancelFlowResponse(BaseModel):
+    """Response model for flow build cancellation."""
+
+    success: bool
+    message: str
