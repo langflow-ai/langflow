@@ -6,12 +6,10 @@ export const useInitializeAudio = async (
   startConversation: () => void,
 ): Promise<void> => {
   try {
-    // Close existing context if it exists
     if (audioContextRef.current?.state === "closed") {
       audioContextRef.current = null;
     }
 
-    // Create new context if needed
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext ||
         (window as any).webkitAudioContext)({
@@ -19,7 +17,6 @@ export const useInitializeAudio = async (
       });
     }
 
-    // Only resume if context is in suspended state
     if (audioContextRef.current.state === "suspended") {
       await audioContextRef.current.resume();
     }

@@ -1,5 +1,4 @@
 import { BuildStatus } from "@/constants/enums";
-import { Edge } from "@xyflow/react";
 import { base64ToFloat32Array } from "../utils";
 
 export const useHandleWebsocketMessage = (
@@ -23,7 +22,6 @@ export const useHandleWebsocketMessage = (
   updateBuildStatus: (nodeIds: string[], status: BuildStatus) => void,
 ) => {
   const data = JSON.parse(event.data);
-
   switch (data.type) {
     case "response.content_part.added":
       if (data.part?.type === "text" && data.part.text) {
@@ -32,13 +30,10 @@ export const useHandleWebsocketMessage = (
       break;
 
     case "response.cancelled":
-      console.log("response.cancelled");
-      // If the server acknowledges our response.cancel, forcibly stop leftover audio
       interruptPlayback();
       break;
 
     case "response.audio.delta":
-      console.log("response.audio.delta");
       if (data.delta && audioContextRef.current) {
         try {
           const float32Data = base64ToFloat32Array(data.delta);
@@ -60,7 +55,6 @@ export const useHandleWebsocketMessage = (
       break;
 
     case "flow.build.progress":
-      console.log("flow.build.progress", data);
       const buildData = data.data;
       switch (buildData.event) {
         case "start":
@@ -111,7 +105,6 @@ export const useHandleWebsocketMessage = (
       break;
 
     case "error":
-      console.error("Server error:", data.error);
       if (data.code === "api_key_missing") {
         setShowApiKeyModal(true);
       }

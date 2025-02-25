@@ -9,7 +9,6 @@ export const useStartConversation = (
 ) => {
   try {
     const url = `ws://${targetUrl}/api/v1/voice/ws/${flowId}`;
-    console.log(url);
     wsRef.current = new WebSocket(url);
 
     wsRef.current.onopen = () => {

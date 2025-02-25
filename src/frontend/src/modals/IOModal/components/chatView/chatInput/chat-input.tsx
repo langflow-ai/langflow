@@ -23,7 +23,7 @@ import FilePreview from "../fileComponent/components/file-preview";
 import ButtonSendWrapper from "./components/button-send-wrapper";
 import TextAreaWrapper from "./components/text-area-wrapper";
 import UploadFileButton from "./components/upload-file-button";
-import { VoiceAssistant } from "./components/voice-assistant";
+import { VoiceAssistant } from "./components/voice-assistant/voice-assistant";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
 export default function ChatInput({

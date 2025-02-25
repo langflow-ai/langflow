@@ -12,6 +12,7 @@ import APIKeyModal from "./components/api-key-popup";
 import VoiceButton from "./components/voice-button";
 import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message";
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
+import { useInterruptPlayback } from "./hooks/use-interrupt-playback";
 import { usePlayNextAudioChunk } from "./hooks/use-play-next-audio-chunk";
 import { useStartConversation } from "./hooks/use-start-conversation";
 import { useStartRecording } from "./hooks/use-start-recording";
@@ -28,6 +29,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const processorRef = useRef<AudioWorkletNode | null>(null);
@@ -35,6 +37,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const isPlayingRef = useRef(false);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+
   const messagesStore = useMessagesStore();
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const edges = useFlowStore((state) => state.edges);
@@ -51,7 +54,6 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const clearEdgesRunningByNodes = useFlowStore(
     (state) => state.clearEdgesRunningByNodes,
   );
-
   const variables = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries,
   );
@@ -136,17 +138,16 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     );
   };
 
+  const interruptPlayback = () => {
+    useInterruptPlayback(audioQueueRef, isPlayingRef, processorRef);
+  };
+
   const toggleRecording = () => {
     if (hasOpenAIAPIKey) {
       setShowApiKeyModal(true);
       return;
     }
-
-    if (!isRecording) {
-      initializeAudio();
-    } else {
-      stopRecording();
-    }
+    !isRecording ? initializeAudio() : stopRecording();
     setIsRecording(!isRecording);
   };
 
@@ -195,16 +196,4 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       />
     </div>
   );
-
-  function interruptPlayback() {
-    // Clear the queued buffers so we won't keep playing leftover audio
-    audioQueueRef.current.splice(0, audioQueueRef.current.length);
-    // Also set isPlayingRef to false to ensure we don't auto-play the next chunk
-    isPlayingRef.current = false;
-
-    // Send a message to your processor telling it to stop any currently playing audio
-    if (processorRef.current) {
-      processorRef.current.port.postMessage({ type: "stop_playback" });
-    }
-  }
 }
