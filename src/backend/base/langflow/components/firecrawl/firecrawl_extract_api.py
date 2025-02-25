@@ -1,13 +1,15 @@
+from loguru import logger
+
 from langflow.custom import Component
 from langflow.io import (
+    BoolInput,
     DataInput,
     MultilineInput,
     Output,
     SecretStrInput,
-    StrInput,
-    BoolInput,
 )
 from langflow.schema import Data
+
 
 class FirecrawlExtractApi(Component):
     display_name: str = "FirecrawlExtractApi"
@@ -83,24 +85,28 @@ class FirecrawlExtractApi(Component):
 
         # Validate API key
         if not self.api_key:
-            raise ValueError("API key is required")
+            msg = "API key is required"
+            raise ValueError(msg)
 
         # Validate URLs
         if not self.urls:
-            raise ValueError("URLs are required")
-            
+            msg = "URLs are required"
+            raise ValueError(msg)
+
         # Split and validate URLs (handle both commas and newlines)
-        urls = [url.strip() for url in self.urls.replace('\n', ',').split(',') if url.strip()]
+        urls = [url.strip() for url in self.urls.replace("\n", ",").split(",") if url.strip()]
         if not urls:
-            raise ValueError("No valid URLs provided")
+            msg = "No valid URLs provided"
+            raise ValueError(msg)
 
         # Validate and process prompt
         if not self.prompt:
-            raise ValueError("Prompt is required")
+            msg = "Prompt is required"
+            raise ValueError(msg)
 
         # Get the prompt text (handling both string and multiline input)
         prompt_text = self.prompt.strip()
-        
+
         # Enhance the prompt to encourage comprehensive extraction
         enhanced_prompt = prompt_text
         if "schema" not in prompt_text.lower():
@@ -125,13 +131,14 @@ class FirecrawlExtractApi(Component):
                     params["schema"] = self.schema.dict()
                 else:
                     # Skip invalid schema without raising an error
-                    print("Warning: Provided schema is not in the correct format. Proceeding without schema.")
-            except Exception as e:
-                print(f"Warning: Could not process schema: {str(e)}. Proceeding without schema.")
+                    pass
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Invalid schema: {e!s}")
 
         try:
             app = FirecrawlApp(api_key=self.api_key)
             extract_result = app.extract(urls, params=params)
             return Data(data=extract_result)
         except Exception as e:
-            raise ValueError(f"Error during extraction: {str(e)}")
+            msg = f"Error during extraction: {e!s}"
+            raise ValueError(msg) from e

@@ -1,7 +1,9 @@
 import uuid
+
 from langflow.custom import Component
 from langflow.io import DataInput, IntInput, MultilineInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
+
 
 class FirecrawlCrawlApi(Component):
     display_name: str = "FirecrawlCrawlApi"

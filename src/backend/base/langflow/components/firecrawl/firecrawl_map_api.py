@@ -1,13 +1,12 @@
 from langflow.custom import Component
 from langflow.io import (
-    DataInput,
+    BoolInput,
     MultilineInput,
     Output,
     SecretStrInput,
-    StrInput,
-    BoolInput,
 )
 from langflow.schema import Data
+
 
 class FirecrawlMapApi(Component):
     display_name: str = "FirecrawlMapApi"
@@ -62,12 +61,14 @@ class FirecrawlMapApi(Component):
 
         # Validate URLs
         if not self.urls:
-            raise ValueError("URLs are required")
-            
+            msg = "URLs are required"
+            raise ValueError(msg)
+
         # Split and validate URLs (handle both commas and newlines)
-        urls = [url.strip() for url in self.urls.replace('\n', ',').split(',') if url.strip()]
+        urls = [url.strip() for url in self.urls.replace("\n", ",").split(",") if url.strip()]
         if not urls:
-            raise ValueError("No valid URLs provided")
+            msg = "No valid URLs provided"
+            raise ValueError(msg)
 
         params = {
             "ignoreSitemap": self.ignore_sitemap,
@@ -76,17 +77,14 @@ class FirecrawlMapApi(Component):
         }
 
         app = FirecrawlApp(api_key=self.api_key)
-        
+
         # Map all provided URLs and combine results
         combined_links = []
         for url in urls:
             result = app.map_url(url, params=params)
-            if isinstance(result, dict) and 'links' in result:
-                combined_links.extend(result['links'])
-        
-        map_result = {
-            'success': True,
-            'links': combined_links
-        }
+            if isinstance(result, dict) and "links" in result:
+                combined_links.extend(result["links"])
+
+        map_result = {"success": True, "links": combined_links}
 
         return Data(data=map_result)

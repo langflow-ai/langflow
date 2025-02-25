@@ -8,6 +8,7 @@ from langflow.io import (
 )
 from langflow.schema import Data
 
+
 class FirecrawlScrapeApi(Component):
     display_name: str = "FirecrawlScrapeApi"
     description: str = "Firecrawl Scrape API."
