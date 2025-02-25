@@ -51,24 +51,19 @@ export default function UpdateAllComponents({}: {}) {
         title: ERROR_MESSAGE_EDGES_LOST,
       });
 
-      edgesUpdateRef.current = {
-        numberOfEdgesBeforeUpdate: 0,
-        updateComponent: false,
-      };
+      resetEdgesUpdateRef();
     }
   }, [edges]);
 
   const getSuccessTitle = (updatedCount: number) => {
+    resetEdgesUpdateRef();
     return `Successfully updated ${updatedCount} component${
       updatedCount > 1 ? "s" : ""
     }`;
   };
 
   const handleUpdateAllComponents = () => {
-    edgesUpdateRef.current = {
-      numberOfEdgesBeforeUpdate: edges.length,
-      updateComponent: true,
-    };
+    startEdgesUpdateRef();
 
     setLoadingUpdate(true);
     takeSnapshot();
@@ -133,6 +128,20 @@ export default function UpdateAllComponents({}: {}) {
       .finally(() => {
         setLoadingUpdate(false);
       });
+  };
+
+  const resetEdgesUpdateRef = () => {
+    edgesUpdateRef.current = {
+      numberOfEdgesBeforeUpdate: 0,
+      updateComponent: false,
+    };
+  };
+
+  const startEdgesUpdateRef = () => {
+    edgesUpdateRef.current = {
+      numberOfEdgesBeforeUpdate: edges.length,
+      updateComponent: true,
+    };
   };
 
   if (componentsToUpdate.length === 0) return null;
