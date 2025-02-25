@@ -180,8 +180,8 @@ async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession
     if not flow or not flow.data:
         msg = "Invalid flow ID"
         raise ValueError(msg)
-    user_id = kwargs.get("user_id") or str(flow.user_id)
-    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=user_id, **kwargs)
+    kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
+    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
 
 
 async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService, **kwargs):
