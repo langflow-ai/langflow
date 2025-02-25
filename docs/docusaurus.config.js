@@ -37,7 +37,7 @@ const config = {
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
-          sidebarCollapsed: false,
+          sidebarCollapsed: true,
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,
