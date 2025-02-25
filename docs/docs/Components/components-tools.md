@@ -176,7 +176,7 @@ This component performs web searches using the [DuckDuckGo](https://www.duckduck
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| data | Data | List of search results as Data objects containing snippets and full content. |
+| data | [Data](/concepts-objects#data-object) | List of search results as Data objects containing snippets and full content. |
 | text | Text | Search results formatted as a single text string. |
 
 ## Exa Search
