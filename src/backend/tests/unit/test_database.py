@@ -202,7 +202,6 @@ async def test_read_flows_components_only_paginated(client: AsyncClient, logged_
         assert response_json["size"] == 50
         assert all(flow["is_component"] is True for flow in response_json["items"])
     except (AssertionError, KeyError) as e:
-        # Add more context to the error
         pytest.fail(f"Failed to verify components_only pagination: {e!s}")
 
 
