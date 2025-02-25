@@ -1,9 +1,9 @@
-
 ##pre-requisite pip install snowflake-connector-python
 import json
 from json.decoder import JSONDecodeError
 
 import snowflake.connector
+
 from langflow.custom import Component
 from langflow.field_typing import Message
 from langflow.io import MessageTextInput, Output
@@ -69,8 +69,7 @@ class SnowflakeSQLExecutorComponent(Component):
     ]
 
     def execute_sql(self) -> Message:
-        """
-        Connect to Snowflake using provided credentials,
+        """Connect to Snowflake using provided credentials,
         execute the SQL query, and return the results as JSON.
         """
         try:
@@ -105,10 +104,7 @@ class SnowflakeSQLExecutorComponent(Component):
             column_names = [desc[0] for desc in cursor.description]
 
             # Convert rows to list of dicts
-            output_dict = [
-                dict(zip(column_names, row))
-                for row in rows
-            ]
+            output_dict = [dict(zip(column_names, row, strict=False)) for row in rows]
             output_json = json.dumps(output_dict, indent=4, default=str)
 
             # Close the cursor/connection
