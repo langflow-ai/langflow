@@ -1,5 +1,3 @@
-import { FieldParserType, FieldValidatorType } from "../api";
-
 export type getCodesObjProps = {
   runCurlCode: string;
   webhookCurlCode: string;
@@ -16,6 +14,7 @@ export enum FormatterType {
   text = "text",
   number = "number",
   json = "json",
+  boolean = "boolean",
 }
 
 export interface ColumnField {

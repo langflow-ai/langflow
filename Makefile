@@ -65,7 +65,7 @@ reinstall_backend: ## forces reinstall all dependencies (no caching)
 
 install_backend: ## install the backend dependencies
 	@echo 'Installing backend dependencies'
-	@uv sync --frozen
+	@uv sync --frozen $(EXTRA_ARGS)
 
 install_frontend: ## install the frontend dependencies
 	@echo 'Installing frontend dependencies'
@@ -142,7 +142,7 @@ coverage: ## run the tests and generate a coverage report
 	@uv run coverage erase
 
 unit_tests: ## run unit tests
-	@uv sync --extra dev --frozen
+	@uv sync --frozen
 	@EXTRA_ARGS=""
 	@if [ "$(async)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
@@ -198,7 +198,7 @@ fix_codespell: ## run codespell to fix spelling errors
 	poetry run codespell --toml pyproject.toml --write
 
 format_backend: ## backend code formatters
-	@uv run ruff check . --fix --ignore EXE002
+	@uv run ruff check . --fix --ignore EXE002 --ignore A005
 	@uv run ruff format . --config pyproject.toml
 
 format_frontend: ## frontend code formatters
@@ -463,3 +463,51 @@ alembic-check: ## check migration status
 alembic-stamp: ## stamp the database with a specific revision
 	@echo 'Stamping the database with revision $(revision)'
 	cd src/backend/base/langflow/ && uv run alembic stamp $(revision)
+
+######################
+# LOAD TESTING
+######################
+
+# Default values for locust configuration
+locust_users ?= 10
+locust_spawn_rate ?= 1
+locust_host ?= http://localhost:7860
+locust_headless ?= true
+locust_time ?= 300s
+locust_api_key ?= your-api-key
+locust_flow_id ?= your-flow-id
+locust_file ?= src/backend/tests/locust/locustfile.py
+locust_min_wait ?= 2000
+locust_max_wait ?= 5000
+locust_request_timeout ?= 30.0
+
+locust: ## run locust load tests (options: locust_users=10 locust_spawn_rate=1 locust_host=http://localhost:7860 locust_headless=true locust_time=300s locust_api_key=your-api-key locust_flow_id=your-flow-id locust_file=src/backend/tests/locust/locustfile.py locust_min_wait=2000 locust_max_wait=5000 locust_request_timeout=30.0)
+	@if [ ! -f "$(locust_file)" ]; then \
+		echo "$(RED)Error: Locustfile not found at $(locust_file)$(NC)"; \
+		exit 1; \
+	fi
+	@echo "Starting Locust with $(locust_users) users, spawn rate of $(locust_spawn_rate)"
+	@echo "Testing host: $(locust_host)"
+	@echo "Using locustfile: $(locust_file)"
+	@export API_KEY=$(locust_api_key) && \
+	export FLOW_ID=$(locust_flow_id) && \
+	export LANGFLOW_HOST=$(locust_host) && \
+	export MIN_WAIT=$(locust_min_wait) && \
+	export MAX_WAIT=$(locust_max_wait) && \
+	export REQUEST_TIMEOUT=$(locust_request_timeout) && \
+	cd $$(dirname "$(locust_file)") && \
+	if [ "$(locust_headless)" = "true" ]; then \
+		uv run locust \
+			--headless \
+			-u $(locust_users) \
+			-r $(locust_spawn_rate) \
+			--run-time $(locust_time) \
+			--host $(locust_host) \
+			-f $$(basename "$(locust_file)"); \
+	else \
+		uv run locust \
+			-u $(locust_users) \
+			-r $(locust_spawn_rate) \
+			--host $(locust_host) \
+			-f $$(basename "$(locust_file)"); \
+	fi

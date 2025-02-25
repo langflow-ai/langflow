@@ -1,4 +1,5 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
+import TableToggleCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableToggleCellEditor";
 import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
@@ -266,6 +267,7 @@ export function groupByFamily(
     return (
       template?.type &&
       template?.show &&
+      !template?.advanced &&
       ((!excludeTypes.has(template.type) &&
         baseClassesSet.has(template.type)) ||
         (template?.input_types &&
@@ -565,7 +567,10 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
         formatter: col.formatter,
       };
       if (col.formatter !== FormatterType.text || col.edit_mode !== "inline") {
-        if (col.edit_mode === "popover") {
+        if (
+          col.edit_mode === "popover" &&
+          col.formatter === FormatterType.text
+        ) {
           newCol.wrapText = false;
           newCol.autoHeight = false;
           newCol.cellEditor = "agLargeTextCellEditor";
@@ -573,6 +578,13 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellEditorParams = {
             maxLength: 100000000,
           };
+        } else if (col.formatter === FormatterType.boolean) {
+          newCol.cellRenderer = TableAutoCellRender;
+          newCol.cellEditorPopup = false;
+          newCol.cellEditor = TableToggleCellEditor;
+          newCol.autoHeight = false;
+          newCol.cellClass = "no-border !py-2";
+          newCol.type = "boolean";
         } else {
           newCol.cellRenderer = TableAutoCellRender;
         }
@@ -740,7 +752,7 @@ export const formatName = (name) => {
     .join(" ");
 
   const firstWord =
-    formattedName.split(" ")[0].charAt(0).toUpperCase() +
+    formattedName.split(" ")[0].charAt(0) +
     formattedName.split(" ")[0].slice(1);
 
   return { formattedName, firstWord };
