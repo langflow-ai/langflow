@@ -56,7 +56,7 @@ class MessageStoreComponent(Component):
         message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
         message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
 
-        stored_messages = []
+        stored_messages: list[Message] = []
 
         if self.memory:
             self.memory.session_id = message.session_id
