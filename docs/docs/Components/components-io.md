@@ -113,8 +113,7 @@ The component accepts the following input types.
 
 ## Text Output
 
-The **Text Output** component displays text output in the **Playground**.
-It takes a single input of text and returns a [Message](/concepts-objects) object containing that text.
+The **Text Output** takes a single input of text and returns a [Message](/concepts-objects) object containing that text.
 
 The output does not appear in the **Playground**.
 
