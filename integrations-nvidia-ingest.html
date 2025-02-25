@@ -16,7 +16,7 @@
 
 
 <link rel="search" type="application/opensearchdescription+xml" title="Langflow Documentation" href="/opensearch.xml"><link rel="stylesheet" href="/assets/css/styles.e5a88218.css">
-<script src="/assets/js/runtime~main.3a6a7d87.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.a91e9e80.js" defer="defer"></script>
 <script src="/assets/js/main.7988a4a3.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -35,10 +35,17 @@
 <p>An NVIDIA Ingest endpoint. For more information on setting up an NVIDIA Ingest endpoint, see the <a href="https://github.com/NVIDIA/nv-ingest?tab=readme-ov-file#quickstart" target="_blank" rel="noopener noreferrer">NVIDIA Ingest quickstart</a>.</p>
 </li>
 <li>
-<p>The <strong>NVIDIA Ingest</strong> component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands:</p>
-</li>
+<p>The <strong>NVIDIA Ingest</strong> component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands.</p>
+<ul>
+<li>If you have the Langflow repository cloned and installed from source:</li>
 </ul>
 <div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>source **YOUR_LANGFLOW_VENV**/bin/activate</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv sync --extra nv-ingest</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run</span></div></div><br></code></div></div>
+<ul>
+<li>If you are installing Langflow from the Python Package Index:</li>
+</ul>
+<div class="ch-codeblock not-prose" data-ch-theme="github-dark"><div class="ch-code-wrapper ch-code" data-ch-measured="false"><code class="ch-code-scroll-parent"><br><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>source **YOUR_LANGFLOW_VENV**/bin/activate</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv pip install &#x27;langflow[nv-ingest]&#x27;</span></div></div><div><span class="ch-code-line-number">_<!-- -->10</span><div style="display:inline-block;margin-left:16px"><span>uv run langflow run</span></div></div><br></code></div></div>
+</li>
+</ul>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="use-the-nvidia-ingest-component-in-a-flow">Use the NVIDIA Ingest component in a flow<a href="#use-the-nvidia-ingest-component-in-a-flow" class="hash-link" aria-label="Direct link to Use the NVIDIA Ingest component in a flow" title="Direct link to Use the NVIDIA Ingest component in a flow">​</a></h2>
 <p>The <strong>NVIDIA Ingest</strong> component accepts <strong>Message</strong> inputs and outputs <strong>Data</strong>. The component calls a NVIDIA Ingest microservice&#x27;s endpoint to ingest a local file and extract the text.</p>
 <p>To use the NVIDIA Ingest component in your flow, follow these steps:</p>
