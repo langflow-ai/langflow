@@ -6,22 +6,22 @@ import { FC } from "react";
 interface VoiceButtonProps {
   isRecording: boolean;
   toggleRecording: () => void;
-  lockChat?: boolean;
+  isBuilding?: boolean;
 }
 
 const VoiceButton = ({
   isRecording,
   toggleRecording,
-  lockChat = false,
+  isBuilding = false,
 }: VoiceButtonProps) => {
   return (
     <>
       <div>
         <Button
           onClick={toggleRecording}
-          disabled={lockChat}
+          disabled={isBuilding}
           className={`btn-playground-actions ${
-            lockChat
+            isBuilding
               ? "cursor-not-allowed"
               : "text-muted-foreground hover:text-primary"
           }`}
