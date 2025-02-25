@@ -139,6 +139,13 @@ module.exports = {
             "Integrations/Notion/notion-agent-meeting-notes",
           ],
         },
+        {
+          type: "category",
+          label: "NVIDIA",
+          items: [
+            "Integrations/Nvidia/integrations-nvidia-ingest",
+          ],
+        },
       ],
     },
     {

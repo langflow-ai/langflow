@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-r0bSI",
+            "id": "ParseData-EqIYf",
             "name": "text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-kTvlf",
+            "id": "Prompt-Ocmh0",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,11 +23,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ParseData-r0bSI{œdataTypeœ:œParseDataœ,œidœ:œParseData-r0bSIœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-kTvlf{œfieldNameœ:œcontextœ,œidœ:œPrompt-kTvlfœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ParseData-r0bSI",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-r0bSIœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kTvlf",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-kTvlfœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-EqIYf{œdataTypeœ:œParseDataœ,œidœ:œParseData-EqIYfœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ocmh0{œfieldNameœ:œcontextœ,œidœ:œPrompt-Ocmh0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ParseData-EqIYf",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-EqIYfœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Ocmh0",
+        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-Ocmh0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-rfENu",
+            "id": "ChatInput-avIze",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-kTvlf",
+            "id": "Prompt-Ocmh0",
             "inputTypes": [
               "Message",
               "Text"
@@ -51,11 +51,11 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-rfENu{œdataTypeœ:œChatInputœ,œidœ:œChatInput-rfENuœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-kTvlf{œfieldNameœ:œquestionœ,œidœ:œPrompt-kTvlfœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-rfENu",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-rfENuœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-kTvlf",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-kTvlfœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-avIze{œdataTypeœ:œChatInputœ,œidœ:œChatInput-avIzeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-Ocmh0{œfieldNameœ:œquestionœ,œidœ:œPrompt-Ocmh0œ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-avIze",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-avIzeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-Ocmh0",
+        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-Ocmh0œ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "File",
-            "id": "File-HapKo",
+            "id": "File-LJbaq",
             "name": "data",
             "output_types": [
               "Data"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "data_inputs",
-            "id": "SplitText-1BFPH",
+            "id": "SplitText-D5Iad",
             "inputTypes": [
               "Data",
               "DataFrame"
@@ -79,18 +79,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-File-HapKo{œdataTypeœ:œFileœ,œidœ:œFile-HapKoœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-1BFPH{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-1BFPHœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
-        "source": "File-HapKo",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-HapKoœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "SplitText-1BFPH",
-        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-1BFPHœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-File-LJbaq{œdataTypeœ:œFileœ,œidœ:œFile-LJbaqœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-SplitText-D5Iad{œfieldNameœ:œdata_inputsœ,œidœ:œSplitText-D5Iadœ,œinputTypesœ:[œDataœ,œDataFrameœ],œtypeœ:œotherœ}",
+        "source": "File-LJbaq",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-LJbaqœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "SplitText-D5Iad",
+        "targetHandle": "{œfieldNameœ: œdata_inputsœ, œidœ: œSplitText-D5Iadœ, œinputTypesœ: [œDataœ, œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-kTvlf",
+            "id": "Prompt-Ocmh0",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -98,25 +98,25 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-EseEF",
+            "id": "OpenAIModel-yyWKU",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-kTvlf{œdataTypeœ:œPromptœ,œidœ:œPrompt-kTvlfœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-EseEF{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-EseEFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-kTvlf",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-kTvlfœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-EseEF",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-EseEFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-Ocmh0{œdataTypeœ:œPromptœ,œidœ:œPrompt-Ocmh0œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-yyWKU{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-yyWKUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "Prompt-Ocmh0",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Ocmh0œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-yyWKU",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-yyWKUœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-EseEF",
+            "id": "OpenAIModel-yyWKU",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -124,7 +124,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-GDLzU",
+            "id": "ChatOutput-U2VPH",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -133,18 +133,17 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-EseEF{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-EseEFœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-GDLzU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-GDLzUœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "OpenAIModel-EseEF",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-EseEFœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-GDLzU",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-GDLzUœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-OpenAIModel-yyWKU{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-yyWKUœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-U2VPH{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-U2VPHœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "OpenAIModel-yyWKU",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-yyWKUœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-U2VPH",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-U2VPHœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-pjVd0",
+            "id": "OpenAIEmbeddings-2w6Mu",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -152,25 +151,24 @@
           },
           "targetHandle": {
             "fieldName": "embedding_model",
-            "id": "AstraDB-XU7Xo",
+            "id": "AstraDB-zSJLX",
             "inputTypes": [
               "Embeddings"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-OpenAIEmbeddings-pjVd0{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-pjVd0œ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-XU7Xo{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-XU7Xoœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-pjVd0",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-pjVd0œ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-XU7Xo",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-XU7Xoœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__OpenAIEmbeddings-2w6Mu{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-2w6Muœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-zSJLX{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-zSJLXœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-2w6Mu",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-2w6Muœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-zSJLX",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-zSJLXœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-rfENu",
+            "id": "ChatInput-avIze",
             "name": "message",
             "output_types": [
               "Message"
@@ -178,25 +176,24 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "AstraDB-XU7Xo",
+            "id": "AstraDB-zSJLX",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-rfENu{œdataTypeœ:œChatInputœ,œidœ:œChatInput-rfENuœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-XU7Xo{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-XU7Xoœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-rfENu",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-rfENuœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AstraDB-XU7Xo",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-XU7Xoœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "xy-edge__ChatInput-avIze{œdataTypeœ:œChatInputœ,œidœ:œChatInput-avIzeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDB-zSJLX{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDB-zSJLXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-avIze",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-avIzeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AstraDB-zSJLX",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDB-zSJLXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
-        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AstraDB",
-            "id": "AstraDB-XU7Xo",
+            "id": "AstraDB-zSJLX",
             "name": "search_results",
             "output_types": [
               "Data"
@@ -204,50 +201,24 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-r0bSI",
+            "id": "ParseData-EqIYf",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AstraDB-XU7Xo{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-XU7Xoœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-r0bSI{œfieldNameœ:œdataœ,œidœ:œParseData-r0bSIœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "AstraDB-XU7Xo",
-        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-XU7Xoœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-r0bSI",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-r0bSIœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-jn7pG",
-            "name": "embeddings",
-            "output_types": [
-              "Embeddings"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "embedding_model",
-            "id": "AstraDB-fyg6q",
-            "inputTypes": [
-              "Embeddings"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-OpenAIEmbeddings-jn7pG{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-jn7pGœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-fyg6q{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-fyg6qœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
-        "source": "OpenAIEmbeddings-jn7pG",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-jn7pGœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
-        "target": "AstraDB-fyg6q",
-        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-fyg6qœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__AstraDB-zSJLX{œdataTypeœ:œAstraDBœ,œidœ:œAstraDB-zSJLXœ,œnameœ:œsearch_resultsœ,œoutput_typesœ:[œDataœ]}-ParseData-EqIYf{œfieldNameœ:œdataœ,œidœ:œParseData-EqIYfœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "AstraDB-zSJLX",
+        "sourceHandle": "{œdataTypeœ: œAstraDBœ, œidœ: œAstraDB-zSJLXœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-EqIYf",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-EqIYfœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
           "sourceHandle": {
             "dataType": "SplitText",
-            "id": "SplitText-1BFPH",
+            "id": "SplitText-D5Iad",
             "name": "chunks",
             "output_types": [
               "Data"
@@ -255,18 +226,43 @@
           },
           "targetHandle": {
             "fieldName": "ingest_data",
-            "id": "AstraDB-fyg6q",
+            "id": "AstraDB-yEyTF",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__SplitText-1BFPH{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-1BFPHœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-fyg6q{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-fyg6qœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "SplitText-1BFPH",
-        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-1BFPHœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
-        "target": "AstraDB-fyg6q",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-fyg6qœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "xy-edge__SplitText-D5Iad{œdataTypeœ:œSplitTextœ,œidœ:œSplitText-D5Iadœ,œnameœ:œchunksœ,œoutput_typesœ:[œDataœ]}-AstraDB-yEyTF{œfieldNameœ:œingest_dataœ,œidœ:œAstraDB-yEyTFœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "SplitText-D5Iad",
+        "sourceHandle": "{œdataTypeœ: œSplitTextœ, œidœ: œSplitText-D5Iadœ, œnameœ: œchunksœ, œoutput_typesœ: [œDataœ]}",
+        "target": "AstraDB-yEyTF",
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDB-yEyTFœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "OpenAIEmbeddings",
+            "id": "OpenAIEmbeddings-w9JOe",
+            "name": "embeddings",
+            "output_types": [
+              "Embeddings"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "embedding_model",
+            "id": "AstraDB-yEyTF",
+            "inputTypes": [
+              "Embeddings"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__OpenAIEmbeddings-w9JOe{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-w9JOeœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDB-yEyTF{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDB-yEyTFœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
+        "source": "OpenAIEmbeddings-w9JOe",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-w9JOeœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "target": "AstraDB-yEyTF",
+        "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDB-yEyTFœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -274,7 +270,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-rfENu",
+          "id": "ChatInput-avIze",
           "node": {
             "base_classes": [
               "Message"
@@ -538,14 +534,14 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatInput-rfENu",
+        "id": "ChatInput-avIze",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
-          "x": 743.9745420290319,
-          "y": 463.6977510207854
+          "x": 741.9155057321848,
+          "y": 453.4025695365494
         },
         "positionAbsolute": {
           "x": 743.9745420290319,
@@ -559,7 +555,7 @@
         "data": {
           "description": "Convert Data into plain text following a specified template.",
           "display_name": "Parse Data",
-          "id": "ParseData-r0bSI",
+          "id": "ParseData-EqIYf",
           "node": {
             "base_classes": [
               "Message"
@@ -695,10 +691,10 @@
         },
         "dragging": false,
         "height": 350,
-        "id": "ParseData-r0bSI",
+        "id": "ParseData-EqIYf",
         "measured": {
           "height": 350,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1606.0595305373527,
@@ -716,7 +712,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-kTvlf",
+          "id": "Prompt-Ocmh0",
           "node": {
             "base_classes": [
               "Message"
@@ -875,10 +871,10 @@
         },
         "dragging": false,
         "height": 433,
-        "id": "Prompt-kTvlf",
+        "id": "Prompt-Ocmh0",
         "measured": {
           "height": 433,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1977.9097981422992,
@@ -896,7 +892,7 @@
         "data": {
           "description": "Split text into chunks based on specified criteria.",
           "display_name": "Split Text",
-          "id": "SplitText-1BFPH",
+          "id": "SplitText-D5Iad",
           "node": {
             "base_classes": [
               "Data"
@@ -1067,10 +1063,10 @@
         },
         "dragging": false,
         "height": 475,
-        "id": "SplitText-1BFPH",
+        "id": "SplitText-D5Iad",
         "measured": {
           "height": 475,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1683.4543896546102,
@@ -1086,7 +1082,7 @@
       },
       {
         "data": {
-          "id": "note-j1WAV",
+          "id": "note-HG929",
           "node": {
             "description": "## 🐕 2. Retriever Flow\n\nThis flow answers your questions with contextual data retrieved from your vector database.\n\nOpen the **Playground** and ask, \n\n```\nWhat is this document about?\n```\n",
             "display_name": "",
@@ -1099,10 +1095,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-j1WAV",
+        "id": "note-HG929",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 374.388314931542,
@@ -1123,7 +1119,7 @@
       },
       {
         "data": {
-          "id": "note-ab4Wr",
+          "id": "note-buSz0",
           "node": {
             "description": "## 📖 README\n\nLoad your data into a vector database with the 📚 **Load Data** flow, and then use your data as chat context with the 🐕 **Retriever** flow.\n\n**🚨 Add your OpenAI API key as a global variable to easily add it to all of the OpenAI components in this flow.** \n\n**Quick start**\n1. Run the 📚 **Load Data** flow.\n2. Run the 🐕 **Retriever** flow.\n\n**Next steps** \n\n- Experiment by changing the prompt and the loaded data to see how the bot's responses change. \n\nFor more info, see the [Langflow docs](https://docs.langflow.org/starter-projects-vector-store-rag).",
             "display_name": "Read Me",
@@ -1136,10 +1132,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-ab4Wr",
+        "id": "note-buSz0",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 94.28986613312418,
@@ -1162,7 +1158,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-GDLzU",
+          "id": "ChatOutput-U2VPH",
           "node": {
             "base_classes": [
               "Message"
@@ -1444,10 +1440,10 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-GDLzU",
+        "id": "ChatOutput-U2VPH",
         "measured": {
           "height": 234,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 2738.611008351098,
@@ -1463,7 +1459,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-pjVd0",
+          "id": "OpenAIEmbeddings-2w6Mu",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -1943,10 +1939,10 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-pjVd0",
+        "id": "OpenAIEmbeddings-2w6Mu",
         "measured": {
           "height": 320,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 825.435626932521,
@@ -1962,7 +1958,7 @@
       },
       {
         "data": {
-          "id": "note-9zl9H",
+          "id": "note-k6tqu",
           "node": {
             "description": "## 📚 1. Load Data Flow\n\nRun this first! Load data from a local file and embed it into the vector database.\n\nSelect a Database and a Collection, or create new ones. \n\nClick ▶️ **Run component** on the **Astra DB** component to load your data.\n\n* If you're using OSS Langflow, add your Astra DB Application Token to the Astra DB component.\n\n#### Next steps:\n Experiment by changing the prompt and the contextual data to see how the retrieval flow's responses change.",
             "display_name": "",
@@ -1975,10 +1971,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-9zl9H",
+        "id": "note-k6tqu",
         "measured": {
           "height": 324,
-          "width": 328
+          "width": 325
         },
         "position": {
           "x": 955.3277857006676,
@@ -1999,7 +1995,7 @@
       },
       {
         "data": {
-          "id": "OpenAIEmbeddings-jn7pG",
+          "id": "OpenAIEmbeddings-w9JOe",
           "node": {
             "base_classes": [
               "Embeddings"
@@ -2479,10 +2475,10 @@
         },
         "dragging": false,
         "height": 320,
-        "id": "OpenAIEmbeddings-jn7pG",
+        "id": "OpenAIEmbeddings-w9JOe",
         "measured": {
           "height": 320,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1690.9220896443658,
@@ -2498,7 +2494,7 @@
       },
       {
         "data": {
-          "id": "File-HapKo",
+          "id": "File-LJbaq",
           "node": {
             "base_classes": [
               "Data"
@@ -2724,10 +2720,10 @@
         },
         "dragging": false,
         "height": 367,
-        "id": "File-HapKo",
+        "id": "File-LJbaq",
         "measured": {
           "height": 367,
-          "width": 360
+          "width": 320
         },
         "position": {
           "x": 1314.0643184619548,
@@ -2743,7 +2739,7 @@
       },
       {
         "data": {
-          "id": "note-ZIyRP",
+          "id": "note-Q02Xp",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2756,10 +2752,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-ZIyRP",
+        "id": "note-Q02Xp",
         "measured": {
           "height": 324,
-          "width": 326
+          "width": 324
         },
         "position": {
           "x": 1692.2322233423606,
@@ -2775,7 +2771,7 @@
       },
       {
         "data": {
-          "id": "note-Bka84",
+          "id": "note-AFRtd",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2788,10 +2784,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-Bka84",
+        "id": "note-AFRtd",
         "measured": {
           "height": 324,
-          "width": 326
+          "width": 324
         },
         "position": {
           "x": 824.1003268813427,
@@ -2807,7 +2803,7 @@
       },
       {
         "data": {
-          "id": "note-DbdD7",
+          "id": "note-HQRSY",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -2820,10 +2816,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-DbdD7",
+        "id": "note-HQRSY",
         "measured": {
           "height": 324,
-          "width": 326
+          "width": 324
         },
         "position": {
           "x": 2350.297636215281,
@@ -2839,7 +2835,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-EseEF",
+          "id": "OpenAIModel-yyWKU",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -3207,10 +3203,10 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-EseEF",
+        "id": "OpenAIModel-yyWKU",
         "measured": {
-          "height": 734,
-          "width": 360
+          "height": 656,
+          "width": 320
         },
         "position": {
           "x": 2365.714820732046,
@@ -3221,7 +3217,7 @@
       },
       {
         "data": {
-          "id": "AstraDB-XU7Xo",
+          "id": "AstraDB-zSJLX",
           "node": {
             "base_classes": [
               "Data",
@@ -3404,42 +3400,21 @@
                         "field_order": [
                           "new_collection_name",
                           "embedding_generation_provider",
-                          "embedding_generation_model"
+                          "embedding_generation_model",
+                          "dimension"
                         ],
                         "name": "create_collection",
                         "template": {
-                          "dimension": {
-                            "_input_type": "IntInput",
+                          "new_collection_name": {
+                            "_input_type": "StrInput",
                             "advanced": false,
-                            "display_name": "Dimensions",
+                            "display_name": "Name",
                             "dynamic": false,
-                            "info": "Dimension of the embeddings to generate.",
+                            "info": "Name of the new collection to create in Astra DB.",
                             "list": false,
                             "list_add_label": "Add More",
-                            "name": "dimension",
-                            "placeholder": "",
-                            "required": false,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "int",
-                            "value": 1024
-                          },
-                          "embedding_generation_model": {
-                            "_input_type": "DropdownInput",
-                            "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Embedding model",
-                            "dynamic": false,
-                            "info": "Model to use for generating embeddings.",
-                            "name": "embedding_generation_model",
-                            "options": [
-                              "Bring your own",
-                              "NV-Embed-QA"
-                            ],
-                            "options_metadata": [],
+                            "load_from_db": false,
+                            "name": "new_collection_name",
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -3473,16 +3448,17 @@
                             "type": "str",
                             "value": ""
                           },
-                          "new_collection_name": {
-                            "_input_type": "StrInput",
+                          "embedding_generation_model": {
+                            "_input_type": "DropdownInput",
                             "advanced": false,
-                            "display_name": "Name",
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Embedding model",
                             "dynamic": false,
-                            "info": "Name of the new collection to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_collection_name",
+                            "info": "Model to use for generating embeddings.",
+                            "name": "embedding_generation_model",
+                            "options": [],
+                            "options_metadata": [],
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -3490,6 +3466,24 @@
                             "tool_mode": false,
                             "trace_as_metadata": true,
                             "type": "str",
+                            "value": ""
+                          },
+                          "dimension": {
+                            "_input_type": "IntInput",
+                            "advanced": false,
+                            "display_name": "Dimensions (Required only for `Bring your own`)",
+                            "dynamic": false,
+                            "info": "Dimensions of the embeddings to generate.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "name": "dimension",
+                            "placeholder": "",
+                            "required": false,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "int",
                             "value": ""
                           }
                         }
@@ -3551,6 +3545,25 @@
                         ],
                         "name": "create_database",
                         "template": {
+                          "new_database_name": {
+                            "_input_type": "StrInput",
+                            "advanced": false,
+                            "display_name": "Name",
+                            "dynamic": false,
+                            "info": "Name of the new database to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_database_name",
+                            "placeholder": "",
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "str",
+                            "value": ""
+                          },
                           "cloud_provider": {
                             "_input_type": "DropdownInput",
                             "advanced": false,
@@ -3576,25 +3589,6 @@
                             "type": "str",
                             "value": ""
                           },
-                          "new_database_name": {
-                            "_input_type": "StrInput",
-                            "advanced": false,
-                            "display_name": "Name",
-                            "dynamic": false,
-                            "info": "Name of the new database to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_database_name",
-                            "placeholder": "",
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
                           "region": {
                             "_input_type": "DropdownInput",
                             "advanced": false,
@@ -3604,11 +3598,7 @@
                             "dynamic": false,
                             "info": "Region for the new database.",
                             "name": "region",
-                            "options": [
-                              "us-east-2",
-                              "ap-south-1",
-                              "eu-west-1"
-                            ],
+                            "options": [],
                             "options_metadata": [],
                             "placeholder": "",
                             "required": true,
@@ -3630,14 +3620,7 @@
                 "info": "The Database name for the Astra DB instance.",
                 "name": "database_name",
                 "options": [],
-                "options_metadata": [
-                  {
-                    "api_endpoint": "https://deb10a81-3c5d-4fd3-8b1b-945915d2835b-us-east-2.apps.astra.datastax.com",
-                    "collections": 10,
-                    "icon": "data",
-                    "status": null
-                  }
-                ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "refresh_button": true,
@@ -3875,6 +3858,24 @@
                 "type": "str",
                 "value": "Similarity"
               },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "token": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
@@ -3900,21 +3901,21 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-XU7Xo",
+        "id": "AstraDB-zSJLX",
         "measured": {
-          "height": 594,
-          "width": 360
+          "height": 532,
+          "width": 320
         },
         "position": {
-          "x": 1213.4353517134307,
-          "y": 631.4125346711122
+          "x": 1217.8097321478133,
+          "y": 653.4355077508712
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "AstraDB-fyg6q",
+          "id": "AstraDB-yEyTF",
           "node": {
             "base_classes": [
               "Data",
@@ -4097,42 +4098,21 @@
                         "field_order": [
                           "new_collection_name",
                           "embedding_generation_provider",
-                          "embedding_generation_model"
+                          "embedding_generation_model",
+                          "dimension"
                         ],
                         "name": "create_collection",
                         "template": {
-                          "dimension": {
-                            "_input_type": "IntInput",
+                          "new_collection_name": {
+                            "_input_type": "StrInput",
                             "advanced": false,
-                            "display_name": "Dimensions",
+                            "display_name": "Name",
                             "dynamic": false,
-                            "info": "Dimension of the embeddings to generate.",
+                            "info": "Name of the new collection to create in Astra DB.",
                             "list": false,
                             "list_add_label": "Add More",
-                            "name": "dimension",
-                            "placeholder": "",
-                            "required": false,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "int",
-                            "value": 1024
-                          },
-                          "embedding_generation_model": {
-                            "_input_type": "DropdownInput",
-                            "advanced": false,
-                            "combobox": false,
-                            "dialog_inputs": {},
-                            "display_name": "Embedding model",
-                            "dynamic": false,
-                            "info": "Model to use for generating embeddings.",
-                            "name": "embedding_generation_model",
-                            "options": [
-                              "Bring your own",
-                              "NV-Embed-QA"
-                            ],
-                            "options_metadata": [],
+                            "load_from_db": false,
+                            "name": "new_collection_name",
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -4166,16 +4146,17 @@
                             "type": "str",
                             "value": ""
                           },
-                          "new_collection_name": {
-                            "_input_type": "StrInput",
+                          "embedding_generation_model": {
+                            "_input_type": "DropdownInput",
                             "advanced": false,
-                            "display_name": "Name",
+                            "combobox": false,
+                            "dialog_inputs": {},
+                            "display_name": "Embedding model",
                             "dynamic": false,
-                            "info": "Name of the new collection to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_collection_name",
+                            "info": "Model to use for generating embeddings.",
+                            "name": "embedding_generation_model",
+                            "options": [],
+                            "options_metadata": [],
                             "placeholder": "",
                             "required": true,
                             "show": true,
@@ -4183,6 +4164,24 @@
                             "tool_mode": false,
                             "trace_as_metadata": true,
                             "type": "str",
+                            "value": ""
+                          },
+                          "dimension": {
+                            "_input_type": "IntInput",
+                            "advanced": false,
+                            "display_name": "Dimensions (Required only for `Bring your own`)",
+                            "dynamic": false,
+                            "info": "Dimensions of the embeddings to generate.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "name": "dimension",
+                            "placeholder": "",
+                            "required": false,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "int",
                             "value": ""
                           }
                         }
@@ -4244,6 +4243,25 @@
                         ],
                         "name": "create_database",
                         "template": {
+                          "new_database_name": {
+                            "_input_type": "StrInput",
+                            "advanced": false,
+                            "display_name": "Name",
+                            "dynamic": false,
+                            "info": "Name of the new database to create in Astra DB.",
+                            "list": false,
+                            "list_add_label": "Add More",
+                            "load_from_db": false,
+                            "name": "new_database_name",
+                            "placeholder": "",
+                            "required": true,
+                            "show": true,
+                            "title_case": false,
+                            "tool_mode": false,
+                            "trace_as_metadata": true,
+                            "type": "str",
+                            "value": ""
+                          },
                           "cloud_provider": {
                             "_input_type": "DropdownInput",
                             "advanced": false,
@@ -4269,25 +4287,6 @@
                             "type": "str",
                             "value": ""
                           },
-                          "new_database_name": {
-                            "_input_type": "StrInput",
-                            "advanced": false,
-                            "display_name": "Name",
-                            "dynamic": false,
-                            "info": "Name of the new database to create in Astra DB.",
-                            "list": false,
-                            "list_add_label": "Add More",
-                            "load_from_db": false,
-                            "name": "new_database_name",
-                            "placeholder": "",
-                            "required": true,
-                            "show": true,
-                            "title_case": false,
-                            "tool_mode": false,
-                            "trace_as_metadata": true,
-                            "type": "str",
-                            "value": ""
-                          },
                           "region": {
                             "_input_type": "DropdownInput",
                             "advanced": false,
@@ -4297,11 +4296,7 @@
                             "dynamic": false,
                             "info": "Region for the new database.",
                             "name": "region",
-                            "options": [
-                              "us-east-2",
-                              "ap-south-1",
-                              "eu-west-1"
-                            ],
+                            "options": [],
                             "options_metadata": [],
                             "placeholder": "",
                             "required": true,
@@ -4561,6 +4556,24 @@
                 "type": "str",
                 "value": "Similarity"
               },
+              "should_cache_vector_store": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Cache Vector Store",
+                "dynamic": false,
+                "info": "If True, the vector store will be cached for the current build of the component. This is useful for components that have multiple output methods and want to share the same vector store.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_cache_vector_store",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
               "token": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
@@ -4586,28 +4599,28 @@
           "type": "AstraDB"
         },
         "dragging": false,
-        "id": "AstraDB-fyg6q",
+        "id": "AstraDB-yEyTF",
         "measured": {
-          "height": 449,
+          "height": 532,
           "width": 320
         },
         "position": {
-          "x": 2065.4581687557493,
-          "y": 1496.259507100966
+          "x": 2094.007605680773,
+          "y": 1503.7785213028983
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": -348.2904435861742,
-      "y": -373.26831165592205,
-      "zoom": 0.6306258994328376
+      "x": 23.94695899838632,
+      "y": -163.43184624766263,
+      "zoom": 0.44406917240373706
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
   "endpoint_name": null,
-  "id": "0ea0fb07-2bcc-4c51-ad28-8ef9239843af",
+  "id": "70334bc3-a88e-4e43-b408-a8ba4fa6d99a",
   "is_component": false,
   "last_tested_version": "1.1.5",
   "name": "Vector Store RAG",
