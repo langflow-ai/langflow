@@ -1,3 +1,4 @@
+import { GmailIcon } from "../icons/Gmail";
 import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
@@ -522,6 +523,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
@@ -607,6 +609,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Gmail: GmailIcon,
   LMStudio: LMStudioIcon,
   Notify: Bell,
   ListFlows: Group,
