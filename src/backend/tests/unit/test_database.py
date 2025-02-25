@@ -5,6 +5,8 @@ from uuid import UUID, uuid4
 import orjson
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import text
+
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
 from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_starter_projects
@@ -13,7 +15,6 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
-from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")
@@ -181,28 +182,24 @@ async def test_read_flows_components_only_paginated(client: AsyncClient, logged_
         FlowCreate(name=f"Flow {i}", description="description", data={}, is_component=True)
         for i in range(number_of_flows)
     ]
-    
+
     for flow in flows:
         response = await client.post("api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
         assert response.status_code == 201
-    
-    try:
-        response = await client.get(
-            "api/v1/flows/", 
-            headers=logged_in_headers, 
-            params={"components_only": True, "get_all": False}
-        )
-        
-        assert response.status_code == 200
-        response_json = response.json()
-        assert response_json["total"] == 10
-        assert response_json["pages"] == 1
-        assert response_json["page"] == 1
-        assert response_json["size"] == 50
-        assert all(flow["is_component"] is True for flow in response_json["items"])
-    except Exception as e:
-        print(f"Error in test_read_flows_components_only_paginated: {e}")
-        raise
+
+    response = await client.get(
+        "api/v1/flows/",
+        headers=logged_in_headers,
+        params={"components_only": True, "get_all": False}
+    )
+
+    assert response.status_code == 200
+    response_json = response.json()
+    assert response_json["total"] == 10
+    assert response_json["pages"] == 1
+    assert response_json["page"] == 1
+    assert response_json["size"] == 50
+    assert all(flow["is_component"] is True for flow in response_json["items"])
 
 
 async def test_read_flows_components_only(client: AsyncClient, logged_in_headers):
