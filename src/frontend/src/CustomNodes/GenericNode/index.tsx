@@ -542,9 +542,11 @@ function GenericNode({
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
-                <div className="block">
-                  {renderOutputs(data.node!.outputs, "hidden")}
-                </div>
+                {showHiddenOutputs && (
+                  <div className="block">
+                    {renderOutputs(data.node!.outputs, "hidden")}
+                  </div>
+                )}
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
