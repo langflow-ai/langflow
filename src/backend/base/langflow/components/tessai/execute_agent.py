@@ -1,9 +1,12 @@
 import json
-import requests
 from copy import deepcopy
+
+import requests
+
 from langflow.custom import Component
 from langflow.inputs import BoolInput, DropdownInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
+
 
 class TessAIExecuteAgentComponent(Component):
     display_name = "Execute Agent"
@@ -36,21 +39,20 @@ class TessAIExecuteAgentComponent(Component):
         headers = self._get_headers()
         execute_endpoint = f"{self.BASE_URL}/api/agents/{self.agent_id.strip()}/execute?waitExecution=true"
         parameters = self._collect_dynamic_parameters()
-    
+
         try:
             response = requests.post(execute_endpoint, headers=headers, json=parameters)
             response.raise_for_status()
             execution_data = response.json()
-    
+
             if execution_data["responses"][0]["status"] not in ["succeeded", "failed", "error"]:
                 raise ValueError(json.dumps(execution_data))
-    
+
             response_id = execution_data["responses"][0]["id"]
             return self._get_agent_response(headers, response_id)
         except requests.RequestException as e:
             error_json = e.response.json() if e.response is not None else {"error": str(e)}
             raise RuntimeError(json.dumps(error_json)) from e
-
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
@@ -67,7 +69,7 @@ class TessAIExecuteAgentComponent(Component):
 
     def _get_headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_key}", "accept": "*/*", "Content-Type": "application/json"}
-    
+
     def _get_agent_questions(self, agent_id):
         endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
         response = requests.get(endpoint, headers=self._get_headers())
@@ -75,7 +77,6 @@ class TessAIExecuteAgentComponent(Component):
         if response.status_code not in [200, 404]:
             raise Exception(json.dumps(response.json()))
 
-        
         template = response.json()
         return template.get("questions", [])
 
@@ -107,7 +108,7 @@ class TessAIExecuteAgentComponent(Component):
 
     def _create_field(self, key: str, question: dict, value: str | None = None) -> dict:
         field_type = question.get("type", "text")
-    
+
         args = {
             "name": key,
             "display_name": question["name"],
@@ -115,12 +116,12 @@ class TessAIExecuteAgentComponent(Component):
             "info": question.get("description", ""),
             "placeholder": question.get("placeholder", ""),
         }
-        
+
         if value:
             args["value"] = value
         elif question.get("default"):
             args["value"] = question.get("default")
-    
+
         if field_type == "textarea":
             input_class = MultilineInput
         elif field_type == "select":
@@ -150,7 +151,7 @@ class TessAIExecuteAgentComponent(Component):
             if field_type == "file":
                 args["display_name"] += " (direct URL)"
             args["input_types"] = ["Message"]
-    
+
         return input_class(**args)
 
     def _clear_dynamic_fields(self, build_config: dict):
@@ -165,16 +166,13 @@ class TessAIExecuteAgentComponent(Component):
 
         for key in self._parameters:
             if key.endswith(suffix):
-                param_name = key[: -suffix_length]
+                param_name = key[:-suffix_length]
                 value = self._parameters[key]
 
                 if param_name == "messages":
-                    parameters[param_name] = [{
-                        "role": "user",
-                        "content": value
-                    }]
+                    parameters[param_name] = [{"role": "user", "content": value}]
                 elif isinstance(value, list):
-                    parameters[param_name] = ','.join(value)
+                    parameters[param_name] = ",".join(value)
                 else:
                     parameters[param_name] = value
         return parameters
