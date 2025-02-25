@@ -1,6 +1,4 @@
-"""
-Snowflake SQL Executor component for LangFlow.
-"""
+"""Snowflake SQL Executor component for LangFlow."""
 
 import json
 from json.decoder import JSONDecodeError
@@ -11,17 +9,14 @@ from langflow.custom import Component
 from langflow.field_typing import Message
 from langflow.io import MessageTextInput, Output
 
-MSG_INVALID_JSON_INPUT = (
-    "Invalid JSON input encountered (not typically expected here)."
-)
+MSG_INVALID_JSON_INPUT = "Invalid JSON input encountered (not typically expected here)."
 MSG_ERROR_CONNECTION_PREFIX = "Error establishing Snowflake connection: "
 MSG_ERROR_EXECUTION_PREFIX = "Error executing Snowflake SQL query: "
 MSG_NO_VALID_SQL = "No valid SQL query provided."
 
+
 class SnowflakeSQLExecutorComponent(Component):
-    """
-    Execute SQL queries on Snowflake.
-    """
+    """Execute SQL queries on Snowflake."""
 
     display_name = "Snowflake SQL Executor"
     description = "Execute SQL queries on Snowflake."
@@ -82,8 +77,7 @@ class SnowflakeSQLExecutorComponent(Component):
     ]
 
     def execute_sql(self) -> Message:
-        """
-        Connect to Snowflake using provided credentials.
+        """Connect to Snowflake using provided credentials.
 
         Execute the SQL query, and return the results as JSON.
         """
