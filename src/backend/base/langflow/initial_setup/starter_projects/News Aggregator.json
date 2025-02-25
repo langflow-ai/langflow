@@ -1,94 +1,10 @@
 {
+  "id": "a5383bea-acb4-44ba-adeb-80c0fcb168b9",
   "data": {
-    "edges": [
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "AgentQL",
-            "id": "AgentQL-mPzt1",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-VOnBt",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__AgentQL-mPzt1{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-mPzt1œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-VOnBt{œfieldNameœ:œtoolsœ,œidœ:œAgent-VOnBtœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "AgentQL-mPzt1",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-mPzt1œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-VOnBt",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-VOnBtœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-VOnBt",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "ChatOutput-SyzjF",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Agent-VOnBt{œdataTypeœ:œAgentœ,œidœ:œAgent-VOnBtœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-SyzjF{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SyzjFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-VOnBt",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-VOnBtœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-SyzjF",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-SyzjFœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ChatInput",
-            "id": "ChatInput-5A2FR",
-            "name": "message",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "input_value",
-            "id": "Agent-VOnBt",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__ChatInput-5A2FR{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5A2FRœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-VOnBt{œfieldNameœ:œinput_valueœ,œidœ:œAgent-VOnBtœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-5A2FR",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5A2FRœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-VOnBt",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-VOnBtœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      }
-    ],
     "nodes": [
       {
         "data": {
-          "id": "note-LzOM2",
+          "id": "note-vGF5M",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -100,7 +16,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-LzOM2",
+        "id": "note-vGF5M",
         "measured": {
           "height": 324,
           "width": 324
@@ -114,7 +30,7 @@
       },
       {
         "data": {
-          "id": "note-u8dIb",
+          "id": "note-VvhWf",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -127,7 +43,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-zgc96",
+        "id": "note-VvhWf",
         "measured": {
           "height": 346,
           "width": 324
@@ -136,24 +52,262 @@
           "x": 741.8464477206785,
           "y": 270.1565987952192
         },
-        "selected": true,
+        "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "AgentQL-mPzt1",
+          "id": "AgentQL-XIw0m",
           "node": {
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "load_from_db": false,
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "api_key",
+                "value": "",
+                "display_name": "AgentQL API Key",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "Your AgentQL API key. Get one at https://dev.agentql.com.",
+                "title_case": false,
+                "password": true,
+                "type": "str",
+                "_input_type": "SecretStrInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"AgentQL Query Data\"\n    description = \"Uses AgentQL API to extract structured data from a given URL.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"AgentQL API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key. Get one at https://dev.agentql.com.\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The public URL of the webpage to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=True,\n            info=\"The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"params\": self.params,\n        }\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "params": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "list": true,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "params",
+                "value": {
+                  "is_screenshot_enabled": false,
+                  "is_scroll_to_bottom_enabled": false,
+                  "mode": "fast",
+                  "wait_for": 0
+                },
+                "display_name": "Additional Params",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
+                "title_case": false,
+                "type": "dict",
+                "_input_type": "DictInput"
+              },
+              "query": {
+                "tool_mode": true,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "query",
+                "value": "",
+                "display_name": "AgentQL Query",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              },
+              "timeout": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "timeout",
+                "value": 900,
+                "display_name": "Timeout",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Timeout in seconds for the request. Increase if data extraction takes too long.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "url": {
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "url",
+                "value": "",
+                "display_name": "URL",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The public URL of the webpage to extract data from.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "tools_metadata": {
+                "tool_mode": false,
+                "is_list": true,
+                "list_add_label": "Add More",
+                "table_schema": {
+                  "columns": [
+                    {
+                      "name": "name",
+                      "display_name": "Tool Name",
+                      "sortable": false,
+                      "filterable": false,
+                      "formatter": "text",
+                      "type": "str",
+                      "description": "Specify the name of the tool.",
+                      "default": "None",
+                      "disable_edit": false,
+                      "edit_mode": "inline",
+                      "hidden": false
+                    },
+                    {
+                      "name": "description",
+                      "display_name": "Tool Description",
+                      "sortable": false,
+                      "filterable": false,
+                      "formatter": "text",
+                      "type": "str",
+                      "description": "Describe the purpose of the tool.",
+                      "default": "None",
+                      "disable_edit": false,
+                      "edit_mode": "popover",
+                      "hidden": false
+                    },
+                    {
+                      "name": "tags",
+                      "display_name": "Tool Identifiers",
+                      "sortable": false,
+                      "filterable": false,
+                      "formatter": "text",
+                      "type": "str",
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "default": "None",
+                      "disable_edit": true,
+                      "edit_mode": "inline",
+                      "hidden": true
+                    }
+                  ]
+                },
+                "trigger_text": "",
+                "trigger_icon": "Hammer",
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_sort": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "hide_options": true,
+                  "field_parsers": {
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ],
+                    "commands": "commands"
+                  },
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool."
+                },
+                "trace_as_metadata": true,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "tools_metadata",
+                "value": [
+                  {
+                    "name": "AgentQL-build_output",
+                    "description": "build_output(api_key: Message, query: Message, url: Message) - Uses AgentQL API to extract structured data from a given URL.",
+                    "tags": [
+                      "AgentQL-build_output"
+                    ]
+                  }
+                ],
+                "display_name": "Edit tools",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "real_time_refresh": true,
+                "title_case": false,
+                "type": "table",
+                "_input_type": "TableInput"
+              }
+            },
+            "description": "Uses AgentQL API to extract structured data from a given URL.",
+            "icon": "AgentQL",
             "base_classes": [
               "Data"
             ],
-            "beta": false,
-            "category": "agentql",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Uses AgentQL API to extract structured data from a given URL.",
             "display_name": "AgentQL Query Data",
             "documentation": "https://docs.agentql.com/rest-api/api-reference",
-            "edited": false,
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Tool"
+                ],
+                "selected": "Tool",
+                "name": "component_as_tool",
+                "hidden": null,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": null,
+                "allows_loop": false,
+                "tool_mode": true
+              }
+            ],
             "field_order": [
               "api_key",
               "url",
@@ -161,253 +315,19 @@
               "timeout",
               "params"
             ],
-            "frozen": false,
-            "icon": "AgentQL",
-            "key": "AgentQL",
+            "beta": false,
             "legacy": false,
-            "lf_version": "1.1.5",
+            "edited": false,
             "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 7.517768383416648e-6,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "AgentQL API Key",
-                "dynamic": false,
-                "info": "Your AgentQL API key. Get one at https://dev.agentql.com.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "AGENTQL_API_KEY"
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"AgentQL Query Data\"\n    description = \"Uses AgentQL API to extract structured data from a given URL.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"AgentQL API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key. Get one at https://dev.agentql.com.\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The public URL of the webpage to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=True,\n            info=\"The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"params\": self.params,\n        }\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
-              },
-              "params": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Additional Params",
-                "dynamic": false,
-                "info": "The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "params",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {
-                  "is_screenshot_enabled": false,
-                  "is_scroll_to_bottom_enabled": false,
-                  "mode": "fast",
-                  "wait_for": 0
-                }
-              },
-              "query": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "AgentQL Query",
-                "dynamic": false,
-                "info": "The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "query",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "Timeout in seconds for the request. Increase if data extraction takes too long.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 900
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "build_output(api_key: Message, query: Message, url: Message) - Uses AgentQL API to extract structured data from a given URL.",
-                    "name": "AgentQL-build_output",
-                    "tags": [
-                      "AgentQL-build_output"
-                    ]
-                  }
-                ]
-              },
-              "url": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "URL",
-                "dynamic": false,
-                "info": "The public URL of the webpage to extract data from.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "url",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
             "tool_mode": true
           },
           "showNode": true,
-          "type": "AgentQL"
+          "type": "AgentQL",
+          "description": "Uses AgentQL API to extract structured data from a given URL.",
+          "display_name": "AgentQL Query Data"
         },
         "dragging": false,
-        "id": "AgentQL-mPzt1",
+        "id": "AgentQL-XIw0m",
         "measured": {
           "height": 499,
           "width": 320
@@ -421,7 +341,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-5A2FR",
+          "id": "ChatInput-KdiYi",
           "node": {
             "base_classes": [
               "Message"
@@ -449,7 +369,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -718,7 +638,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-5A2FR",
+        "id": "ChatInput-KdiYi",
         "measured": {
           "height": 66,
           "width": 192
@@ -732,7 +652,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-SyzjF",
+          "id": "ChatOutput-QiEpu",
           "node": {
             "base_classes": [
               "Message"
@@ -760,7 +680,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1030,7 +950,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-SyzjF",
+        "id": "ChatOutput-QiEpu",
         "measured": {
           "height": 66,
           "width": 192
@@ -1044,7 +964,7 @@
       },
       {
         "data": {
-          "id": "Agent-VOnBt",
+          "id": "Agent-O1xzr",
           "node": {
             "base_classes": [
               "Message"
@@ -1089,7 +1009,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1195,7 +1115,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1203,7 +1123,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1696,7 +1616,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-VOnBt",
+        "id": "Agent-O1xzr",
         "measured": {
           "height": 624,
           "width": 320
@@ -1710,7 +1630,7 @@
       },
       {
         "data": {
-          "id": "note-16o52",
+          "id": "note-OAlDJ",
           "node": {
             "description": "# News Aggregator\n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\nThe **Agent** component populates the **Agent QL** component's **URL** and **Query** fields, and returns a structured response to your question.",
             "display_name": "",
@@ -1722,34 +1642,118 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-16o52",
+        "id": "note-OAlDJ",
         "measured": {
-          "height": 581,
-          "width": 404
+          "height": 604,
+          "width": 325
         },
         "position": {
           "x": 215.10951666579462,
           "y": -25.20466668876412
         },
-        "selected": true,
+        "selected": false,
         "type": "noteNode"
       }
     ],
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "AgentQL",
+            "id": "AgentQL-XIw0m",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-O1xzr",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-AgentQL-XIw0m{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-XIw0mœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-O1xzr{œfieldNameœ:œtoolsœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "AgentQL-XIw0m",
+        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-XIw0mœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-O1xzr",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-O1xzr",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-QiEpu",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-Agent-O1xzr{œdataTypeœ:œAgentœ,œidœ:œAgent-O1xzrœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-QiEpu{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-QiEpuœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-O1xzr",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-O1xzrœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-QiEpu",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-QiEpuœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-KdiYi",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-O1xzr",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "reactflow__edge-ChatInput-KdiYi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KdiYiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-O1xzr{œfieldNameœ:œinput_valueœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-KdiYi",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KdiYiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-O1xzr",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      }
+    ],
     "viewport": {
-      "x": 12.487929830752307,
-      "y": 53.296431264065234,
-      "zoom": 0.4998778160758756
+      "x": -185.56277678480728,
+      "y": 98.64473921569584,
+      "zoom": 1.3444274567846564
     }
   },
   "description": "Extracts data and information from webpages.",
-  "endpoint_name": null,
-  "icon": "Newspaper",
-  "id": "4b857ff3-595a-4902-874f-f591bd804fa1",
-  "is_component": false,
-  "last_tested_version": "1.1.5",
   "name": "News Aggregator",
+  "last_tested_version": "1.2.0",
+  "endpoint_name": null,
+  "is_component": false,
+  "icon": "Newspaper",
   "tags": [
-    "web-scraping",
-    "agents"
-  ]
+      "web-scraping",
+      "agents"
+    ]
 }
