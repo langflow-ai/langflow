@@ -2,7 +2,7 @@ import json
 import requests
 from copy import deepcopy
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, FileInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.inputs import BoolInput, DropdownInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
 
 class TessAIExecuteAgentComponent(Component):
@@ -35,7 +35,6 @@ class TessAIExecuteAgentComponent(Component):
     def execute_agent(self) -> str:
         headers = self._get_headers()
         execute_endpoint = f"{self.BASE_URL}/api/agents/{self.agent_id.strip()}/execute?waitExecution=true"
-    
         parameters = self._collect_dynamic_parameters()
     
         try:
@@ -108,11 +107,10 @@ class TessAIExecuteAgentComponent(Component):
 
     def _create_field(self, key: str, question: dict, value: str | None = None) -> dict:
         field_type = question.get("type", "text")
-        name = question["name"].replace("_", " ").capitalize()
     
         args = {
             "name": key,
-            "display_name": name,
+            "display_name": question["name"],
             "required": question.get("required", False),
             "info": question.get("description", ""),
             "placeholder": question.get("placeholder", ""),
@@ -126,26 +124,31 @@ class TessAIExecuteAgentComponent(Component):
         if field_type == "textarea":
             input_class = MultilineInput
         elif field_type == "select":
-            input_class = DropdownInput
-            args["options"] = question.get("options", [])
-            if value and value in args["options"]:
-                args["value"] = value
-            elif args["required"]:
-                args["value"] = args.get("default", args["options"][0])
+            options = question.get("options", [])
+            if all(isinstance(option, bool) for option in options):
+                input_class = BoolInput
+                if value:
+                    args["value"] = value
+                elif args["required"]:
+                    args["value"] = args.get("default", options[0])
+            else:
+                input_class = DropdownInput
+                args["options"] = [str(option) for option in options]
+                if value and value in args["options"]:
+                    args["value"] = value
+                elif args["required"]:
+                    args["value"] = args.get("default", args["options"][0])
         elif field_type == "multiselect":
             input_class = MultiselectInput
-            args["options"] = [opt.split(":")[-1].strip() for opt in question.get("description", "").strip().split(",")]
-            if value:
-                args["value"] = [val for val in value.split(",") if val in args["options"]]
+            args["options"] = question.get("description", "").split(",")
+            if value and isinstance(value, list):
+                args["value"] = [val for val in value if val in args["options"]]
             else:
                 args["value"] = []
-        elif field_type == "file":
-            input_class = FileInput
-            args["file_path"] = ""
-            args["fileTypes"] = ['pdf', 'docx', 'txt', 'csv', 'xlsx', 'xls', 'ppt', 'pptx', 
-                             'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff', 'ico', 'webp']
         else:
             input_class = StrInput
+            if field_type == "file":
+                args["display_name"] += " (direct URL)"
             args["input_types"] = ["Message"]
     
         return input_class(**args)
