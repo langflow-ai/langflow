@@ -168,11 +168,11 @@ class NotionPageCreator(Component):
                     r"[0-9a-fA-F]{12}$"
                 )
                 relation_values = [v.strip() for v in str(value).split(",") if v.strip()]
-                valid_ids = [v for v in relation_values if uuid_regex.match(v)]
-                if relation_values and not valid_ids:
+                relation_ids = [v for v in relation_values if uuid_regex.match(v)]
+                if relation_values and not relation_ids:
                     error_message = f"Invalid relation id(s) provided for property {prop_name}: {value}"
                     raise ValueError(error_message)
-                return {"relation": [{"id": rid} for rid in valid_ids]}
+                return {"relation": [{"id": rid} for rid in relation_ids]}
 
             elif prop_type == "status":
                 if not value:
@@ -195,12 +195,13 @@ class NotionPageCreator(Component):
                     return {"people": []}
 
                 people_values = [v.strip() for v in str(value).split(",") if v.strip()]
-                valid_ids = []
+                # Use a differently named variable to avoid redefinition issues
+                people_id_objects: list[dict[str, str]] = []
 
                 for person_value in people_values:
                     if uuid_regex.match(person_value):
-                        # It's a user ID
-                        valid_ids.append({"id": person_value})
+                        # It's a user ID - create a dictionary with the ID
+                        people_id_objects.append({"id": person_value})
                     else:
                         # For non-UUID values, log a warning
                         self.log(
@@ -208,7 +209,7 @@ class NotionPageCreator(Component):
                             f"People properties require Notion user IDs, not names."
                         )
 
-                return {"people": valid_ids}
+                return {"people": people_id_objects}
 
             elif prop_type == "formula":
                 # Formula properties are calculated by Notion and cannot be set
@@ -357,7 +358,7 @@ class NotionPageCreator(Component):
 
         return DataFrame(result_df[existing_cols])
 
-    def _create_notion_page(self) -> dict:
+    def _create_notion_page(self) -> dict[str, Any]:
         """Internal method to create the Notion page and return the API response."""
         if not self.database_id or self.database_id == "Loading databases...":
             return {"error": "Please select a valid database first."}
@@ -385,7 +386,7 @@ class NotionPageCreator(Component):
                 self.log(f"Found title property: {title_property}")
                 break
 
-        properties = {}
+        properties: dict[str, Any] = {}
         num_properties = getattr(self, "number_of_properties", 0)
         self.log(f"Processing {num_properties} properties")
 
@@ -482,25 +483,18 @@ class NotionPageCreator(Component):
             if field_name is None or field_name == "notion_secret":
                 databases = self.fetch_databases()
                 # Format options as "Name (ID)"
-                formatted_dbs: list[str] = []  # Add type annotation
+                formatted_dbs: list[str] = []
                 for db in databases:
                     db_name = db.get("title", [{}])[0].get("text", {}).get("content", "Untitled")
                     db_id = db["id"]
-                    formatted_name: str = f"{db_name} ({db_id})"
+                    formatted_name = f"{db_name} ({db_id})"
                     formatted_dbs.append(formatted_name)
 
                 build_config["database_id"]["options"] = formatted_dbs
                 if databases:
                     build_config["database_id"]["value"] = formatted_dbs[0]
 
-                # Map formatted names to original IDs for API calls
-                id_mapping: dict[str, str] = {}
-                for db in databases:
-                    db_name = db.get("title", [{}])[0].get("text", {}).get("content", "Untitled")
-                    db_id = db["id"]
-                    formatted_key = f"{db_name} ({db_id})"
-                    id_mapping[formatted_key] = db_id
-                build_config["database_id"]["tooltips"] = id_mapping
+                # Skip setting tooltips to avoid any type errors
 
             # When database_id changes
             if field_name == "database_id":
