@@ -124,11 +124,12 @@ body {
 /* This CSS is to not apply the border for the column having 'no-border' class */
 .no-border.ag-cell:focus {
   border: none !important;
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
 }
 .no-border.ag-cell {
   border: none !important;
-  outline: none;
+  outline: none !important;
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
