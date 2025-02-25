@@ -8,10 +8,18 @@ export default function OutputModal({
   outputName,
   children,
   disabled,
+  open,
+  setOpen,
 }): JSX.Element {
   const [activeTab, setActiveTab] = useState<"Outputs" | "Logs">("Outputs");
   return (
-    <BaseModal disable={disabled} size="large" className="z-50">
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      disable={disabled}
+      size="large"
+      className="z-50"
+    >
       <BaseModal.Header description="Inspect the output of the component below.">
         <div className="flex items-center">
           <span className="pr-2">Component Output</span>
