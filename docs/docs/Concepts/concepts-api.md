@@ -59,7 +59,7 @@ To use your code in a Python application using the Langflow runtime, you have to
 
 2. Download the flow to your local machine. Make sure the flow path in the script matches the flow’s location on your machine.
 
-3. Copy and paste the code from the API tab into a Python script file.
+3. Copy and paste the code from the **Python Code** tab into a Python script file.
 
 4. Run the script:
 
