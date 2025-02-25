@@ -29,7 +29,7 @@ It can optionally store the message in a chat history.
 |should_store_message|Store Messages|Store the message in the history.|
 |sender|Sender Type|The type of sender.|
 |sender_name|Sender Name|The name of the sender.|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|
+|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter is used.|
 |files|Files|The files to be sent with the message.|
 |background_color|Background Color|The background color of the icon.|
 |chat_icon|Icon|The icon of the message.|
@@ -97,8 +97,8 @@ The component accepts the following input types.
 |should_store_message|Store Messages|The flag to store the message in the history.|
 |sender|Sender Type|The type of sender.|
 |sender_name|Sender Name|The name of the sender.|
-|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter will be used.|
-|data_template|Data Template|The template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.|
+|session_id|Session ID|The session ID of the chat. If empty, the current session ID parameter is used.|
+|data_template|Data Template|The template to convert Data to Text. If the option is left empty, it is dynamically set to the Data's text key.|
 |background_color|Background Color|The background color of the icon.|
 |chat_icon|Icon|The icon of the message.|
 |text_color|Text Color|The text color of the name.|

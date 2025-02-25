@@ -151,7 +151,7 @@ The `Output Schema` parameter defines the structure and data types for the model
 * **Name**: The name of the output field.
 * **Description**: The purpose of the output field.
 * **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
-* **Multiple**: Deprecated feature, currently by default, it is set to `True` if you expect multiple values for a single field. For example, a `list` of `features` is set to `true` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
+* **Multiple**: This feature is deprecated. Currently, it is set to `True` by default if you expect multiple values for a single field. For example, a `list` of `features` is set to `True` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
 
 The **Parse DataFrame** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
 
