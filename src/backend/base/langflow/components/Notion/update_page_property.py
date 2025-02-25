@@ -384,8 +384,8 @@ class NotionPageUpdate(Component):
 
         except (ValueError, TypeError) as e:
             self.log(f"Error formatting property {prop_name}: {e}")
-            # Return empty value appropriate for the type
-            empty_values = {
+            # Fix: Add explicit type annotation to empty_values
+            empty_values: dict[str, dict[str, Any]] = {
                 "title": {"title": []},
                 "rich_text": {"rich_text": []},
                 "select": {"select": None},
@@ -399,4 +399,6 @@ class NotionPageUpdate(Component):
                 "files": {"files": []},
                 "status": {"status": None},
             }
-            return empty_values.get(prop_type, {"rich_text": []})
+            # Fix: Explicitly type the return value
+            result: dict[str, Any] = empty_values.get(prop_type, {"rich_text": []})
+            return result
