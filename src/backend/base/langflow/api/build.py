@@ -365,7 +365,7 @@ async def generate_flow_events(
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
-            logger.exception(exc)
+            logger.error(f"Build cancelled: {exc}")
             raise
 
         # send built event or error event
@@ -445,6 +445,7 @@ async def cancel_flow_build(
 
     Raises:
         ValueError: If the job doesn't exist
+        asyncio.CancelledError: If the task cancellation failed
     """
     # Get the event task and event manager for the job
     _, _, event_task = queue_service.get_queue_data(job_id)
@@ -460,13 +461,24 @@ async def cancel_flow_build(
     # Store the task reference to check status after cleanup
     task_before_cleanup = event_task
 
-    # Perform cleanup using the queue service
-    await queue_service.cleanup_job(job_id)
+    try:
+        # Perform cleanup using the queue service
+        await queue_service.cleanup_job(job_id)
+    except asyncio.CancelledError:
+        # Check if the task was actually cancelled
+        if task_before_cleanup.cancelled():
+            logger.info(f"Successfully cancelled flow build for job_id {job_id} (CancelledError caught)")
+            return True
+        # If the task wasn't cancelled, re-raise the exception
+        logger.error(f"CancelledError caught but task for job_id {job_id} was not cancelled")
+        raise
 
-    # Verify that the task was actually cancelled
+    # If no exception was raised, verify that the task was actually cancelled
     # The task should be done (cancelled) after cleanup
     if task_before_cleanup.cancelled():
         logger.info(f"Successfully cancelled flow build for job_id {job_id}")
         return True
+
+    # If we get here, the task wasn't cancelled properly
     logger.error(f"Failed to cancel flow build for job_id {job_id}, task is still running")
     return False
