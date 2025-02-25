@@ -79,7 +79,8 @@ class MessageStoreComponent(Component):
             )
 
         if not stored_messages:
-            raise ValueError("No messages were stored. Please ensure that the session ID and sender are properly set.")
+            msg = "No messages were stored. Please ensure that the session ID and sender are properly set."
+            raise ValueError(msg)
 
         stored_message = stored_messages[0]
         self.status = stored_message
