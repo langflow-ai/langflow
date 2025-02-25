@@ -5,8 +5,6 @@ from uuid import UUID, uuid4
 import orjson
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import text
-
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
 from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_starter_projects
@@ -15,6 +13,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
 from langflow.services.database.models.folder.model import FolderCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
+from sqlalchemy import text
 
 
 @pytest.fixture(scope="module")
@@ -188,9 +187,7 @@ async def test_read_flows_components_only_paginated(client: AsyncClient, logged_
         assert response.status_code == 201
 
     response = await client.get(
-        "api/v1/flows/",
-        headers=logged_in_headers,
-        params={"components_only": True, "get_all": False}
+        "api/v1/flows/", headers=logged_in_headers, params={"components_only": True, "get_all": False}
     )
 
     assert response.status_code == 200
