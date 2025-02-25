@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from langflow.graph.schema import CHAT_COMPONENTS
+from langflow.graph.vertex.base import Vertex
 from langflow.utils.lazy_load import LazyLoadDictBase
 
 if TYPE_CHECKING:
@@ -42,10 +43,11 @@ class VertexTypesDict(LazyLoadDictBase):
 
     def get_type_dict(self) -> dict[str, type[Vertex]]:
         types = self._types()
+        interface_vertex = types.InterfaceVertex
         return {
             "CustomComponent": types.CustomComponentVertex,
             "Component": types.ComponentVertex,
-            **dict.fromkeys(CHAT_COMPONENTS, types.InterfaceVertex),
+            **{component: interface_vertex for component in CHAT_COMPONENTS},
         }
 
     def get_custom_component_vertex_type(self) -> type[CustomComponentVertex]:
