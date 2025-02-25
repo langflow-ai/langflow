@@ -1,3 +1,4 @@
+import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   BASE_URL_API,
   POLLING_INTERVAL,
@@ -93,7 +94,7 @@ export async function updateVerticesOrder(
       );
     } catch (error: any) {
       setErrorData({
-        title: "Oops! Looks like you missed something",
+        title: MISSED_ERROR_ALERT,
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
       useFlowStore.getState().setIsBuilding(false);
@@ -161,6 +162,7 @@ async function pollBuildEvents(
     onGetOrderSuccess?: () => void;
     onValidateNodes?: (nodes: string[]) => void;
   },
+  abortController: AbortController,
 ): Promise<void> {
   let isDone = false;
   while (!isDone) {
@@ -169,6 +171,7 @@ async function pollBuildEvents(
       headers: {
         "Content-Type": "application/json",
       },
+      signal: abortController.signal, // Add abort signal to fetch
     });
 
     if (!response.ok) {
@@ -184,13 +187,16 @@ async function pollBuildEvents(
 
     // Process the event
     const event = JSON.parse(data.event);
-    await onEvent(
+    const result = await onEvent(
       event.event,
       event.data,
       buildResults,
       verticesStartTimeMs,
       callbacks,
     );
+    if (!result) {
+      isDone = true;
+    }
 
     // Check if this was the end event or if we got a null value
     if (event.event === "end" || data.event === null) {
@@ -224,6 +230,10 @@ export async function buildFlowVertices({
   const inputs = {};
   let buildUrl = `${BASE_URL_API}build/${flowId}/flow`;
   const queryParams = new URLSearchParams();
+
+  // Get the buildController from flowStore
+  const buildController = new AbortController();
+  useFlowStore.getState().setBuildController(buildController);
 
   if (startNodeId) {
     queryParams.append("start_component_id", startNodeId);
@@ -267,6 +277,7 @@ export async function buildFlowVertices({
         "Content-Type": "application/json",
       },
       body: JSON.stringify(postData),
+      signal: buildController.signal,
     });
 
     if (!buildResponse.ok) {
@@ -314,6 +325,7 @@ export async function buildFlowVertices({
             "Network error. Please check the connection to the server.",
           ]);
         },
+        buildController,
       });
     } else {
       const callbacks = {
@@ -329,10 +341,15 @@ export async function buildFlowVertices({
         buildResults,
         verticesStartTimeMs,
         callbacks,
+        buildController,
       );
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Build process error:", error);
+    if (error instanceof Error && error.name === "AbortError") {
+      onBuildStopped && onBuildStopped();
+      return;
+    }
     onBuildError!("Error Building Flow", [
       (error as Error).message || "An unexpected error occurred",
     ]);
