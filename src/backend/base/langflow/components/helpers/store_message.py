@@ -56,14 +56,14 @@ class MessageStoreComponent(Component):
         message.sender = self.sender or message.sender or MESSAGE_SENDER_AI
         message.sender_name = self.sender_name or message.sender_name or MESSAGE_SENDER_NAME_AI
 
-        stored_messages = []  
+        stored_messages = []
 
         if self.memory:
             self.memory.session_id = message.session_id
             lc_message = message.to_lc_message()
             await self.memory.aadd_messages([lc_message])
 
-            stored_messages = await self.memory.aget_messages() or [] 
+            stored_messages = await self.memory.aget_messages() or []
 
             stored_messages = [Message.from_lc_message(m) for m in stored_messages] if stored_messages else []
 
@@ -71,9 +71,12 @@ class MessageStoreComponent(Component):
                 stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
             await astore_message(message, flow_id=self.graph.flow_id)
-            stored_messages = await aget_messages(
-                session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
-            ) or [] 
+            stored_messages = (
+                await aget_messages(
+                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
+                )
+                or []
+            )
 
         if not stored_messages:
             raise ValueError("No messages were stored. Please ensure that the session ID and sender are properly set.")
