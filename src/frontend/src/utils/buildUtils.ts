@@ -196,6 +196,7 @@ async function pollBuildEvents(
     );
     if (!result) {
       isDone = true;
+      abortController.abort();
     }
 
     // Check if this was the end event or if we got a null value
@@ -230,10 +231,6 @@ export async function buildFlowVertices({
   const inputs = {};
   let buildUrl = `${BASE_URL_API}build/${flowId}/flow`;
   const queryParams = new URLSearchParams();
-
-  // Get the buildController from flowStore
-  const buildController = new AbortController();
-  useFlowStore.getState().setBuildController(buildController);
 
   if (startNodeId) {
     queryParams.append("start_component_id", startNodeId);
@@ -277,7 +274,6 @@ export async function buildFlowVertices({
         "Content-Type": "application/json",
       },
       body: JSON.stringify(postData),
-      signal: buildController.signal,
     });
 
     if (!buildResponse.ok) {
@@ -288,6 +284,24 @@ export async function buildFlowVertices({
     }
 
     const { job_id } = await buildResponse.json();
+
+    let cancelBuildUrl = `${BASE_URL_API}build/${job_id}/cancel`;
+
+    // Get the buildController from flowStore
+    const buildController = new AbortController();
+    buildController.signal.addEventListener("abort", () => {
+      try {
+        fetch(cancelBuildUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } catch (error) {
+        console.error("Error canceling build:", error);
+      }
+    });
+    useFlowStore.getState().setBuildController(buildController);
 
     // Then stream the events
     const eventsUrl = `${BASE_URL_API}build/${job_id}/events`;
