@@ -28,4 +28,5 @@ export interface ColumnField {
   default?: any;
   edit_mode?: "modal" | "inline" | "popover";
   hidden?: boolean;
+  options?: string[];
 }
