@@ -39,7 +39,7 @@ dependencies = [
     "fastavro==1.9.7",
     "redis==5.2.1",
     "metaphor-python==0.1.23",
-    'pywin32>=306,<307; sys_platform == "win32"',
+    'pywin32==307; sys_platform == "win32"',
     "langfuse==2.53.9",
     "metal_sdk==2.5.1",
     "MarkupSafe==3.0.2",
