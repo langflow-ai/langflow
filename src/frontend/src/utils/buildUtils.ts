@@ -285,7 +285,7 @@ export async function buildFlowVertices({
 
     const { job_id } = await buildResponse.json();
 
-    let cancelBuildUrl = `${BASE_URL_API}build/${job_id}/cancel`;
+    const cancelBuildUrl = `${BASE_URL_API}build/${job_id}/cancel`;
 
     // Get the buildController from flowStore
     const buildController = new AbortController();
