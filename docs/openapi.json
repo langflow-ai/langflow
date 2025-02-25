@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Langflow",
-        "version": "1.1.5"
+        "version": "1.2.0"
     },
     "paths": {
         "/api/v1/build/{flow_id}/vertices": {
@@ -237,6 +237,49 @@
                         "content": {
                             "application/json": {
                                 "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/build/{job_id}/cancel": {
+            "post": {
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Cancel Build",
+                "description": "Cancel a specific build job.",
+                "operationId": "cancel_build_api_v1_build__job_id__cancel_post",
+                "parameters": [
+                    {
+                        "name": "job_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Job Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CancelFlowResponse"
+                                }
                             }
                         }
                     },
@@ -5059,7 +5102,7 @@
                         "anyOf": [
                             {
                                 "type": "string",
-                                "pattern": "password"
+                                "pattern": "^password$"
                             },
                             {
                                 "type": "null"
@@ -5165,6 +5208,25 @@
                     "file"
                 ],
                 "title": "Body_upload_user_file_api_v2_files_post"
+            },
+            "CancelFlowResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "title": "Success"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "success",
+                    "message"
+                ],
+                "title": "CancelFlowResponse",
+                "description": "Response model for flow build cancellation."
             },
             "ChatOutputResponse": {
                 "properties": {
