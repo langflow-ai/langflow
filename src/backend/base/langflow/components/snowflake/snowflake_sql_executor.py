@@ -1,15 +1,28 @@
+"""
+Snowflake SQL Executor component for LangFlow.
+"""
 
-##pre-requisite pip install snowflake-connector-python
 import json
 from json.decoder import JSONDecodeError
 
 import snowflake.connector
+
 from langflow.custom import Component
 from langflow.field_typing import Message
 from langflow.io import MessageTextInput, Output
 
+MSG_INVALID_JSON_INPUT = (
+    "Invalid JSON input encountered (not typically expected here)."
+)
+MSG_ERROR_CONNECTION_PREFIX = "Error establishing Snowflake connection: "
+MSG_ERROR_EXECUTION_PREFIX = "Error executing Snowflake SQL query: "
+MSG_NO_VALID_SQL = "No valid SQL query provided."
 
 class SnowflakeSQLExecutorComponent(Component):
+    """
+    Execute SQL queries on Snowflake.
+    """
+
     display_name = "Snowflake SQL Executor"
     description = "Execute SQL queries on Snowflake."
     name = "SnowflakeExecutor"
@@ -70,14 +83,14 @@ class SnowflakeSQLExecutorComponent(Component):
 
     def execute_sql(self) -> Message:
         """
-        Connect to Snowflake using provided credentials,
-        execute the SQL query, and return the results as JSON.
+        Connect to Snowflake using provided credentials.
+
+        Execute the SQL query, and return the results as JSON.
         """
         try:
-            # Ensure we have a non-empty query string
             sql_query = self.query.strip() if self.query else ""
             if not sql_query:
-                raise ValueError("No valid SQL query provided.")
+                raise ValueError(MSG_NO_VALID_SQL)
 
             # Create a Snowflake connection
             conn = snowflake.connector.connect(
@@ -88,12 +101,10 @@ class SnowflakeSQLExecutorComponent(Component):
                 database=self.database,
                 schema=self.schema,
             )
-        except JSONDecodeError as e:
-            msg = "Invalid JSON input encountered (not typically expected here)."
-            raise ValueError(msg) from e
-        except Exception as e:
-            msg = f"Error establishing Snowflake connection: {e}"
-            raise ValueError(msg) from e
+        except JSONDecodeError as exc:
+            raise ValueError(MSG_INVALID_JSON_INPUT) from exc
+        except Exception as exc:
+            raise ValueError(MSG_ERROR_CONNECTION_PREFIX + str(exc)) from exc
 
         try:
             # Execute the query
@@ -104,20 +115,16 @@ class SnowflakeSQLExecutorComponent(Component):
             rows = cursor.fetchall()
             column_names = [desc[0] for desc in cursor.description]
 
-            # Convert rows to list of dicts
-            output_dict = [
-                dict(zip(column_names, row))
-                for row in rows
-            ]
+            # Convert rows to list of dicts (using strict=False for Python 3.10+)
+            output_dict = [dict(zip(column_names, row, strict=False)) for row in rows]
             output_json = json.dumps(output_dict, indent=4, default=str)
 
             # Close the cursor/connection
             cursor.close()
             conn.close()
 
-        except Exception as e:
-            msg = f"Error executing Snowflake SQL query: {e}"
-            raise ValueError(msg) from e
+        except Exception as exc:
+            raise ValueError(MSG_ERROR_EXECUTION_PREFIX + str(exc)) from exc
 
         # Store the result in the component's status (optional, for logging)
         self.status = output_json
