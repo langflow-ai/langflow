@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-6fb13",
+            "id": "AgentQL-ae8s3",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7MSQT",
+            "id": "Agent-fKPB7",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-6fb13{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-6fb13œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7MSQT{œfieldNameœ:œtoolsœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-ae8s3{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-ae8s3œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-fKPB7{œfieldNameœ:œtoolsœ,œidœ:œAgent-fKPB7œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-6fb13",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-6fb13œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-ae8s3",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-ae8s3œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-fKPB7",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-fKPB7œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-141bi",
+            "id": "TavilySearchComponent-EMBUM",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7MSQT",
+            "id": "Agent-fKPB7",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-141bi{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-141biœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7MSQT{œfieldNameœ:œtoolsœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-EMBUM{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-EMBUMœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-fKPB7{œfieldNameœ:œtoolsœ,œidœ:œAgent-fKPB7œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-141bi",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-141biœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-EMBUM",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-EMBUMœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-fKPB7",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-fKPB7œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-X0wLK",
+            "id": "ChatInput-pBnbh",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-7MSQT",
+            "id": "Agent-fKPB7",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-X0wLK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X0wLKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7MSQT{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-pBnbh{œdataTypeœ:œChatInputœ,œidœ:œChatInput-pBnbhœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-fKPB7{œfieldNameœ:œinput_valueœ,œidœ:œAgent-fKPB7œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-X0wLK",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X0wLKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-pBnbh",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-pBnbhœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-fKPB7",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-fKPB7œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-7MSQT",
+            "id": "Agent-fKPB7",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-QZLoV",
+            "id": "ChatOutput-LHE6J",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,18 +108,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-7MSQT{œdataTypeœ:œAgentœ,œidœ:œAgent-7MSQTœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-QZLoV{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-QZLoVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-fKPB7{œdataTypeœ:œAgentœ,œidœ:œAgent-fKPB7œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-LHE6J{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-LHE6Jœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-7MSQT",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-7MSQTœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-QZLoV",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-QZLoVœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-fKPB7",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-fKPB7œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-LHE6J",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-LHE6Jœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-X0wLK",
+          "id": "ChatInput-pBnbh",
           "node": {
             "base_classes": [
               "Message"
@@ -147,7 +147,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -416,7 +416,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-X0wLK",
+        "id": "ChatInput-pBnbh",
         "measured": {
           "height": 66,
           "width": 192
@@ -430,7 +430,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-QZLoV",
+          "id": "ChatOutput-LHE6J",
           "node": {
             "base_classes": [
               "Message"
@@ -458,7 +458,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -728,7 +728,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-QZLoV",
+        "id": "ChatOutput-LHE6J",
         "measured": {
           "height": 66,
           "width": 192
@@ -742,7 +742,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-141bi",
+          "id": "TavilySearchComponent-EMBUM",
           "node": {
             "base_classes": [
               "Data",
@@ -768,6 +768,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -800,7 +801,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -808,7 +809,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "TAVILY_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1074,9 +1075,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-141bi",
+        "id": "TavilySearchComponent-EMBUM",
         "measured": {
-          "height": 435,
+          "height": 437,
           "width": 320
         },
         "position": {
@@ -1088,13 +1089,12 @@
       },
       {
         "data": {
-          "id": "AgentQL-6fb13",
+          "id": "AgentQL-ae8s3",
           "node": {
             "base_classes": [
               "Data"
             ],
             "beta": false,
-            "category": "agentql",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Uses AgentQL API to extract structured data from a given URL.",
@@ -1110,9 +1110,8 @@
             ],
             "frozen": false,
             "icon": "AgentQL",
-            "key": "AgentQL",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1134,7 +1133,6 @@
               }
             ],
             "pinned": false,
-            "score": 7.517768383416648e-6,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -1154,7 +1152,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "AGENTQL_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1172,7 +1170,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"AgentQL Query Data\"\n    description = \"Uses AgentQL API to extract structured data from a given URL.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"AgentQL API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key. Get one at https://dev.agentql.com.\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The public URL of the webpage to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=True,\n            info=\"The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"params\": self.params,\n        }\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"AgentQL Query Data\"\n    description = \"Uses AgentQL API to extract structured data from a given URL.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"AgentQL API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key. Get one at https://dev.agentql.com.\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The public URL of the webpage to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=True,\n            info=\"The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"params\": self.params,\n        }\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
               },
               "params": {
                 "_input_type": "DictInput",
@@ -1274,37 +1272,43 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
                       "edit_mode": "popover",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     }
                   ]
                 },
@@ -1354,21 +1358,21 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-6fb13",
+        "id": "AgentQL-ae8s3",
         "measured": {
-          "height": 497,
+          "height": 499,
           "width": 320
         },
         "position": {
           "x": 329.8776020848543,
           "y": -114.65601128197832
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-7MSQT",
+          "id": "Agent-fKPB7",
           "node": {
             "base_classes": [
               "Message"
@@ -1411,7 +1415,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1525,7 +1529,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -2018,9 +2022,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-7MSQT",
+        "id": "Agent-fKPB7",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -2032,7 +2036,7 @@
       },
       {
         "data": {
-          "id": "note-atyJV",
+          "id": "note-cGRPR",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2044,7 +2048,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-atyJV",
+        "id": "note-cGRPR",
         "measured": {
           "height": 324,
           "width": 324
@@ -2058,7 +2062,7 @@
       },
       {
         "data": {
-          "id": "note-jHwfH",
+          "id": "note-7eHcL",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -2071,7 +2075,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-jHwfH",
+        "id": "note-7eHcL",
         "measured": {
           "height": 346,
           "width": 324
@@ -2085,7 +2089,7 @@
       },
       {
         "data": {
-          "id": "note-5TPRO",
+          "id": "note-Q5Lrp",
           "node": {
             "description": "# Price Deal Finder \n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
@@ -2096,7 +2100,7 @@
         },
         "dragging": false,
         "height": 674,
-        "id": "note-5TPRO",
+        "id": "note-Q5Lrp",
         "measured": {
           "height": 674,
           "width": 467
@@ -2112,7 +2116,7 @@
       },
       {
         "data": {
-          "id": "note-eqJwa",
+          "id": "note-ieePd",
           "node": {
             "description": "### 💡 Add your Tavily AI Search key here",
             "display_name": "",
@@ -2125,7 +2129,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-eqJwa",
+        "id": "note-ieePd",
         "measured": {
           "height": 324,
           "width": 344
@@ -2141,16 +2145,17 @@
       }
     ],
     "viewport": {
-      "x": 443.6808096885552,
-      "y": 80.83479654841267,
-      "zoom": 0.7762365447780835
+      "x": 392.45501135152057,
+      "y": 166.5158914613299,
+      "zoom": 0.6912276968901476
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
-  "id": "ab091b94-13c1-42af-9f9b-3689e99fb0bf",
+  "icon": "DollarSign",
+  "id": "4d8ac539-b784-4df9-8f9f-7029936579d8",
   "is_component": false,
-  "last_tested_version": "1.1.5",
+  "last_tested_version": "1.2.0",
   "name": "Price Deal Finder",
   "tags": [
     "web-scraping",
