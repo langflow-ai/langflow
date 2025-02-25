@@ -4,7 +4,7 @@ from copy import deepcopy
 import requests
 
 from langflow.custom import Component
-from langflow.inputs import BoolInput, DropdownInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.inputs import BoolInput, DropdownInput, IntInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
 
 
@@ -139,6 +139,9 @@ class TessAIExecuteAgentComponent(Component):
                     args["value"] = value
                 elif args["required"]:
                     args["value"] = args.get("default", args["options"][0])
+        elif field_type == "number":
+            input_class = IntInput
+            args["input_types"] = ["Message"]
         elif field_type == "multiselect":
             input_class = MultiselectInput
             args["options"] = question.get("description", "").split(",")
