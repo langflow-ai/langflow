@@ -1,4 +1,3 @@
-# Third-party imports
 import json
 from typing import Any
 
@@ -30,6 +29,10 @@ class GmailAPIComponent(LCToolComponent):
     name = "GmailAPI"
     icon = "Gmail"
     documentation: str = "https://docs.composio.dev"
+    _local_storage: dict = {
+        "GMAIL_SEND_EMAIL": ["recipient_email", "subject", "body"],
+        "GMAIL_FETCH_EMAILS": ["max_results"],
+    }
 
     inputs = [
         MessageTextInput(
@@ -37,7 +40,7 @@ class GmailAPIComponent(LCToolComponent):
             display_name="Entity ID",
             value="default",
             advanced=True,
-            tool_mode=True,  # Enable tool mode toggle
+            tool_mode=True,  # Using tool mode field here to use tool mode feat
         ),
         SecretStrInput(
             name="api_key",
@@ -74,7 +77,7 @@ class GmailAPIComponent(LCToolComponent):
             dynamic=True,
             show=False,
         ),
-        # Non-tool mode inputs - explicitly set show=True
+        # Non-tool mode inputs
         DropdownInput(
             name="action",
             display_name="Action",
@@ -90,31 +93,17 @@ class GmailAPIComponent(LCToolComponent):
             required=True,
             info="Email address of the recipient",
             show=False,
-            tool_mode=True,
         ),
         MessageTextInput(
-            name="subject",
-            display_name="Subject",
-            required=True,
-            info="Subject of the email",
-            show=False,
-            tool_mode=True,
+            name="subject", display_name="Subject", required=True, info="Subject of the email", show=False
         ),
-        MessageTextInput(
-            name="body",
-            display_name="Body",
-            required=True,
-            info="Content of the email",
-            show=False,
-            tool_mode=True,
-        ),
+        MessageTextInput(name="body", display_name="Body", required=True, info="Content of the email", show=False),
         IntInput(
             name="max_results",
             display_name="Max Results",
             required=True,
             info="Maximum number of emails to be returned",
             show=False,
-            tool_mode=True,
         ),
     ]
 
@@ -149,6 +138,20 @@ class GmailAPIComponent(LCToolComponent):
 
         return [item["enum"] for item in data["items"]]
 
+    def show_hide_fields(self, build_config: dict, field_value: Any):
+        all_fields = set()
+        for fields in self._local_storage.values():
+            all_fields.update(fields)
+
+        for field in all_fields:
+            build_config[field]["show"] = False
+            build_config[field]["value"] = ""
+
+        # Show only the fields for the selected action
+        if field_value in self._local_storage:
+            for field in self._local_storage[field_value]:
+                build_config[field]["show"] = True
+
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
         dynamic_fields = ["max_results", "body", "subject", "recipient_email"]
         # Always show auth status
@@ -166,6 +169,7 @@ class GmailAPIComponent(LCToolComponent):
                     build_config["actions"]["options"] = self.get_gmail_actions()
                     build_config["actions"]["value"] = [gmail_actions[0]]
 
+                # hide all action input fields
                 for field in dynamic_fields:
                     build_config[field]["show"] = False
 
@@ -173,29 +177,9 @@ class GmailAPIComponent(LCToolComponent):
                 build_config["action"]["show"] = True
                 build_config["actions"]["show"] = False
 
+        # updating fields show status based on selected action
         if field_name == "action":
-            if field_value == "GMAIL_SEND_EMAIL":
-                # show - email sending fields
-                build_config["recipient_email"]["show"] = True
-                build_config["subject"]["show"] = True
-                build_config["body"]["show"] = True
-
-                # Hide - fetch email fields
-                build_config["max_results"]["show"] = False
-                # clear value
-                build_config["max_results"]["value"] = ""
-            elif field_value == "GMAIL_FETCH_EMAILS":
-                # Hide - email sending fields
-                build_config["recipient_email"]["show"] = False
-                build_config["subject"]["show"] = False
-                build_config["body"]["show"] = False
-                # clear value
-                build_config["recipient_email"]["value"] = ""
-                build_config["subject"]["value"] = ""
-                build_config["body"]["value"] = ""
-
-                # Show - fetch email fields
-                build_config["max_results"]["show"] = True
+            self.show_hide_fields(build_config, field_value)
 
         # Handle authentication checks if API key is present
         if hasattr(self, "api_key") and self.api_key != "":
