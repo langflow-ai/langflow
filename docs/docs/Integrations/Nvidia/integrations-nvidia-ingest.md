@@ -13,12 +13,21 @@ The **NVIDIA Ingest** component imports the NVIDIA `Ingestor` client, ingests fi
 
 * An NVIDIA Ingest endpoint. For more information on setting up an NVIDIA Ingest endpoint, see the [NVIDIA Ingest quickstart](https://github.com/NVIDIA/nv-ingest?tab=readme-ov-file#quickstart).
 
-* The **NVIDIA Ingest** component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands:
-```bash
-source **YOUR_LANGFLOW_VENV**/bin/activate
-uv sync --extra nv-ingest
-uv run langflow run
-```
+* The **NVIDIA Ingest** component requires the installation of additional dependencies to your Langflow environment. To install the dependencies in a virtual environment, run the following commands.
+
+  * If you have the Langflow repository cloned and installed from source:
+  ```bash
+  source **YOUR_LANGFLOW_VENV**/bin/activate
+  uv sync --extra nv-ingest
+  uv run langflow run
+  ```
+  
+  * If you are installing Langflow from the Python Package Index:
+  ```bash
+  source **YOUR_LANGFLOW_VENV**/bin/activate
+  uv pip install 'langflow[nv-ingest]'
+  uv run langflow run
+  ```
 
 ## Use the NVIDIA Ingest component in a flow
 
