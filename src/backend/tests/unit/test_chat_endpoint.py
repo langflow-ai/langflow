@@ -193,3 +193,167 @@ async def test_build_flow_polling(client, json_memory_chatbot_no_llm, logged_in_
 
     # Use the same consume_and_assert_stream function to verify the events
     await consume_and_assert_stream(polling_response, job_id)
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_unexpected_error(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test handling of unexpected exceptions during flow build cancellation."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to raise an unexpected exception
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_cancel_flow_build_with_error(*_args, **_kwargs):
+        msg = "Unexpected error during cancellation"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build_with_error)
+
+    try:
+        # Try to cancel the build - should return 500 Internal Server Error
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.INTERNAL_SERVER_ERROR
+
+        # Verify the error message
+        response_data = cancel_response.json()
+        assert "detail" in response_data
+        assert "Unexpected error during cancellation" in response_data["detail"]
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_success(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test successful cancellation of a flow build."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to simulate a successful cancellation
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_successful_cancel_flow_build(*_args, **_kwargs):
+        return True  # Return True to indicate successful cancellation
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_successful_cancel_flow_build)
+
+    try:
+        # Try to cancel the build (should return success)
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.OK
+
+        # Verify the response structure indicates success
+        response_data = cancel_response.json()
+        assert "success" in response_data
+        assert "message" in response_data
+        assert response_data["success"] is True
+        assert "cancelled successfully" in response_data["message"].lower()
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_cancel_nonexistent_build(client, logged_in_headers):
+    """Test cancelling a non-existent flow build."""
+    # Generate a random job_id that doesn't exist
+    invalid_job_id = str(uuid.uuid4())
+
+    # Try to cancel a non-existent build
+    response = await client.post(f"api/v1/build/{invalid_job_id}/cancel", headers=logged_in_headers)
+    assert response.status_code == codes.NOT_FOUND
+    assert "No queue found for job_id" in response.json()["detail"]
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_failure(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test handling of cancellation failure."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to simulate a failure
+    # The import path in monkeypatch should match exactly how it's imported in the application
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_cancel_flow_build(*_args, **_kwargs):
+        return False  # Return False to indicate cancellation failure
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build)
+
+    try:
+        # Try to cancel the build (should return failure but success=False)
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.OK
+
+        # Verify the response structure indicates failure
+        response_data = cancel_response.json()
+        assert "success" in response_data
+        assert "message" in response_data
+        assert response_data["success"] is False
+        assert "Failed to cancel" in response_data["message"]
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
+
+
+@pytest.mark.benchmark
+async def test_cancel_build_with_cancelled_error(client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch):
+    """Test handling of CancelledError during cancellation (should be treated as failure)."""
+    # First create the flow
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start the build and get job_id
+    build_response = await build_flow(client, flow_id, logged_in_headers)
+    job_id = build_response["job_id"]
+    assert job_id is not None
+
+    # Mock the cancel_flow_build function to raise CancelledError
+    import asyncio
+
+    import langflow.api.v1.chat
+
+    original_cancel_flow_build = langflow.api.v1.chat.cancel_flow_build
+
+    async def mock_cancel_flow_build_with_cancelled_error(*_args, **_kwargs):
+        msg = "Task cancellation failed"
+        raise asyncio.CancelledError(msg)
+
+    monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", mock_cancel_flow_build_with_cancelled_error)
+
+    try:
+        # Try to cancel the build - should return failure when CancelledError is raised
+        # since our implementation treats CancelledError as a failed cancellation
+        cancel_response = await client.post(f"api/v1/build/{job_id}/cancel", headers=logged_in_headers)
+        assert cancel_response.status_code == codes.OK
+
+        # Verify the response structure indicates failure
+        response_data = cancel_response.json()
+        assert "success" in response_data
+        assert "message" in response_data
+        assert response_data["success"] is False
+        assert "failed to cancel" in response_data["message"].lower()
+    finally:
+        # Restore the original function to avoid affecting other tests
+        monkeypatch.setattr(langflow.api.v1.chat, "cancel_flow_build", original_cancel_flow_build)
