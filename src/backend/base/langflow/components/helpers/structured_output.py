@@ -66,7 +66,7 @@ class StructuredOutputComponent(Component):
             display_name="Output Schema",
             info="Define the structure and data types for the model's output.",
             required=True,
-            # TODO: remove deault value
+            # TODO: remove default value
             table_schema=[
                 {
                     "name": "name",
