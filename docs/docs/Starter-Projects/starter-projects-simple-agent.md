@@ -22,7 +22,7 @@ This opens a starter flow with the necessary components to run an agentic applic
 
 ## Simple Agent flow
 
-<img src="/img/starter-flow-simple-agent.png" alt="Starter flow simple agent" width="75%"/>
+![Simple agent starter flow](/img/starter-flow-simple-agent.png)
 
 The **Simple Agent** flow consists of these components:
 
