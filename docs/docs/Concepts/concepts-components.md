@@ -23,7 +23,7 @@ Use the component controls to do the following:
 
 - **Code** — Modify the component's Python code and save your changes.
 - **Controls** — Adjust all component parameters.
-- **Freeze Path** — After a component runs, lock its previous output state to prevent it from re-running.
+- **Freeze** — After a component runs, lock its previous output state to prevent it from re-running.
 
 Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
