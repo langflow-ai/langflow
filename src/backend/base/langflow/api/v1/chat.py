@@ -195,10 +195,10 @@ async def cancel_build(
             return CancelFlowResponse(success=True, message="Flow build cancelled successfully")
         # Cancellation was attempted but failed
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
-    except asyncio.CancelledError as exc:
-        # If we get here, the task cancellation failed in an unexpected way
-        logger.error(f"Build cancellation failed for job_id {job_id}: {exc}")
-        return CancelFlowResponse(success=False, message=f"Failed to cancel flow build: {exc}")
+    except asyncio.CancelledError:
+        # If CancelledError reaches here, it means the task was not successfully cancelled
+        logger.error(f"Failed to cancel flow build for job_id {job_id} (CancelledError caught)")
+        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
     except ValueError as exc:
         # Job not found
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
