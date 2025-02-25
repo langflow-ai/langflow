@@ -369,7 +369,7 @@ class ComposioAPIComponent(LCToolComponent):
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return ComposioToolSet(api_key=self.api_key)
+            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
             msg = "Please provide a valid Composio API Key in the component settings"
