@@ -20,12 +20,12 @@ class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
-        return S3BucketUploaderComponent
+        return S3BucketRetrieverComponent
 
     @pytest.fixture
     def retriever_component_class(self):
         """Return the component class to test."""
-        return S3BucketRetrieverComponent
+        return S3BucketUploaderComponent
 
     @pytest.fixture
     def file_names_mapping(self):
@@ -112,7 +112,7 @@ class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
                 "strip_path": True,
             }
         )
-        upload.upload_files()
+        upload.process_files()
 
         download = S3BucketRetrieverComponent()
         download.set_attributes(
