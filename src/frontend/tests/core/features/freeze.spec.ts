@@ -119,7 +119,7 @@ test(
     await urlOutput.hover();
     await page.mouse.down();
     const splitTextInputData = await page.getByTestId(
-      "handle-splittext-shownode-data inputs-left",
+      "handle-splittext-shownode-input documents-left",
     );
     await splitTextInputData.hover();
     await page.mouse.up();

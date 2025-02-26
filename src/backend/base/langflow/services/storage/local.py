@@ -88,7 +88,12 @@ class LocalStorageService(StorageService):
             msg = f"Flow {flow_id} directory does not exist."
             raise FileNotFoundError(msg)
 
-        files = [file.name async for file in folder_path.iterdir() if await file.is_file()]
+        files = [
+            file.name
+            async for file in await anyio.to_thread.run_sync(folder_path.iterdir)
+            if await anyio.Path(file).is_file()
+        ]
+
         logger.info(f"Listed {len(files)} files in flow {flow_id}.")
         return files
 

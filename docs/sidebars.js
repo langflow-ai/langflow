@@ -98,8 +98,25 @@ module.exports = {
     },
     {
       type: "category",
+      label: "API reference",
+      items: [
+        {
+          type: "link",
+          label: "API documentation",
+          href: "/api",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-reference-api-examples",
+          label: "API examples",
+        },
+      ],
+    },
+    {
+      type: "category",
       label: "Integrations",
       items: [
+        "Integrations/Apify/integrations-apify",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
@@ -122,6 +139,13 @@ module.exports = {
             "Integrations/Notion/notion-agent-meeting-notes",
           ],
         },
+        {
+          type: "category",
+          label: "NVIDIA",
+          items: [
+            "Integrations/Nvidia/integrations-nvidia-ingest",
+          ],
+        },
       ],
     },
     {
@@ -134,22 +158,6 @@ module.exports = {
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-telemetry",
-      ],
-    },
-    {
-      type: "category",
-      label: "API reference",
-      items: [
-        {
-          type: "link",
-          label: "API documentation",
-          href: "/api",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-reference-api-examples",
-          label: "API examples",
-        },
       ],
     },
     {

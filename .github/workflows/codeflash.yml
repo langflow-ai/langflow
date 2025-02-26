@@ -22,11 +22,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-          python-version: "3.12"
-      - run: uv sync --extra dev
+      - name: "Setup Environment"
+        uses: ./.github/actions/setup-uv
+      - run: uv sync
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
         continue-on-error: true
