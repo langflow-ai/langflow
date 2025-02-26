@@ -1,6 +1,7 @@
 import os
 import tempfile
 import uuid
+from pathlib import Path
 
 import boto3
 import pytest
@@ -37,12 +38,13 @@ class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def temp_files(self):
-        # Setup: Create three temporary files
+        """Setup: Create three temporary files."""
         temp_files = []
         contents = [
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
             b"Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            b"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            b"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea ",
+            b"commodo consequat.",
         ]
 
         for content in contents:
@@ -52,20 +54,20 @@ class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
                 temp_file.close()
                 temp_files.append(temp_file.name)
 
-        data = [Data(data={"file_path": file_path, "text": open(file_path).read()}) for file_path in temp_files]
+        data = [Data(data={"file_path": file_path, "text": Path(file_path).read_text()}) for file_path in temp_files]
 
         yield data
 
         # Teardown: Explicitly delete the files
         for temp_file in temp_files:
-            os.unlink(temp_file)
+            Path(temp_file).unlink()
 
     @pytest.fixture
     def s3_bucket(self) -> str:
-        # Generate a unique bucket name (AWS requires globally unique names)
+        """Generate a unique bucket name (AWS requires globally unique names)."""
         bucket_name = f"graphrag-test-bucket-{uuid.uuid4().hex[:8]}"
 
-        # Initialize S3 client using environment variables for credentials. Assumes key and secret are set via environment variables
+        # Initialize S3 client using environment variables for credentials
         s3 = boto3.client("s3")
 
         try:
@@ -84,8 +86,12 @@ class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
 
                 # Delete the bucket
                 s3.delete_bucket(Bucket=bucket_name)
-            except Exception as e:
-                print(f"Error during teardown: {e}")
+            except boto3.exceptions.S3UploadFailedError as e:
+                pytest.fail(f"S3 upload failed during teardown: {e}")
+            except boto3.exceptions.S3DeleteError as e:
+                pytest.fail(f"S3 delete failed during teardown: {e}")
+            except boto3.exceptions.Boto3Error as e:
+                pytest.fail(f"Boto3 error during teardown: {e}")
 
     def test_upload_download(self, temp_files, s3_bucket):
         """Test uploading files to an S3 bucket."""

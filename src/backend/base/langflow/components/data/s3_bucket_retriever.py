@@ -1,6 +1,6 @@
 import fnmatch
-import os
 import tempfile
+from pathlib import Path
 from typing import Any
 
 import boto3
@@ -33,10 +33,10 @@ class S3BucketRetrieverComponent(Component):
             Converts the input value to a Data object by downloading the object from the S3 bucket and parsing it.
     """
 
-    display_name = "S3 Bucket Retreiver"
+    display_name = "S3 Bucket Retriever"
     description = "Reads from S3 bucket."
     icon = "Globe"
-    name = "s3bucketretreiver"
+    name = "s3bucketretriever"
 
     inputs = [
         SecretStrInput(
@@ -90,6 +90,11 @@ class S3BucketRetrieverComponent(Component):
         )
 
     def retrieve_files(self) -> Data:
+        """Retrieve files from the S3 bucket based on the specified prefix and object name.
+
+        Returns:
+            Data: A list of Data objects representing the retrieved files.
+        """
         # List objects with the specified prefix
         response = self._s3_client().list_objects_v2(Bucket=self.bucket_name, Prefix=self.s3_prefix)
         if "Contents" not in response:
@@ -103,9 +108,8 @@ class S3BucketRetrieverComponent(Component):
         # Download each matching object
         data_list = []
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Download each matching object
             for key in matching_keys:
-                file_name = os.path.join(temp_dir, os.path.basename(key))
-                self._s3_client().download_file(self.bucket_name, key, file_name)
+                file_name = Path(temp_dir) / Path(key).name
+                self._s3_client().download_file(self.bucket_name, key, str(file_name))
                 data_list.append(parse_text_file_to_data(file_name, silent_errors=True))
         return data_list
