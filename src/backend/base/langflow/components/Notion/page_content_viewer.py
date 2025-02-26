@@ -9,7 +9,7 @@ from langflow.schema import Data, dotdict
 from langflow.schema.message import Message
 
 
-class NotionPageContentViewer(Component):
+class NotionPageContent(Component):
     """A component that retrieves and displays the content of a Notion page.
 
     The page selection is implemented as a dropdown populated with page names,
