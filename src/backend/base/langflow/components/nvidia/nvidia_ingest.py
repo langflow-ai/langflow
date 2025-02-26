@@ -231,5 +231,5 @@ class NvidiaIngestComponent(Component):
                     # image is not yet supported; skip if encountered
                     self.log(f"Unsupported document type: {document_type}", name="NVIDIAIngestComponent")
 
-        self.status = data if data else "No data"
+        self.status = data or "No data"
         return data

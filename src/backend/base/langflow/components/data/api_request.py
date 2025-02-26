@@ -321,7 +321,7 @@ class APIRequestComponent(Component):
                 elif field_name == "curl":
                     field_config["advanced"] = not use_curl
                     field_config["real_time_refresh"] = use_curl
-                elif field_name in ["body", "headers"]:
+                elif field_name in {"body", "headers"}:
                     field_config["advanced"] = True  # Always keep body and headers in advanced when use_curl is False
                 else:
                     field_config["advanced"] = use_curl
@@ -359,7 +359,7 @@ class APIRequestComponent(Component):
                 if field_name in common_fields:
                     field_config["advanced"] = False
                 elif field_name in body_fields:
-                    field_config["advanced"] = method not in ["POST", "PUT", "PATCH"]
+                    field_config["advanced"] = method not in {"POST", "PUT", "PATCH"}
                 elif field_name in always_advanced_fields:
                     field_config["advanced"] = True
                 else:

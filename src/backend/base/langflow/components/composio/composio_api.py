@@ -158,7 +158,7 @@ class ComposioAPIComponent(LCToolComponent):
 
             for item in data.get("items", []):
                 for auth_scheme in item.get("auth_schemes", []):
-                    if auth_scheme.get("mode") in ["OAUTH1", "OAUTH2"]:
+                    if auth_scheme.get("mode") in {"OAUTH1", "OAUTH2"}:
                         oauth_apps.append(item["key"].upper())
                         break
         except requests.RequestException as e:

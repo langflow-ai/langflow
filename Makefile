@@ -198,7 +198,7 @@ fix_codespell: ## run codespell to fix spelling errors
 	poetry run codespell --toml pyproject.toml --write
 
 format_backend: ## backend code formatters
-	@uv run ruff check . --fix --ignore EXE002 --ignore A005
+	@uv run ruff check . --fix
 	@uv run ruff format . --config pyproject.toml
 
 format_frontend: ## frontend code formatters

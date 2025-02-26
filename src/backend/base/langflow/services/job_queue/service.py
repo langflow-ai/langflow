@@ -203,7 +203,7 @@ class JobQueueService(Service):
             return
 
         logger.info(f"Commencing cleanup for job_id {job_id}")
-        main_queue, event_manager, task = self._queues[job_id]
+        main_queue, _event_manager, task = self._queues[job_id]
 
         # Cancel the associated task if it is still running.
         if task and not task.done():
