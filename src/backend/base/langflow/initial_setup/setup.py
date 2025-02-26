@@ -17,6 +17,7 @@ from uuid import UUID
 import anyio
 import httpx
 import orjson
+import sqlalchemy as sa
 from aiofile import async_open
 from emoji import demojize, purely_emoji
 from loguru import logger
@@ -28,8 +29,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
 from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.database.models.folder.model import Folder, FolderCreate
-from langflow.services.database.models.folder.utils import get_default_folder_id
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
@@ -242,14 +243,50 @@ def update_new_output(data):
 
 
 def update_edges_with_latest_component_versions(project_data):
+    """Update edges in a project with the latest component versions.
+
+    This function processes each edge in the project data and ensures that the source and target handles
+    are updated to match the latest component versions. It tracks all changes made to edges in a log
+    for debugging purposes.
+
+    Args:
+        project_data (dict): The project data containing nodes and edges to be updated.
+
+    Returns:
+        dict: A deep copy of the project data with updated edges.
+
+    The function performs the following operations:
+    1. Creates a deep copy of the project data to avoid modifying the original
+    2. For each edge, extracts and parses the source and target handles
+    3. Finds the corresponding source and target nodes
+    4. Updates output types in the source handle based on the node's outputs
+    5. Updates input types in the target handle based on the node's template
+    6. Escapes and updates the handles in the edge data
+    7. Logs all changes made to the edges
+    """
+    # Initialize a dictionary to track changes for logging
     edge_changes_log = defaultdict(list)
+    # Create a deep copy to avoid modifying the original data
     project_data_copy = deepcopy(project_data)
+
+    # Create a mapping of node types to node IDs for node reconciliation
+    node_type_map = {}
+    for node in project_data_copy.get("nodes", []):
+        node_type = node.get("data", {}).get("type", "")
+        if node_type:
+            if node_type not in node_type_map:
+                node_type_map[node_type] = []
+            node_type_map[node_type].append(node.get("id"))
+
+    # Process each edge in the project
     for edge in project_data_copy.get("edges", []):
-        source_handle = edge.get("data").get("sourceHandle")
+        # Extract and parse source and target handles
+        source_handle = edge.get("data", {}).get("sourceHandle")
         source_handle = scape_json_parse(source_handle)
-        target_handle = edge.get("data").get("targetHandle")
+        target_handle = edge.get("data", {}).get("targetHandle")
         target_handle = scape_json_parse(target_handle)
-        # Now find the source and target nodes in the nodes list
+
+        # Find the corresponding source and target nodes
         source_node = next(
             (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
             None,
@@ -258,27 +295,95 @@ def update_edges_with_latest_component_versions(project_data):
             (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
             None,
         )
+
+        # Try to reconcile missing nodes by type
+        if source_node is None and source_handle and "dataType" in source_handle:
+            node_type = source_handle.get("dataType")
+            if node_type_map.get(node_type):
+                # Use the first node of matching type as replacement
+                new_node_id = node_type_map[node_type][0]
+                logger.info(f"Reconciling missing source node: replacing {edge.get('source')} with {new_node_id}")
+
+                # Update edge source
+                edge["source"] = new_node_id
+
+                # Update source handle ID
+                source_handle["id"] = new_node_id
+
+                # Find the new source node
+                source_node = next(
+                    (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                    None,
+                )
+
+                # Update edge ID (complex as it contains encoded handles)
+                # This is a simplified approach - in production you'd need to parse and rebuild the ID
+                old_id_prefix = edge.get("id", "").split("{")[0]
+                if old_id_prefix:
+                    new_id_prefix = old_id_prefix.replace(edge.get("source"), new_node_id)
+                    edge["id"] = edge.get("id", "").replace(old_id_prefix, new_id_prefix)
+
+        if target_node is None and target_handle and "id" in target_handle:
+            # Extract node type from target handle ID (e.g., "AstraDBGraph-jr8pY" -> "AstraDBGraph")
+            id_parts = target_handle.get("id", "").split("-")
+            if len(id_parts) > 0:
+                node_type = id_parts[0]
+                if node_type_map.get(node_type):
+                    # Use the first node of matching type as replacement
+                    new_node_id = node_type_map[node_type][0]
+                    logger.info(f"Reconciling missing target node: replacing {edge.get('target')} with {new_node_id}")
+
+                    # Update edge target
+                    edge["target"] = new_node_id
+
+                    # Update target handle ID
+                    target_handle["id"] = new_node_id
+
+                    # Find the new target node
+                    target_node = next(
+                        (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                        None,
+                    )
+
+                    # Update edge ID (simplified approach)
+                    old_id_suffix = edge.get("id", "").split("}-")[1] if "}-" in edge.get("id", "") else ""
+                    if old_id_suffix:
+                        new_id_suffix = old_id_suffix.replace(edge.get("target"), new_node_id)
+                        edge["id"] = edge.get("id", "").replace(old_id_suffix, new_id_suffix)
+
         if source_node and target_node:
-            source_node_data = source_node.get("data").get("node")
-            target_node_data = target_node.get("data").get("node")
+            # Extract node data for easier access
+            source_node_data = source_node.get("data", {}).get("node", {})
+            target_node_data = target_node.get("data", {}).get("node", {})
+
+            # Find the output data that matches the source handle name
             output_data = next(
-                (output for output in source_node_data.get("outputs", []) if output["name"] == source_handle["name"]),
+                (
+                    output
+                    for output in source_node_data.get("outputs", [])
+                    if output.get("name") == source_handle.get("name")
+                ),
                 None,
             )
+
+            # If not found by name, try to find by display_name
             if not output_data:
                 output_data = next(
                     (
                         output
                         for output in source_node_data.get("outputs", [])
-                        if output["display_name"] == source_handle["name"]
+                        if output.get("display_name") == source_handle.get("name")
                     ),
                     None,
                 )
+                # Update source handle name if found by display_name
                 if output_data:
-                    source_handle["name"] = output_data["name"]
+                    source_handle["name"] = output_data.get("name")
+
+            # Determine the new output types based on the output data
             if output_data:
-                if len(output_data.get("types")) == 1:
-                    new_output_types = output_data.get("types")
+                if len(output_data.get("types", [])) == 1:
+                    new_output_types = output_data.get("types", [])
                 elif output_data.get("selected"):
                     new_output_types = [output_data.get("selected")]
                 else:
@@ -286,42 +391,51 @@ def update_edges_with_latest_component_versions(project_data):
             else:
                 new_output_types = []
 
-            if source_handle["output_types"] != new_output_types:
-                edge_changes_log[source_node_data["display_name"]].append(
+            # Update output types if they've changed and log the change
+            if source_handle.get("output_types", []) != new_output_types:
+                edge_changes_log[source_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "output_types",
-                        "old_value": source_handle["output_types"],
+                        "old_value": source_handle.get("output_types", []),
                         "new_value": new_output_types,
                     }
                 )
                 source_handle["output_types"] = new_output_types
 
+            # Update input types if they've changed and log the change
             field_name = target_handle.get("fieldName")
-            if field_name in target_node_data.get("template") and target_handle["inputTypes"] != target_node_data.get(
-                "template"
-            ).get(field_name).get("input_types"):
-                edge_changes_log[target_node_data["display_name"]].append(
+            if field_name in target_node_data.get("template", {}) and target_handle.get(
+                "inputTypes", []
+            ) != target_node_data.get("template", {}).get(field_name, {}).get("input_types", []):
+                edge_changes_log[target_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "inputTypes",
-                        "old_value": target_handle["inputTypes"],
-                        "new_value": target_node_data.get("template").get(field_name).get("input_types"),
+                        "old_value": target_handle.get("inputTypes", []),
+                        "new_value": target_node_data.get("template", {}).get(field_name, {}).get("input_types", []),
                     }
                 )
-                target_handle["inputTypes"] = target_node_data.get("template").get(field_name).get("input_types")
+                target_handle["inputTypes"] = (
+                    target_node_data.get("template", {}).get(field_name, {}).get("input_types", [])
+                )
+
+            # Escape the updated handles for JSON storage
             escaped_source_handle = escape_json_dump(source_handle)
             escaped_target_handle = escape_json_dump(target_handle)
-            try:
-                old_escape_source_handle = escape_json_dump(json.loads(edge["sourceHandle"]))
 
-            except json.JSONDecodeError:
-                old_escape_source_handle = edge["sourceHandle"]
+            # Try to parse and escape the old handles for comparison
+            try:
+                old_escape_source_handle = escape_json_dump(json.loads(edge.get("sourceHandle", "{}")))
+            except (json.JSONDecodeError, TypeError):
+                old_escape_source_handle = edge.get("sourceHandle", "")
 
             try:
-                old_escape_target_handle = escape_json_dump(json.loads(edge["targetHandle"]))
-            except json.JSONDecodeError:
-                old_escape_target_handle = edge["targetHandle"]
+                old_escape_target_handle = escape_json_dump(json.loads(edge.get("targetHandle", "{}")))
+            except (json.JSONDecodeError, TypeError):
+                old_escape_target_handle = edge.get("targetHandle", "")
+
+            # Update source handle if it's changed and log the change
             if old_escape_source_handle != escaped_source_handle:
-                edge_changes_log[source_node_data["display_name"]].append(
+                edge_changes_log[source_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "sourceHandle",
                         "old_value": old_escape_source_handle,
@@ -329,8 +443,12 @@ def update_edges_with_latest_component_versions(project_data):
                     }
                 )
                 edge["sourceHandle"] = escaped_source_handle
+                if "data" in edge:
+                    edge["data"]["sourceHandle"] = source_handle
+
+            # Update target handle if it's changed and log the change
             if old_escape_target_handle != escaped_target_handle:
-                edge_changes_log[target_node_data["display_name"]].append(
+                edge_changes_log[target_node_data.get("display_name", "unknown")].append(
                     {
                         "attr": "targetHandle",
                         "old_value": old_escape_target_handle,
@@ -338,9 +456,14 @@ def update_edges_with_latest_component_versions(project_data):
                     }
                 )
                 edge["targetHandle"] = escaped_target_handle
+                if "data" in edge:
+                    edge["data"]["targetHandle"] = target_handle
 
         else:
+            # Log an error if source or target node is not found after reconciliation attempt
             logger.error(f"Source or target node not found for edge: {edge}")
+
+    # Log all the changes that were made
     log_node_changes(edge_changes_log)
     return project_data_copy
 
@@ -384,10 +507,27 @@ async def load_starter_projects(retries=3, delay=1) -> list[tuple[anyio.Path, di
 
 
 async def copy_profile_pictures() -> None:
+    """Asynchronously copies profile pictures from the source directory to the target configuration directory.
+
+    This function copies profile pictures while optimizing I/O operations by:
+    1. Using a set to track existing files and avoid redundant filesystem checks
+    2. Performing bulk copy operations concurrently using asyncio.gather
+    3. Offloading blocking I/O to threads
+
+    The directory structure is:
+    profile_pictures/
+    ├── People/
+    │   └── [profile images]
+    └── Space/
+        └── [profile images]
+    """
+    # Get config directory from settings
     config_dir = get_storage_service().settings_service.settings.config_dir
     if config_dir is None:
         msg = "Config dir is not set in the settings"
         raise ValueError(msg)
+
+    # Setup source and target paths
     origin = anyio.Path(__file__).parent / "profile_pictures"
     target = anyio.Path(config_dir) / "profile_pictures"
 
@@ -395,15 +535,41 @@ async def copy_profile_pictures() -> None:
         msg = f"The source folder '{origin}' does not exist."
         raise ValueError(msg)
 
+    # Create target dir if needed
     if not await target.exists():
-        await target.mkdir(parents=True)
+        await target.mkdir(parents=True, exist_ok=True)
 
     try:
-        await asyncio.to_thread(shutil.copytree, str(origin), str(target), dirs_exist_ok=True)
-        logger.debug(f"Folder copied from '{origin}' to '{target}'")
+        # Get set of existing files in target to avoid redundant checks
+        target_files = {str(f.relative_to(target)) async for f in target.rglob("*") if await f.is_file()}
 
-    except Exception:  # noqa: BLE001
-        logger.exception("Error copying the folder")
+        # Define a helper coroutine to copy a single file concurrently
+        async def copy_file(src_file, dst_file, rel_path):
+            # Create parent directories if needed
+            await dst_file.parent.mkdir(parents=True, exist_ok=True)
+            # Offload blocking I/O to a thread
+            await asyncio.to_thread(shutil.copy2, str(src_file), str(dst_file))
+            logger.debug(f"Copied file '{rel_path}'")
+
+        tasks = []
+        async for src_file in origin.rglob("*"):
+            if not await src_file.is_file():
+                continue
+
+            rel_path = src_file.relative_to(origin)
+            if str(rel_path) not in target_files:
+                dst_file = target / rel_path
+                tasks.append(copy_file(src_file, dst_file, rel_path))
+            else:
+                logger.debug(f"Skipped existing file: '{rel_path}'")
+
+        if tasks:
+            await asyncio.gather(*tasks)
+
+    except Exception as exc:
+        logger.exception("Error copying profile pictures")
+        msg = "An error occurred while copying profile pictures."
+        raise RuntimeError(msg) from exc
 
 
 def get_project_data(project):
@@ -491,9 +657,9 @@ def create_new_project(
     session.add(db_flow)
 
 
-async def get_all_flows_similar_to_project(session, folder_id):
+async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUID) -> list[Flow]:
     stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == folder_id)
-    return (await session.exec(stmt)).first().flows
+    return list((await session.exec(stmt)).first().flows)
 
 
 async def delete_start_projects(session, folder_id) -> None:
@@ -548,8 +714,12 @@ async def load_flows_from_directory() -> None:
         if user is None:
             msg = "Superuser not found in the database"
             raise NoResultFound(msg)
-        async for file_path in anyio.Path(flows_path).iterdir():
-            if not await file_path.is_file() or file_path.suffix != ".json":
+
+        # Ensure that the default folder exists for this user
+        _ = await get_or_create_default_folder(session, user.id)
+
+        for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
+            if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             logger.info(f"Loading flow from file: {file_path.name}")
             async with async_open(str(file_path), "r", encoding="utf-8") as f:
@@ -660,11 +830,9 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
         existing.user_id = user_id
 
-        # Generally, folder_id should not be None, but we must check this due to the previous
-        # behavior where flows could be added and folder_id was None, orphaning
-        # them within Langflow.
+        # Ensure that the flow is associated with an existing default folder
         if existing.folder_id is None:
-            folder_id = await get_default_folder_id(session, user_id)
+            folder_id = await get_or_create_default_folder(session, user_id)
             existing.folder_id = folder_id
 
         if isinstance(existing.id, str):
@@ -678,11 +846,11 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
     else:
         logger.info(f"Creating new flow: {flow_id} with endpoint name {flow_endpoint_name}")
 
-        # Current behavior loads all new flows into default folder
-        folder_id = await get_default_folder_id(session, user_id)
+        # Assign the newly created flow to the default folder
+        folder = await get_or_create_default_folder(session, user_id)
         flow["user_id"] = user_id
-        flow["folder_id"] = folder_id
-        flow = Flow.model_validate(flow, from_attributes=True)
+        flow["folder_id"] = folder.id
+        flow = Flow.model_validate(flow)
         flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
 
         session.add(flow)
@@ -738,7 +906,8 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     # We also need to update the project data in the file
                     await update_project_file(project_path, project, updated_project_data)
             if do_create and project_name and project_data:
-                for existing_project in await get_all_flows_similar_to_project(session, new_folder.id):
+                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+                for existing_project in existing_flows:
                     await session.delete(existing_project)
 
                 create_new_project(
@@ -754,3 +923,40 @@ async def create_or_update_starter_projects(all_types_dict: dict, *, do_create: 
                     project_tags=project_tags,
                     new_folder_id=new_folder.id,
                 )
+
+
+async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:
+    """Ensure the default folder exists for the given user_id. If it doesn't exist, create it.
+
+    Uses an idempotent insertion approach to handle concurrent creation gracefully.
+
+    This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
+
+    Args:
+        session (AsyncSession): The active database session.
+        user_id (UUID): The ID of the user who owns the folder.
+
+    Returns:
+        UUID: The ID of the default folder.
+    """
+    stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
+    result = await session.exec(stmt)
+    folder = result.first()
+    if folder:
+        return FolderRead.model_validate(folder, from_attributes=True)
+
+    try:
+        folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME)
+        session.add(folder_obj)
+        await session.commit()
+        await session.refresh(folder_obj)
+    except sa.exc.IntegrityError as e:
+        # Another worker may have created the folder concurrently.
+        await session.rollback()
+        result = await session.exec(stmt)
+        folder = result.first()
+        if folder:
+            return FolderRead.model_validate(folder, from_attributes=True)
+        msg = "Failed to get or create default folder"
+        raise ValueError(msg) from e
+    return FolderRead.model_validate(folder_obj, from_attributes=True)

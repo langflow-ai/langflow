@@ -2,9 +2,9 @@ from langflow.custom import Component
 from langflow.io import (
     DataInput,
     IntInput,
+    MultilineInput,
     Output,
     SecretStrInput,
-    StrInput,
 )
 from langflow.schema import Data
 
@@ -25,11 +25,12 @@ class FirecrawlScrapeApi(Component):
             password=True,
             info="The API key to use Firecrawl API.",
         ),
-        StrInput(
+        MultilineInput(
             name="url",
             display_name="URL",
             required=True,
             info="The URL to scrape.",
+            tool_mode=True,
         ),
         IntInput(
             name="timeout",

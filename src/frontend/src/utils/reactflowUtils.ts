@@ -55,7 +55,9 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
-  let newEdges = cloneDeep(edges);
+  let newEdges: EdgeType[] = cloneDeep(
+    edges.map((edge) => ({ ...edge, selected: false, animated: false })),
+  );
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -133,7 +135,33 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         }
       }
     }
+
+    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
+  return newEdges;
+}
+
+export function filterHiddenFieldsEdges(
+  edge: EdgeType,
+  newEdges: EdgeType[],
+  targetNode: AllNodeType,
+) {
+  if (targetNode) {
+    const nodeInputType = edge.data?.targetHandle?.inputTypes;
+    const nodeTemplates = targetNode.data.node!.template;
+
+    Object.keys(nodeTemplates).forEach((key) => {
+      if (!nodeTemplates[key]?.input_types) return;
+      if (
+        nodeTemplates[key]?.input_types?.some((type) =>
+          nodeInputType?.includes(type),
+        ) &&
+        !nodeTemplates[key].show
+      ) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+      }
+    });
+  }
   return newEdges;
 }
 

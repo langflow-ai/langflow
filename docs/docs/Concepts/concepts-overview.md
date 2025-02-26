@@ -21,7 +21,7 @@ A flow can be as simple as the [basic prompting flow](/get-started-quickstart), 
 * Each component has a **Configuration** menu. Click the **Code** pane to see a component's underlying Python code.
 * Components are connected with **edges** to form flows.
 
-If you're familiar with [ReactFlow](https://reactflow.dev/learn), a **flow** is a node-based application, a **component** is a node, and the connections between components are **edges**.
+If you're familiar with [React Flow](https://reactflow.dev/learn), a **flow** is a node-based application, a **component** is a node, and the connections between components are **edges**.
 
 When a flow is run, Langflow builds a Directed Acyclic Graph (DAG) graph object from the nodes (components) and edges (connections between components), with the nodes sorted to determine the order of execution. The graph build calls the individual components' `def_build` functions to validate and prepare the nodes. This graph is then processed in dependency order. Each node is built and executed sequentially, with results from each built node being passed to nodes that are dependent on the previous node's results.
 
@@ -90,6 +90,21 @@ The **Logs** pane provides a detailed record of all component executions withi
 To access the **Logs** pane, click your **Flow Name**, and then select **Logs**.
 
 ![](/img/logs.png)
+
+Langflow stores logs at the location specified in the `LANGFLOW_CONFIG_DIR` environment variable.
+
+This directory's default location depends on your operating system.
+
+* **Linux/WSL**: `~/.cache/langflow/`
+* **macOS**: `/Users/<username>/Library/Caches/langflow/`
+* **Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`
+
+To modify the location of your log file:
+
+1. Add `LANGFLOW_LOG_FILE=path/to/logfile.log` in your `.env.` file.
+2. To start Langflow with the values from your `.env` file, start Langflow with `uv run langflow run --env-file .env`.
+
+An example `.env` file is available in the [project repository](https://github.com/langflow-ai/langflow/blob/main/.env.example).
 
 ## Projects and folders
 

@@ -64,7 +64,10 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
 
   const { onDragStart } = useDragStart(flowData);
 
-  const descriptionModal = useDescriptionModal([flowData?.id], "flow");
+  const descriptionModal = useDescriptionModal(
+    [flowData?.id],
+    flowData.is_component ? "component" : "flow",
+  );
 
   const swatchIndex =
     (flowData.gradient && !isNaN(parseInt(flowData.gradient))
@@ -164,6 +167,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           setOpen={setOpenDelete}
           onConfirm={handleDelete}
           description={descriptionModal}
+          note={
+            !flowData.is_component
+              ? "Deleting the selected flow will remove all associated messages."
+              : ""
+          }
         >
           <></>
         </DeleteConfirmationModal>
