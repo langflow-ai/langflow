@@ -765,3 +765,8 @@ export const isStringArray = (value: unknown): value is string[] => {
 };
 
 export const stringToBool = (str) => (str === "false" ? false : true);
+
+// Filter out null/undefined options
+export const filterNullOptions = (opts: any[]): any[] => {
+  return opts.filter((opt) => opt !== null && opt !== undefined);
+};
