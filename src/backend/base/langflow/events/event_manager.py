@@ -50,7 +50,7 @@ class EventManager:
     def register_event(
         self,
         name: str,
-        event_type: Literal["message", "error", "warning", "info", "token"],
+        event_type: str,
         callback: EventCallback | None = None,
     ) -> None:
         if not name:
