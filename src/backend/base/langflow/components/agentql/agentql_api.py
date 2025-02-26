@@ -14,8 +14,8 @@ from langflow.schema import Data
 
 
 class AgentQL(Component):
-    display_name = "AgentQL Query Data"
-    description = "Uses AgentQL API to extract structured data from a given URL."
+    display_name = "AgentQL Extract Web Data"
+    description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
     documentation: str = "https://docs.agentql.com/rest-api/api-reference"
     icon = "AgentQL"
     name = "AgentQL"
@@ -23,23 +23,23 @@ class AgentQL(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="AgentQL API Key",
+            display_name="API Key",
             required=True,
             password=True,
-            info="Your AgentQL API key. Get one at https://dev.agentql.com.",
+            info="Your AgentQL API key from dev.agentql.com",
         ),
         MessageTextInput(
             name="url",
             display_name="URL",
             required=True,
-            info="The public URL of the webpage to extract data from.",
+            info="The URL of the public web page you want to extract data from.",
             tool_mode=True,
         ),
         MultilineInput(
             name="query",
             display_name="AgentQL Query",
             required=True,
-            info="The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
+            info="The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
             tool_mode=True,
         ),
         IntInput(
@@ -73,6 +73,7 @@ class AgentQL(Component):
         headers = {
             "X-API-Key": self.api_key,
             "Content-Type": "application/json",
+            "X-TF-Request-Origin": "langflow",
         }
 
         payload = {
