@@ -17,7 +17,7 @@ This guide explains how to deploy Langflow on [HuggingFace Spaces](https://huggi
 
    ![Hugging Face deployment dialog](/img/hugging-face-deployment.png)
 
-3. Wait for the setup to complete. You'll be redirected to your new Space automatically.
+Wait for the setup to complete. You'll be redirected to your new Space automatically.
 
-4. Your Langflow instance is now ready to use.
+Your Langflow instance is now ready to use.
 
