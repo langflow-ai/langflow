@@ -1,6 +1,7 @@
 import os
 import tempfile
 import uuid
+from pathlib import Path
 
 import boto3
 import pytest
@@ -14,7 +15,23 @@ from tests.base import ComponentTestBaseWithoutClient
     not os.environ.get("AWS_ACCESS_KEY_ID") or not os.environ.get("AWS_SECRET_ACCESS_KEY"),
     reason="Environment variable AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY is not defined.",
 )
+
 class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
+    """
+    Unit tests for the S3BucketUploaderComponent.
+
+    This test class inherits from ComponentTestBaseWithoutClient and includes several pytest fixtures and a test method to verify the functionality of the S3BucketUploaderComponent.
+
+    Fixtures:
+        component_class: Returns the component class to be tested.
+        file_names_mapping: Returns an empty list since this component doesn't have version-specific files.
+        default_kwargs: Returns an empty dictionary since this component doesn't have any default arguments.
+        temp_files: Creates three temporary files with predefined content and yields them as Data objects. Cleans up the files after the test.
+        s3_bucket: Creates a unique S3 bucket for testing, yields the bucket name, and deletes the bucket and its contents after the test.
+
+    Test Methods:
+        test_upload: Tests the upload functionality of the S3BucketUploaderComponent by uploading temporary files to the S3 bucket and verifying their content.
+    """
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -31,7 +48,7 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
 
     @pytest.fixture
     def temp_files(self):
-        # Setup: Create three temporary files
+        """Setup: Create three temporary files."""
         temp_files = []
         contents = [
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
@@ -46,20 +63,23 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
                 temp_file.close()
                 temp_files.append(temp_file.name)
 
-        data = [Data(data={"file_path": file_path, "text": open(file_path).read()}) for file_path in temp_files]
+        data = [
+            Data(data={"file_path": file_path, "text": Path(file_path).read_text(encoding="utf-8")})
+            for file_path in temp_files
+        ]
 
         yield data
 
         # Teardown: Explicitly delete the files
         for temp_file in temp_files:
-            os.unlink(temp_file)
+            Path(temp_file).unlink()
 
     @pytest.fixture
     def s3_bucket(self) -> str:
-        # Generate a unique bucket name (AWS requires globally unique names)
+        """Generate a unique bucket name (AWS requires globally unique names)."""
         bucket_name = f"graphrag-test-bucket-{uuid.uuid4().hex[:8]}"
 
-        # Initialize S3 client using environment variables for credentials. Assumes key and secret are set via environment variables
+        # Initialize S3 client using environment variables for credentials
         s3 = boto3.client("s3")
 
         try:
@@ -78,8 +98,8 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
 
                 # Delete the bucket
                 s3.delete_bucket(Bucket=bucket_name)
-            except Exception as e:
-                print(f"Error during teardown: {e}")
+            except boto3.exceptions.Boto3Error as e:
+                pytest.fail(f"Error during teardown: {e}")
 
     def test_upload(self, temp_files, s3_bucket):
         """Test uploading files to an S3 bucket."""
@@ -106,7 +126,7 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
         s3 = boto3.client("s3")
 
         for temp_file in temp_files:
-            key = f"test/{os.path.basename(temp_file.file_path)}"
-            print(key)
+            key = f"test/{Path(temp_file.data['file_path']).name}"
             response = s3.get_object(Bucket=s3_bucket, Key=key)
-            assert response["Body"].read() == open(temp_file.file_path, "rb").read()
+            with Path(temp_file.data['file_path']).open("rb") as f:
+                assert response["Body"].read() == f.read()

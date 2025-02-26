@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from pathlib import Path
 
 import boto3
 
@@ -45,7 +46,8 @@ class S3BucketUploaderComponent(Component):
             Creates and returns an S3 client using the provided AWS access key ID and secret
             access key.
 
-        Please note that this component requires the boto3 library to be installed. It is designed to work with File and Director components as inputs
+        Please note that this component requires the boto3 library to be installed. It is designed to
+        work with File and Director components as inputs
     """
 
     display_name = "S3 Bucket Uploader"
@@ -79,7 +81,11 @@ class S3BucketUploaderComponent(Component):
             display_name="Strategy for file upload",
             options=["Store Data", "Store Original File"],
             value="By Data",
-            info="Choose the strategy to upload the file. By Data means that the source file is parsed and stored as LangFlow data. By File Name means that the source file is uploaded as is.",
+            info=(
+                "Choose the strategy to upload the file. By Data means that the source file "
+                "is parsed and stored as LangFlow data. By File Name means that the source "
+                "file is uploaded as is."
+            ),
         ),
         HandleInput(
             name="data_inputs",
@@ -110,6 +116,7 @@ class S3BucketUploaderComponent(Component):
 
     def process_files(self) -> None:
         """Process files based on the selected strategy.
+
         This method uses a strategy pattern to process files. The strategy is determined
         by the `self.strategy` attribute, which can be either "By Data" or "By File Name".
         Depending on the strategy, the corresponding method (`process_files_by_data` or
@@ -118,7 +125,6 @@ class S3BucketUploaderComponent(Component):
 
         Returns:
             None
-
         """
         strategy_methods = {
             "Store Data": self.process_files_by_data,
@@ -128,12 +134,14 @@ class S3BucketUploaderComponent(Component):
 
     def process_files_by_data(self) -> None:
         """Processes and uploads files to an S3 bucket based on the data inputs.
+
         This method iterates over the data inputs, logs the file path and text content,
         and uploads each file to the specified S3 bucket if both file path and text content
         are available.
 
         Args:
             None
+
         Returns:
             None
         """
@@ -148,6 +156,7 @@ class S3BucketUploaderComponent(Component):
 
     def process_files_by_name(self) -> None:
         """Processes and uploads files to an S3 bucket based on their names.
+
         Iterates through the list of data inputs, retrieves the file path from each data item,
         and uploads the file to the specified S3 bucket if the file path is available.
         Logs the file path being uploaded.
@@ -159,10 +168,13 @@ class S3BucketUploaderComponent(Component):
             file_path = data_item.data.get("file_path")
             self.log(f"Uploading file: {file_path}")
             if file_path:
-                self._s3_client().upload_file(file_path, Bucket=self.bucket_name, Key=self._normalize_path(file_path))
+                self._s3_client().upload_file(file_path,
+                                              Bucket=self.bucket_name, 
+                                              Key=self._normalize_path(file_path))
 
     def _s3_client(self) -> Any:
-        """Creates and returns an S3 client using the provided AWS access key ID and secret access key.
+        """Creates and returns an S3 client using the provided AWS access key ID and secret 
+        access key.
 
         Returns:
             Any: A boto3 S3 client instance.
@@ -190,10 +202,10 @@ class S3BucketUploaderComponent(Component):
 
         if strip_path:
             # Filename only
-            processed_path = os.path.basename(file_path)
+            processed_path = Path(file_path).name
 
         # Concatenate the s3_prefix if it exists
         if prefix:
-            processed_path = os.path.join(prefix, processed_path)
+            processed_path = str(Path(prefix) / processed_path)
 
         return processed_path
