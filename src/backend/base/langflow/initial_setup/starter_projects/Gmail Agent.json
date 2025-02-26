@@ -1817,5 +1817,8 @@
   "name": "Gmail Agent",
   "endpoint_name": null,
   "id": "0473161e-ca7e-413c-9113-e98a142313ed",
-  "is_component": false
+  "is_component": false,
+  "tags": [
+    "agents"
+  ]
 }
