@@ -5,7 +5,14 @@ from pydantic import BaseModel, Field, create_model
 from langflow.base.models.chat_result import get_chat_result
 from langflow.custom import Component
 from langflow.helpers.base_model import build_model_from_schema
-from langflow.io import BoolInput, HandleInput, MessageTextInput, MultilineInput, Output, TableInput
+from langflow.io import (
+    BoolInput,
+    HandleInput,
+    MessageTextInput,
+    MultilineInput,
+    Output,
+    TableInput,
+)
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.table import EditMode
@@ -92,7 +99,8 @@ class StructuredOutputComponent(Component):
                     "description": (
                         "Indicate the data type of the output field (e.g., str, int, float, bool, list, dict)."
                     ),
-                    "default": "text",
+                    "options": ["str", "int", "float", "bool", "list", "dict"],
+                    "default": "str",
                 },
                 {
                     "name": "multiple",
@@ -103,7 +111,14 @@ class StructuredOutputComponent(Component):
                     "edit_mode": EditMode.INLINE,
                 },
             ],
-            value=[{"name": "field", "description": "description of field", "type": "text", "multiple": "False"}],
+            value=[
+                {
+                    "name": "field",
+                    "description": "description of field",
+                    "type": "str",
+                    "multiple": "False",
+                }
+            ],
         ),
         BoolInput(
             name="multiple",
@@ -115,8 +130,16 @@ class StructuredOutputComponent(Component):
     ]
 
     outputs = [
-        Output(name="structured_output", display_name="Structured Output", method="build_structured_output"),
-        Output(name="structured_output_dataframe", display_name="DataFrame", method="as_dataframe"),
+        Output(
+            name="structured_output",
+            display_name="Structured Output",
+            method="build_structured_output",
+        ),
+        Output(
+            name="structured_output_dataframe",
+            display_name="DataFrame",
+            method="as_dataframe",
+        ),
     ]
 
     def build_structured_output_base(self) -> Data:
