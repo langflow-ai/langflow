@@ -5,7 +5,7 @@ import requests
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, SecretStrInput
+from langflow.inputs import BoolInput, DropdownInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import DataFrame, dotdict
 
@@ -17,6 +17,9 @@ class NotionDatabaseProperties(Component):
     description: str = "Retrieve properties of a Notion database as a structured table."
     documentation: str = "https://docs.langflow.org/integrations/notion/list-database-properties"
     icon: str = "NotionDirectoryLoader"
+
+    # Class variable to store current database options
+    _cached_databases: list[dict[str, Any]] = []
 
     inputs = [
         SecretStrInput(
@@ -35,6 +38,15 @@ class NotionDatabaseProperties(Component):
             real_time_refresh=True,
             required=True,
         ),
+        BoolInput(
+            name="list_properties",
+            display_name="List Database Properties",
+            info="Set to True to list the properties of the first available database.",
+            required=False,
+            value=True,
+            tool_mode=True,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -43,6 +55,10 @@ class NotionDatabaseProperties(Component):
 
     def fetch_databases(self) -> list[dict[str, Any]]:
         """Fetch available databases from Notion API."""
+        if not self.notion_secret:
+            self.log("No Notion secret provided.")
+            return []
+
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Content-Type": "application/json",
@@ -50,6 +66,7 @@ class NotionDatabaseProperties(Component):
         }
 
         try:
+            self.log("Fetching databases from Notion API...")
             response = requests.post(
                 "https://api.notion.com/v1/search",
                 headers=headers,
@@ -57,10 +74,18 @@ class NotionDatabaseProperties(Component):
                 timeout=10,
             )
             response.raise_for_status()
-            return response.json().get("results", [])
+            results = response.json().get("results", [])
+
+            # Cache the databases
+            self.__class__._cached_databases = results
+
+            self.log(f"Found {len(results)} databases.")
+            return results
         except requests.exceptions.RequestException as e:
             self.log(f"Error fetching databases: {e!s}")
             return []
+        else:
+            return results
 
     def update_build_config(self, build_config: dotdict, _: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on field updates."""
@@ -99,16 +124,38 @@ class NotionDatabaseProperties(Component):
 
     def get_properties_as_dataframe(self) -> DataFrame:
         """Retrieve properties of a Notion database as a DataFrame."""
-        if not self.database_id or self.database_id == "Loading databases...":
-            # Return an empty DataFrame with an error message
-            error_df = pd.DataFrame([{"error": "Please select a valid database."}])
-            return DataFrame(error_df)
+        # Check if we're in tool mode using list_properties
+        if hasattr(self, "list_properties") and self.list_properties:
+            self.log("Tool mode activated with list_properties=True")
 
-        try:
+            # Use the cached databases or fetch them if needed
+            if not self.__class__._cached_databases:
+                self.fetch_databases()
+
+            # If we have databases, use the first one
+            if self.__class__._cached_databases:
+                first_db = self.__class__._cached_databases[0]
+                db_id = first_db["id"]
+                db_name = first_db.get("title", [{}])[0].get("text", {}).get("content", "Untitled")
+                self.log(f"Using first available database: {db_name} ({db_id})")
+                database_id = db_id
+            else:
+                error_df = pd.DataFrame([{"error": "No databases available."}])
+                return DataFrame(error_df)
+        else:
+            # Normal mode, use the selected database from dropdown
+            if not self.database_id or self.database_id == "Loading databases...":
+                # Return an empty DataFrame with an error message
+                error_df = pd.DataFrame([{"error": "Please select a valid database."}])
+                return DataFrame(error_df)
+
             # Extract the pure ID if it's in the format "Name (ID)"
             database_id = self.database_id
             if "(" in database_id and database_id.endswith(")"):
                 database_id = database_id.split("(")[-1].rstrip(")")
+
+        try:
+            self.log(f"Getting properties for database ID: {database_id}")
 
             headers = {
                 "Authorization": f"Bearer {self.notion_secret}",
