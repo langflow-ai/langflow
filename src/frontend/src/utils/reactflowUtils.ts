@@ -55,7 +55,9 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
-  let newEdges = cloneDeep(edges);
+  let newEdges: EdgeType[] = cloneDeep(
+    edges.map((edge) => ({ ...edge, selected: false, animated: false })),
+  );
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
