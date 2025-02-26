@@ -13,7 +13,7 @@ Two charts are available at the [Langflow Helm Charts repository](https://github
 - Deploy the [Langflow IDE](deployment-kubernetes#langflow-ide-deployment) for the complete Langflow development environment.
 - Deploy the [Langflow runtime](/deployment-kubernetes#langflow-runtime-deployment) to deploy a standalone Langflow application in a more secure and stable environment.
 
-## Langflow IDE deployment
+## Deploy the Langflow IDE
 
 The Langflow IDE deployment is a complete environment for developers to create, test, and debug their flows. It includes both the API and the UI.
 
@@ -21,7 +21,7 @@ The `langflow-ide` Helm chart is available in the [Langflow Helm Charts reposito
 
 ### Prerequisites
 
-- [Kubernetes](https://kubernetes.io/docs/setup/) cluster
+- A [Kubernetes](https://kubernetes.io/docs/setup/) cluster
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 - [Helm](https://helm.sh/docs/intro/install/)
 
@@ -178,7 +178,7 @@ langflow:
       #   memory: 512Mi
 ```
 
-## Langflow runtime deployment
+## Deploy the Langflow runtime
 
 The runtime chart is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation, and security to ensure that applications run reliably and efficiently.
 
@@ -186,7 +186,7 @@ The `langflow-runtime` Helm chart is available in the [Langflow Helm Charts repo
 
 ### Prerequisites
 
-- [Kubernetes](https://kubernetes.io/docs/setup/) server
+- A [Kubernetes](https://kubernetes.io/docs/setup/) server
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 - [Helm](https://helm.sh/docs/intro/install/)
 
@@ -325,7 +325,7 @@ helm upgrade my-langflow-app-image langflow/langflow-runtime -n langflow \
 </TabItem>
 </Tabs>
 
-### Configure log level
+### Configure the log level
 
 Set the log level and other Langflow configurations in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file.
 
