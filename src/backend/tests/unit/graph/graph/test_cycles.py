@@ -144,7 +144,7 @@ def test_that_outputs_cache_is_set_to_false_in_cycle():
         assert output.cache is True
 
 
-@pytest.mark.skip(reason="Cycles should have a `allows_loop` Output to work.")
+@pytest.mark.skip(reason="Cycles now require a LoopComponent to work")
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")
 def test_updated_graph_with_prompts():
     # Chat input initialization
@@ -210,10 +210,10 @@ def test_updated_graph_with_prompts():
     assert len(snapshots) > 2, "Graph should have more than one snapshot"
     # Extract the vertex IDs for analysis
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
-    assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
+    assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}. Snapshots: {snapshots}"
 
 
-@pytest.mark.skip(reason="Cycles should have a `allows_loop` Output to work.")
+@pytest.mark.skip(reason="Cycles now require a LoopComponent to work")
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")
 def test_updated_graph_with_max_iterations():
     # Chat input initialization
@@ -279,7 +279,7 @@ def test_updated_graph_with_max_iterations():
     assert len(snapshots) > 2, "Graph should have more than one snapshot"
     # Extract the vertex IDs for analysis
     results_ids = [result.vertex.id for result in results if hasattr(result, "vertex")]
-    assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}"
+    assert "chat_output_1" in results_ids, f"Expected outputs not in results: {results_ids}. Snapshots: {snapshots}"
 
 
 def test_conditional_router_max_iterations():
