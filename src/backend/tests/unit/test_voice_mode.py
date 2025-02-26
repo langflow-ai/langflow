@@ -1,15 +1,17 @@
-import pytest
 import numpy as np
+import pytest
 import webrtcvad
-
-from langflow.utils.voice_utils import SAMPLE_RATE_24K, BYTES_PER_24K_FRAME, resample_24k_to_16k, BYTES_PER_16K_FRAME, \
-    VAD_SAMPLE_RATE_16K
+from langflow.utils.voice_utils import (
+    BYTES_PER_16K_FRAME,
+    BYTES_PER_24K_FRAME,
+    SAMPLE_RATE_24K,
+    VAD_SAMPLE_RATE_16K,
+    resample_24k_to_16k,
+)
 
 
 def test_resample_24k_to_16k_valid_frame():
-    """
-    Test that valid 960-byte frames (20ms @ 24kHz) resample to 640 bytes (20ms @ 16kHz).
-    """
+    """Test that valid 960-byte frames (20ms @ 24kHz) resample to 640 bytes (20ms @ 16kHz)."""
     # Generate a fake 20ms @ 24kHz frame (960 bytes)
     duration_samples_24k = int(0.02 * SAMPLE_RATE_24K)  # 480 samples
     fake_frame_24k = (np.random.rand(duration_samples_24k) * 32767).astype(np.int16)
@@ -25,18 +27,15 @@ def test_resample_24k_to_16k_valid_frame():
 
 
 def test_resample_24k_to_16k_invalid_frame():
-    """
-    Test that passing an invalid size frame raises a ValueError.
-    """
+    """Test that passing an invalid size frame raises a ValueError."""
     invalid_frame = b"\x00\x01" * 100  # only 200 bytes, not 960
     with pytest.raises(ValueError) as exc_info:
         _ = resample_24k_to_16k(invalid_frame)
     assert "Expected exactly" in str(exc_info.value)
 
+
 def test_webrtcvad_silence_detection():
-    """
-    Make sure that passing all-zero frames leads to is_speech == False.
-    """
+    """Make sure that passing all-zero frames leads to is_speech == False."""
     vad = webrtcvad.Vad(mode=0)
 
     # Generate 1 second of silence @16k, chunk it in 20ms frames
@@ -59,8 +58,7 @@ def test_webrtcvad_silence_detection():
 
 
 def test_webrtcvad_with_real_data():
-    """
-    End-to-end test:
+    """End-to-end test:
     - Load or generate 24kHz audio
     - Break into 20ms frames
     - Resample to 16k
@@ -84,13 +82,11 @@ def test_webrtcvad_with_real_data():
         frame_24k = raw_data_24k[i * frame_size_24k : (i + 1) * frame_size_24k]
         frame_16k = resample_24k_to_16k(frame_24k)
 
-
         resampled_all.extend(frame_16k)  # Append to our buffer
 
         is_speech = vad.is_speech(frame_16k, VAD_SAMPLE_RATE_16K)
         if is_speech:
             speech_count += 1
-
 
     with open("../data/debug_resampled_16k.raw", "wb") as f:
         f.write(resampled_all)

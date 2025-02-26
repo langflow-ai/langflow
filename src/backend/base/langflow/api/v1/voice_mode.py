@@ -7,7 +7,6 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import webrtcvad
-
 import websockets
 from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, BackgroundTasks
@@ -154,7 +153,7 @@ async def websocket_endpoint(
         )
     except (InvalidToken, ValueError):
         openai_key = os.getenv("OPENAI_API_KEY")
-        if not openai_key or openai_key == 'dummy':
+        if not openai_key or openai_key == "dummy":
             await client_websocket.send_json(
                 {
                     "type": "error",
@@ -235,11 +234,11 @@ async def websocket_endpoint(
             nonlocal vad_audio_buffer
             last_speech_time = datetime.now()
             last_queue_check = datetime.now()
-            
+
             while True:
                 base64_data = await vad_queue.get()
                 raw_chunk_24k = base64.b64decode(base64_data)
-                
+
                 # Process audio for VAD
                 vad_audio_buffer.extend(raw_chunk_24k)
                 has_speech = False
@@ -251,7 +250,7 @@ async def websocket_endpoint(
                     try:
                         frame_16k = resample_24k_to_16k(frame_24k)
                         is_speech = vad.is_speech(frame_16k, VAD_SAMPLE_RATE_16K)
-                        
+
                         if is_speech:
                             has_speech = True
                             logger.trace("!", end="")
@@ -260,7 +259,7 @@ async def websocket_endpoint(
                                 await openai_ws.send(json.dumps({"type": "response.cancel"}))
                                 print("bot speaking false")
                                 bot_speaking_flag[0] = False
-                                
+
                     except Exception as e:
                         logger.error(f"[ERROR] VAD processing failed: {e}")
                         continue
@@ -274,10 +273,7 @@ async def websocket_endpoint(
                         logger.trace("_", end="")
 
         # Shared state for event tracking
-        shared_state = {
-            "last_event_type": None,
-            "event_count": 0
-        }
+        shared_state = {"last_event_type": None, "event_count": 0}
 
         def log_event(event_type: str, direction: str) -> None:
             """Helper to log events consistently"""
@@ -286,11 +282,11 @@ async def websocket_endpoint(
                 print(f"\n  {timestamp} --  {direction} {event_type} ", end="", flush=True)
                 shared_state["last_event_type"] = event_type
                 shared_state["event_count"] = 0
-            
+
             shared_state["event_count"] += 1
-            #if shared_state["event_count"] % 10 == 0:
+            # if shared_state["event_count"] % 10 == 0:
             #    print(f"[{shared_state['event_count']}]", end="", flush=True)
-            #else:
+            # else:
             #    print(".", end="", flush=True)
 
         async def forward_to_openai() -> None:
