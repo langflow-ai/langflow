@@ -71,7 +71,7 @@ Volumes:
 
 * `langflow-postgres`: This volume is mapped to `/var/lib/postgresql/data` in the container.
 
-### Deploy a specific Langflow version
+### Deploy a specific Langflow version with Docker Compose
 
 If you want to deploy a specific version of Langflow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version `1.0-alpha`, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
 
