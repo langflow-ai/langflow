@@ -5,6 +5,8 @@ import SliderComponent from "@/components/core/parameterRenderComponent/componen
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import AuthenticateComponent from "./components/authenticateComponent";
+import ButtonComponent from "./components/buttonComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -96,16 +98,28 @@ export function ParameterRenderComponent({
           );
         }
       }
-      return (
-        <StrRenderComponent
+      return false ? (
+        <AuthenticateComponent
           {...baseInputProps}
-          templateData={templateData}
+          id={`inputlist_${id}`}
           name={name}
-          display_name={templateData.display_name ?? ""}
-          editNode={editNode}
         />
+      ) : (
+        <ButtonComponent
+          {...baseInputProps}
+          id={`inputlist_${id}`}
+          name={name}
+        />
+        // <StrRenderComponent
+        //   {...baseInputProps}
+        //   templateData={templateData}
+        //   name={name}
+        //   display_name={templateData.display_name ?? ""}
+        //   editNode={editNode}
+        // />
       );
     }
+
     switch (templateData.type) {
       case "NestedDict":
         return (
@@ -202,6 +216,14 @@ export function ParameterRenderComponent({
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
             id={`slider_${id}`}
+          />
+        );
+      case "authenticate":
+        return (
+          <AuthenticateComponent
+            {...baseInputProps}
+            id={`authenticate_${id}`}
+            name={name}
           />
         );
       default:

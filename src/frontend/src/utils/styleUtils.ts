@@ -255,6 +255,7 @@ import { CloudflareIcon } from "../icons/Cloudflare";
 import { CohereIcon } from "../icons/Cohere";
 import { ComposioIcon } from "../icons/Composio";
 import { ConfluenceIcon } from "../icons/Confluence";
+import { ContactRoundKey } from "../icons/ContactRoundKey";
 import { CouchbaseIcon } from "../icons/Couchbase";
 import { CrewAiIcon } from "../icons/CrewAI";
 import { DeepSeekIcon } from "../icons/DeepSeek";
@@ -974,4 +975,5 @@ export const nodeIconsLucide: iconsType = {
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
   DollarSign,
   BookOpenText,
+  ContactRoundKey,
 };
