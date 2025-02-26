@@ -1,4 +1,3 @@
-import os
 from typing import Any
 from pathlib import Path
 
@@ -13,7 +12,6 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
-
 
 class S3BucketUploaderComponent(Component):
     """S3BucketUploaderComponent is a component responsible for uploading files to an S3 bucket.
@@ -46,8 +44,8 @@ class S3BucketUploaderComponent(Component):
             Creates and returns an S3 client using the provided AWS access key ID and secret
             access key.
 
-        Please note that this component requires the boto3 library to be installed. It is designed to
-        work with File and Director components as inputs
+        Please note that this component requires the boto3 library to be installed. It is designed
+        to work with File and Director components as inputs
     """
 
     display_name = "S3 Bucket Uploader"
