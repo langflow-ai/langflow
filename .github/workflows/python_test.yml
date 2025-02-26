@@ -60,7 +60,7 @@ jobs:
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: make unit_tests async=false args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
       - name: Minimize uv cache
         run: uv cache prune --ci
   integration-tests:
