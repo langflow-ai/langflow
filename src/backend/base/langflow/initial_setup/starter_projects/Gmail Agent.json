@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-JDz15",
+            "id": "ChatInput-3YnjI",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-jnpdC",
+            "id": "Agent-PH3eS",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-JDz15{œdataTypeœ:œChatInputœ,œidœ:œChatInput-JDz15œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-jnpdC{œfieldNameœ:œinput_valueœ,œidœ:œAgent-jnpdCœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-3YnjI{œdataTypeœ:œChatInputœ,œidœ:œChatInput-3YnjIœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-PH3eS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-PH3eSœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-JDz15",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-JDz15œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-jnpdC",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-jnpdCœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-3YnjI",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-3YnjIœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-PH3eS",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-PH3eSœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-jnpdC",
+            "id": "Agent-PH3eS",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,7 +43,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-lgshI",
+            "id": "ChatOutput-iLQcv",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -52,19 +52,19 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-jnpdC{œdataTypeœ:œAgentœ,œidœ:œAgent-jnpdCœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-lgshI{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-lgshIœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-PH3eS{œdataTypeœ:œAgentœ,œidœ:œAgent-PH3eSœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iLQcv{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iLQcvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-jnpdC",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-jnpdCœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-lgshI",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-lgshIœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-PH3eS",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-PH3eSœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-iLQcv",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iLQcvœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ComposioAPI",
-            "id": "ComposioAPI-ajGtz",
+            "id": "ComposioAPI-adjCJ",
             "name": "tools",
             "output_types": [
               "Tool"
@@ -72,24 +72,24 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-jnpdC",
+            "id": "Agent-PH3eS",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__ComposioAPI-ajGtz{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-ajGtzœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-jnpdC{œfieldNameœ:œtoolsœ,œidœ:œAgent-jnpdCœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ComposioAPI-ajGtz",
-        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-ajGtzœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-jnpdC",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-jnpdCœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ComposioAPI-adjCJ{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-adjCJœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-PH3eS{œfieldNameœ:œtoolsœ,œidœ:œAgent-PH3eSœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "ComposioAPI-adjCJ",
+        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-adjCJœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-PH3eS",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-PH3eSœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Agent-jnpdC",
+          "id": "Agent-PH3eS",
           "node": {
             "base_classes": [
               "Message"
@@ -240,7 +240,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -741,7 +741,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-jnpdC",
+        "id": "Agent-PH3eS",
         "measured": {
           "height": 624,
           "width": 320
@@ -755,7 +755,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-JDz15",
+          "id": "ChatInput-3YnjI",
           "node": {
             "base_classes": [
               "Message"
@@ -1052,7 +1052,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-JDz15",
+        "id": "ChatInput-3YnjI",
         "measured": {
           "height": 66,
           "width": 192
@@ -1066,7 +1066,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-lgshI",
+          "id": "ChatOutput-iLQcv",
           "node": {
             "base_classes": [
               "Message"
@@ -1197,7 +1197,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return (\n                    data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n                    .applymap(lambda x: (str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x))\n                    .to_markdown(index=False)\n                )\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -1364,7 +1364,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-lgshI",
+        "id": "ChatOutput-iLQcv",
         "measured": {
           "height": 66,
           "width": 192
@@ -1378,7 +1378,7 @@
       },
       {
         "data": {
-          "id": "note-t5lD7",
+          "id": "note-5GU6o",
           "node": {
             "description": "# Gmail Agent\nUsing this flow you can send emails, create drafts, fetch emails and more\n\n## Instructions\n\n1. Get Composio API Key\n   - Visit https://app.composio.dev\n   - Enter the key in the \"Composio API Key\" field\n\n2. Authenticate Gmail Account\n   - Select Gmail App from the dropdown menu in the App Names field\n   - Click the refresh button next to the App Name\n   - Follow the Gmail authentication link\n   - After authenticating, click refresh again\n   - Verify that authentication status shows as successful\n\n3. Select Actions\n   - Default actions (pre-selected):\n     - GMAIL_SEND_EMAIL: Send emails directly\n     - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails\n   - Select additional actions based on your needs\n\n4. Configure OpenAI\n   - Enter your OpenAI API key in the Agent OpenAI API key field\n\n5. Run Agent\n   Example prompts:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
             "display_name": "",
@@ -1389,7 +1389,7 @@
         },
         "dragging": false,
         "height": 842,
-        "id": "note-t5lD7",
+        "id": "note-5GU6o",
         "measured": {
           "height": 842,
           "width": 395
@@ -1405,13 +1405,14 @@
       },
       {
         "data": {
-          "id": "ComposioAPI-ajGtz",
+          "description": "Use Composio toolset to run actions with your agent",
+          "display_name": "Composio Tools",
+          "id": "ComposioAPI-adjCJ",
           "node": {
             "base_classes": [
               "Tool"
             ],
             "beta": false,
-            "category": "composio",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Use Composio toolset to run actions with your agent",
@@ -1430,7 +1431,6 @@
             ],
             "frozen": false,
             "icon": "Composio",
-            "key": "ComposioAPI",
             "legacy": false,
             "metadata": {},
             "minimized": false,
@@ -1453,7 +1453,6 @@
               }
             ],
             "pinned": false,
-            "score": 0.020497501093998755,
             "template": {
               "_type": "Component",
               "action_names": {
@@ -1465,6 +1464,7 @@
                 "info": "The actions to pass to agent to execute",
                 "list": true,
                 "list_add_label": "Add More",
+                "load_from_db": false,
                 "name": "action_names",
                 "options": [
                   "GMAIL_GET_PEOPLE",
@@ -1476,13 +1476,16 @@
                   "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
                   "GMAIL_CREATE_LABEL",
                   "GMAIL_GET_ATTACHMENT",
+                  "GMAIL_FIND_EMAIL_ID",
                   "GMAIL_REMOVE_LABEL",
                   "GMAIL_GET_PROFILE",
                   "GMAIL_ADD_LABEL_TO_EMAIL",
                   "GMAIL_GET_CONTACTS",
                   "GMAIL_REPLY_TO_THREAD",
                   "GMAIL_LIST_LABELS",
+                  "GMAIL_FETCH_LAST_THREE_MESSAGES",
                   "GMAIL_LIST_THREADS",
+                  "GMAIL_FETCH_EMAILS_WITH_LABEL",
                   "GMAIL_MODIFY_THREAD_LABELS"
                 ],
                 "placeholder": "",
@@ -1493,8 +1496,7 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": [
-                  "GMAIL_SEND_EMAIL",
-                  "GMAIL_CREATE_EMAIL_DRAFT"
+                  "GMAIL_GET_PEOPLE"
                 ]
               },
               "api_key": {
@@ -1506,7 +1508,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1544,6 +1546,7 @@
                 "display_name": "App Name",
                 "dynamic": false,
                 "info": "The app name to use. Please refresh after selecting app name",
+                "load_from_db": false,
                 "name": "app_names",
                 "options": [
                   "ACCELO",
@@ -1570,6 +1573,7 @@
                   "CANVAS",
                   "CHATWORK",
                   "CLICKUP",
+                  "CONFLUENCE",
                   "CONTENTFUL",
                   "D2LBRIGHTSPACE",
                   "DEEL",
@@ -1700,7 +1704,7 @@
               },
               "auth_status": {
                 "_input_type": "StrInput",
-                "advanced": true,
+                "advanced": false,
                 "display_name": "Auth Status",
                 "dynamic": true,
                 "info": "Current authentication status",
@@ -1710,12 +1714,12 @@
                 "name": "auth_status",
                 "placeholder": "",
                 "required": false,
-                "show": false,
+                "show": true,
                 "title_case": false,
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "✅"
               },
               "code": {
                 "advanced": true,
@@ -1733,7 +1737,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "# Standard library imports\nfrom collections.abc import Sequence\nfrom typing import Any\n\nimport requests\n\n# Third-party imports\nfrom composio.client.collections import AppAuthScheme\nfrom composio.client.exceptions import NoItemsFound\nfrom composio_langchain import Action, ComposioToolSet\nfrom langchain_core.tools import Tool\nfrom loguru import logger\n\n# Local imports\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput\nfrom langflow.io import Output\n\n\nclass ComposioAPIComponent(LCToolComponent):\n    display_name: str = \"Composio Tools\"\n    description: str = \"Use Composio toolset to run actions with your agent\"\n    name = \"ComposioAPI\"\n    icon = \"Composio\"\n    documentation: str = \"https://docs.composio.dev\"\n\n    inputs = [\n        # Basic configuration inputs\n        MessageTextInput(name=\"entity_id\", display_name=\"Entity ID\", value=\"default\", advanced=True),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Composio API Key\",\n            required=True,\n            info=\"Refer to https://docs.composio.dev/faq/api_key/api_key\",\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"app_names\",\n            display_name=\"App Name\",\n            options=[],\n            value=\"\",\n            info=\"The app name to use. Please refresh after selecting app name\",\n            refresh_button=True,\n            required=True,\n        ),\n        # Authentication-related inputs (initially hidden)\n        SecretStrInput(\n            name=\"app_credentials\",\n            display_name=\"App Credentials\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Credentials for app authentication (API Key, Password, etc)\",\n            load_from_db=False,\n        ),\n        MessageTextInput(\n            name=\"username\",\n            display_name=\"Username\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Username for Basic authentication\",\n        ),\n        LinkInput(\n            name=\"auth_link\",\n            display_name=\"Authentication Link\",\n            value=\"\",\n            info=\"Click to authenticate with OAuth2\",\n            dynamic=True,\n            show=False,\n            placeholder=\"Click to authenticate\",\n        ),\n        StrInput(\n            name=\"auth_status\",\n            display_name=\"Auth Status\",\n            value=\"Not Connected\",\n            info=\"Current authentication status\",\n            dynamic=True,\n            show=False,\n        ),\n        MultiselectInput(\n            name=\"action_names\",\n            display_name=\"Actions to use\",\n            required=True,\n            options=[],\n            value=[],\n            info=\"The actions to pass to agent to execute\",\n            dynamic=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"tools\", display_name=\"Tools\", method=\"build_tool\"),\n    ]\n\n    def _check_for_authorization(self, app: str) -> str:\n        \"\"\"Checks if the app is authorized.\n\n        Args:\n            app (str): The app name to check authorization for.\n\n        Returns:\n            str: The authorization status or URL.\n        \"\"\"\n        toolset = self._build_wrapper()\n        entity = toolset.client.get_entity(id=self.entity_id)\n        try:\n            # Check if user is already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # Get auth scheme for the app\n            auth_scheme = self._get_auth_scheme(app)\n            return self._handle_auth_by_scheme(entity, app, auth_scheme)\n        except Exception:  # noqa: BLE001\n            logger.exception(\"Authorization error\")\n            return \"Error checking authorization\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _get_auth_scheme(self, app_name: str) -> AppAuthScheme:\n        \"\"\"Get the primary auth scheme for an app.\n\n        Args:\n            app_name (str): The name of the app to get auth scheme for.\n\n        Returns:\n            AppAuthScheme: The auth scheme details.\n        \"\"\"\n        toolset = self._build_wrapper()\n        try:\n            return toolset.get_auth_scheme_for_app(app=app_name.lower())\n        except Exception:  # noqa: BLE001\n            logger.exception(f\"Error getting auth scheme for {app_name}\")\n            return None\n\n    def _get_oauth_apps(self, api_key: str) -> list[str]:\n        \"\"\"Fetch OAuth-enabled apps from Composio API.\n\n        Args:\n            api_key (str): The Composio API key.\n\n        Returns:\n            list[str]: A list containing OAuth-enabled app names.\n        \"\"\"\n        oauth_apps = []\n        try:\n            url = \"https://backend.composio.dev/api/v1/apps\"\n            headers = {\"x-api-key\": api_key}\n            params = {\n                \"includeLocal\": \"true\",\n                \"additionalFields\": \"auth_schemes\",\n                \"sortBy\": \"alphabet\",\n            }\n\n            response = requests.get(url, headers=headers, params=params, timeout=20)\n            data = response.json()\n\n            for item in data.get(\"items\", []):\n                for auth_scheme in item.get(\"auth_schemes\", []):\n                    if auth_scheme.get(\"mode\") in [\"OAUTH1\", \"OAUTH2\"]:\n                        oauth_apps.append(item[\"key\"].upper())\n                        break\n        except requests.RequestException as e:\n            logger.error(f\"Error fetching OAuth apps: {e}\")\n            return []\n        else:\n            return oauth_apps\n\n    def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:\n        \"\"\"Handle authentication based on the auth scheme.\n\n        Args:\n            entity (Any): The entity instance.\n            app (str): The app name.\n            auth_scheme (AppAuthScheme): The auth scheme details.\n\n        Returns:\n            str: The authentication status or URL.\n        \"\"\"\n        auth_mode = auth_scheme.auth_mode\n\n        try:\n            # First check if already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # If not connected, handle new connection based on auth mode\n            if auth_mode == \"API_KEY\":\n                if hasattr(self, \"app_credentials\") and self.app_credentials:\n                    try:\n                        entity.initiate_connection(\n                            app_name=app,\n                            auth_mode=\"API_KEY\",\n                            auth_config={\"api_key\": self.app_credentials},\n                            use_composio_auth=False,\n                            force_new_integration=True,\n                        )\n                    except Exception as e:  # noqa: BLE001\n                        logger.error(f\"Error connecting with API Key: {e}\")\n                        return \"Invalid API Key\"\n                    else:\n                        return f\"{app} CONNECTED\"\n                return \"Enter API Key\"\n\n            if (\n                auth_mode == \"BASIC\"\n                and hasattr(self, \"username\")\n                and hasattr(self, \"app_credentials\")\n                and self.username\n                and self.app_credentials\n            ):\n                try:\n                    entity.initiate_connection(\n                        app_name=app,\n                        auth_mode=\"BASIC\",\n                        auth_config={\"username\": self.username, \"password\": self.app_credentials},\n                        use_composio_auth=False,\n                        force_new_integration=True,\n                    )\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error connecting with Basic Auth: {e}\")\n                    return \"Invalid credentials\"\n                else:\n                    return f\"{app} CONNECTED\"\n            elif auth_mode == \"BASIC\":\n                return \"Enter Username and Password\"\n\n            if auth_mode == \"OAUTH2\":\n                try:\n                    return self._initiate_default_connection(entity, app)\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error initiating OAuth2: {e}\")\n                    return \"OAuth2 initialization failed\"\n\n            return \"Unsupported auth mode\"\n        except Exception as e:  # noqa: BLE001\n            logger.error(f\"Error checking connection status: {e}\")\n            return f\"Error: {e!s}\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _initiate_default_connection(self, entity: Any, app: str) -> str:\n        connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)\n        return connection.redirectUrl\n\n    def _get_connected_app_names_for_entity(self) -> list[str]:\n        toolset = self._build_wrapper()\n        connections = toolset.client.get_entity(id=self.entity_id).get_connections()\n        return list({connection.appUniqueId for connection in connections})\n\n    def _get_normalized_app_name(self) -> str:\n        \"\"\"Get app name without connection status suffix.\n\n        Returns:\n            str: Normalized app name.\n        \"\"\"\n        return self.app_names.replace(\" ✅\", \"\").replace(\"_connected\", \"\")\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002\n        # Update the available apps options from the API\n        if hasattr(self, \"api_key\") and self.api_key != \"\":\n            toolset = self._build_wrapper()\n            build_config[\"app_names\"][\"options\"] = self._get_oauth_apps(api_key=self.api_key)\n\n        # First, ensure all dynamic fields are hidden by default\n        dynamic_fields = [\"app_credentials\", \"username\", \"auth_link\", \"auth_status\", \"action_names\"]\n        for field in dynamic_fields:\n            if field in build_config:\n                if build_config[field][\"value\"] is None or build_config[field][\"value\"] == \"\":\n                    build_config[field][\"show\"] = False\n                    build_config[field][\"advanced\"] = True\n                    build_config[field][\"load_from_db\"] = False\n                else:\n                    build_config[field][\"show\"] = True\n                    build_config[field][\"advanced\"] = False\n\n        if field_name == \"app_names\" and (not hasattr(self, \"app_names\") or not self.app_names):\n            build_config[\"auth_status\"][\"show\"] = True\n            build_config[\"auth_status\"][\"value\"] = \"Please select an app first\"\n            return build_config\n\n        if field_name == \"app_names\" and hasattr(self, \"api_key\") and self.api_key != \"\":\n            # app_name = self._get_normalized_app_name()\n            app_name = self.app_names\n            try:\n                toolset = self._build_wrapper()\n                entity = toolset.client.get_entity(id=self.entity_id)\n\n                # Always show auth_status when app is selected\n                build_config[\"auth_status\"][\"show\"] = True\n                build_config[\"auth_status\"][\"advanced\"] = False\n\n                try:\n                    # Check if already connected\n                    entity.get_connection(app=app_name)\n                    build_config[\"auth_status\"][\"value\"] = \"✅\"\n                    build_config[\"auth_link\"][\"show\"] = False\n                    # Show action selection for connected apps\n                    build_config[\"action_names\"][\"show\"] = True\n                    build_config[\"action_names\"][\"advanced\"] = False\n\n                except NoItemsFound:\n                    # Get auth scheme and show relevant fields\n                    auth_scheme = self._get_auth_scheme(app_name)\n                    auth_mode = auth_scheme.auth_mode\n                    logger.info(f\"Auth mode for {app_name}: {auth_mode}\")\n\n                    if auth_mode == \"API_KEY\":\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"API Key\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter API Key\"\n\n                    elif auth_mode == \"BASIC\":\n                        build_config[\"username\"][\"show\"] = True\n                        build_config[\"username\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"Password\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter Username and Password\"\n\n                    elif auth_mode == \"OAUTH2\":\n                        build_config[\"auth_link\"][\"show\"] = True\n                        build_config[\"auth_link\"][\"advanced\"] = False\n                        auth_url = self._initiate_default_connection(entity, app_name)\n                        build_config[\"auth_link\"][\"value\"] = auth_url\n                        build_config[\"auth_status\"][\"value\"] = \"Click link to authenticate\"\n\n                    else:\n                        build_config[\"auth_status\"][\"value\"] = \"Unsupported auth mode\"\n\n                # Update action names if connected\n                if build_config[\"auth_status\"][\"value\"] == \"✅\":\n                    all_action_names = [str(action).replace(\"Action.\", \"\") for action in Action.all()]\n                    app_action_names = [\n                        action_name\n                        for action_name in all_action_names\n                        if action_name.lower().startswith(app_name.lower() + \"_\")\n                    ]\n                    if build_config[\"action_names\"][\"options\"] != app_action_names:\n                        build_config[\"action_names\"][\"options\"] = app_action_names\n                        build_config[\"action_names\"][\"value\"] = [app_action_names[0]] if app_action_names else [\"\"]\n\n            except Exception as e:  # noqa: BLE001\n                logger.error(f\"Error checking auth status: {e}, app: {app_name}\")\n                build_config[\"auth_status\"][\"value\"] = f\"Error: {e!s}\"\n\n        return build_config\n\n    def build_tool(self) -> Sequence[Tool]:\n        \"\"\"Build Composio tools based on selected actions.\n\n        Returns:\n            Sequence[Tool]: List of configured Composio tools.\n        \"\"\"\n        composio_toolset = self._build_wrapper()\n        return composio_toolset.get_tools(actions=self.action_names)\n\n    def _build_wrapper(self) -> ComposioToolSet:\n        \"\"\"Build the Composio toolset wrapper.\n\n        Returns:\n            ComposioToolSet: The initialized toolset.\n\n        Raises:\n            ValueError: If the API key is not found or invalid.\n        \"\"\"\n        try:\n            if not self.api_key:\n                msg = \"Composio API Key is required\"\n                raise ValueError(msg)\n            return ComposioToolSet(api_key=self.api_key)\n        except ValueError as e:\n            logger.error(f\"Error building Composio wrapper: {e}\")\n            msg = \"Please provide a valid Composio API Key in the component settings\"\n            raise ValueError(msg) from e\n"
+                "value": "# Standard library imports\nfrom collections.abc import Sequence\nfrom typing import Any\n\nimport requests\n\n# Third-party imports\nfrom composio.client.collections import AppAuthScheme\nfrom composio.client.exceptions import NoItemsFound\nfrom composio_langchain import Action, ComposioToolSet\nfrom langchain_core.tools import Tool\nfrom loguru import logger\n\n# Local imports\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput\nfrom langflow.io import Output\n\n\nclass ComposioAPIComponent(LCToolComponent):\n    display_name: str = \"Composio Tools\"\n    description: str = \"Use Composio toolset to run actions with your agent\"\n    name = \"ComposioAPI\"\n    icon = \"Composio\"\n    documentation: str = \"https://docs.composio.dev\"\n\n    inputs = [\n        # Basic configuration inputs\n        MessageTextInput(name=\"entity_id\", display_name=\"Entity ID\", value=\"default\", advanced=True),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Composio API Key\",\n            required=True,\n            info=\"Refer to https://docs.composio.dev/faq/api_key/api_key\",\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"app_names\",\n            display_name=\"App Name\",\n            options=[],\n            value=\"\",\n            info=\"The app name to use. Please refresh after selecting app name\",\n            refresh_button=True,\n            required=True,\n        ),\n        # Authentication-related inputs (initially hidden)\n        SecretStrInput(\n            name=\"app_credentials\",\n            display_name=\"App Credentials\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Credentials for app authentication (API Key, Password, etc)\",\n            load_from_db=False,\n        ),\n        MessageTextInput(\n            name=\"username\",\n            display_name=\"Username\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Username for Basic authentication\",\n        ),\n        LinkInput(\n            name=\"auth_link\",\n            display_name=\"Authentication Link\",\n            value=\"\",\n            info=\"Click to authenticate with OAuth2\",\n            dynamic=True,\n            show=False,\n            placeholder=\"Click to authenticate\",\n        ),\n        StrInput(\n            name=\"auth_status\",\n            display_name=\"Auth Status\",\n            value=\"Not Connected\",\n            info=\"Current authentication status\",\n            dynamic=True,\n            show=False,\n        ),\n        MultiselectInput(\n            name=\"action_names\",\n            display_name=\"Actions to use\",\n            required=True,\n            options=[],\n            value=[],\n            info=\"The actions to pass to agent to execute\",\n            dynamic=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"tools\", display_name=\"Tools\", method=\"build_tool\"),\n    ]\n\n    def _check_for_authorization(self, app: str) -> str:\n        \"\"\"Checks if the app is authorized.\n\n        Args:\n            app (str): The app name to check authorization for.\n\n        Returns:\n            str: The authorization status or URL.\n        \"\"\"\n        toolset = self._build_wrapper()\n        entity = toolset.client.get_entity(id=self.entity_id)\n        try:\n            # Check if user is already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # Get auth scheme for the app\n            auth_scheme = self._get_auth_scheme(app)\n            return self._handle_auth_by_scheme(entity, app, auth_scheme)\n        except Exception:  # noqa: BLE001\n            logger.exception(\"Authorization error\")\n            return \"Error checking authorization\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _get_auth_scheme(self, app_name: str) -> AppAuthScheme:\n        \"\"\"Get the primary auth scheme for an app.\n\n        Args:\n            app_name (str): The name of the app to get auth scheme for.\n\n        Returns:\n            AppAuthScheme: The auth scheme details.\n        \"\"\"\n        toolset = self._build_wrapper()\n        try:\n            return toolset.get_auth_scheme_for_app(app=app_name.lower())\n        except Exception:  # noqa: BLE001\n            logger.exception(f\"Error getting auth scheme for {app_name}\")\n            return None\n\n    def _get_oauth_apps(self, api_key: str) -> list[str]:\n        \"\"\"Fetch OAuth-enabled apps from Composio API.\n\n        Args:\n            api_key (str): The Composio API key.\n\n        Returns:\n            list[str]: A list containing OAuth-enabled app names.\n        \"\"\"\n        oauth_apps = []\n        try:\n            url = \"https://backend.composio.dev/api/v1/apps\"\n            headers = {\"x-api-key\": api_key}\n            params = {\n                \"includeLocal\": \"true\",\n                \"additionalFields\": \"auth_schemes\",\n                \"sortBy\": \"alphabet\",\n            }\n\n            response = requests.get(url, headers=headers, params=params, timeout=20)\n            data = response.json()\n\n            for item in data.get(\"items\", []):\n                for auth_scheme in item.get(\"auth_schemes\", []):\n                    if auth_scheme.get(\"mode\") in [\"OAUTH1\", \"OAUTH2\"]:\n                        oauth_apps.append(item[\"key\"].upper())\n                        break\n        except requests.RequestException as e:\n            logger.error(f\"Error fetching OAuth apps: {e}\")\n            return []\n        else:\n            return oauth_apps\n\n    def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:\n        \"\"\"Handle authentication based on the auth scheme.\n\n        Args:\n            entity (Any): The entity instance.\n            app (str): The app name.\n            auth_scheme (AppAuthScheme): The auth scheme details.\n\n        Returns:\n            str: The authentication status or URL.\n        \"\"\"\n        auth_mode = auth_scheme.auth_mode\n\n        try:\n            # First check if already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # If not connected, handle new connection based on auth mode\n            if auth_mode == \"API_KEY\":\n                if hasattr(self, \"app_credentials\") and self.app_credentials:\n                    try:\n                        entity.initiate_connection(\n                            app_name=app,\n                            auth_mode=\"API_KEY\",\n                            auth_config={\"api_key\": self.app_credentials},\n                            use_composio_auth=False,\n                            force_new_integration=True,\n                        )\n                    except Exception as e:  # noqa: BLE001\n                        logger.error(f\"Error connecting with API Key: {e}\")\n                        return \"Invalid API Key\"\n                    else:\n                        return f\"{app} CONNECTED\"\n                return \"Enter API Key\"\n\n            if (\n                auth_mode == \"BASIC\"\n                and hasattr(self, \"username\")\n                and hasattr(self, \"app_credentials\")\n                and self.username\n                and self.app_credentials\n            ):\n                try:\n                    entity.initiate_connection(\n                        app_name=app,\n                        auth_mode=\"BASIC\",\n                        auth_config={\"username\": self.username, \"password\": self.app_credentials},\n                        use_composio_auth=False,\n                        force_new_integration=True,\n                    )\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error connecting with Basic Auth: {e}\")\n                    return \"Invalid credentials\"\n                else:\n                    return f\"{app} CONNECTED\"\n            elif auth_mode == \"BASIC\":\n                return \"Enter Username and Password\"\n\n            if auth_mode == \"OAUTH2\":\n                try:\n                    return self._initiate_default_connection(entity, app)\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error initiating OAuth2: {e}\")\n                    return \"OAuth2 initialization failed\"\n\n            return \"Unsupported auth mode\"\n        except Exception as e:  # noqa: BLE001\n            logger.error(f\"Error checking connection status: {e}\")\n            return f\"Error: {e!s}\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _initiate_default_connection(self, entity: Any, app: str) -> str:\n        connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)\n        return connection.redirectUrl\n\n    def _get_connected_app_names_for_entity(self) -> list[str]:\n        toolset = self._build_wrapper()\n        connections = toolset.client.get_entity(id=self.entity_id).get_connections()\n        return list({connection.appUniqueId for connection in connections})\n\n    def _get_normalized_app_name(self) -> str:\n        \"\"\"Get app name without connection status suffix.\n\n        Returns:\n            str: Normalized app name.\n        \"\"\"\n        return self.app_names.replace(\" ✅\", \"\").replace(\"_connected\", \"\")\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002\n        # Update the available apps options from the API\n        if hasattr(self, \"api_key\") and self.api_key != \"\":\n            toolset = self._build_wrapper()\n            build_config[\"app_names\"][\"options\"] = self._get_oauth_apps(api_key=self.api_key)\n\n        # First, ensure all dynamic fields are hidden by default\n        dynamic_fields = [\"app_credentials\", \"username\", \"auth_link\", \"auth_status\", \"action_names\"]\n        for field in dynamic_fields:\n            if field in build_config:\n                if build_config[field][\"value\"] is None or build_config[field][\"value\"] == \"\":\n                    build_config[field][\"show\"] = False\n                    build_config[field][\"advanced\"] = True\n                    build_config[field][\"load_from_db\"] = False\n                else:\n                    build_config[field][\"show\"] = True\n                    build_config[field][\"advanced\"] = False\n\n        if field_name == \"app_names\" and (not hasattr(self, \"app_names\") or not self.app_names):\n            build_config[\"auth_status\"][\"show\"] = True\n            build_config[\"auth_status\"][\"value\"] = \"Please select an app first\"\n            return build_config\n\n        if field_name == \"app_names\" and hasattr(self, \"api_key\") and self.api_key != \"\":\n            # app_name = self._get_normalized_app_name()\n            app_name = self.app_names\n            try:\n                toolset = self._build_wrapper()\n                entity = toolset.client.get_entity(id=self.entity_id)\n\n                # Always show auth_status when app is selected\n                build_config[\"auth_status\"][\"show\"] = True\n                build_config[\"auth_status\"][\"advanced\"] = False\n\n                try:\n                    # Check if already connected\n                    entity.get_connection(app=app_name)\n                    build_config[\"auth_status\"][\"value\"] = \"✅\"\n                    build_config[\"auth_link\"][\"show\"] = False\n                    # Show action selection for connected apps\n                    build_config[\"action_names\"][\"show\"] = True\n                    build_config[\"action_names\"][\"advanced\"] = False\n\n                except NoItemsFound:\n                    # Get auth scheme and show relevant fields\n                    auth_scheme = self._get_auth_scheme(app_name)\n                    auth_mode = auth_scheme.auth_mode\n                    logger.info(f\"Auth mode for {app_name}: {auth_mode}\")\n\n                    if auth_mode == \"API_KEY\":\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"API Key\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter API Key\"\n\n                    elif auth_mode == \"BASIC\":\n                        build_config[\"username\"][\"show\"] = True\n                        build_config[\"username\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"Password\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter Username and Password\"\n\n                    elif auth_mode == \"OAUTH2\":\n                        build_config[\"auth_link\"][\"show\"] = True\n                        build_config[\"auth_link\"][\"advanced\"] = False\n                        auth_url = self._initiate_default_connection(entity, app_name)\n                        build_config[\"auth_link\"][\"value\"] = auth_url\n                        build_config[\"auth_status\"][\"value\"] = \"Click link to authenticate\"\n\n                    else:\n                        build_config[\"auth_status\"][\"value\"] = \"Unsupported auth mode\"\n\n                # Update action names if connected\n                if build_config[\"auth_status\"][\"value\"] == \"✅\":\n                    all_action_names = [str(action).replace(\"Action.\", \"\") for action in Action.all()]\n                    app_action_names = [\n                        action_name\n                        for action_name in all_action_names\n                        if action_name.lower().startswith(app_name.lower() + \"_\")\n                    ]\n                    if build_config[\"action_names\"][\"options\"] != app_action_names:\n                        build_config[\"action_names\"][\"options\"] = app_action_names\n                        build_config[\"action_names\"][\"value\"] = [app_action_names[0]] if app_action_names else [\"\"]\n\n            except Exception as e:  # noqa: BLE001\n                logger.error(f\"Error checking auth status: {e}, app: {app_name}\")\n                build_config[\"auth_status\"][\"value\"] = f\"Error: {e!s}\"\n\n        return build_config\n\n    def build_tool(self) -> Sequence[Tool]:\n        \"\"\"Build Composio tools based on selected actions.\n\n        Returns:\n            Sequence[Tool]: List of configured Composio tools.\n        \"\"\"\n        composio_toolset = self._build_wrapper()\n        return composio_toolset.get_tools(actions=self.action_names)\n\n    def _build_wrapper(self) -> ComposioToolSet:\n        \"\"\"Build the Composio toolset wrapper.\n\n        Returns:\n            ComposioToolSet: The initialized toolset.\n\n        Raises:\n            ValueError: If the API key is not found or invalid.\n        \"\"\"\n        try:\n            if not self.api_key:\n                msg = \"Composio API Key is required\"\n                raise ValueError(msg)\n            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)\n        except ValueError as e:\n            logger.error(f\"Error building Composio wrapper: {e}\")\n            msg = \"Please provide a valid Composio API Key in the component settings\"\n            raise ValueError(msg) from e\n"
               },
               "entity_id": {
                 "_input_type": "MessageTextInput",
@@ -1788,39 +1792,32 @@
           "type": "ComposioAPI"
         },
         "dragging": false,
-        "id": "ComposioAPI-ajGtz",
+        "id": "ComposioAPI-adjCJ",
         "measured": {
-          "height": 415,
+          "height": 497,
           "width": 320
         },
         "position": {
           "x": -137.53986902236176,
           "y": 20.325147658297382
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 368.95391968218075,
-      "y": 154.58720326423327,
-      "zoom": 0.7309415987294762
+      "x": 494.6705020244866,
+      "y": 423.6508642555026,
+      "zoom": 0.7202622571895975
     }
   },
   "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
   "endpoint_name": null,
-  "folder_id": "4599f5b8-0cbe-4a2e-a492-8b3fa6193da4",
-  "gradient": null,
-  "icon": "mail",
-  "icon_bg_color": null,
-  "id": "44cfd75e-0f47-4011-8802-9e124b782c42",
+  "id": "6e5d7690-35da-4163-8c2f-9693ebb59f5c",
   "is_component": false,
-  "locked": false,
+  "last_tested_version": "1.2.0",
   "name": "Gmail Agent",
   "tags": [
     "agents"
-  ],
-  "updated_at": "2025-02-14T09:35:52+00:00",
-  "user_id": "baa8aaab-c242-4191-b79d-761bdb5a393c",
-  "webhook": false
+  ]
 }
