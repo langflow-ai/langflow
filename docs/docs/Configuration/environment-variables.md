@@ -200,17 +200,15 @@ LANGFLOW_WORKERS=3
 
 A systemd service configuration file configures Linux system services.
 
-For more information on systemd, see the [Red Hat documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_systemd_unit_files_to_customize_and_optimize_your_system/assembly_working-with-systemd-unit-files_working-with-systemd#assembly_working-with-systemd-unit-files_working-with-systemd).
+To add environment variables, create or edit a service configuration file and add an `override.conf` file. This file allows you to override the default environment variables for the service.
 
-To add environment variables, create or edit an override configuration for an existing service configuration.
-This example assumes that you have a service configuration file named `langflow_internal.service` in `/etc/systemd/system/`.
+1. Create the override directory and file:
 ```bash
-sudo systemctl edit langflow_internal.service
+sudo mkdir -p /etc/systemd/system/langflow_internal.service.d/
+sudo nano /etc/systemd/system/langflow_internal.service.d/override.conf
 ```
 
-This command creates a drop-in directory at `/etc/systemd/system/langflow_internal.service.d/` and opens an editor with an `override.conf` file. After saving, systemd automatically reloads the configuration.
-
-Add your configuration to `langflow_internal.service.d/override.conf`:
+2. Add your environment variables:
 
 ```ini title="override.conf"
 [Service]
@@ -245,37 +243,13 @@ Environment="LANGFLOW_WORKER_TIMEOUT=60000"
 Environment="LANGFLOW_WORKERS=32"
 ```
 
-After editing, follow these steps to apply the changes:
-
-1. Reload the systemd daemon to recognize the new configuration:
+3. After creating or modifying the override file, reload the systemd daemon and restart the service:
 ```bash
-systemctl daemon-reload
+sudo systemctl daemon-reload
+sudo systemctl restart langflow_internal.service
 ```
 
-2. Restart the Langflow service to apply changes:
-```bash
-systemctl restart langflow_internal.service
-```
-
-3. Verify that the environment variables are set correctly:
-```bash
-systemctl show langflow_internal.service -p Environment
-```
-
-4. Check that the service is running properly:
-```bash
-systemctl status langflow_internal.service
-```
-
-5. Monitor the service logs if needed:
-```bash
-journalctl -u langflow_internal.service -f
-```
-
-The environment variables are available to the Langflow process when it starts. You can also check the service logs using:
-```bash
-journalctl -u langflow_internal.service -f
-```
+For more information on systemd, see the [Red Hat documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_systemd_unit_files_to_customize_and_optimize_your_system/assembly_working-with-systemd-unit-files_working-with-systemd#assembly_working-with-systemd-unit-files_working-with-systemd).
 
 </TabItem>
 <TabItem value="vscode" label="VSCode tasks.json">
@@ -332,7 +306,7 @@ Create or edit the `.vscode/tasks.json` file in your project root:
 }
 ```
 
-You can then run Langflow using the VSCode command palette (Ctrl+Shift+P) and selecting "Tasks: Run Task" > "langflow backend".
+To run Langflow using the above VSCode `tasks.json` file, in the VSCode command palette, select **Tasks: Run Task** > **langflow backend**.
 
 </TabItem>
 </Tabs>
