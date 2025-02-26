@@ -194,6 +194,19 @@
                   "Data"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -337,6 +350,19 @@
                 "tool_mode": true,
                 "types": [
                   "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -509,6 +535,19 @@
                   "Message"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -618,6 +657,19 @@
                 "tool_mode": true,
                 "types": [
                   "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1038,6 +1090,20 @@
                   "LanguageModel"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": [],
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,
@@ -1419,6 +1485,19 @@
                 "tool_mode": true,
                 "types": [
                   "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
                 ],
                 "value": "__UNDEFINED__"
               }
