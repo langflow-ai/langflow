@@ -11,7 +11,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
@@ -234,6 +233,8 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
 async def initialize_super_user_if_needed(
     settings_service: SettingsService | None = None, session: AsyncSession | None = None
 ) -> None:
+    from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
+
     if settings_service is None:
         settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN or settings_service.auth_settings.disable_superuser_creation:
