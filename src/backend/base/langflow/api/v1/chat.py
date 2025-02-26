@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import time
 import traceback
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from loguru import logger
 
 from langflow.api.build import (
+    cancel_flow_build,
     get_flow_events_response,
     start_flow_build,
 )
@@ -25,6 +27,7 @@ from langflow.api.utils import (
     parse_exception,
 )
 from langflow.api.v1.schemas import (
+    CancelFlowResponse,
     FlowDataRequest,
     InputValueRequest,
     ResultDataResponse,
@@ -175,6 +178,34 @@ async def get_build_events(
         queue_service=queue_service,
         stream=stream,
     )
+
+
+@router.post("/build/{job_id}/cancel", response_model=CancelFlowResponse)
+async def cancel_build(
+    job_id: str,
+    queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+):
+    """Cancel a specific build job."""
+    try:
+        # Cancel the flow build and check if it was successful
+        cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
+
+        if cancellation_success:
+            # Cancellation succeeded or wasn't needed
+            return CancelFlowResponse(success=True, message="Flow build cancelled successfully")
+        # Cancellation was attempted but failed
+        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+    except asyncio.CancelledError:
+        # If CancelledError reaches here, it means the task was not successfully cancelled
+        logger.error(f"Failed to cancel flow build for job_id {job_id} (CancelledError caught)")
+        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+    except ValueError as exc:
+        # Job not found
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except Exception as exc:
+        # Any other unexpected error
+        logger.exception(f"Error cancelling flow build for job_id {job_id}: {exc}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
