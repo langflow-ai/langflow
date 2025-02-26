@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Langflow",
-        "version": "1.1.4"
+        "version": "1.2.0"
     },
     "paths": {
         "/api/v1/build/{flow_id}/vertices": {
@@ -104,6 +104,7 @@
                     "Chat"
                 ],
                 "summary": "Build Flow",
+                "description": "Build and process a flow, returning a job ID for event polling.",
                 "operationId": "build_flow_api_v1_build__flow_id__flow_post",
                 "security": [
                     {
@@ -164,14 +165,7 @@
                         "in": "query",
                         "required": false,
                         "schema": {
-                            "anyOf": [
-                                {
-                                    "type": "boolean"
-                                },
-                                {
-                                    "type": "null"
-                                }
-                            ],
+                            "type": "boolean",
                             "default": true,
                             "title": "Log Builds"
                         }
@@ -192,6 +186,100 @@
                         "content": {
                             "application/json": {
                                 "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/build/{job_id}/events": {
+            "get": {
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Get Build Events",
+                "description": "Get events for a specific build job.",
+                "operationId": "get_build_events_api_v1_build__job_id__events_get",
+                "parameters": [
+                    {
+                        "name": "job_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Job Id"
+                        }
+                    },
+                    {
+                        "name": "stream",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true,
+                            "title": "Stream"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/build/{job_id}/cancel": {
+            "post": {
+                "tags": [
+                    "Chat"
+                ],
+                "summary": "Cancel Build",
+                "description": "Cancel a specific build job.",
+                "operationId": "cancel_build_api_v1_build__job_id__cancel_post",
+                "parameters": [
+                    {
+                        "name": "job_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Job Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CancelFlowResponse"
+                                }
                             }
                         }
                     },
@@ -642,21 +730,23 @@
                 ]
             }
         },
-        "/api/v1/task/{task_id}": {
+        "/api/v1/task/{_task_id}": {
             "get": {
                 "tags": [
                     "Base"
                 ],
                 "summary": "Get Task Status",
-                "operationId": "get_task_status_api_v1_task__task_id__get",
+                "description": "Get the status of a task by ID (Deprecated).\n\nThis endpoint is deprecated and will be removed in a future version.",
+                "operationId": "get_task_status_api_v1_task___task_id__get",
+                "deprecated": true,
                 "parameters": [
                     {
-                        "name": "task_id",
+                        "name": "_task_id",
                         "in": "path",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "title": "Task Id"
+                            "title": " Task Id"
                         }
                     }
                 ],
@@ -721,7 +811,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/UploadFileResponse"
+                                    "$ref": "#/components/schemas/langflow__api__v1__schemas__UploadFileResponse"
                                 }
                             }
                         }
@@ -2978,7 +3068,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/UploadFileResponse"
+                                    "$ref": "#/components/schemas/langflow__api__v1__schemas__UploadFileResponse"
                                 }
                             }
                         }
@@ -4266,6 +4356,289 @@
                 }
             }
         },
+        "/api/v2/files": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "List Files",
+                "description": "List the files available to the current user.",
+                "operationId": "list_files_api_v2_files_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/langflow__services__database__models__file__model__File"
+                                    },
+                                    "type": "array",
+                                    "title": "Response List Files Api V2 Files Get"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    },
+                    {
+                        "API key query": []
+                    },
+                    {
+                        "API key header": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Upload User File",
+                "description": "Upload a file for the current user and track it in the database.",
+                "operationId": "upload_user_file_api_v2_files_post",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_upload_user_file_api_v2_files_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    },
+                    {
+                        "API key query": []
+                    },
+                    {
+                        "API key header": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Delete All Files",
+                "description": "Delete all files for the current user.",
+                "operationId": "delete_all_files_api_v2_files_delete",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    },
+                    {
+                        "API key query": []
+                    },
+                    {
+                        "API key header": []
+                    }
+                ]
+            }
+        },
+        "/api/v2/files/{file_id}": {
+            "get": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Download File",
+                "description": "Download a file by its ID.",
+                "operationId": "download_file_api_v2_files__file_id__get",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    },
+                    {
+                        "API key query": []
+                    },
+                    {
+                        "API key header": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "file_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "File Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Edit File Name",
+                "description": "Edit the name of a file by its ID.",
+                "operationId": "edit_file_name_api_v2_files__file_id__put",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    },
+                    {
+                        "API key query": []
+                    },
+                    {
+                        "API key header": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "file_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "File Id"
+                        }
+                    },
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Name"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/langflow__api__schemas__UploadFileResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Files"
+                ],
+                "summary": "Delete File",
+                "description": "Delete a file by its ID.",
+                "operationId": "delete_file_api_v2_files__file_id__delete",
+                "security": [
+                    {
+                        "OAuth2PasswordBearer": []
+                    },
+                    {
+                        "API key query": []
+                    },
+                    {
+                        "API key header": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "file_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "File Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "tags": [
@@ -4729,7 +5102,7 @@
                         "anyOf": [
                             {
                                 "type": "string",
-                                "pattern": "password"
+                                "pattern": "^password$"
                             },
                             {
                                 "type": "null"
@@ -4822,6 +5195,39 @@
                 ],
                 "title": "Body_upload_file_api_v1_folders_upload__post"
             },
+            "Body_upload_user_file_api_v2_files_post": {
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "title": "File"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "file"
+                ],
+                "title": "Body_upload_user_file_api_v2_files_post"
+            },
+            "CancelFlowResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "title": "Success"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "success",
+                    "message"
+                ],
+                "title": "CancelFlowResponse",
+                "description": "Response model for flow build cancellation."
+            },
             "ChatOutputResponse": {
                 "properties": {
                     "message": {
@@ -4904,7 +5310,7 @@
                     },
                     "files": {
                         "items": {
-                            "$ref": "#/components/schemas/File"
+                            "$ref": "#/components/schemas/langflow__utils__schemas__File"
                         },
                         "type": "array",
                         "title": "Files",
@@ -4981,6 +5387,14 @@
                     "max_file_size_upload": {
                         "type": "integer",
                         "title": "Max File Size Upload"
+                    },
+                    "event_delivery": {
+                        "type": "string",
+                        "enum": [
+                            "polling",
+                            "streaming"
+                        ],
+                        "title": "Event Delivery"
                     }
                 },
                 "type": "object",
@@ -4990,7 +5404,8 @@
                     "auto_saving",
                     "auto_saving_interval",
                     "health_check_max_retries",
-                    "max_file_size_upload"
+                    "max_file_size_upload",
+                    "event_delivery"
                 ],
                 "title": "ConfigResponse"
             },
@@ -5230,30 +5645,6 @@
                 "additionalProperties": false,
                 "type": "object",
                 "title": "FeatureFlags"
-            },
-            "File": {
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "title": "Path"
-                    },
-                    "name": {
-                        "type": "string",
-                        "title": "Name"
-                    },
-                    "type": {
-                        "type": "string",
-                        "title": "Type"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "path",
-                    "name",
-                    "type"
-                ],
-                "title": "File",
-                "description": "File schema."
             },
             "Flow": {
                 "properties": {
@@ -8740,26 +9131,6 @@
                 ],
                 "title": "UpdateCustomComponentRequest"
             },
-            "UploadFileResponse": {
-                "properties": {
-                    "flowId": {
-                        "type": "string",
-                        "title": "Flowid"
-                    },
-                    "file_path": {
-                        "type": "string",
-                        "format": "path",
-                        "title": "File Path"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "flowId",
-                    "file_path"
-                ],
-                "title": "UploadFileResponse",
-                "description": "Upload file response schema."
-            },
             "UserCreate": {
                 "properties": {
                     "username": {
@@ -9459,6 +9830,147 @@
                     "zoom"
                 ],
                 "title": "ViewPort"
+            },
+            "langflow__api__schemas__UploadFileResponse": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "path": {
+                        "type": "string",
+                        "format": "path",
+                        "title": "Path"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "title": "Size"
+                    },
+                    "provider": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Provider"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "name",
+                    "path",
+                    "size"
+                ],
+                "title": "UploadFileResponse",
+                "description": "File upload response schema."
+            },
+            "langflow__api__v1__schemas__UploadFileResponse": {
+                "properties": {
+                    "flowId": {
+                        "type": "string",
+                        "title": "Flowid"
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "format": "path",
+                        "title": "File Path"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "flowId",
+                    "file_path"
+                ],
+                "title": "UploadFileResponse",
+                "description": "Upload file response schema."
+            },
+            "langflow__services__database__models__file__model__File": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "User Id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "path": {
+                        "type": "string",
+                        "title": "Path"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "title": "Size"
+                    },
+                    "provider": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Provider"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Created At"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Updated At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "user_id",
+                    "name",
+                    "path",
+                    "size"
+                ],
+                "title": "File"
+            },
+            "langflow__utils__schemas__File": {
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "title": "Path"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "path",
+                    "name",
+                    "type"
+                ],
+                "title": "File",
+                "description": "File schema."
             }
         },
         "securitySchemes": {
