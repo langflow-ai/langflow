@@ -1814,9 +1814,8 @@
     }
   },
   "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
+  "name": "Gmail Agent",
   "endpoint_name": null,
   "id": "0473161e-ca7e-413c-9113-e98a142313ed",
   "is_component": false,
-  "last_tested_version": "1.2.0",
-  "name": "Gmail Agent (updated)"
 }
