@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import os
+from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from collections import OrderedDict
+
 from loguru import logger
 from typing_extensions import override
 
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from langchain.callbacks.base import BaseCallbackHandler
-    from langfuse.client import StatefulSpanClient
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
@@ -29,7 +29,7 @@ class LangFuseTracer(BaseTracer):
         self.trace_type = trace_type
         self.trace_id = trace_id
         self.flow_id = trace_name.split(" - ")[-1]
-        self.spans: dict = OrderedDict() # spans that are not ended
+        self.spans: dict = OrderedDict()  # spans that are not ended
 
         config = self._get_config()
         self._ready: bool = self.setup_langfuse(config) if config else False
@@ -66,7 +66,7 @@ class LangFuseTracer(BaseTracer):
     @override
     def add_trace(
         self,
-        trace_id: str, # actualy component id
+        trace_id: str,  # actualy component id
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
