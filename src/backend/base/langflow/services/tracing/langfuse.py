@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-
+from collections import OrderedDict
 from loguru import logger
 from typing_extensions import override
 
@@ -29,8 +29,7 @@ class LangFuseTracer(BaseTracer):
         self.trace_type = trace_type
         self.trace_id = trace_id
         self.flow_id = trace_name.split(" - ")[-1]
-        self.last_span: StatefulSpanClient | None = None
-        self.spans: dict = {}
+        self.spans: dict = OrderedDict() # spans that are not ended
 
         config = self._get_config()
         self._ready: bool = self.setup_langfuse(config) if config else False
@@ -67,7 +66,7 @@ class LangFuseTracer(BaseTracer):
     @override
     def add_trace(
         self,
-        trace_id: str,
+        trace_id: str, # actualy component id
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
@@ -90,9 +89,12 @@ class LangFuseTracer(BaseTracer):
             "start_time": start_time,
         }
 
-        span = self.last_span.span(**content_span) if self.last_span else self.trace.span(**content_span)
+        if len(self.spans) > 0:
+            last_span = next(reversed(self.spans))
+            span = self.spans[last_span].span(**content_span)
+        else:
+            span = self.trace.span(**content_span)
 
-        self.last_span = span
         self.spans[trace_id] = span
 
     @override
@@ -108,7 +110,7 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        span = self.spans.get(trace_id, None)
+        span = self.spans.pop(trace_id, None)
         if span:
             output: dict = {}
             output |= outputs or {}
