@@ -1748,32 +1748,26 @@ export function downloadFlow(
   flowDescription?: string,
 ) {
   try {
-    // Create a deep clone to avoid modifying the original flow
     const clonedFlow = cloneDeep(flow);
 
-    // Remove filenames from components to clean the data
     removeFileNameFromComponents(clonedFlow);
 
-    // Prepare the flow data with updated name and description
     const flowData = {
       ...clonedFlow,
       name: flowName,
       description: flowDescription,
     };
 
-    // Sort all object keys and arrays recursively and stringify with pretty formatting
+    console.log(flowData);
+
     const sortedData = sortJsonStructure(flowData);
     const sortedJsonString = JSON.stringify(sortedData, null, 2);
 
-    // Create a data URI with the sorted JSON
     const dataUri = `data:text/json;chatset=utf-8,${encodeURIComponent(sortedJsonString)}`;
-
-    // Set up download link
     const downloadLink = document.createElement("a");
     downloadLink.href = dataUri;
     downloadLink.download = `${flowName || flow.name}.json`;
 
-    // Trigger download
     downloadLink.click();
   } catch (error) {
     console.error("Error downloading flow:", error);
@@ -1803,6 +1797,7 @@ export const createNewFlow = (
     is_component: flow?.is_component ?? false,
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
+    tags: flow?.tags ?? [],
   };
 };
 

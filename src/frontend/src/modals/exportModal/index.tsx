@@ -64,6 +64,7 @@ const ExportModal = forwardRef(
                 last_tested_version: version,
                 endpoint_name: currentFlow!.endpoint_name,
                 is_component: false,
+                tags: currentFlow!.tags,
               }),
               name!,
               description,
