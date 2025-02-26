@@ -17,7 +17,6 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from loguru import logger
-from sqlmodel import select
 
 from langflow.api.build import (
     cancel_flow_build,
@@ -34,6 +33,7 @@ from langflow.api.utils import (
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
+    verify_public_flow_and_get_user,
 )
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
@@ -47,11 +47,10 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.graph.graph.base import Graph
 from langflow.graph.utils import log_vertex_build
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.schema.schema import OutputValue
 from langflow.services.cache.utils import CacheMiss
 from langflow.services.chat.service import ChatService
-from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import (
     get_chat_service,
     get_queue_service,
@@ -101,9 +100,7 @@ async def retrieve_vertices_order(
     try:
         # First, we need to check if the flow_id is in the cache
         if not data:
-            graph = await build_graph_from_db(
-                flow_id=flow_id, session=session, chat_service=chat_service
-            )
+            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
@@ -114,11 +111,7 @@ async def retrieve_vertices_order(
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
         components_count = len(graph.vertices)
-        vertices_to_run = list(
-            graph.vertices_to_run.union(
-                get_top_level_vertices(graph, graph.vertices_to_run)
-            )
-        )
+        vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
         await chat_service.set_cache(str(flow_id), graph)
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -128,9 +121,7 @@ async def retrieve_vertices_order(
                 playground_success=True,
             ),
         )
-        return VerticesOrderResponse(
-            ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run
-        )
+        return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -162,14 +153,32 @@ async def build_flow(
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
     flow_name: str | None = None,
 ):
-    """Build and process a flow, returning a job ID for event polling."""
+    """Build and process a flow, returning a job ID for event polling.
+
+    This endpoint requires authentication through the CurrentActiveUser dependency.
+    For public flows that don't require authentication, use the /build_public_tmp/{flow_id}/flow endpoint.
+
+    Args:
+        flow_id: UUID of the flow to build
+        background_tasks: Background tasks manager
+        inputs: Optional input values for the flow
+        data: Optional flow data
+        files: Optional files to include
+        stop_component_id: Optional ID of component to stop at
+        start_component_id: Optional ID of component to start from
+        log_builds: Whether to log the build process
+        current_user: The authenticated user
+        queue_service: Queue service for job management
+        flow_name: Optional name for the flow
+
+    Returns:
+        Dict with job_id that can be used to poll for build status
+    """
     # First verify the flow exists
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if not flow:
-            raise HTTPException(
-                status_code=404, detail=f"Flow with id {flow_id} not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
 
     job_id = await start_flow_build(
         flow_id=flow_id,
@@ -210,34 +219,24 @@ async def cancel_build(
     """Cancel a specific build job."""
     try:
         # Cancel the flow build and check if it was successful
-        cancellation_success = await cancel_flow_build(
-            job_id=job_id, queue_service=queue_service
-        )
+        cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)
 
         if cancellation_success:
             # Cancellation succeeded or wasn't needed
-            return CancelFlowResponse(
-                success=True, message="Flow build cancelled successfully"
-            )
+            return CancelFlowResponse(success=True, message="Flow build cancelled successfully")
         # Cancellation was attempted but failed
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
     except asyncio.CancelledError:
         # If CancelledError reaches here, it means the task was not successfully cancelled
-        logger.error(
-            f"Failed to cancel flow build for job_id {job_id} (CancelledError caught)"
-        )
+        logger.error(f"Failed to cancel flow build for job_id {job_id} (CancelledError caught)")
         return CancelFlowResponse(success=False, message="Failed to cancel flow build")
     except ValueError as exc:
         # Job not found
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except Exception as exc:
         # Any other unexpected error
         logger.exception(f"Error cancelling flow build for job_id {job_id}: {exc}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
@@ -284,9 +283,7 @@ async def build_vertex(
         cache = await chat_service.get_cache(flow_id_str)
         if isinstance(cache, CacheMiss):
             # If there's no cache
-            logger.warning(
-                f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}"
-            )
+            logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             graph = await build_graph_from_db(
                 flow_id=flow_id,
                 session=await anext(get_session()),
@@ -311,13 +308,9 @@ async def build_vertex(
             params = vertex_build_result.params
             valid = vertex_build_result.valid
             artifacts = vertex_build_result.artifacts
-            next_runnable_vertices = await graph.get_next_runnable_vertices(
-                lock, vertex=vertex, cache=False
-            )
+            next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
             top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
-            result_data_response = ResultDataResponse.model_validate(
-                result_dict, from_attributes=True
-            )
+            result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
         except Exception as exc:  # noqa: BLE001
             if isinstance(exc, ComponentBuildError):
                 params = exc.message
@@ -469,10 +462,7 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
             except Exception as exc:  # noqa: BLE001
                 logger.exception("Error building Component")
                 exc_message = parse_exception(exc)
-                if (
-                    exc_message
-                    == "The message must be an iterator or an async iterator."
-                ):
+                if exc_message == "The message must be an iterator or an async iterator.":
                     exc_message = "This stream has already been closed."
                 yield str(StreamData(event="error", data={"error": exc_message}))
         elif vertex.result is not None:
@@ -539,7 +529,7 @@ async def build_vertex_stream(
 @router.post("/build_public_tmp/{flow_id}/flow")
 async def build_public_tmp(
     *,
-    background_tasks: BackgroundTasks,
+    background_tasks: LimitVertexBuildBackgroundTasks,
     flow_id: uuid.UUID,
     inputs: Annotated[InputValueRequest | None, Body(embed=True)] = None,
     data: Annotated[FlowDataRequest | None, Body(embed=True)] = None,
@@ -551,36 +541,58 @@ async def build_public_tmp(
     request: Request,
     queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
 ):
-    async with session_scope() as session:
-        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+    """Build a public flow without requiring authentication.
 
-        if flow.access_type is not AccessTypeEnum.PUBLIC:
-            raise HTTPException(status_code=403, detail="Flow is not public")
-        # Copy the flow to a new flow with a new id
-        current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    This endpoint is specifically for public flows that don't require authentication.
+    It uses a client_id cookie to create a deterministic flow ID for tracking purposes.
 
-    # Get cookie from request and raise if not found
-    cookie = request.cookies.get("client_id")
-    if not cookie:
-        raise HTTPException(status_code=400, detail="No session cookie found")
+    The endpoint:
+    1. Verifies the requested flow is marked as public in the database
+    2. Creates a deterministic UUID based on client_id and flow_id
+    3. Uses the flow owner's permissions to build the flow
 
-    new_id = f"{cookie}_{flow_id}"
-    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
-    if not flow_name:
-        flow_name = new_id
-        # Create a deterministic UUID using uuid5 with DNS namespace and the flow_id string
+    Requirements:
+    - The flow must be marked as PUBLIC in the database
+    - The request must include a client_id cookie
+
+    Args:
+        flow_id: UUID of the public flow to build
+        background_tasks: Background tasks manager
+        inputs: Optional input values for the flow
+        data: Optional flow data
+        files: Optional files to include
+        stop_component_id: Optional ID of component to stop at
+        start_component_id: Optional ID of component to start from
+        log_builds: Whether to log the build process
+        flow_name: Optional name for the flow
+        request: FastAPI request object (needed for cookie access)
+        queue_service: Queue service for job management
+
+    Returns:
+        Dict with job_id that can be used to poll for build status
+    """
     try:
-        return await build_flow(
-            background_tasks=background_tasks,
+        # Verify this is a public flow and get the associated user
+        client_id = request.cookies.get("client_id")
+        owner_user, new_flow_id = await verify_public_flow_and_get_user(flow_id=flow_id, client_id=client_id)
+
+        # Start the flow build using the new flow ID
+        job_id = await start_flow_build(
             flow_id=new_flow_id,
+            background_tasks=background_tasks,
             inputs=inputs,
             data=data,
             files=files,
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
             log_builds=log_builds,
-            current_user=current_user,
+            current_user=owner_user,
             queue_service=queue_service,
+            flow_name=flow_name or f"{client_id}_{flow_id}",
         )
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="Error building Component") from exc
+        logger.exception("Error building public flow")
+        if isinstance(exc, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"job_id": job_id}
