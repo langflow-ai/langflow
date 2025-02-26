@@ -15,23 +15,26 @@ from tests.base import ComponentTestBaseWithoutClient
     not os.environ.get("AWS_ACCESS_KEY_ID") or not os.environ.get("AWS_SECRET_ACCESS_KEY"),
     reason="Environment variable AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY is not defined.",
 )
-
 class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
-    """
-    Unit tests for the S3BucketUploaderComponent.
+    """Unit tests for the S3BucketUploaderComponent.
 
-    This test class inherits from ComponentTestBaseWithoutClient and includes several pytest fixtures and a test method to verify the functionality of the S3BucketUploaderComponent.
+    This test class inherits from ComponentTestBaseWithoutClient and includes several pytest fixtures and a test method
+    to verify the functionality of the S3BucketUploaderComponent.
 
     Fixtures:
         component_class: Returns the component class to be tested.
         file_names_mapping: Returns an empty list since this component doesn't have version-specific files.
         default_kwargs: Returns an empty dictionary since this component doesn't have any default arguments.
-        temp_files: Creates three temporary files with predefined content and yields them as Data objects. Cleans up the files after the test.
-        s3_bucket: Creates a unique S3 bucket for testing, yields the bucket name, and deletes the bucket and its contents after the test.
+        temp_files: Creates three temporary files with predefined content and yields them as Data objects.
+        Cleans up the files after the test.
+        s3_bucket: Creates a unique S3 bucket for testing, yields the bucket name, and deletes the bucket
+        and its contents after the test.
 
     Test Methods:
-        test_upload: Tests the upload functionality of the S3BucketUploaderComponent by uploading temporary files to the S3 bucket and verifying their content.
+        test_upload: Tests the upload functionality of the S3BucketUploaderComponent by uploading temporary files
+        to the S3 bucket and verifying their content.
     """
+
     @pytest.fixture
     def component_class(self):
         """Return the component class to test."""
@@ -53,7 +56,8 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
         contents = [
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
             b"Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            b"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+            b"Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris "
+            b"nisi ut aliquip ex ea commodo consequat.",
         ]
 
         for content in contents:
@@ -128,5 +132,5 @@ class TestS3UploaderComponent(ComponentTestBaseWithoutClient):
         for temp_file in temp_files:
             key = f"test/{Path(temp_file.data['file_path']).name}"
             response = s3.get_object(Bucket=s3_bucket, Key=key)
-            with Path(temp_file.data['file_path']).open("rb") as f:
+            with Path(temp_file.data["file_path"]).open("rb") as f:
                 assert response["Body"].read() == f.read()

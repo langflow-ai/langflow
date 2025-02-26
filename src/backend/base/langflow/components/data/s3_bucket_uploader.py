@@ -1,5 +1,5 @@
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 import boto3
 
@@ -12,6 +12,7 @@ from langflow.io import (
     SecretStrInput,
     StrInput,
 )
+
 
 class S3BucketUploaderComponent(Component):
     """S3BucketUploaderComponent is a component responsible for uploading files to an S3 bucket.
@@ -166,13 +167,10 @@ class S3BucketUploaderComponent(Component):
             file_path = data_item.data.get("file_path")
             self.log(f"Uploading file: {file_path}")
             if file_path:
-                self._s3_client().upload_file(file_path,
-                                              Bucket=self.bucket_name, 
-                                              Key=self._normalize_path(file_path))
+                self._s3_client().upload_file(file_path, Bucket=self.bucket_name, Key=self._normalize_path(file_path))
 
     def _s3_client(self) -> Any:
-        """Creates and returns an S3 client using the provided AWS access key ID and secret 
-        access key.
+        """Creates and returns an S3 client using the provided AWS access key ID and secret access key.
 
         Returns:
             Any: A boto3 S3 client instance.
