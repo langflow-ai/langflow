@@ -5,8 +5,6 @@ slug: /deployment-railway
 
 This guide explains how to deploy Langflow on [Railway](https://railway.app/), a cloud infrastructure platform that provides auto-deploy, managed databases, and automatic scaling.
 
-## Deploy Langflow
-
 1. Click the following button to go to Railway:
 
    [![Deploy on Railway](/logos/railway-deploy.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)

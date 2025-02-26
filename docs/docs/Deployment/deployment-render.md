@@ -5,8 +5,6 @@ slug: /deployment-render
 
 This guide explains how to deploy Langflow on [Render](https://render.com/), a cloud platform for deploying web applications and APIs.
 
-## Deploy Langflow
-
 :::note
 Langflow requires at least 2 GB of RAM to run, so it uses a **standard** Render instance. This may require a credit card. Review [Render's pricing](https://render.com/pricing) before proceeding.
 :::
