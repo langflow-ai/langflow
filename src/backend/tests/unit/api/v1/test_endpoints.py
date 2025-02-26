@@ -57,7 +57,7 @@ async def test_update_component_outputs(client: AsyncClient, logged_in_headers: 
 async def test_update_component_model_name_options(client: AsyncClient, logged_in_headers: dict):
     """Test that model_name options are updated when selecting a provider."""
     component = AgentComponent()
-    component_node, cc_instance = build_custom_component_template(
+    component_node, _cc_instance = build_custom_component_template(
         component,
     )
 
