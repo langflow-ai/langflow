@@ -37,7 +37,7 @@ def test_run_flow_from_json_params():
 def fake_env_file(tmp_path):
     # Create a fake .env file
     env_file = tmp_path / ".env"
-    env_file.write_text("TEST_OP=TESTWORKS")
+    env_file.write_text("TEST_OP=TESTWORKS", encoding="utf-8")
     return env_file
 
 

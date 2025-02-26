@@ -1,12 +1,10 @@
 import asyncio
 import uuid
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-import anyio
 import pytest
-from aiofile import async_open
+from anyio import Path
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
@@ -28,7 +26,7 @@ async def test_load_starter_projects():
     projects = await load_starter_projects()
     assert isinstance(projects, list)
     assert all(isinstance(project[1], dict) for project in projects)
-    assert all(isinstance(project[0], anyio.Path) for project in projects)
+    assert all(isinstance(project[0], Path) for project in projects)
 
 
 async def test_get_project_data():
@@ -139,7 +137,7 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    data_path = str(await anyio.Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
+    data_path = str(await Path(__file__).parent.parent.parent.absolute() / "base" / "langflow" / "components")
     components = await abuild_custom_component_list_from_path(data_path)
 
     chat_input = find_component_by_name(components, "ChatInput")
@@ -243,9 +241,8 @@ async def test_load_bundles_from_urls():
         assert len(components_paths) == 1
         assert "langflow-bundles-68428ce16729a385fe1bcc0f1ec91fd5f5f420b9/components" in components_paths[0]
 
-        async with async_open(Path(components_paths[0]) / "embeddings" / "openai2.py") as f:
-            content = await f.read()
-            assert "OpenAIEmbeddings2Component" in content
+        content = await (Path(components_paths[0]) / "embeddings" / "openai2.py").read_text(encoding="utf-8")
+        assert "OpenAIEmbeddings2Component" in content
 
         assert len(temp_dirs) == 1
 

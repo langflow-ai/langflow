@@ -1,5 +1,5 @@
 import pytest
-from aiofile import async_open
+from anyio import Path
 from langflow.components.inputs import ChatInput, TextInputComponent
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
@@ -90,9 +90,8 @@ class TestChatInput(ComponentTestBaseWithClient):
     async def test_message_response_with_files(self, component_class, tmp_path):
         """Test message response with file attachments."""
         # Create a temporary test file
-        test_file = tmp_path / "test.txt"
-        async with async_open(test_file, "w") as f:
-            await f.write("Test content")
+        test_file = Path(tmp_path) / "test.txt"
+        await test_file.write_text("Test content", encoding="utf-8")
 
         kwargs = {
             "input_value": "Message with file",
