@@ -120,7 +120,12 @@ class ParameterHandler:
 
     def should_skip_field(self, field_name: str, field: dict, params: dict[str, Any]) -> bool:
         """Determine if field should be skipped."""
-        return field_name in params or field_name == "_type" or (not field.get("show") and field_name != "code")
+        return (
+            field.get("type") == "other"
+            or field_name in params
+            or field_name == "_type"
+            or (not field.get("show") and field_name != "code")
+        )
 
     def process_file_field(self, field_name: str, field: dict, params: dict[str, Any]) -> dict[str, Any]:
         """Process file type fields."""
