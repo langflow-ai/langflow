@@ -1,16 +1,26 @@
 from __future__ import annotations
 
+import asyncio
 import time
 import traceback
 import uuid
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from sqlmodel import select
 
 from langflow.api.build import (
+    cancel_flow_build,
     get_flow_events_response,
     start_flow_build,
 )
@@ -26,6 +36,7 @@ from langflow.api.utils import (
     parse_exception,
 )
 from langflow.api.v1.schemas import (
+    CancelFlowResponse,
     FlowDataRequest,
     InputValueRequest,
     ResultDataResponse,
@@ -90,7 +101,9 @@ async def retrieve_vertices_order(
     try:
         # First, we need to check if the flow_id is in the cache
         if not data:
-            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+            graph = await build_graph_from_db(
+                flow_id=flow_id, session=session, chat_service=chat_service
+            )
         else:
             graph = await build_and_cache_graph_from_data(
                 flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
@@ -101,7 +114,11 @@ async def retrieve_vertices_order(
         # We need to get the id of each vertex
         # and return the same structure but only with the ids
         components_count = len(graph.vertices)
-        vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
+        vertices_to_run = list(
+            graph.vertices_to_run.union(
+                get_top_level_vertices(graph, graph.vertices_to_run)
+            )
+        )
         await chat_service.set_cache(str(flow_id), graph)
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -111,7 +128,9 @@ async def retrieve_vertices_order(
                 playground_success=True,
             ),
         )
-        return VerticesOrderResponse(ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run)
+        return VerticesOrderResponse(
+            ids=graph.first_layer, run_id=graph.run_id, vertices_to_run=vertices_to_run
+        )
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_playground,
@@ -148,7 +167,9 @@ async def build_flow(
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
         if not flow:
-            raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Flow with id {flow_id} not found"
+            )
 
     job_id = await start_flow_build(
         flow_id=flow_id,
@@ -179,6 +200,44 @@ async def get_build_events(
         queue_service=queue_service,
         stream=stream,
     )
+
+
+@router.post("/build/{job_id}/cancel", response_model=CancelFlowResponse)
+async def cancel_build(
+    job_id: str,
+    queue_service: Annotated[JobQueueService, Depends(get_queue_service)],
+):
+    """Cancel a specific build job."""
+    try:
+        # Cancel the flow build and check if it was successful
+        cancellation_success = await cancel_flow_build(
+            job_id=job_id, queue_service=queue_service
+        )
+
+        if cancellation_success:
+            # Cancellation succeeded or wasn't needed
+            return CancelFlowResponse(
+                success=True, message="Flow build cancelled successfully"
+            )
+        # Cancellation was attempted but failed
+        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+    except asyncio.CancelledError:
+        # If CancelledError reaches here, it means the task was not successfully cancelled
+        logger.error(
+            f"Failed to cancel flow build for job_id {job_id} (CancelledError caught)"
+        )
+        return CancelFlowResponse(success=False, message="Failed to cancel flow build")
+    except ValueError as exc:
+        # Job not found
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        # Any other unexpected error
+        logger.exception(f"Error cancelling flow build for job_id {job_id}: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
+        ) from exc
 
 
 @router.post("/build/{flow_id}/vertices/{vertex_id}", deprecated=True)
@@ -225,9 +284,13 @@ async def build_vertex(
         cache = await chat_service.get_cache(flow_id_str)
         if isinstance(cache, CacheMiss):
             # If there's no cache
-            logger.warning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
+            logger.warning(
+                f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}"
+            )
             graph = await build_graph_from_db(
-                flow_id=flow_id, session=await anext(get_session()), chat_service=chat_service
+                flow_id=flow_id,
+                session=await anext(get_session()),
+                chat_service=chat_service,
             )
         else:
             graph = cache.get("result")
@@ -248,9 +311,13 @@ async def build_vertex(
             params = vertex_build_result.params
             valid = vertex_build_result.valid
             artifacts = vertex_build_result.artifacts
-            next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
+            next_runnable_vertices = await graph.get_next_runnable_vertices(
+                lock, vertex=vertex, cache=False
+            )
             top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
-            result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
+            result_data_response = ResultDataResponse.model_validate(
+                result_dict, from_attributes=True
+            )
         except Exception as exc:  # noqa: BLE001
             if isinstance(exc, ComponentBuildError):
                 params = exc.message
@@ -402,7 +469,10 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
             except Exception as exc:  # noqa: BLE001
                 logger.exception("Error building Component")
                 exc_message = parse_exception(exc)
-                if exc_message == "The message must be an iterator or an async iterator.":
+                if (
+                    exc_message
+                    == "The message must be an iterator or an async iterator."
+                ):
                     exc_message = "This stream has already been closed."
                 yield str(StreamData(event="error", data={"error": exc_message}))
         elif vertex.result is not None:
@@ -423,7 +493,11 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
-@router.get("/build/{flow_id}/{vertex_id}/stream", response_class=StreamingResponse, deprecated=True)
+@router.get(
+    "/build/{flow_id}/{vertex_id}/stream",
+    response_class=StreamingResponse,
+    deprecated=True,
+)
 async def build_vertex_stream(
     flow_id: uuid.UUID,
     vertex_id: str,
@@ -455,7 +529,8 @@ async def build_vertex_stream(
     """
     try:
         return StreamingResponse(
-            _stream_vertex(str(flow_id), vertex_id, get_chat_service()), media_type="text/event-stream"
+            _stream_vertex(str(flow_id), vertex_id, get_chat_service()),
+            media_type="text/event-stream",
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc

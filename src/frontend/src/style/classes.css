@@ -287,6 +287,10 @@ input[type="search"]::-webkit-search-cancel-button {
   fill: hsl(var(--canvas-dot)) !important;
 }
 
+.markdown td {
+  min-width: 78px;
+}
+
 .linenumber {
   font-style: normal !important;
 }

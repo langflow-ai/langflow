@@ -12,7 +12,12 @@ from aiofile import async_open
 from loguru import logger
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 from typing_extensions import override
 
 from langflow.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
@@ -34,7 +39,9 @@ def is_list_of_any(field: FieldInfo) -> bool:
     if field.annotation is None:
         return False
     try:
-        union_args = field.annotation.__args__ if hasattr(field.annotation, "__args__") else []
+        union_args = (
+            field.annotation.__args__ if hasattr(field.annotation, "__args__") else []
+        )
 
         return field.annotation.__origin__ is list or any(
             arg.__origin__ is list for arg in union_args if hasattr(arg, "__origin__")
@@ -149,8 +156,12 @@ class Settings(BaseSettings):
 
     store: bool | None = True
     store_url: str | None = "https://api.langflow.store"
-    download_webhook_url: str | None = "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
-    like_webhook_url: str | None = "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
+    download_webhook_url: str | None = (
+        "https://api.langflow.store/flows/trigger/ec611a61-8460-4438-b187-a4f65e5559d4"
+    )
+    like_webhook_url: str | None = (
+        "https://api.langflow.store/flows/trigger/64275852-ec00-45c1-984e-3bff814732da"
+    )
 
     storage_type: str = "local"
 
@@ -229,7 +240,7 @@ class Settings(BaseSettings):
     public_flow_expiration: int = Field(default=86400, gt=600)
     """The time in seconds after which a public temporary flow will be considered expired and eligible for cleanup.
     Default is 24 hours (86400 seconds). Minimum is 600 seconds (10 minutes)."""
-    event_delivery: Literal["polling", "streaming"] = "streaming"
+    event_delivery: Literal["polling", "streaming"] = "polling"
     """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
 
     @field_validator("dev")
@@ -296,7 +307,9 @@ class Settings(BaseSettings):
             msg = f"Invalid database_url provided: '{value}'"
             raise ValueError(msg)
 
-        logger.debug("No database_url provided, trying LANGFLOW_DATABASE_URL env variable")
+        logger.debug(
+            "No database_url provided, trying LANGFLOW_DATABASE_URL env variable"
+        )
         if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
             value = langflow_database_url
             logger.debug("Using LANGFLOW_DATABASE_URL env variable.")
@@ -335,7 +348,10 @@ class Settings(BaseSettings):
                     logger.debug("Copying existing database to new location")
                     copy2(new_path, new_pre_path)
                     logger.debug(f"Copied existing database to {new_pre_path}")
-                elif Path(f"./{db_file_name}").exists() and info.data["save_db_in_config_dir"]:
+                elif (
+                    Path(f"./{db_file_name}").exists()
+                    and info.data["save_db_in_config_dir"]
+                ):
                     logger.debug("Copying existing database to new location")
                     copy2(f"./{db_file_name}", new_pre_path)
                     logger.debug(f"Copied existing database to {new_pre_path}")
@@ -369,15 +385,22 @@ class Settings(BaseSettings):
         if os.getenv("LANGFLOW_COMPONENTS_PATH"):
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
             langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-            if Path(langflow_component_path).exists() and langflow_component_path not in value:
+            if (
+                Path(langflow_component_path).exists()
+                and langflow_component_path not in value
+            ):
                 if isinstance(langflow_component_path, list):
                     for path in langflow_component_path:
                         if path not in value:
                             value.append(path)
-                    logger.debug(f"Extending {langflow_component_path} to components_path")
+                    logger.debug(
+                        f"Extending {langflow_component_path} to components_path"
+                    )
                 elif langflow_component_path not in value:
                     value.append(langflow_component_path)
-                    logger.debug(f"Appending {langflow_component_path} to components_path")
+                    logger.debug(
+                        f"Appending {langflow_component_path} to components_path"
+                    )
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
@@ -389,7 +412,9 @@ class Settings(BaseSettings):
         logger.debug(f"Components path: {value}")
         return value
 
-    model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
+    model_config = SettingsConfigDict(
+        validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_"
+    )
 
     async def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
         new_settings = await load_settings_from_yaml(file_path)

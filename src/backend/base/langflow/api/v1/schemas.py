@@ -379,3 +379,10 @@ class ConfigResponse(BaseModel):
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     event_delivery: Literal["polling", "streaming"]
+
+
+class CancelFlowResponse(BaseModel):
+    """Response model for flow build cancellation."""
+
+    success: bool
+    message: str

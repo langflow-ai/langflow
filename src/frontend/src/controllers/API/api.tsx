@@ -240,6 +240,7 @@ export type StreamingRequestParams = {
   body?: object;
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
+  buildController: AbortController;
 };
 
 async function performStreamingRequest({
@@ -249,18 +250,18 @@ async function performStreamingRequest({
   body,
   onError,
   onNetworkError,
+  buildController,
 }: StreamingRequestParams) {
   let headers = {
     "Content-Type": "application/json",
     // this flag is fundamental to ensure server stops tasks when client disconnects
     Connection: "close",
   };
-  const controller = new AbortController();
-  useFlowStore.getState().setBuildController(controller);
+
   const params = {
     method: method,
     headers: headers,
-    signal: controller.signal,
+    signal: buildController.signal,
   };
   if (body) {
     params["body"] = JSON.stringify(body);
@@ -301,7 +302,7 @@ async function performStreamingRequest({
           }
           const shouldContinue = await onData(data);
           if (!shouldContinue) {
-            controller.abort();
+            buildController.abort();
             return;
           }
         } else {
