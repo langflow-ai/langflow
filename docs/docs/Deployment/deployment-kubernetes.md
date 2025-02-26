@@ -3,11 +3,15 @@ title: Deploy Langflow on Kubernetes
 slug: /deployment-kubernetes
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-This guide demonstrates deploying Langflow on a Kubernetes cluster. Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
+This guide demonstrates deploying Langflow on a Kubernetes cluster.
 
-- Install [Langflow as an IDE](deployment-kubernetes#install-the-langflow-ide-helm-chart) in a Kubernetes cluster for the complete Langflow development environment.
-- Install [Langflow as a standalone application](/deployment-kubernetes#install-the-langflow-runtime-helm-chart) to deploy a Langflow application in a more secure and stable environment.
+Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
+
+- Deploy the [Langflow IDE](deployment-kubernetes#langflow-ide-deployment) for the complete Langflow development environment.
+- Deploy the [Langflow runtime](/deployment-kubernetes#langflow-runtime-deployment) to deploy a standalone Langflow application in a more secure and stable environment.
 
 ## Langflow IDE deployment
 
@@ -17,12 +21,11 @@ The `langflow-ide` Helm chart is available in the [Langflow Helm Charts reposito
 
 ### Prerequisites
 
-- [Kubernetes](https://kubernetes.io/docs/setup/) server
+- [Kubernetes](https://kubernetes.io/docs/setup/) cluster
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
 - [Helm](https://helm.sh/docs/intro/install/)
 
 ### Prepare a Kubernetes cluster
-
 
 This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you can use any Kubernetes cluster.
 
@@ -37,7 +40,6 @@ This example uses [Minikube](https://minikube.sigs.k8s.io/docs/start/), but you 
 	```text
 	kubectl config use-context minikube
 	```
-
 
 ### Install the Langflow IDE Helm chart
 
@@ -83,8 +85,8 @@ kubectl port-forward -n langflow svc/langflow-service 8080:8080
 ```
 
 Now you can access:
-- The Langflow UI at `http://localhost:8080`
 - The Langflow API at `http://localhost:7860`
+- The Langflow UI at `http://localhost:8080`
 
 
 ### Configure the Langflow version
@@ -176,7 +178,7 @@ langflow:
       #   memory: 512Mi
 ```
 
-## Langflow Runtime deployment
+## Langflow runtime deployment
 
 The runtime chart is tailored for deploying applications in a production environment. It is focused on stability, performance, isolation, and security to ensure that applications run reliably and efficiently.
 
@@ -274,7 +276,10 @@ To inject secrets and Langflow global variables, use the `secrets` and `env` sec
 
 For example, the [example flow JSON](https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/heads/main/examples/flows/basic-prompting-hello-world.json) uses a global variable that is a secret. When you export the flow as JSON, it's recommended to not include the secret.
 
-Instead, when importing the flow in the Langflow runtime, set the global variable using the `env` section in the [values.yaml](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/values.yaml) file. Assuming you have a global variable called `openai_key_var`, you can read it directly from a secret:
+Instead, when importing the flow in the Langflow runtime, you can set the global variable in one of the following ways:
+
+<Tabs>
+<TabItem value="values" label="Using values.yaml">
 
 ```yaml
 env:
@@ -285,21 +290,22 @@ env:
         key: openai-key
 ```
 
-or directly from the values file (not recommended for secret values):
+Or directly in the values file (not recommended for secret values):
 
-```
+```yaml
 env:
   - name: openai_key_var
     value: "sk-...."
 ```
 
-Alternatively, add a Kubernetes secret with Helm commands.
+</TabItem>
+<TabItem value="helm" label="Using Helm Commands">
 
 1. Create the secret:
 ```shell
 kubectl create secret generic openai-credentials \
   --namespace langflow \
-  --from-literal=OPENAI_API_KEY=your-api-key-here
+  --from-literal=OPENAI_API_KEY=sk...
 ```
 
 2. Verify the secret exists. The result is encrypted.
@@ -315,6 +321,9 @@ helm upgrade my-langflow-app-image langflow/langflow-runtime -n langflow \
   --set "extraEnv[0].valueFrom.secretKeyRef.name=openai-credentials" \
   --set "extraEnv[0].valueFrom.secretKeyRef.key=OPENAI_API_KEY"
 ```
+
+</TabItem>
+</Tabs>
 
 ### Configure log level
 
@@ -344,7 +353,7 @@ resources:
     cpu: "1000m"
 ```
 
-## Deploy on AWS EKS, Google GKE, or Azure AKS and other examples
+## Deploy Langflow on AWS EKS, Google GKE, or Azure AKS and other examples
 
 For more information, see the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts).
 

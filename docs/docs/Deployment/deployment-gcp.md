@@ -11,8 +11,7 @@ The script guides you through setting up a Debian-based VM with the Langflow pac
 
 ## Prerequisites
 
-* A GCP account with the necessary permissions to create resources
-* A project on GCP where you want to deploy Langflow
+* A [Google Cloud](https://console.cloud.google.com/) project with the necessary permissions to create resources
 
 ## Deploy Langflow in GCP
 
