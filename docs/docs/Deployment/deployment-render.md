@@ -15,7 +15,7 @@ Langflow requires at least 2 GB of RAM to run, so it uses a **standard** Render 
 
    [![Deploy to Render](/logos/render-deploy.svg)](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Flangflow-ai%2Flangflow%2Ftree%2Fdev)
 
-2. Enter a blueprint name and select the branch for your `render.yaml` file.
+2. Enter a blueprint name, and then select the branch for your `render.yaml` file.
 
 3. Click **Deploy Blueprint**.
 
