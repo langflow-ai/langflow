@@ -1705,34 +1705,79 @@ export function extractFieldsFromComponenents(data: APIObjectType) {
   });
   return fields;
 }
+/**
+ * Recursively sorts all object keys and arrays in a JSON structure
+ * @param obj - The object to sort keys and arrays for
+ * @returns A new object with sorted keys and arrays
+ */
+function sortJsonStructure<T>(obj: T): T {
+  // Handle null case
+  if (obj === null) {
+    return obj;
+  }
 
+  // Handle arrays - sort array elements if they are objects
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sortJsonStructure(item)) as unknown as T;
+  }
+
+  // Only process actual objects
+  if (typeof obj !== "object") {
+    return obj;
+  }
+
+  // Create a new object with sorted keys
+  return Object.keys(obj)
+    .sort()
+    .reduce((result, key) => {
+      // Recursively sort nested objects and arrays
+      result[key] = sortJsonStructure(obj[key]);
+      return result;
+    }, {} as any);
+}
+
+/**
+ * Downloads the flow as a JSON file with sorted keys and arrays
+ * @param flow - The flow to download
+ * @param flowName - The name to use for the flow
+ * @param flowDescription - Optional description for the flow
+ */
 export function downloadFlow(
   flow: FlowType,
   flowName: string,
   flowDescription?: string,
 ) {
-  let clonedFlow = cloneDeep(flow);
-  removeFileNameFromComponents(clonedFlow);
-  // create a data URI with the current flow data
-  const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-    JSON.stringify(
-      {
-        ...clonedFlow,
-        name: flowName,
-        description: flowDescription,
-      },
-      null,
-      2,
-    ),
-  )}`;
+  try {
+    // Create a deep clone to avoid modifying the original flow
+    const clonedFlow = cloneDeep(flow);
 
-  // create a link element and set its properties
-  const link = document.createElement("a");
-  link.href = jsonString;
-  link.download = `${flowName && flowName != "" ? flowName : flow.name}.json`;
+    // Remove filenames from components to clean the data
+    removeFileNameFromComponents(clonedFlow);
 
-  // simulate a click on the link element to trigger the download
-  link.click();
+    // Prepare the flow data with updated name and description
+    const flowData = {
+      ...clonedFlow,
+      name: flowName,
+      description: flowDescription,
+    };
+
+    // Sort all object keys and arrays recursively and stringify with pretty formatting
+    const sortedData = sortJsonStructure(flowData);
+    const sortedJsonString = JSON.stringify(sortedData, null, 2);
+
+    // Create a data URI with the sorted JSON
+    const dataUri = `data:text/json;chatset=utf-8,${encodeURIComponent(sortedJsonString)}`;
+
+    // Set up download link
+    const downloadLink = document.createElement("a");
+    downloadLink.href = dataUri;
+    downloadLink.download = `${flowName || flow.name}.json`;
+
+    // Trigger download
+    downloadLink.click();
+  } catch (error) {
+    console.error("Error downloading flow:", error);
+  }
 }
 
 export function getRandomElement<T>(array: T[]): T {
