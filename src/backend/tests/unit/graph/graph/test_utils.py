@@ -869,7 +869,7 @@ def test_get_sorted_vertices_with_unconnected_graph():
     predecessor_map = {vertex: data["predecessors"] for vertex, data in graph_dict.items()}
 
     def is_input_vertex(vertex_id: str) -> bool:
-        return vertex_id in ["A"]
+        return vertex_id == "A"
 
     def get_vertex_predecessors(vertex_id: str) -> list[str]:
         return predecessor_map[vertex_id]
