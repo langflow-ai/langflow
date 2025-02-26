@@ -46,6 +46,8 @@ docker run -it --rm \
 
 ### Langflow service
 
+The `langflow`service serves both the backend API and frontend UI of the Langflow web application.
+
 The `langflow` service uses the `langflowai/langflow:latest` Docker image and exposes port `7860`. It depends on the `postgres` service.
 
 Environment variables:
@@ -59,7 +61,11 @@ Volumes:
 
 ### PostgreSQL service
 
-The `postgres` service uses the `postgres:16` Docker image and exposes port 5432.
+The `postgres` service is a database that stores Langflow's persistent data including flows, users, and settings.
+
+The service runs on port 5432 and includes a dedicated volume for data storage.
+
+The `postgres` service uses the `postgres:16` Docker image.
 
 Environment variables:
 
