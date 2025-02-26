@@ -43,7 +43,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=README.md,target=README.md \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable
+    cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable --extra postgresql
 
 COPY ./src /app/src
 
@@ -63,7 +63,7 @@ COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/README.md /app/src/backend/base/README.md
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --frozen --no-dev --no-editable --extra postgresql
 
 ################################
 # RUNTIME
