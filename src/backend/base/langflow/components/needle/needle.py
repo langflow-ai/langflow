@@ -3,7 +3,7 @@ from langchain_community.retrievers.needle import NeedleRetriever
 from langchain_openai import ChatOpenAI
 
 from langflow.custom.custom_component.component import Component
-from langflow.io import DropdownInput, Output, SecretStrInput, StrInput
+from langflow.io import DropdownInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema.message import Message
 from langflow.utils.constants import MESSAGE_SENDER_AI
 
@@ -28,17 +28,14 @@ class NeedleComponent(Component):
             info="Your OpenAI API key.",
             required=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="collection_id",
             display_name="Collection ID",
             info="The ID of the Needle collection.",
             required=True,
         ),
-        StrInput(
-            name="query",
-            display_name="User Query",
-            info="Enter your question here.",
-            required=True,
+        MessageTextInput(
+            name="query", display_name="User Query", info="Enter your question here.", required=True, tool_mode=True
         ),
         DropdownInput(
             name="output_type",
