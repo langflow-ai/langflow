@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 
 import orjson
@@ -77,12 +78,21 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert events_response.status_code == 200
 
         # Process the events stream
+        text_output = None
         async for line in events_response.aiter_lines():
             if not line:  # Skip empty lines
                 continue
+            if "TextOutput" in line:
+                text_output = json.loads(line)
             # Process events if needed
             # We could add specific assertions here for loop-related events
+        json_string = text_output["data"]["build_data"]["data"]["results"]["text"]["text"]
+        json_data = json.loads(json_string)
 
+        # Use a for loop for better debugging
+        for data, q_dict in json_data:
+            expected_text = f"==> {q_dict['q']}"
+            assert expected_text in data["text"], f"Expected '{expected_text}' not found in '{data['text']}'"
         await self.check_messages(flow_id)
 
     async def test_run_flow_loop(self, client: AsyncClient, created_api_key, json_loop_test, logged_in_headers):
