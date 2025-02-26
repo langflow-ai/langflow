@@ -53,8 +53,9 @@ env:
   NODE_VERSION: "21"
   PYTHON_VERSION: "3.13"
   # Define the directory where Playwright browsers will be installed.
-  # Adjust if your project uses a different path.
+  # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
+  PLAYWRIGHT_VERSION: "1.49.1" # Add explicit version for cache key
 
 jobs:
   determine-test-suite:
@@ -251,12 +252,21 @@ jobs:
         run: npm ci
         working-directory: ./src/frontend
 
-      - name: Install Playwright Browser Dependencies
-        id: install-playwright
-        uses: ./.github/actions/install-playwright
+      # Cache Playwright browsers using a composite key
+      - name: Cache Playwright Browsers
+        id: cache-playwright
+        uses: actions/cache@v4
         with:
-          working-directory: ./src/frontend
-          browsers: chromium
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+          restore-keys: |
+            playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        run: |
+          cd ./src/frontend
+          npx playwright install --with-deps chromium
 
       - name: Setup Python Environment with UV
         uses: ./.github/actions/setup-uv
