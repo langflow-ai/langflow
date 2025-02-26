@@ -7,7 +7,7 @@ This guide explains how to deploy Langflow on [Railway](https://railway.app/), a
 
 ## Deploy Langflow
 
-1. Click the deployment button to go to Railway:
+1. Click the following button to go to Railway:
 
    [![Deploy on Railway](/logos/railway-deploy.svg)](https://railway.app/template/JMXEWp?referralCode=MnPSdg)
 
@@ -17,4 +17,6 @@ Railway automatically does the following:
    - Deploys Langflow.
    - Starts the application.
 
-By following these steps, your Langflow instance is successfully deployed on Railway.
+Wait for the deployment to complete.
+
+Your Langflow instance is now ready to use.
