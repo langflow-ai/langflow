@@ -876,9 +876,6 @@ wheels = [
 redis = [
     { name = "redis" },
 ]
-sqlalchemy = [
-    { name = "sqlalchemy" },
-]
 
 [[package]]
 name = "certifi"
@@ -4595,7 +4592,6 @@ dependencies = [
     { name = "asyncer" },
     { name = "bcrypt" },
     { name = "cachetools" },
-    { name = "celery", extra = ["redis", "sqlalchemy"] },
     { name = "chardet" },
     { name = "clickhouse-connect" },
     { name = "cryptography" },
@@ -4728,7 +4724,6 @@ requires-dist = [
     { name = "cachetools", specifier = ">=5.5.0,<6.0.0" },
     { name = "celery", marker = "extra == 'all'", specifier = ">=5.3.1" },
     { name = "celery", marker = "extra == 'deploy'", specifier = ">=5.3.1" },
-    { name = "celery", extras = ["redis", "sqlalchemy"], specifier = ">=5.4.0" },
     { name = "chardet", specifier = ">=5.2.0,<6.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
     { name = "cryptography", specifier = ">=42.0.5,<44.0.0" },
