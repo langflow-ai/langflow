@@ -2532,6 +2532,20 @@
                   "Data"
                 ],
                 "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Filepath",
+                "method": "get_path",
+                "name": "Filepath",
+                "required_inputs": [],
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
               }
             ],
             "pinned": false,

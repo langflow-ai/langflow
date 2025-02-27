@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import Data, Message
 
 
 class NvidiaIngestComponent(Component):
@@ -39,6 +39,7 @@ class NvidiaIngestComponent(Component):
             file_types=file_types,
             info=supported_file_types_info,
             required=True,
+            input_types=["Message"],
         ),
         BoolInput(
             name="extract_text",
@@ -133,6 +134,8 @@ class NvidiaIngestComponent(Component):
             err_msg = "Upload a file to use this component."
             self.log(err_msg, name="NVIDIAIngestComponent")
             raise ValueError(err_msg)
+        if isinstance(self.path, Message):
+            self.path = self.path.text
 
         resolved_path = self.resolve_path(self.path)
         extension = Path(resolved_path).suffix[1:].lower()

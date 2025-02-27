@@ -161,7 +161,22 @@ class BaseFileComponent(Component, ABC):
         ),
     ]
 
-    _base_outputs = [Output(display_name="Data", name="data", method="load_files")]
+    _base_outputs = [
+        Output(display_name="Data", name="data", method="load_files"),
+        Output(
+            name="Filepath",
+            display_name="Filepath",
+            method="get_path",
+        ),
+    ]
+
+    def get_path(self) -> Message:
+        data_list = self.load_files()
+        if not data_list:
+            return Message(text="")
+
+        file_path = data_list[0].data.get(self.SERVER_FILE_PATH_FIELDNAME, "")
+        return Message(text=str(file_path))
 
     @abstractmethod
     def process_files(self, file_list: list[BaseFile]) -> list[BaseFile]:
