@@ -108,12 +108,19 @@ class TaskUpdaterComponent(Component):
 
     async def process_task(self) -> Data:
         """Update or delete a task based on the operation selected."""
-        if not self.task_id:
+        task_id: UUID | str | None = self.task_id
+        if not task_id and "task_id" not in self.ctx:
+            msg = "Task ID is required"
+            raise ValueError(msg)
+        if not task_id and "task_id" in self.ctx:
+            task_id = self.ctx["task_id"]
+        if task_id is None:
             msg = "Task ID is required"
             raise ValueError(msg)
 
         try:
-            task_id = UUID(self.task_id)
+            if isinstance(task_id, str):
+                task_id = UUID(task_id)
         except ValueError as exc:
             msg = "Invalid Task ID format - must be a valid UUID"
             raise ValueError(msg) from exc
