@@ -5,7 +5,7 @@ import requests
 from loguru import logger
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput
+from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from langflow.schema import DataFrame, dotdict
 from langflow.template import Output
 
@@ -20,6 +20,8 @@ class NotionListPages(Component):
 
     # Store database properties globally
     _database_properties: dict[str, Any] = {}
+    # Cache for database list
+    _cached_databases: list[dict[str, Any]] = []
 
     inputs = [
         SecretStrInput(
@@ -81,6 +83,15 @@ class NotionListPages(Component):
             value=100,
             advanced=True,
         ),
+        BoolInput(
+            name="list_all_pages",
+            display_name="List All Pages",
+            info="Set to True to list all pages from the first available database.",
+            required=False,
+            value=False,
+            tool_mode=True,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -89,6 +100,10 @@ class NotionListPages(Component):
 
     def fetch_databases(self) -> list[dict[str, Any]]:
         """Fetch available databases from Notion API."""
+        if not self.notion_secret:
+            self.log("No Notion secret provided.")
+            return []
+
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Content-Type": "application/json",
@@ -96,6 +111,7 @@ class NotionListPages(Component):
         }
 
         try:
+            self.log("Fetching databases from Notion API...")
             response = requests.post(
                 "https://api.notion.com/v1/search",
                 headers=headers,
@@ -103,10 +119,18 @@ class NotionListPages(Component):
                 timeout=10,
             )
             response.raise_for_status()
-            return response.json().get("results", [])
+            results = response.json().get("results", [])
+
+            # Cache databases for later use
+            self.__class__._cached_databases = results
+
+            self.log(f"Found {len(results)} databases.")
+            # Fix for TRY300: Move return inside else block
         except requests.exceptions.RequestException as e:
             self.log(f"Error fetching databases: {e!s}")
             return []
+        else:
+            return results
 
     def fetch_database_properties(self, database_id: str) -> dict[str, Any]:
         """Fetch properties of a specific database."""
@@ -123,6 +147,7 @@ class NotionListPages(Component):
         }
 
         try:
+            self.log(f"Fetching properties for database: {database_id}")
             response = requests.get(f"https://api.notion.com/v1/databases/{database_id}", headers=headers, timeout=10)
             response.raise_for_status()
             return response.json().get("properties", {})
@@ -168,21 +193,61 @@ class NotionListPages(Component):
 
     def list_pages(self) -> DataFrame:
         """Query pages from the selected Notion database with filtering and sorting."""
-        if not self.database_id or self.database_id == "Loading databases...":
-            return DataFrame(pd.DataFrame({"error": ["Please select a valid database."]}))
+        # Check if we're in tool mode using list_all_pages
+        if hasattr(self, "list_all_pages") and self.list_all_pages:
+            self.log("Tool mode activated with list_all_pages=True")
 
-        # Get the actual database ID from the formatted database name
-        actual_database_id = self.get_actual_database_id()
+            # Use the cached databases or fetch them if needed
+            if not self.__class__._cached_databases:
+                self.fetch_databases()
 
-        # Ensure we have database properties
-        if not self._database_properties:
-            self._database_properties = self.fetch_database_properties(actual_database_id)
+            # If we have databases, use the first one
+            if self.__class__._cached_databases:
+                first_db = self.__class__._cached_databases[0]
+                db_id = first_db["id"]
+                db_name = ""
+                title_array = first_db.get("title", [])
+                for title_part in title_array:
+                    if "plain_text" in title_part:
+                        db_name += title_part["plain_text"]
+
+                if not db_name:
+                    db_name = "Untitled"
+
+                self.log(f"Using first available database: {db_name} ({db_id})")
+                actual_database_id = db_id
+
+                # Fetch properties for this database
+                self._database_properties = self.fetch_database_properties(actual_database_id)
+            else:
+                error_msg = "No databases available."
+                self.log(error_msg)
+                return DataFrame(pd.DataFrame({"error": [error_msg]}))
+        else:
+            # Normal mode, use the selected database from dropdown
+            if not self.database_id or self.database_id == "Loading databases...":
+                error_msg = "Please select a valid database."
+                return DataFrame(pd.DataFrame({"error": [error_msg]}))
+
+            # Get the actual database ID from the formatted database name
+            actual_database_id = self.get_actual_database_id()
+            self.log(f"Using selected database ID: {actual_database_id}")
+
+            # Ensure we have database properties
+            if not self._database_properties:
+                self._database_properties = self.fetch_database_properties(actual_database_id)
 
         # Build query payload
         query_payload = {"page_size": self.page_size}
 
-        # Add filter if provided
-        if self.filter_property and self.filter_operator and self.filter_value:
+        # Add filter if provided and not in tool mode
+        # Fix for E501: Break long line into multiple lines
+        if (
+            not (hasattr(self, "list_all_pages") and self.list_all_pages)
+            and self.filter_property
+            and self.filter_operator
+            and self.filter_value
+        ):
             prop_info = self._database_properties.get(self.filter_property, {})
             prop_type = prop_info.get("type", "text")
 
@@ -192,12 +257,13 @@ class NotionListPages(Component):
             if condition:
                 query_payload["filter"] = condition
 
-        # Add sort if provided
-        if self.sort_property:
+        # Add sort if provided and not in tool mode
+        if not (hasattr(self, "list_all_pages") and self.list_all_pages) and self.sort_property:
             query_payload["sorts"] = [{"property": self.sort_property, "direction": self.sort_direction}]
 
         # Make the request
         try:
+            self.log(f"Querying database {actual_database_id} with payload: {query_payload}")
             response = requests.post(
                 f"https://api.notion.com/v1/databases/{actual_database_id}/query",
                 headers={
@@ -210,6 +276,7 @@ class NotionListPages(Component):
             )
             response.raise_for_status()
             results = response.json()["results"]
+            self.log(f"Received {len(results)} pages from Notion API.")
 
             # Transform results
             pages_data = []
@@ -240,10 +307,13 @@ class NotionListPages(Component):
 
         except requests.exceptions.RequestException as e:
             error_msg = f"Error querying Notion database: {e}"
+            self.log(error_msg)
             return DataFrame(pd.DataFrame({"error": [error_msg]}))
         except (ValueError, KeyError, TypeError) as e:
+            error_msg = f"Error processing database response: {e}"
             logger.opt(exception=True).debug("Error processing Notion database response")
-            return DataFrame(pd.DataFrame({"error": [f"Error processing database response: {e}"]}))
+            self.log(error_msg)
+            return DataFrame(pd.DataFrame({"error": [error_msg]}))
 
     def format_property_value(self, prop_value: dict[str, Any]) -> str:
         """Format a Notion property value for display in the DataFrame."""
