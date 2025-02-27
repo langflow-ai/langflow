@@ -14,7 +14,7 @@ from langflow.schema import Data
 
 
 class AgentQL(Component):
-    display_name = "AgentQL Extract Web Data"
+    display_name = "Extract Web Data"
     description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
     documentation: str = "https://docs.agentql.com/rest-api/api-reference"
     icon = "AgentQL"
@@ -38,8 +38,15 @@ class AgentQL(Component):
         MultilineInput(
             name="query",
             display_name="AgentQL Query",
-            required=True,
+            required=False,
             info="The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
+            tool_mode=True,
+        ),
+        MultilineInput(
+            name="prompt",
+            display_name="Prompt",
+            required=False,
+            info="A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
             tool_mode=True,
         ),
         IntInput(
@@ -73,38 +80,44 @@ class AgentQL(Component):
         headers = {
             "X-API-Key": self.api_key,
             "Content-Type": "application/json",
-            "X-TF-Request-Origin": "langflow",
         }
 
         payload = {
             "url": self.url,
             "query": self.query,
+            "prompt": self.prompt,
             "params": self.params,
         }
 
-        try:
-            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
-            response.raise_for_status()
-
-            json = response.json()
-            data = Data(result=json["data"], metadata=json["metadata"])
-
-        except httpx.HTTPStatusError as e:
-            response = e.response
-            if response.status_code in {401, 403}:
-                self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
-            else:
-                try:
-                    error_json = response.json()
-                    logger.error(
-                        f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
-                    )
-                    msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
-                except (ValueError, TypeError):
-                    msg = f"HTTP {e}."
-                self.status = msg
-            raise ValueError(self.status) from e
-
+        if not self.prompt and not self.query:
+            msg = "Please provide either an AgentQL Query or a natural language prompt."
+            self.status = msg
+            raise ValueError(msg)
         else:
-            self.status = data
-            return data
+
+            try:
+                response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
+                response.raise_for_status()
+
+                json = response.json()
+                data = Data(result=json["data"], metadata=json["metadata"])
+
+            except httpx.HTTPStatusError as e:
+                response = e.response
+                if response.status_code in {401, 403}:
+                    self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
+                else:
+                    try:
+                        error_json = response.json()
+                        logger.error(
+                            f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
+                        )
+                        msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
+                    except (ValueError, TypeError):
+                        msg = f"HTTP {e}."
+                    self.status = msg
+                raise ValueError(self.status) from e
+
+            else:
+                self.status = data
+                return data
