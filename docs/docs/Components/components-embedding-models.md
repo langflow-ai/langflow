@@ -202,7 +202,7 @@ Use this component to generate embeddings using locally downloaded Hugging Face 
 |------|--------------|------|
 | embeddings | Embeddings | The generated embeddings |
 
-## Hugging Face embeddings Inference API
+## Hugging Face embeddings inference
 
 This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/).
 
@@ -212,19 +212,32 @@ Use this component to create embeddings with Hugging Face's hosted models.
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| API Key | API Key | API key for accessing the Hugging Face Inference API |
-| API URL | API URL | URL of the Hugging Face Inference API |
-| Model Name | Model Name | Name of the model to use for embeddings |
-| Cache Folder | Cache Folder | Folder path to cache Hugging Face models |
-| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process |
-| Model Kwargs | Model Arguments | Additional arguments for the model |
-| Multi Process | Multi-Process | Whether to use multiple processes |
+| API Key | API Key | API key for accessing the Hugging Face Inference API. |
+| API URL | API URL | URL of the Hugging Face Inference API. |
+| Model Name | Model Name | Name of the model to use for embeddings. |
+| Cache Folder | Cache Folder | Folder path to cache Hugging Face models. |
+| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process. |
+| Model Kwargs | Model Arguments | Additional arguments for the model. |
+| Multi Process | Multi-Process | Whether to use multiple processes. |
 
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| embeddings | Embeddings | The generated embeddings |
+| embeddings | Embeddings | The generated embeddings. |
+
+### Connect the Hugging Face component to a local embeddings model
+
+To run an embeddings inference locally, see the [HuggingFace documentation](https://huggingface.co/docs/text-embeddings-inference/local_cpu).
+
+To connect the local Hugging Face model to the **Hugging Face embeddings inference** component and use it in a flow, follow these steps:
+
+1. Create a [Vector store RAG flow](/starter-projects-vector-store-rag).
+There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
+2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
+3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
+4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model, for example, `http://localhost:8000`. **The **API Key** field is not required for local inference.**
+5. Run the flow. The local inference models generate embeddings for the input text.
 
 ## LM Studio Embeddings
 
