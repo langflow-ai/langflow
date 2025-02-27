@@ -87,7 +87,7 @@ class SaveToFileComponent(Component):
             build_config["data"]["show"] = field_value == "Data"
             build_config["message"]["show"] = field_value == "Message"
 
-            if field_value in ["DataFrame", "Data"]:
+            if field_value in {"DataFrame", "Data"}:
                 build_config["file_format"]["options"] = self.DATA_FORMAT_CHOICES
             elif field_value == "Message":
                 build_config["file_format"]["options"] = self.MESSAGE_FORMAT_CHOICES
