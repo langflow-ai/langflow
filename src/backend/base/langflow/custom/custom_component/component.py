@@ -514,7 +514,12 @@ class Component(CustomComponent):
     def get_output_by_method(self, method: Callable):
         # method is a callable and output.method is a string
         # we need to find the output that has the same method
-        output = next((output for output in self._outputs_map.values() if output.method == method.__name__), None)
+        outputs_map = deepcopy(self._outputs_map)
+        # Add Toolkit output if not already present
+        if TOOL_OUTPUT_NAME not in outputs_map:
+            outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
+        outputs = outputs_map.values()
+        output = next((output for output in outputs if output.method == method.__name__), None)
         if output is None:
             method_name = method.__name__ if hasattr(method, "__name__") else str(method)
             msg = f"Output with method {method_name} not found"
@@ -563,7 +568,12 @@ class Component(CustomComponent):
                         or if the output method is invalid.
         """
         # Retrieve all outputs from the given component
-        outputs = value._outputs_map.values()
+        outputs_map = deepcopy(value._outputs_map)
+        # Add Toolkit output if not already present
+        if TOOL_OUTPUT_NAME not in outputs_map:
+            outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
+        outputs = outputs_map.values()
+
         # Prepare to collect matching output-input pairs
         matching_pairs = []
         # Get the input object from the current component
@@ -771,6 +781,9 @@ class Component(CustomComponent):
         # ! This part here is clunky but we need it like this for
         # ! backwards compatibility. We can change how prompt component
         # ! works and then update this later
+        # Add to self._outputs_map the Toolkit output if not already present
+        if TOOL_OUTPUT_NAME not in self._outputs_map:
+            self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
         field_config = self.get_template_config(self)
         frontend_node = ComponentFrontendNode.from_inputs(**field_config)
         for key in self._inputs:
