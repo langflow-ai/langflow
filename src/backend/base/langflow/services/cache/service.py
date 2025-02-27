@@ -222,6 +222,7 @@ class RedisCache(AsyncBaseCacheService, Generic[LockType]):
     # change to keep async safe
     async def is_connected(self) -> bool:
         import redis
+
         try:
             await self._client.ping()  # 直接使用await
             return True
