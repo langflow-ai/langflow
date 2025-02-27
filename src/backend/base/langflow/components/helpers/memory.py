@@ -82,7 +82,7 @@ class MemoryComponent(Component):
         if sender == "Machine and User":
             sender = None
 
-        if not hasattr(self.memory, "aget_messages"):
+        if self.memory and not hasattr(self.memory, "aget_messages"):
             memory_name = type(self.memory).__name__
             err_msg = f"External Memory object ({memory_name}) must have 'aget_messages' method."
             raise AttributeError(err_msg)
