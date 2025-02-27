@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data, Message
+from langflow.schema import Data, Message,DataFrame
 
 
 class NvidiaIngestComponent(Component):
@@ -38,7 +38,6 @@ class NvidiaIngestComponent(Component):
             display_name="Path",
             file_types=file_types,
             info=supported_file_types_info,
-            required=True,
             input_types=["Message"],
         ),
         BoolInput(
@@ -115,10 +114,10 @@ class NvidiaIngestComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="load_file"),
+        Output(display_name="DataFrame", name="DataFrame", method="load_file"),
     ]
 
-    def load_file(self) -> list[Data]:
+    def load_file(self) -> DataFrame:
         try:
             from nv_ingest_client.client import Ingestor
         except ImportError as e:
@@ -138,8 +137,11 @@ class NvidiaIngestComponent(Component):
 
         # Convert path to string if it's a Message
         path_str: str
-        path_str = str(self.path.text) if isinstance(self.path, Message) else str(self.path)
-
+        # path_str = str(self.path.files) if isinstance(self.path, Message) else str(self.path)
+        if isinstance(self.path, Message):
+            path_str = str(self.path.files[0]) if self.path.files is not None else str(self.path.text)  
+        else:
+            path_str = str(self.path)
         resolved_path = self.resolve_path(path_str)
         if not isinstance(resolved_path, str):
             msg = "Failed to resolve path to a valid string"
@@ -238,4 +240,4 @@ class NvidiaIngestComponent(Component):
                     self.log(f"Unsupported document type: {document_type}", name="NVIDIAIngestComponent")
 
         self.status = data or "No data"
-        return data
+        return DataFrame(data)
