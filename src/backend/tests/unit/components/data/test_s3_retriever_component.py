@@ -6,7 +6,6 @@ from pathlib import Path
 import boto3
 import pytest
 from langflow.components.data.s3_bucket_retriever import S3BucketRetrieverComponent
-from langflow.components.data.s3_bucket_uploader import S3BucketUploaderComponent
 from langflow.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -21,11 +20,6 @@ class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
     def component_class(self):
         """Return the component class to test."""
         return S3BucketRetrieverComponent
-
-    @pytest.fixture
-    def retriever_component_class(self):
-        """Return the component class to test."""
-        return S3BucketUploaderComponent
 
     @pytest.fixture
     def file_names_mapping(self):
@@ -95,25 +89,23 @@ class TestS3RetrieverComponent(ComponentTestBaseWithoutClient):
 
     def test_upload_download(self, temp_files, s3_bucket):
         """Test uploading files to an S3 bucket."""
-        upload = S3BucketUploaderComponent()
-        download = S3BucketRetrieverComponent()
-
         # Set AWS credentials from environment variables
         aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
         aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-        upload.set_attributes(
-            {
-                "aws_access_key_id": aws_access_key_id,
-                "aws_secret_access_key": aws_secret_access_key,
-                "bucket_name": s3_bucket,
-                "strategy": "Store Original File",
-                "data_inputs": temp_files,
-                "s3_prefix": "test",
-                "strip_path": True,
-            }
-        )
-        upload.process_files()
 
+        # Initialize S3 client using environment variables for credentials
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+
+        # Upload each temporary file to the S3 bucket
+        for temp_file in temp_files:
+            file_path = temp_file.data["file_path"]
+            s3.upload_file(file_path, s3_bucket, f"test/{Path(file_path).name}")
+
+        # Download the files from the S3 bucket
         download = S3BucketRetrieverComponent()
         download.set_attributes(
             {
