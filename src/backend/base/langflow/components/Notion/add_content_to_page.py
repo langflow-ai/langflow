@@ -101,10 +101,11 @@ class AddContentToPage(Component):
                     }
                 )
 
-            return sorted(pages, key=lambda x: x["title"].lower())
         except requests.exceptions.RequestException as e:
             self.log(f"Error searching pages: {e}")
             return []
+        else:
+            return sorted(pages, key=lambda x: x["title"].lower())
 
     def get_block_children(self, block_id: str) -> list[dict[str, Any]]:
         """Get children blocks of a given block ID."""
@@ -142,8 +143,8 @@ class AddContentToPage(Component):
         except requests.exceptions.RequestException as e:
             self.log(f"Error fetching block children: {e}")
             return []
-
-        return blocks
+        else:
+            return blocks
 
     def get_block_content(self, block: dict[str, Any]) -> str:
         """Extract readable content from a block."""
@@ -156,10 +157,7 @@ class AddContentToPage(Component):
         # Handle text-based blocks
         if "rich_text" in block_data:
             rich_text = block_data.get("rich_text", [])
-            text = ""
-            for rt in rich_text:
-                text += rt.get("plain_text", "")
-            return text
+            return "".join(rt.get("plain_text", "") for rt in rich_text)
 
         # Handle specific block types
         if block_type == "child_page":
@@ -238,7 +236,6 @@ class AddContentToPage(Component):
 
     def add_content_to_page(self) -> Data:
         """Convert markdown text to Notion blocks and append them after the selected block."""
-        # Get the page ID from page_id tooltips
         page_title = self.page_id
         page_id = ""
 
@@ -258,7 +255,6 @@ class AddContentToPage(Component):
             # Get block ID if not "Top of Page"
             after_id = ""
             if self.block_id != "Top of Page":
-                # Search for the block ID
                 blocks = self.get_block_children(page_id)
                 for block in blocks:
                     display_text = f"{block['type']}: {block['content'][:50]}..." if block["content"] else block["type"]
@@ -279,9 +275,8 @@ class AddContentToPage(Component):
                 "Notion-Version": "2022-06-28",
             }
 
-            data = {"children": blocks}
-
-            # Add after_id if specified
+            # Explicitly type data as a dictionary to resolve linter error
+            data: dict[str, Any] = {"children": blocks}
             if after_id:
                 data["after"] = after_id
 
@@ -314,10 +309,9 @@ class AddContentToPage(Component):
             text = node.strip()
             if text:
                 if text.startswith("#"):
-                    heading_level = text.count("#", 0, 6)
+                    heading_level = min(text.count("#", 0, 6), 3)
                     heading_text = text[heading_level:].strip()
-                    if heading_level in range(3):
-                        blocks.append(self.create_block(f"heading_{heading_level + 1}", heading_text))
+                    blocks.append(self.create_block(f"heading_{heading_level}", heading_text))
                 else:
                     blocks.append(self.create_block("paragraph", text))
         elif node.name == "h1":
@@ -365,17 +359,6 @@ class AddContentToPage(Component):
         code = "\n".join(lines[1:]).strip()
         return language, code
 
-    def is_code_block(self, text):
-        """Check if text is a code block."""
-        return text.startswith("```")
-
-    def extract_code_block(self, text):
-        """Extract language and code from a markdown code block."""
-        lines = text.split("\n")
-        language = lines[0].strip("`").strip()
-        code = "\n".join(lines[1:]).strip("`").strip()
-        return language, code
-
     def is_table(self, text):
         """Check if text represents a markdown table."""
         rows = text.split("\n")
@@ -421,14 +404,12 @@ class AddContentToPage(Component):
     def process_table(self, node):
         """Process table nodes and convert them to Notion table blocks."""
         blocks = []
-        # Find header and body rows
         header_row = node.find("thead").find("tr") if node.find("thead") else None
         body_rows = node.find("tbody").find_all("tr") if node.find("tbody") else []
 
-        # If no tbody, try getting rows directly
         if not body_rows and not header_row:
             all_rows = node.find_all("tr")
-            if len(all_rows) > 1:  # First row as header if multiple rows
+            if len(all_rows) > 1:
                 header_row = all_rows[0]
                 body_rows = all_rows[1:]
 
@@ -473,18 +454,14 @@ class AddContentToPage(Component):
             block[block_type]["rich_text"] = [
                 {
                     "type": "text",
-                    "text": {
-                        "content": content,
-                    },
+                    "text": {"content": content},
                 }
             ]
         elif block_type == "to_do":
             block[block_type]["rich_text"] = [
                 {
                     "type": "text",
-                    "text": {
-                        "content": content,
-                    },
+                    "text": {"content": content},
                 }
             ]
             block[block_type]["checked"] = kwargs.get("checked", False)
@@ -492,9 +469,7 @@ class AddContentToPage(Component):
             block[block_type]["rich_text"] = [
                 {
                     "type": "text",
-                    "text": {
-                        "content": content,
-                    },
+                    "text": {"content": content},
                 }
             ]
             block[block_type]["language"] = kwargs.get("language", "plain text")
