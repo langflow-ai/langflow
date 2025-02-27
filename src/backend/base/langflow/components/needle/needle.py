@@ -27,10 +27,10 @@ class NeedleComponent(Component):
             required=True,
         ),
         MessageTextInput(
-            name="query", 
-            display_name="User Query", 
-            info="Enter your question here. In tool mode, you can also specify top_k parameter (min: 20).", 
-            required=True, 
+            name="query",
+            display_name="User Query",
+            info="Enter your question here. In tool mode, you can also specify top_k parameter (min: 20).",
+            required=True,
             tool_mode=True
         ),
         IntInput(
@@ -53,19 +53,26 @@ class NeedleComponent(Component):
         try:
             if isinstance(query_input, dict) and "top_k" in query_input:
                 agent_top_k = query_input.get("top_k")
-                top_k = max(20, int(agent_top_k))  # Always enforce minimum of 20
+                # Check if agent_top_k is not None before converting to int
+                if agent_top_k is not None:
+                    top_k = max(20, int(agent_top_k))  # Always enforce minimum of 20
+                else:
+                    top_k = max(20, self.top_k)
             else:
                 top_k = max(20, self.top_k)
         except (ValueError, TypeError):
             top_k = max(20, self.top_k)
-            
+        
         # Validate required inputs
         if not self.needle_api_key or not self.needle_api_key.strip():
-            raise ValueError("The Needle API key cannot be empty.")
+            error_msg = "The Needle API key cannot be empty."
+            raise ValueError(error_msg)
         if not self.collection_id or not self.collection_id.strip():
-            raise ValueError("The Collection ID cannot be empty.")
+            error_msg = "The Collection ID cannot be empty."
+            raise ValueError(error_msg)
         if not actual_query or not actual_query.strip():
-            raise ValueError("The query cannot be empty.")
+            error_msg = "The query cannot be empty."
+            raise ValueError(error_msg)
 
         try:
             # Initialize the retriever and get documents
@@ -99,4 +106,5 @@ class NeedleComponent(Component):
             )
 
         except Exception as e:
-            raise ValueError(f"Error processing query: {e!s}") from e
+            error_msg = f"Error processing query: {e!s}"
+            raise ValueError(error_msg) from e
