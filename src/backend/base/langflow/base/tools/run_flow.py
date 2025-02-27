@@ -14,6 +14,7 @@ from langflow.inputs.inputs import (
     DropdownInput,
     InputTypes,
     MessageInput,
+    MessageTextInput,
 )
 from langflow.schema import Data, dotdict
 from langflow.schema.dataframe import DataFrame
@@ -45,6 +46,13 @@ class RunFlowBaseComponent(Component):
             info="The session ID to run the flow in.",
             value="",
             advanced=True,
+        ),
+        MessageTextInput(
+            name="tool_placeholder",
+            display_name="Tool Placeholder",
+            tool_mode=True,
+            advanced=True,
+            info="A placeholder input for tool mode.",
         ),
     ]
     _base_outputs: list[Output] = [
