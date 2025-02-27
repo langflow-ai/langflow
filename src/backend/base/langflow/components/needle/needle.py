@@ -31,7 +31,7 @@ class NeedleComponent(Component):
             display_name="User Query",
             info="Enter your question here. In tool mode, you can also specify top_k parameter (min: 20).",
             required=True,
-            tool_mode=True
+            tool_mode=True,
         ),
         IntInput(
             name="top_k",
@@ -48,21 +48,18 @@ class NeedleComponent(Component):
         # Extract query and top_k
         query_input = self.query
         actual_query = query_input.get("query", "") if isinstance(query_input, dict) else query_input
-        
+
         # Parse top_k from tool input or use default, always enforcing minimum of 20
         try:
             if isinstance(query_input, dict) and "top_k" in query_input:
                 agent_top_k = query_input.get("top_k")
                 # Check if agent_top_k is not None before converting to int
-                if agent_top_k is not None:
-                    top_k = max(20, int(agent_top_k))  # Always enforce minimum of 20
-                else:
-                    top_k = max(20, self.top_k)
+                top_k = max(20, int(agent_top_k)) if agent_top_k is not None else max(20, self.top_k)
             else:
                 top_k = max(20, self.top_k)
         except (ValueError, TypeError):
             top_k = max(20, self.top_k)
-        
+
         # Validate required inputs
         if not self.needle_api_key or not self.needle_api_key.strip():
             error_msg = "The Needle API key cannot be empty."
@@ -81,9 +78,9 @@ class NeedleComponent(Component):
                 collection_id=self.collection_id,
                 top_k=top_k,
             )
-            
+
             docs = retriever.get_relevant_documents(actual_query)
-            
+
             # Format the response
             if not docs:
                 text_content = "No relevant documents found for the query."
@@ -97,11 +94,8 @@ class NeedleComponent(Component):
                 type="assistant",
                 sender=MESSAGE_SENDER_AI,
                 additional_kwargs={
-                    "source_documents": [
-                        {"page_content": doc.page_content, "metadata": doc.metadata}
-                        for doc in docs
-                    ],
-                    "top_k_used": top_k
+                    "source_documents": [{"page_content": doc.page_content, "metadata": doc.metadata} for doc in docs],
+                    "top_k_used": top_k,
                 },
             )
 
