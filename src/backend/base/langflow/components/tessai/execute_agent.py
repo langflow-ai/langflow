@@ -7,7 +7,6 @@ from langflow.custom import Component
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
 
-
 class TessAIExecuteAgentComponent(Component):
     display_name = "Execute Agent"
     description = "Executes a TessAI agent."
@@ -32,12 +31,13 @@ class TessAIExecuteAgentComponent(Component):
 
     outputs = [Output(display_name="Output", name="output", method="execute_agent")]
 
-    BASE_URL = "https://tess.pareto.io"
+    BASE_URL = "https://tess.pareto.io/api"
     FIELD_SUFFIX = "_tess_ai_dynamic_field"
+    CHAT_MESSAGE_INPUT_SUFFIX = "_tess_ai_chat_message_input"
 
     def execute_agent(self) -> str:
         headers = self._get_headers()
-        execute_endpoint = f"{self.BASE_URL}/api/agents/{self.agent_id.strip()}/execute?waitExecution=true"
+        execute_endpoint = f"{self.BASE_URL}/agents/{self.agent_id.strip()}/execute?waitExecution=true"
         parameters = self._collect_dynamic_parameters()
 
         try:
@@ -57,8 +57,8 @@ class TessAIExecuteAgentComponent(Component):
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
             try:
-                questions = self._get_agent_questions(field_value)
-                self._update_dynamic_fields(build_config, questions)
+                agent = self._get_agent(field_value)
+                self._update_dynamic_fields(build_config, agent)
             except requests.RequestException:
                 self._clear_dynamic_fields(build_config)
 
@@ -70,17 +70,17 @@ class TessAIExecuteAgentComponent(Component):
     def _get_headers(self) -> dict:
         return {"Authorization": f"Bearer {self.api_key}", "accept": "*/*", "Content-Type": "application/json"}
 
-    def _get_agent_questions(self, agent_id):
-        endpoint = f"{self.BASE_URL}/api/agents/{agent_id}"
+    def _get_agent(self, agent_id):
+        endpoint = f"{self.BASE_URL}/agents/{agent_id}"
         response = requests.get(endpoint, headers=self._get_headers())
 
         if response.status_code not in [200, 404]:
             raise Exception(json.dumps(response.json()))
 
-        template = response.json()
-        return template.get("questions", [])
+        return response.json()
 
-    def _update_dynamic_fields(self, build_config: dict, questions: list[dict]):
+    def _update_dynamic_fields(self, build_config: dict, agent: dict):
+        questions = agent.get("questions", [])
         old_build_config = deepcopy(dict(build_config))
 
         for key in list(build_config.keys()):
@@ -88,8 +88,14 @@ class TessAIExecuteAgentComponent(Component):
                 del build_config[key]
 
         for question in questions:
-            key = f"{question['name']}{self.FIELD_SUFFIX}"
+            name = question.get("name", "")
+
+            if name == "messages" and agent.get("type") == "chat":
+                name += self.CHAT_MESSAGE_INPUT_SUFFIX
+
+            key = name + self.FIELD_SUFFIX
             old_config = old_build_config.get(key, {})
+            
             field = self._create_field(key, question, old_config.get("value"))
             config = field.model_dump(by_alias=True, exclude_none=True)
 
@@ -97,7 +103,7 @@ class TessAIExecuteAgentComponent(Component):
             build_config[key] = config
 
     def _get_agent_response(self, headers: dict, response_id: str) -> str:
-        endpoint = f"{self.BASE_URL}/api/agent-responses/{response_id}"
+        endpoint = f"{self.BASE_URL}/agent-responses/{response_id}"
         try:
             response = requests.get(endpoint, headers=headers)
             response.raise_for_status()
@@ -172,10 +178,11 @@ class TessAIExecuteAgentComponent(Component):
                 param_name = key[:-suffix_length]
                 value = self._parameters[key]
 
-                if param_name == "messages":
+                if param_name.endswith(self.CHAT_MESSAGE_INPUT_SUFFIX):
+                    param_name = param_name[:-len(self.CHAT_MESSAGE_INPUT_SUFFIX)]
                     parameters[param_name] = [{"role": "user", "content": value}]
                 elif isinstance(value, list):
-                    parameters[param_name] = ",".join(value)
-                else:
+                    parameters[param_name] = ",".join(str(val) for val in value)
+                elif value != "":
                     parameters[param_name] = value
         return parameters
