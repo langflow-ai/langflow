@@ -84,7 +84,8 @@ class MemoryComponent(Component):
 
         if not hasattr(self.memory, "aget_messages"):
             memory_name = type(self.memory).__name__
-            raise AttributeError(f"External Memory object ({memory_name}) must have 'aget_messages' method.")
+            message = f"External Memory object ({memory_name}) must have 'aget_messages' method."
+            raise AttributeError(message)
 
         if self.memory:
             # override session_id
