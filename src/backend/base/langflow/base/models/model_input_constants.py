@@ -265,4 +265,7 @@ ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.val
 MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
 
 
-MODELS_METADATA = {key: {"icon": MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None} for key in MODEL_PROVIDERS_DICT}
+MODELS_METADATA = {
+    key: {"icon": MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None}
+    for key in MODEL_PROVIDERS_DICT
+}
