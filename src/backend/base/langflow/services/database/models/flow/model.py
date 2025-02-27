@@ -202,6 +202,7 @@ class FlowRead(FlowBase):
     folder_id: UUID | None = Field()
     tags: list[str] | None = Field(None, description="The tags of the flow")
 
+
 class FlowHeader(BaseModel):
     """Model representing a header for a flow - Without the data."""
 
