@@ -3,7 +3,7 @@ from typing import Any
 import requests
 
 from langflow.custom import Component
-from langflow.inputs import DropdownInput, MultiselectInput, SecretStrInput
+from langflow.inputs import BoolInput, DropdownInput, MultiselectInput, SecretStrInput
 from langflow.io import Output
 from langflow.schema import Data, dotdict
 from langflow.schema.message import Message
@@ -22,6 +22,8 @@ class NotionPageContent(Component):
 
     # Store database pages cache
     _database_pages_cache: dict[str, list[dict[str, Any]]] = {}
+    # Store database cache
+    _cached_databases: list[dict[str, Any]] = []
 
     inputs = [
         SecretStrInput(
@@ -57,6 +59,15 @@ class NotionPageContent(Component):
             value=[],
             advanced=True,
         ),
+        BoolInput(
+            name="view_first_page",
+            display_name="View First Page",
+            info="Set to True to automatically view the first available page from the first database.",
+            required=False,
+            value=True,
+            tool_mode=True,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -66,6 +77,10 @@ class NotionPageContent(Component):
 
     def fetch_databases(self) -> list[dict[str, Any]]:
         """Fetch available databases from Notion API."""
+        if not self.notion_secret:
+            self.log("No Notion secret provided.")
+            return []
+
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Content-Type": "application/json",
@@ -73,6 +88,7 @@ class NotionPageContent(Component):
         }
 
         try:
+            self.log("Fetching databases from Notion API...")
             response = requests.post(
                 "https://api.notion.com/v1/search",
                 headers=headers,
@@ -92,6 +108,10 @@ class NotionPageContent(Component):
 
                 databases.append({"id": db["id"], "title": title or "Untitled Database"})
 
+            # Cache the databases
+            self.__class__._cached_databases = databases
+
+            self.log(f"Found {len(databases)} databases.")
             return sorted(databases, key=lambda x: x["title"].lower())
 
         except requests.exceptions.RequestException as e:
@@ -118,6 +138,7 @@ class NotionPageContent(Component):
         }
 
         try:
+            self.log(f"Fetching pages from database: {database_id}")
             # Query database pages
             response = requests.post(
                 f"https://api.notion.com/v1/databases/{database_id}/query",
@@ -147,6 +168,9 @@ class NotionPageContent(Component):
 
             # Cache the results
             self._database_pages_cache[database_id] = pages_sorted
+
+            self.log(f"Found {len(pages_sorted)} pages in database {database_id}")
+            return pages_sorted
         except requests.exceptions.RequestException as e:
             self.log(f"Error fetching pages from database: {e!s}")
             return []
@@ -276,6 +300,33 @@ class NotionPageContent(Component):
             self.log(f"Unexpected error updating build config: {e}")
 
         return build_config
+
+    def get_first_available_page_id(self) -> str:
+        """Get the first available page ID from the first available database."""
+        # Use cached databases or fetch them
+        if not self.__class__._cached_databases:
+            self.fetch_databases()
+
+        if not self.__class__._cached_databases:
+            self.log("No databases found")
+            return ""
+
+        # Get the first database
+        first_db = self.__class__._cached_databases[0]
+        db_id = first_db["id"]
+        self.log(f"Using first database: {first_db['title']} ({db_id})")
+
+        # Get pages for this database
+        pages = self.fetch_database_pages(db_id)
+        if not pages:
+            self.log(f"No pages found in database {first_db['title']}")
+            return ""
+
+        # Get the first page
+        first_page = pages[0]
+        page_id = first_page["id"]
+        self.log(f"Using first page: {first_page['title']} ({page_id})")
+        return page_id
 
     def fetch_block_text(self, block_id: str, headers: dict) -> str:
         """Recursively fetch aggregated text content from the block with the given block_id."""
@@ -467,13 +518,22 @@ class NotionPageContent(Component):
 
     def view_page_message(self) -> Message:
         """Fetch and return the aggregated text content of the selected Notion page with proper formatting."""
-        if not self.page_id or self.page_id in ["Select a database first...", "No pages found"]:
-            return Message(text="Please select a valid page")
+        # Check if we're in tool mode
+        if hasattr(self, "view_first_page") and self.view_first_page:
+            self.log("Tool mode activated with view_first_page=True")
+            page_id = self.get_first_available_page_id()
+            if not page_id:
+                return Message(text="No pages available. Please check Notion database access.")
+        else:
+            # Normal mode - use the selected page
+            if not self.page_id or self.page_id in ["Select a database first...", "No pages found"]:
+                return Message(text="Please select a valid page")
 
-        # Get the actual page ID
-        actual_page_id = self.get_actual_page_id()
-        if not actual_page_id:
-            return Message(text="Invalid page ID format")
+            # Get the actual page ID
+            page_id = self.get_actual_page_id()
+
+        if not page_id:
+            return Message(text="Invalid page ID format or no page available")
 
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
@@ -481,37 +541,30 @@ class NotionPageContent(Component):
         }
 
         try:
-            blocks_url = f"https://api.notion.com/v1/blocks/{actual_page_id}/children?page_size=100"
+            # First fetch page data for title
+            page_data = self.fetch_page_data(page_id, headers)
+            page_title = "Untitled Page"
+            if "properties" in page_data:
+                for prop_value in page_data["properties"].values():
+                    if prop_value.get("type") == "title":
+                        title_parts = prop_value.get("title", [])
+                        if title_parts:
+                            page_title = "".join(part.get("plain_text", "") for part in title_parts)
+                            break
+
+            # Then fetch blocks
+            blocks_url = f"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100"
             blocks_response = requests.get(blocks_url, headers=headers, timeout=15)
             blocks_response.raise_for_status()
             blocks_data = blocks_response.json()
             content = self.parse_blocks(blocks_data.get("results", []))
 
             if not content.strip():
-                # Try to get at least the page title if no content was found
-                page_response = requests.get(
-                    f"https://api.notion.com/v1/pages/{actual_page_id}", headers=headers, timeout=15
-                )
-                page_response.raise_for_status()
-                page_data = page_response.json()
-                title = "Untitled Page"
-                if "properties" in page_data:
-                    for prop_value in page_data["properties"].values():
-                        if prop_value.get("type") == "title":
-                            title_parts = prop_value.get("title", [])
-                            if title_parts:
-                                title = "".join(part.get("plain_text", "") for part in title_parts)
-                                break
-
-                # Include both title and page ID in the message
-                page_title = self.page_id.split(" (")[0] if "(" in self.page_id else title
-                content = f"# {page_title}\n\nThis page has no content or the content is not accessible."
-
-            # Include a header with the page title for context
-            if "(" in self.page_id:
-                page_title = self.page_id.split(" (")[0]
-                if not content.startswith(f"# {page_title}"):
-                    content = f"# {page_title}\n\n{content}"
+                # Include both title and page URL in the message
+                content = f"# {page_title}\n\nPage has no accessible content. No URL available."
+            else:
+                # Include a header with the page title and URL for context
+                content = f"# {page_title}\n\nPage URL: {page_data.get('url', 'No URL available')}\n\n{content}"
 
             return Message(text=content)
         except requests.exceptions.RequestException as e:
@@ -566,17 +619,28 @@ class NotionPageContent(Component):
         """Fetch blocks from the selected Notion page and return as a list of Data objects."""
         data_list: list[Data] = []
 
-        if not self.page_id or self.page_id in ["Select a database first...", "No pages found"]:
-            error_data = Data(data={"error": "Please select a valid page"})
-            data_list.append(error_data)
-            # Using type ignore for assignment to self.status as other components do
-            self.status = data_list  # type: ignore[assignment]
-            return data_list
+        # Check if we're in tool mode
+        if hasattr(self, "view_first_page") and self.view_first_page:
+            self.log("Tool mode activated with view_first_page=True")
+            page_id = self.get_first_available_page_id()
+            if not page_id:
+                error_data = Data(data={"error": "No pages available. Check database access."})
+                data_list.append(error_data)
+                self.status = data_list  # type: ignore[assignment]
+                return data_list
+        else:
+            # Normal mode - use the selected page
+            if not self.page_id or self.page_id in ["Select a database first...", "No pages found"]:
+                error_data = Data(data={"error": "Please select a valid page."})
+                data_list.append(error_data)
+                self.status = data_list  # type: ignore[assignment]
+                return data_list
 
-        # Get the actual page ID
-        actual_page_id = self.get_actual_page_id()
-        if not actual_page_id:
-            error_data = Data(data={"error": "Invalid page ID format"})
+            # Get the actual page ID
+            page_id = self.get_actual_page_id()
+
+        if not page_id:
+            error_data = Data(data={"error": "Invalid page ID format or no page available"})
             data_list.append(error_data)
             # Using type ignore for assignment to self.status as other components do
             self.status = data_list  # type: ignore[assignment]
@@ -589,7 +653,7 @@ class NotionPageContent(Component):
 
         try:
             # Get page info for reference
-            page_data = self.fetch_page_data(actual_page_id, headers)
+            page_data = self.fetch_page_data(page_id, headers)
             page_title = "Untitled Page"
             if "properties" in page_data:
                 for prop_value in page_data["properties"].values():
@@ -604,7 +668,7 @@ class NotionPageContent(Component):
                 Data(
                     data={
                         "type": "page_info",
-                        "id": actual_page_id,
+                        "id": page_id,
                         "title": page_title,
                         "url": page_data.get("url", ""),
                         "created_time": page_data.get("created_time", ""),
@@ -614,7 +678,7 @@ class NotionPageContent(Component):
             )
 
             # Get the actual blocks
-            blocks_data = self.fetch_blocks_for_dataframe(actual_page_id, headers)
+            blocks_data = self.fetch_blocks_for_dataframe(page_id, headers)
 
             if not blocks_data:
                 if self.block_types:
