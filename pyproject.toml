@@ -202,11 +202,10 @@ nv-ingest = [
     "llama-index-embeddings-nvidia==0.1.5",
 ]
 
-postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
-
-]
+#postgresql = [
+#  "sqlalchemy[postgresql_psycopg2binary]",
+#    "sqlalchemy[postgresql_psycopg]",
+#]
 
 [project.scripts]
 langflow = "langflow.__main__:main"
