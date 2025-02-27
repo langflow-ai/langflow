@@ -129,15 +129,21 @@ class NvidiaIngestComponent(Component):
             raise ImportError(msg) from e
 
         self.base_url: str | None = self.base_url.strip() if self.base_url else None
+        self.path: str | Message
 
         if not self.path:
             err_msg = "Upload a file to use this component."
             self.log(err_msg, name="NVIDIAIngestComponent")
             raise ValueError(err_msg)
-        if isinstance(self.path, Message):
-            self.path = self.path.text
 
-        resolved_path = self.resolve_path(self.path)
+        # Convert path to string if it's a Message
+        path_str: str
+        path_str = str(self.path.text) if isinstance(self.path, Message) else str(self.path)
+
+        resolved_path = self.resolve_path(path_str)
+        if not isinstance(resolved_path, str):
+            msg = "Failed to resolve path to a valid string"
+            raise TypeError(msg)
         extension = Path(resolved_path).suffix[1:].lower()
         if extension not in self.file_types:
             err_msg = f"Unsupported file type: {extension}"
