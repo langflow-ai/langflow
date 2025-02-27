@@ -11,18 +11,17 @@ from langflow.schema import Data, dotdict
 
 
 class NotionPageUpdate(Component):
-    """A component that updates properties of a Notion page with dynamic property selection."""
+    """A component that updates properties of a Notion page with database-based page selection."""
 
     display_name: str = "Update Page Property"
-    description: str = "Update the properties of a Notion page with dynamic property selection."
+    description: str = "Update properties of a Notion page by first selecting a database and then a page."
     documentation: str = "https://docs.langflow.org/integrations/notion/page-update"
     icon: str = "NotionDirectoryLoader"
 
-    # Maximum number of properties that can be updated at once
     MAX_PROPERTIES = 10
 
-    # Store page properties globally
     _page_properties: dict[str, Any] = {}
+    _database_pages_cache: dict[str, list[dict[str, Any]]] = {}
 
     inputs = [
         SecretStrInput(
@@ -33,11 +32,20 @@ class NotionPageUpdate(Component):
             real_time_refresh=True,
         ),
         DropdownInput(
+            name="database_id",
+            display_name="Database",
+            info="Select a database to list its pages",
+            options=["Loading databases..."],
+            value="Loading databases...",
+            real_time_refresh=True,
+            required=True,
+        ),
+        DropdownInput(
             name="page_id",
             display_name="Page",
             info="Select a page to update",
-            options=["Loading pages..."],
-            value="Loading pages...",
+            options=["Select a database first..."],
+            value="Select a database first...",
             real_time_refresh=True,
             required=True,
         ),
@@ -55,8 +63,8 @@ class NotionPageUpdate(Component):
         Output(name="data", display_name="Updated Page", method="update_page"),
     ]
 
-    def fetch_pages(self) -> list[dict[str, Any]]:
-        """Fetch available pages from Notion API."""
+    def fetch_databases(self) -> list[dict[str, Any]]:
+        """Fetch available databases from Notion API."""
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Content-Type": "application/json",
@@ -67,41 +75,81 @@ class NotionPageUpdate(Component):
             response = requests.post(
                 "https://api.notion.com/v1/search",
                 headers=headers,
-                json={"filter": {"value": "page", "property": "object"}},
+                json={"filter": {"value": "database", "property": "object"}},
                 timeout=10,
+            )
+            response.raise_for_status()
+
+            databases = []
+            for db in response.json().get("results", []):
+                title = "Untitled Database"
+                if "title" in db:
+                    title_parts = db.get("title", [])
+                    if title_parts:
+                        title = "".join(part.get("plain_text", "") for part in title_parts)
+
+                databases.append({"id": db["id"], "title": title or "Untitled Database"})
+
+            return sorted(databases, key=lambda x: x["title"].lower())
+
+        except requests.exceptions.RequestException as e:
+            self.log(f"Error fetching databases: {e!s}")
+            return []
+
+    def fetch_database_pages(self, database_id: str) -> list[dict[str, Any]]:
+        """Fetch pages from a specific database."""
+        if "(" in database_id and database_id.endswith(")"):
+            database_id = database_id.split("(")[-1].rstrip(")")
+
+        if not database_id or database_id in ["Loading databases...", "No databases found"]:
+            return []
+
+        if database_id in self._database_pages_cache:
+            return self._database_pages_cache[database_id]
+
+        headers = {
+            "Authorization": f"Bearer {self.notion_secret}",
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-06-28",
+        }
+
+        try:
+            response = requests.post(
+                f"https://api.notion.com/v1/databases/{database_id}/query",
+                headers=headers,
+                json={"page_size": 100},
+                timeout=15,
             )
             response.raise_for_status()
 
             pages = []
             for page in response.json().get("results", []):
-                # Get the page title from properties
                 title = "Untitled Page"
                 if "properties" in page:
-                    # Look for title property
-                    title_prop = page["properties"].get("title", page["properties"].get("Name", {}))
-                    if title_prop and "title" in title_prop:
-                        title_parts = title_prop.get("title", [])
-                        if title_parts:
-                            title = "".join(part.get("plain_text", "") for part in title_parts)
+                    for prop_value in page["properties"].values():
+                        if prop_value.get("type") == "title":
+                            title_parts = prop_value.get("title", [])
+                            if title_parts:
+                                title = "".join(part.get("plain_text", "") for part in title_parts)
+                                break
 
-                pages.append({"id": page["id"], "title": title or "Untitled Page"})
+                pages.append({"id": page["id"], "title": title, "last_edited_time": page.get("last_edited_time", "")})
 
-            return sorted(pages, key=lambda x: x["title"].lower())
+            pages_sorted = sorted(pages, key=lambda x: x["title"].lower())
+            self._database_pages_cache[database_id] = pages_sorted
 
         except requests.exceptions.RequestException as e:
-            self.log(f"Error fetching pages: {e!s}")
+            self.log(f"Error fetching pages from database: {e!s}")
             return []
+        else:
+            return pages_sorted
 
     def fetch_page_properties(self) -> dict[str, Any]:
         """Fetch the current properties of the page."""
-        if not self.page_id or self.page_id == "Loading pages...":
+        if not self.page_id or self.page_id in ["Select a database first...", "No pages found"]:
             return {}
 
-        # Get the actual page ID from the title
-        pages = self.fetch_pages()
-        title_to_id = {page["title"]: page["id"] for page in pages}
-        actual_page_id = title_to_id.get(self.page_id)
-
+        actual_page_id = self.get_actual_page_id()
         if not actual_page_id:
             return {}
 
@@ -121,34 +169,51 @@ class NotionPageUpdate(Component):
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update build configuration based on field updates."""
         try:
-            # When notion_secret is updated or initially loaded
             if field_name is None or field_name == "notion_secret":
-                # Fetch the pages
-                pages = self.fetch_pages()
+                databases = self.fetch_databases()
+                options = [f"{db['title']} ({db['id']})" for db in databases]
 
-                # Prepare the dropdown options using the titles
-                options = [page["title"] for page in pages]
+                if not options:
+                    options = ["No databases found"]
 
-                build_config["page_id"]["options"] = options
-                if options:
-                    build_config["page_id"]["value"] = options[0]
+                build_config["database_id"]["options"] = options
+                if options and options[0] != "No databases found":
+                    build_config["database_id"]["value"] = options[0]
 
-                # Add tooltips with page IDs
-                tooltips = {page["title"]: page["id"] for page in pages}
-                build_config["page_id"]["tooltips"] = tooltips
+                build_config["page_id"]["options"] = ["Select a database first..."]
+                build_config["page_id"]["value"] = "Select a database first..."
+                build_config["number_of_properties"]["value"] = 0
 
-            # When page_id changes
-            if field_name == "page_id":
-                if field_value and field_value != "Loading pages...":
-                    # Reset number of properties to 0 when page changes
+            if field_name == "database_id":
+                if field_value and field_value not in ["Loading databases...", "No databases found"]:
+                    pages = self.fetch_database_pages(field_value)
+                    page_options = [f"{page['title']} ({page['id']})" for page in pages]
+
+                    if not page_options:
+                        page_options = ["No pages found"]
+
+                    build_config["page_id"]["options"] = page_options
+                    if page_options and page_options[0] != "No pages found":
+                        build_config["page_id"]["value"] = page_options[0]
+                    else:
+                        build_config["page_id"]["value"] = "No pages found"
+
                     build_config["number_of_properties"]["value"] = 0
-                    # Store page properties globally
+                    self._page_properties = {}
+                else:
+                    build_config["page_id"]["options"] = ["Select a database first..."]
+                    build_config["page_id"]["value"] = "Select a database first..."
+                    build_config["number_of_properties"]["value"] = 0
+                    self._page_properties = {}
+
+            if field_name == "page_id":
+                if field_value and field_value not in ["Select a database first...", "No pages found"]:
+                    build_config["number_of_properties"]["value"] = 0
                     self._page_properties = self.fetch_page_properties()
                 else:
                     build_config["number_of_properties"]["value"] = 0
                     self._page_properties = {}
 
-            # When number_of_properties changes
             if field_name == "number_of_properties":
                 try:
                     num_properties = int(field_value)
@@ -156,34 +221,26 @@ class NotionPageUpdate(Component):
                     self.log("Invalid number of properties")
                     return build_config
 
-                # Validate number of properties
                 if num_properties > self.MAX_PROPERTIES:
                     num_properties = self.MAX_PROPERTIES
                     build_config["number_of_properties"]["value"] = self.MAX_PROPERTIES
 
-                # Default keys that should not be removed
-                default_keys = {"code", "_type", "notion_secret", "page_id", "number_of_properties"}
-
-                # Clear existing property fields
+                default_keys = {"code", "_type", "notion_secret", "database_id", "page_id", "number_of_properties"}
                 for key in list(build_config.keys()):
                     if key not in default_keys:
                         build_config.pop(key)
 
-                # Get properties from page
                 if not self._page_properties:
                     self._page_properties = self.fetch_page_properties()
 
                 property_options = list(self._page_properties.keys())
-
                 if not property_options:
                     property_options = ["No properties available"]
 
-                # Create fields for each property
                 for i in range(1, num_properties + 1):
                     name_key = f"property_{i}_name"
                     value_key = f"property_{i}_value"
 
-                    # Add the property name dropdown
                     build_config[name_key] = DropdownInput(
                         name=name_key,
                         display_name=f"Property {i} - Name",
@@ -192,23 +249,19 @@ class NotionPageUpdate(Component):
                         value=property_options[0] if property_options else "",
                     ).to_dict()
 
-                    # Get property type info
                     prop_type = "text"
                     info_text = "Enter the new value for this property"
-
                     if property_options and property_options[0] != "No properties available":
                         prop_info = self._page_properties[property_options[0]]
                         prop_type = prop_info["type"]
                         info_text = f"Enter the new value for this property (type: {prop_type})"
-
                         if prop_type in ["select", "multi_select", "status"]:
-                            options = prop_info.get(prop_type, {}).get("options", [])
-                            option_names = [opt["name"] for opt in options]
+                            options_list: list[dict[str, Any]] = prop_info.get(prop_type, {}).get("options", [])
+                            option_names = [opt["name"] for opt in options_list]
                             info_text += f"\nValid options: {', '.join(option_names)}"
                             if prop_type == "multi_select":
                                 info_text += "\nFor multiple values, separate with commas"
 
-                    # Add the value input field
                     build_config[value_key] = MessageTextInput(
                         name=value_key,
                         display_name=f"Property {i} - Value",
@@ -225,24 +278,28 @@ class NotionPageUpdate(Component):
 
         return build_config
 
+    def get_actual_page_id(self) -> str:
+        """Extract the actual page ID from the format 'Title (ID)'."""
+        if not self.page_id or self.page_id in ["Select a database first...", "No pages found"]:
+            return ""
+
+        if "(" in self.page_id and self.page_id.endswith(")"):
+            return self.page_id.split("(")[-1].rstrip(")")
+
+        return self.page_id
+
     def update_page(self) -> Data:
         """Update properties of a Notion page."""
-        if not self.page_id or self.page_id == "Loading pages...":
+        if not self.page_id or self.page_id in ["Select a database first...", "No pages found"]:
             return Data(data={"error": "Please select a valid page"})
 
-        # Get the actual page ID from the title
-        pages = self.fetch_pages()
-        title_to_id = {page["title"]: page["id"] for page in pages}
-        actual_page_id = title_to_id.get(self.page_id)
-
+        actual_page_id = self.get_actual_page_id()
         if not actual_page_id:
-            return Data(data={"error": "Page not found"})
+            return Data(data={"error": "Invalid page ID format"})
 
-        # Debug logs
         self.log(f"Updating page: {actual_page_id}")
         self.log(f"Available properties: {self._page_properties}")
 
-        # Ensure we have page properties
         if not self._page_properties:
             self._page_properties = self.fetch_page_properties()
             self.log(f"Fetched properties: {self._page_properties}")
@@ -265,12 +322,10 @@ class NotionPageUpdate(Component):
             self.log(f"Name: {property_name}")
             self.log(f"Value: {property_value}")
 
-            # Skip if no property name
             if not property_name:
                 self.log("No property name provided, skipping")
                 continue
 
-            # Get property info
             prop_info = self._page_properties.get(property_name)
             if not prop_info:
                 self.log(f"Property {property_name} not found in page properties")
@@ -278,30 +333,25 @@ class NotionPageUpdate(Component):
 
             self.log(f"Property info: {prop_info}")
 
-            # Format the value
             formatted_value = self.format_property_value(
                 property_name, prop_info, property_value if property_value else ""
             )
 
             self.log(f"Formatted value: {formatted_value}")
 
-            # Add to properties
             if formatted_value:
                 properties[property_name] = formatted_value
                 self.log(f"Added property {property_name}")
 
-        # Final check
         if not properties:
             self.log("No properties were updated!")
             return Data(data={"error": "No valid properties defined. Please check the logs for details."})
 
-        # Create update data
         data = {"properties": properties}
 
         self.log(f"Final request data: {json.dumps(data, indent=2)}")
 
         try:
-            # Send update request
             response = requests.patch(
                 f"https://api.notion.com/v1/pages/{actual_page_id}", headers=headers, json=data, timeout=10
             )
@@ -319,7 +369,13 @@ class NotionPageUpdate(Component):
                 return Data(data={"error": error_msg})
 
             response.raise_for_status()
-            return Data(data=cast(dict[str, Any], response.json()))
+
+            response_data = response.json()
+            if self.page_id and "(" in self.page_id:
+                page_title = self.page_id.split(" (")[0]
+                response_data["page_title"] = page_title
+
+            return Data(data=cast(dict[str, Any], response_data))
 
         except requests.exceptions.RequestException as e:
             error_msg = f"Error updating page: {e}"
@@ -372,19 +428,19 @@ class NotionPageUpdate(Component):
 
             if prop_type == "files":
                 if value.startswith(("http://", "https://")):
-                    return {"files": [{"name": value.split("/")[-1], "type": "external", "external": {"url": value}}]}
+                    url_parts = value.split("/")
+                    file_name = url_parts[-1]
+                    return {"files": [{"name": file_name, "type": "external", "external": {"url": value}}]}
                 return {"files": []}
 
             if prop_type == "status":
                 return {"status": {"name": str(value)}}
 
-            # For unknown types, use rich_text
             self.log(f"Unknown property type {prop_type}, defaulting to rich_text")
             return {"rich_text": [{"type": "text", "text": {"content": str(value)}}]}
 
         except (ValueError, TypeError) as e:
             self.log(f"Error formatting property {prop_name}: {e}")
-            # Fix: Add explicit type annotation to empty_values
             empty_values: dict[str, dict[str, Any]] = {
                 "title": {"title": []},
                 "rich_text": {"rich_text": []},
@@ -399,6 +455,5 @@ class NotionPageUpdate(Component):
                 "files": {"files": []},
                 "status": {"status": None},
             }
-            # Fix: Explicitly type the return value
             result: dict[str, Any] = empty_values.get(prop_type, {"rich_text": []})
             return result
