@@ -179,7 +179,7 @@ This component connects to Google's generative AI embedding service using the Go
 
 :::note
 This component is deprecated as of Langflow version 1.0.18.
-Instead, use the [Hugging Face API Embeddings component](#hugging-face-embeddings-inference-api).
+Instead, use the [Hugging Face Embeddings Inference component](#hugging-face-embeddings-inference).
 :::
 
 This component loads embedding models from HuggingFace.
@@ -204,9 +204,9 @@ Use this component to generate embeddings using locally downloaded Hugging Face 
 
 ## Hugging Face embeddings inference
 
-This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/).
+This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/) and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate. Local inference models do not require an API key.
 
-Use this component to create embeddings with Hugging Face's hosted models.
+Use this component to create embeddings with Hugging Face's hosted models, or to connect to your own locally hosted models.
 
 ### Inputs
 
@@ -236,7 +236,7 @@ To connect the local Hugging Face model to the **Hugging Face embeddings inferen
 There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
 2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
 3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
-4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model, for example, `http://localhost:8000`. **The **API Key** field is not required for local inference.**
+4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model. **The **API Key** field is not required for local inference.**
 5. Run the flow. The local inference models generate embeddings for the input text.
 
 ## LM Studio Embeddings
