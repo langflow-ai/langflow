@@ -6,6 +6,7 @@ import requests
 from langflow.custom import Component
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MultilineInput, MultiselectInput, SecretStrInput, StrInput
 from langflow.io import Output
+from langflow.schema.message import Message
 
 class TessAIExecuteAgentComponent(Component):
     display_name = "Execute Agent"
@@ -38,10 +39,10 @@ class TessAIExecuteAgentComponent(Component):
     def execute_agent(self) -> str:
         headers = self._get_headers()
         execute_endpoint = f"{self.BASE_URL}/agents/{self.agent_id.strip()}/execute?waitExecution=true"
-        parameters = self._collect_dynamic_parameters()
+        attributes = self._collect_dynamic_attributes()
 
         try:
-            response = requests.post(execute_endpoint, headers=headers, json=parameters)
+            response = requests.post(execute_endpoint, headers=headers, json=attributes)
             response.raise_for_status()
             execution_data = response.json()
 
@@ -54,13 +55,38 @@ class TessAIExecuteAgentComponent(Component):
             error_json = e.response.json() if e.response is not None else {"error": str(e)}
             raise RuntimeError(json.dumps(error_json)) from e
 
-    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str|None = None) -> dict:
         if field_name == "agent_id" and field_value and build_config.get("api_key", {}).get("value"):
             try:
                 agent = self._get_agent(field_value)
-                self._update_dynamic_fields(build_config, agent)
+                old_build_config = deepcopy(dict(build_config))
+                
+                for key in list(build_config.keys()):
+                    if key.endswith(self.FIELD_SUFFIX):
+                        del build_config[key]
+                
+                questions = agent.get("questions", [])
+                for question in questions:
+                    name = question.get("name", "")
+                    
+                    if name == "messages" and agent.get("type") == "chat":
+                        name += self.CHAT_MESSAGE_INPUT_SUFFIX
+                    
+                    key = name + self.FIELD_SUFFIX
+                    old_config = old_build_config.get(key, {})
+                    
+                    field = self._create_field(key, question, old_config.get("value"))
+                    config = field.model_dump(by_alias=True, exclude_none=True)
+                    
+                    self.inputs.append(field)
+                    build_config[key] = config
+                    
             except requests.RequestException:
-                self._clear_dynamic_fields(build_config)
+                for key in list(build_config.keys()):
+                    if key.endswith(self.FIELD_SUFFIX):
+                        del build_config[key]
+
+        print(f"Inputs: {len(self.inputs)}")
 
         self.map_inputs(self.inputs)
         self.build_inputs()
@@ -79,29 +105,6 @@ class TessAIExecuteAgentComponent(Component):
 
         return response.json()
 
-    def _update_dynamic_fields(self, build_config: dict, agent: dict):
-        questions = agent.get("questions", [])
-        old_build_config = deepcopy(dict(build_config))
-
-        for key in list(build_config.keys()):
-            if key.endswith(self.FIELD_SUFFIX):
-                del build_config[key]
-
-        for question in questions:
-            name = question.get("name", "")
-
-            if name == "messages" and agent.get("type") == "chat":
-                name += self.CHAT_MESSAGE_INPUT_SUFFIX
-
-            key = name + self.FIELD_SUFFIX
-            old_config = old_build_config.get(key, {})
-            
-            field = self._create_field(key, question, old_config.get("value"))
-            config = field.model_dump(by_alias=True, exclude_none=True)
-
-            self.inputs.append(field)
-            build_config[key] = config
-
     def _get_agent_response(self, headers: dict, response_id: str) -> str:
         endpoint = f"{self.BASE_URL}/agent-responses/{response_id}"
         try:
@@ -112,7 +115,7 @@ class TessAIExecuteAgentComponent(Component):
             error_json = e.response.json() if e.response is not None else {"error": str(e)}
             raise RuntimeError(json.dumps(error_json)) from e
 
-    def _create_field(self, key: str, question: dict, value: str | None = None) -> dict:
+    def _create_field(self, key: str, question: dict, value: str|None = None) -> dict:
         field_type = question.get("type", "text")
 
         args = {
@@ -163,26 +166,24 @@ class TessAIExecuteAgentComponent(Component):
 
         return input_class(**args)
 
-    def _clear_dynamic_fields(self, build_config: dict):
-        for key in list(build_config.keys()):
-            if key.endswith(self.FIELD_SUFFIX):
-                del build_config[key]
-
-    def _collect_dynamic_parameters(self) -> dict:
-        parameters = {}
+    def _collect_dynamic_attributes(self) -> dict:
+        attributes = {}
         suffix = self.FIELD_SUFFIX
         suffix_length = len(suffix)
 
-        for key in self._parameters:
+        for key in self._attributes:
             if key.endswith(suffix):
-                param_name = key[:-suffix_length]
-                value = self._parameters[key]
+                value = self._attributes[key]
+                name = key[:-suffix_length]
 
-                if param_name.endswith(self.CHAT_MESSAGE_INPUT_SUFFIX):
-                    param_name = param_name[:-len(self.CHAT_MESSAGE_INPUT_SUFFIX)]
-                    parameters[param_name] = [{"role": "user", "content": value}]
+                if isinstance(value, Message):
+                    value = value.text
+
+                if name.endswith(self.CHAT_MESSAGE_INPUT_SUFFIX):
+                    name = name[:-len(self.CHAT_MESSAGE_INPUT_SUFFIX)]
+                    attributes[name] = [{"role": "user", "content": value}]
                 elif isinstance(value, list):
-                    parameters[param_name] = ",".join(str(val) for val in value)
+                    attributes[name] = ",".join(str(val) for val in value)
                 elif value != "":
-                    parameters[param_name] = value
-        return parameters
+                    attributes[name] = value
+        return attributes
