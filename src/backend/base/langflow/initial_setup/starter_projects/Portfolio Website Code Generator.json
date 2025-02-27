@@ -2144,7 +2144,7 @@
                 "name": "data",
                 "required_inputs": [],
                 "selected": "Data",
-                "tool_mode": true,
+                "tool_mode": false,
                 "types": [
                   "Data"
                 ],
@@ -2340,6 +2340,29 @@
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
               },
               "use_multithreading": {
                 "_input_type": "BoolInput",
