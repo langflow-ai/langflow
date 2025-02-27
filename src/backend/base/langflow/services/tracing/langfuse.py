@@ -41,17 +41,9 @@ class LangFuseTracer(BaseTracer):
     def setup_langfuse(self, config) -> bool:
         try:
             from langfuse import Langfuse
-            from langfuse.callback.langchain import LangchainCallbackHandler
 
             self._client = Langfuse(**config)
             self.trace = self._client.trace(id=str(self.trace_id), name=self.flow_id)
-
-            config |= {
-                "trace_name": self.flow_id,
-                "stateful_client": self.trace,
-                "update_stateful_client": True,
-            }
-            self._callback = LangchainCallbackHandler(**config)
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
@@ -135,7 +127,10 @@ class LangFuseTracer(BaseTracer):
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
             return None
-        return self._callback
+
+        # get callback from parent span
+        stateful_client = self.spans[next(reversed(self.spans))] if len(self.spans) > 0 else self.trace
+        return stateful_client.get_langchain_handler()
 
     @staticmethod
     def _get_config() -> dict:
