@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data, Message,DataFrame
+from langflow.schema import Data, DataFrame, Message
 
 
 class NvidiaIngestComponent(Component):
@@ -139,7 +139,7 @@ class NvidiaIngestComponent(Component):
         path_str: str
         # path_str = str(self.path.files) if isinstance(self.path, Message) else str(self.path)
         if isinstance(self.path, Message):
-            path_str = str(self.path.files[0]) if self.path.files is not None else str(self.path.text)  
+            path_str = str(self.path.files[0]) if self.path.files is not None else str(self.path.text)
         else:
             path_str = str(self.path)
         resolved_path = self.resolve_path(path_str)
