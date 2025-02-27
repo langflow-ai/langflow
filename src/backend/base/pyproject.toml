@@ -81,6 +81,7 @@ dependencies = [
     "mcp>=1.1.2",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
+    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
 ]
 
 [dependency-groups]
@@ -120,6 +121,7 @@ dev = [
     "pytest-flakefinder>=1.1.0",
     "types-markdown>=3.7.0.20240822",
     "codeflash>=0.8.4"
+
 ]
 
 
@@ -221,6 +223,12 @@ Documentation = "https://docs.langflow.org"
 
 # Optional dependencies for uv
 [project.optional-dependencies]
+
+postgresql = [
+  "sqlalchemy[postgresql_psycopg2binary]",
+    "sqlalchemy[postgresql_psycopg]",
+
+]
 deploy = [
     "celery>=5.3.1",
     "redis>=4.6.0",
