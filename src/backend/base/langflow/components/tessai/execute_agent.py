@@ -182,6 +182,6 @@ class TessAIExecuteAgentComponent(Component):
                     attributes[name] = [{"role": "user", "content": value}]
                 elif isinstance(value, list):
                     attributes[name] = ",".join(str(val) for val in value)
-                elif value != "":
+                elif value not in ["", None]:
                     attributes[name] = value
         return attributes
