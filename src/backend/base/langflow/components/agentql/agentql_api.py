@@ -93,31 +93,30 @@ class AgentQL(Component):
             msg = "Please provide either an AgentQL Query or a natural language prompt."
             self.status = msg
             raise ValueError(msg)
-        else:
 
-            try:
-                response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
-                response.raise_for_status()
+        try:
+            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
+            response.raise_for_status()
 
-                json = response.json()
-                data = Data(result=json["data"], metadata=json["metadata"])
+            json = response.json()
+            data = Data(result=json["data"], metadata=json["metadata"])
 
-            except httpx.HTTPStatusError as e:
-                response = e.response
-                if response.status_code in {401, 403}:
-                    self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
-                else:
-                    try:
-                        error_json = response.json()
-                        logger.error(
-                            f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
-                        )
-                        msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
-                    except (ValueError, TypeError):
-                        msg = f"HTTP {e}."
-                    self.status = msg
-                raise ValueError(self.status) from e
-
+        except httpx.HTTPStatusError as e:
+            response = e.response
+            if response.status_code in {401, 403}:
+                self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
             else:
-                self.status = data
-                return data
+                try:
+                    error_json = response.json()
+                    logger.error(
+                        f"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}"
+                    )
+                    msg = error_json["error_info"] if "error_info" in error_json else error_json["detail"]
+                except (ValueError, TypeError):
+                    msg = f"HTTP {e}."
+                self.status = msg
+            raise ValueError(self.status) from e
+
+        else:
+            self.status = data
+            return data
