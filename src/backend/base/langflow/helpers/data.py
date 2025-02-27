@@ -83,7 +83,7 @@ def data_to_text_list(template: str, data: Data | list[Data]) -> tuple[list[str]
             if isinstance(data_obj.data.get("data"), dict):
                 format_dict.update(data_obj.data["data"])
 
-            elif "error" in format_dict:
+            elif format_dict.get("error"):
                 format_dict["text"] = format_dict["error"]
 
         format_dict["data"] = data_obj.data

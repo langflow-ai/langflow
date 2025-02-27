@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIEmbeddings",
-            "id": "OpenAIEmbeddings-jyvkr",
+            "id": "OpenAIEmbeddings-fcwMC",
             "name": "embeddings",
             "output_types": [
               "Embeddings"
@@ -24,8 +24,8 @@
         },
         "id": "reactflow__edge-OpenAIEmbeddings-jyvkr{œdataTypeœ:œOpenAIEmbeddingsœ,œidœ:œOpenAIEmbeddings-jyvkrœ,œnameœ:œembeddingsœ,œoutput_typesœ:[œEmbeddingsœ]}-AstraDBGraph-jr8pY{œfieldNameœ:œembedding_modelœ,œidœ:œAstraDBGraph-jr8pYœ,œinputTypesœ:[œEmbeddingsœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "OpenAIEmbeddings-jyvkr",
-        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-jyvkrœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
+        "source": "OpenAIEmbeddings-fcwMC",
+        "sourceHandle": "{œdataTypeœ: œOpenAIEmbeddingsœ, œidœ: œOpenAIEmbeddings-fcwMCœ, œnameœ: œembeddingsœ, œoutput_typesœ: [œEmbeddingsœ]}",
         "target": "AstraDBGraph-jr8pY",
         "targetHandle": "{œfieldNameœ: œembedding_modelœ, œidœ: œAstraDBGraph-jr8pYœ, œinputTypesœ: [œEmbeddingsœ], œtypeœ: œotherœ}"
       },
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-ZCSfi",
+            "id": "ChatInput-DA114",
             "name": "message",
             "output_types": [
               "Message"
@@ -52,8 +52,8 @@
         },
         "id": "reactflow__edge-ChatInput-ZCSfi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ZCSfiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-AstraDBGraph-jr8pY{œfieldNameœ:œsearch_queryœ,œidœ:œAstraDBGraph-jr8pYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-ZCSfi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ZCSfiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "source": "ChatInput-DA114",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-DA114œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AstraDBGraph-jr8pY",
         "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œAstraDBGraph-jr8pYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-T6FGT",
+            "id": "ParseData-alciW",
             "inputTypes": [
               "Data"
             ],
@@ -82,8 +82,8 @@
         "selected": false,
         "source": "AstraDBGraph-jr8pY",
         "sourceHandle": "{œdataTypeœ: œAstraDBGraphœ, œidœ: œAstraDBGraph-jr8pYœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-T6FGT",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-T6FGTœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "target": "ParseData-alciW",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-alciWœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -185,7 +185,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XL9ho",
+            "id": "ChatOutput-KIkbc",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -196,10 +196,10 @@
         },
         "id": "reactflow__edge-OpenAIModel-LnWKb{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-LnWKbœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-KIkbc{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-KIkbcœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-a26gL",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-a26gLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XL9ho",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XL9hoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-LnWKb",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-LnWKbœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-KIkbc",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-KIkbcœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -1288,7 +1288,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "batch_size": {
                 "_input_type": "IntInput",
@@ -1721,7 +1721,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
             "tool_mode": false
@@ -2994,7 +2994,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_API_ENDPOINT"
               },
               "batch_size": {
                 "_input_type": "IntInput",
@@ -3423,7 +3423,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "ASTRA_DB_APPLICATION_TOKEN"
               }
             },
             "tool_mode": false
