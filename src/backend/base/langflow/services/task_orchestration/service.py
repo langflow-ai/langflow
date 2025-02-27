@@ -131,6 +131,12 @@ class TaskOrchestrationService(Service):
         task_data.update(task_update.model_dump(exclude_unset=True))
         task_data["updated_at"] = datetime.now(timezone.utc)
 
+        # If status is changing to processing, start processing the task
+        if task_update.status == "processing" and task_id not in self._processing_tasks:
+            # Create a background task for processing
+            processing_task = asyncio.create_task(self._process_task(task_id))
+            self._processing_tasks[task_id] = processing_task
+
         task_read = TaskRead.model_validate(task_data)
         await self.event_bus_service.publish("TaskUpdated", task_read.model_dump())
         return task_read
@@ -208,6 +214,7 @@ class TaskOrchestrationService(Service):
         from langflow.api.utils import build_graph_from_data
 
         try:
+            logger.info(f"Starting to process task {task_id}")
             # Update task to processing
             await self.update_task(task_id, TaskUpdate(status="processing"))
 
@@ -217,10 +224,12 @@ class TaskOrchestrationService(Service):
             input_request = task_data.get("input_request", {})
 
             if not flow_data:
+                logger.error(f"Task {task_id} has no flow_data")
                 msg = "No flow data provided for task processing"
                 raise ValueError(msg)
 
             try:
+                logger.debug(f"Building graph for task {task_id}")
                 # Build the graph
                 graph = await build_graph_from_data(
                     flow_id=str(task_id),
@@ -229,16 +238,53 @@ class TaskOrchestrationService(Service):
                     flow_name=task_data.get("title", "Untitled Flow"),
                 )
 
+                # Set session_id from input_request if available
+                if input_request and "session_id" in input_request:
+                    session_id = input_request.get("session_id")
+                    if session_id:
+                        logger.debug(f"Setting session_id {session_id} for task {task_id}")
+                        graph.session_id = session_id
+
+                        # Also set session_id on all Agent components in the graph
+                        for vertex in graph.vertices:
+                            if "Agent" in vertex.vertex_type:
+                                logger.debug(f"Setting session_id on Agent component {vertex.id}")
+                                if hasattr(vertex, "set") and callable(vertex.set):
+                                    # Set session_id, sender and sender_name
+                                    sender = input_request.get("sender", "Machine")
+                                    sender_name = input_request.get("sender_name", "Agent")
+                                    vertex.set(session_id=session_id, sender=sender, sender_name=sender_name)
+                    else:
+                        logger.warning(f"Empty session_id provided for task {task_id}")
+                else:
+                    # Use the task_id as fallback
+                    logger.debug(f"No session_id in input_request, using task_id for task {task_id}")
+                    graph.session_id = str(task_id)
+
                 # Create input value request and set it in the graph
-                input_request.get("input_value", "")
+                input_value = input_request.get("input_value", "")
+                logger.debug(f"Input value for task {task_id}: {input_value}")
+
+                # If there's an input_value in the input_request, set it in the graph
+                if input_value and hasattr(graph.start, "set"):
+                    logger.debug(f"Setting input_value for task {task_id}")
+                    graph.start.set(input_value=input_value)
+
+                # If there's a message in the input_request, set it in the graph
+                message = input_request.get("message", "")
+                if message and hasattr(graph.start, "set"):
+                    logger.debug(f"Setting message for task {task_id}: {message}")
+                    graph.start.set(message=message)
 
                 # Prepare the graph for processing
+                logger.debug(f"Preparing graph for task {task_id}")
                 graph.prepare()
 
                 # Create output state model for tracking
                 output_state_model = create_output_state_model_from_graph(graph)()
 
                 # Process the graph
+                logger.info(f"Starting graph execution for task {task_id}")
                 results = []
                 async for result in graph.async_start():
                     if hasattr(result, "vertex") and result.vertex.is_output:
@@ -254,8 +300,11 @@ class TaskOrchestrationService(Service):
                         )
 
                 if not results:
+                    logger.debug(f"No explicit outputs for task {task_id}, using output state model")
                     # If no explicit outputs, get the output state model
                     results = [{"output_state": output_state_model.model_dump(), "type": "output_state"}]
+
+                logger.info(f"Task {task_id} completed successfully with {len(results)} results")
 
                 # Update task as completed
                 await self.update_task(
@@ -277,7 +326,7 @@ class TaskOrchestrationService(Service):
                 )
 
             except Exception as e:  # noqa: BLE001
-                logger.error(f"Error processing graph: {e!s}")
+                logger.error(f"Error processing graph for task {task_id}: {e!s}")
                 error_result = {"error": str(e)}
 
                 # Update task as failed
@@ -305,7 +354,7 @@ class TaskOrchestrationService(Service):
             raise
 
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Error in task processing: {e!s}")
+            logger.error(f"Error in task processing {task_id}: {e!s}")
             try:
                 await self.update_task(
                     task_id,
