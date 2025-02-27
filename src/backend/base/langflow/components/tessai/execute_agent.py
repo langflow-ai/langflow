@@ -86,8 +86,6 @@ class TessAIExecuteAgentComponent(Component):
                     if key.endswith(self.FIELD_SUFFIX):
                         del build_config[key]
 
-        print(f"Inputs: {len(self.inputs)}")
-
         self.map_inputs(self.inputs)
         self.build_inputs()
 
