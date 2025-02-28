@@ -7,12 +7,7 @@ slug: /integrations-apify
 
 [Apify](https://apify.com/) is a web scraping and data extraction platform. It provides an [Actor Store](https://apify.com/store) with more than three thousand ready-made cloud tools called **Actors**.
 
-Apify components in Langflow can run **Actors** to accomplish tasks such as:
-
-* Crawling websites and extracting text content
-* Scraping social media platforms like Instagram and Facebook
-* Extracting data from Google Maps
-* Inserting data into a PostgreSQL/MySQL/MSSQL database
+Apify components in Langflow run **Actors** to accomplish tasks like data extraction, content analysis, and SQL operations.
 
 ## Prerequisites
 
