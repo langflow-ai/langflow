@@ -89,7 +89,7 @@ class S3BucketRetrieverComponent(Component):
             aws_secret_access_key=self.aws_secret_access_key,
         )
 
-    def retrieve_files(self) -> Data:
+    def retrieve_files(self) -> Data | list[Data]:
         """Retrieve files from the S3 bucket based on the specified prefix and object name.
 
         Returns:
@@ -99,7 +99,7 @@ class S3BucketRetrieverComponent(Component):
         response = self._s3_client().list_objects_v2(Bucket=self.bucket_name, Prefix=self.s3_prefix)
         if "Contents" not in response:
             self.log(f"No objects found with prefix {self.s3_prefix}")
-            return []
+            return Data()
 
         # Filter objects based on the wildcard pattern
         matching_keys = [obj["Key"] for obj in response["Contents"] if fnmatch.fnmatch(obj["Key"], self.object_name)]
@@ -111,5 +111,6 @@ class S3BucketRetrieverComponent(Component):
             for key in matching_keys:
                 file_name = Path(temp_dir) / Path(key).name
                 self._s3_client().download_file(self.bucket_name, key, str(file_name))
-                data_list.append(parse_text_file_to_data(file_name, silent_errors=True))
+                data_list.append(parse_text_file_to_data(str(file_name), silent_errors=False))
+                self.log(str(file_name))
         return data_list
