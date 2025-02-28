@@ -7,13 +7,14 @@ from langchain_core.tools import StructuredTool, Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
+from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
 from langflow.schema import Data
 from langflow.schema.table import EditMode
 
 
 class AstraDBToolComponent(LCToolComponent):
     display_name: str = "Astra DB Tool"
-    description: str = "Create a tool to get transactional data from DataStax Astra DB Collection"
+    description: str = "Tool to run hybrid vector and metadata search on DataStax Astra DB Collection"
     documentation: str = "https://docs.langflow.org/Components/components-tools#astra-db-tool"
     icon: str = "AstraDB"
 
@@ -21,19 +22,19 @@ class AstraDBToolComponent(LCToolComponent):
         StrInput(
             name="tool_name",
             display_name="Tool Name",
-            info="The name of the tool.",
+            info="The name of the tool to be passed to the LLM.",
             required=True,
         ),
         StrInput(
             name="tool_description",
             display_name="Tool Description",
-            info="The description of the tool.",
+            info="Describe the tool to LLM. Add any information that can help the LLM to use the tool.",
             required=True,
         ),
         StrInput(
             name="keyspace",
             display_name="Keyspace Name",
-            info="The name of the keyspace within Astra where the collection is be stored.",
+            info="The name of the keyspace within Astra where the collection is stored.",
             value="default_keyspace",
             advanced=True,
         ),
@@ -53,6 +54,7 @@ class AstraDBToolComponent(LCToolComponent):
         SecretStrInput(
             name="api_endpoint",
             display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
+            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -60,7 +62,7 @@ class AstraDBToolComponent(LCToolComponent):
         StrInput(
             name="projection_attributes",
             display_name="Projection Attributes",
-            info="Attributes to return separated by comma.",
+            info="Attributes to be returned by the tool separated by comma.",
             required=True,
             value="*",
             advanced=True,
@@ -68,7 +70,8 @@ class AstraDBToolComponent(LCToolComponent):
         TableInput(
             name="tools_params_v2",
             display_name="Tools Params",
-            info="Define the structure for the tool parameters.",
+            info="Define the structure for the tool parameters. Describe the parameters "
+            "in a way the LLM can understand how to use them.",
             required=False,
             table_schema=[
                 {
@@ -93,6 +96,7 @@ class AstraDBToolComponent(LCToolComponent):
                     "type": "boolean",
                     "edit_mode": EditMode.INLINE,
                     "description": ("Indicate if the field is included in the metadata field."),
+                    "description": ("Indicate if the field is included in the metadata field."),
                     "options": ["True", "False"],
                     "default": "False",
                 },
@@ -102,6 +106,7 @@ class AstraDBToolComponent(LCToolComponent):
                     "type": "boolean",
                     "edit_mode": EditMode.INLINE,
                     "description": ("Indicate if the field is mandatory."),
+                    "description": ("Indicate if the field is mandatory."),
                     "options": ["True", "False"],
                     "default": "False",
                 },
@@ -109,17 +114,20 @@ class AstraDBToolComponent(LCToolComponent):
                     "name": "operator",
                     "display_name": "Operator",
                     "type": "str",
-                    "description": "Set the operator for the field. https://docs.datastax.com/en/astra-db-serverless/api-reference/documents.html#operators",
+                    "description": "Set the operator for the field. "
+                    "https://docs.datastax.com/en/astra-db-serverless/api-reference/documents.html#operators",
                     "default": "$eq",
                     "options": ["$gt", "$gte", "$lt", "$lte", "$eq", "$ne", "$in", "$nin", "$exists", "$all", "$size"],
                     "edit_mode": EditMode.INLINE,
                 },
             ],
             value=[],
+            value=[],
         ),
         DictInput(
             name="tool_params",
-            info="DEPRECATED: Attributes to filter and description to the model. Add ! for mandatory (e.g: !customerId)",
+            info="DEPRECATED: Attributes to filter and description to the model. "
+            "Add ! for mandatory (e.g: !customerId)",
             display_name="Tool params",
             is_list=True,
             advanced=True,
@@ -145,14 +153,14 @@ class AstraDBToolComponent(LCToolComponent):
             advanced=False,
             value=False,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         BoolInput(
             name="use_vectorize",
-            display_name="Use Vectorize",
-            info="When this parameter is activated, Astra Vectorize method will be used to generate the embeddings.",
+            display_name="Use Astra DB Vectorize",
+            info="When this parameter is activated, Astra DB Vectorize method will be used to generate the embeddings.",
             advanced=False,
             value=False,
         ),
+        HandleInput(name="embedding", display_name="Embedding Model", input_types=["Embeddings"]),
     ]
 
     _cached_client: DataAPIClient | None = None
@@ -163,13 +171,17 @@ class AstraDBToolComponent(LCToolComponent):
         if self._cached_collection:
             return self._cached_collection
 
-        cached_client = DataAPIClient(self.token)
-        cached_db = cached_client.get_database(self.api_endpoint, keyspace=self.keyspace)
-        self._cached_collection = cached_db.get_collection(self.collection_name)
-        return self._cached_collection
+        try:
+            cached_client = DataAPIClient(self.token)
+            cached_db = cached_client.get_database(self.api_endpoint, keyspace=self.keyspace)
+            self._cached_collection = cached_db.get_collection(self.collection_name)
+        except Exception as e:
+            msg = f"Error building collection: {e}"
+            raise ValueError(msg) from e
+        else:
+            return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:
-        print("tools_params")
         self.log.warning("This is the old way to define the tool parameters. Please use the new way.")
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
@@ -178,28 +190,26 @@ class AstraDBToolComponent(LCToolComponent):
                 args[key[1:]] = (str, Field(description=self.tool_params[key]))
             else:  # Optional
                 args[key] = (str | None, Field(description=self.tool_params[key], default=None))
+                args[key] = (str | None, Field(description=self.tool_params[key], default=None))
 
         if self.use_search_query:
             args["search_query"] = (
                 str | None,
                 Field(description="Search query to find relevant documents.", default=None),
             )
-        print("args schema")
-        print(args)
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
 
     def create_args_schema_v2(self) -> dict[str, BaseModel]:
-        print("tools_params_v2")
-        print(self.tools_params_v2)
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
+
         for tool_param in self.tools_params_v2:
-            print(tool_param)
             if tool_param["mandatory"]:
                 args[tool_param["name"]] = (str, Field(description=tool_param["description"]))
             else:
+                args[tool_param["name"]] = (str | None, Field(description=tool_param["description"], default=None))
                 args[tool_param["name"]] = (str | None, Field(description=tool_param["description"], default=None))
 
         if self.use_search_query:
@@ -207,8 +217,6 @@ class AstraDBToolComponent(LCToolComponent):
                 str | None,
                 Field(description="Search query to find relevant documents.", default=None),
             )
-        print("args schema")
-        print(args)
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
@@ -255,16 +263,17 @@ class AstraDBToolComponent(LCToolComponent):
         Args:
             args: Dictionary of arguments from the tool
             filter_settings: List of filter settings from tools_params_v2
-
         Returns:
             Dictionary containing the filter conditions
         """
         filters = {**self.static_filters}
 
+
         for key, value in args.items():
             # Skip search_query as it's handled separately
             if key == "search_query":
                 continue
+
 
             filter_setting = next((x for x in filter_settings if x["name"] == key), None)
             if filter_setting and value is not None:
@@ -272,27 +281,33 @@ class AstraDBToolComponent(LCToolComponent):
                 if filter_setting["operator"] == "$exists":
                     filters[filter_key] = {filter_setting["operator"]: True}
                 elif filter_setting["operator"] in ["$in", "$nin", "$all"]:
-                    filters[filter_key] = {filter_setting["operator"]: [value]}
+                    filters[filter_key] = {
+                        filter_setting["operator"]: value.split(",") if isinstance(value, str) else value
+                    }
                 else:
                     filters[filter_key] = {filter_setting["operator"]: value}
 
-        print("filters")
-        print(filters)
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
         collection = self._build_collection()
         sort = {}
 
+
         # Build filters using the new method
         filters = self.build_filter(args, self.tools_params_v2)
 
-        if self.use_search_query:
+        if self.use_search_query and args["search_query"] is not None and args["search_query"] != "":
             if self.use_vectorize:
                 sort["$vectorize"] = args["search_query"]
-                del args["search_query"]
             else:
-                filters["search_query"] = args["search_query"]
+                if self.embedding is None:
+                    msg = "Embedding model is not set. Please set the embedding model or use Astra DB Vectorize."
+                    self.log.error(msg)
+                    raise ValueError(msg)
+                embedding_query = self.embedding.embed_query(args["search_query"])
+                sort["$vector"] = embedding_query
+            del args["search_query"]
 
         find_options = {
             "filter": filters,
