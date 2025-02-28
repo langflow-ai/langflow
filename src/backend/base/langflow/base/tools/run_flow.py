@@ -48,8 +48,8 @@ class RunFlowBaseComponent(Component):
             advanced=True,
         ),
         MessageTextInput(
-            name="tool_placeholder",
-            display_name="Tool Placeholder",
+            name="runflow_tool_placeholder",
+            display_name="Run Flow Tool Placeholder",
             tool_mode=True,
             advanced=True,
             info="A placeholder input for tool mode.",
@@ -74,7 +74,7 @@ class RunFlowBaseComponent(Component):
             name="flow_outputs_message", display_name="Flow Message Output", method="message_output", tool_mode=True
         ),
     ]
-    default_keys = ["code", "_type", "flow_name_selected", "session_id"]
+    default_keys = ["code", "_type", "flow_name_selected", "session_id", "runflow_tool_placeholder"]
     FLOW_INPUTS: list[dotdict] = []
     flow_tweak_data: dict = {}
 
@@ -171,7 +171,8 @@ class RunFlowBaseComponent(Component):
                             **field_template[input_name],
                             "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
                             "name": f"{vertex.id}~{input_name}",
-                            "tool_mode": not (field_template[input_name].get("advanced", False)),
+                            "tool_mode": not (field_template[input_name].get("advanced", False))
+                            and "File" not in field_template[input_name]["display_name"]
                         }
                     )
                     for input_name in field_order
