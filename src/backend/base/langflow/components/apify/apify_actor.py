@@ -89,9 +89,9 @@ class ApifyActorsComponent(Component):
 
     def run_model(self) -> list[Data]:
         """Run the Actor and return node output."""
-        _input = json.loads(self.run_input)
+        input_ = json.loads(self.run_input)
         fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
-        res = self._run_actor(self.actor_id, _input, fields=fields)
+        res = self._run_actor(self.actor_id, input_, fields=fields)
         if self.flatten_dataset:
             res = [ApifyActorsComponent.flatten(item) for item in res]
         data = [Data(data=item) for item in res]
@@ -113,16 +113,16 @@ class ApifyActorsComponent(Component):
         properties = {"run_input": properties}
 
         # works from input schema
-        _info = [
+        info_ = [
             (
                 "JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\n\n"
                 f"{json.dumps(properties, separators=(',', ':'))}"
             )
         ]
         if required:
-            _info.append("\n\nRequired fields:\n" + "\n".join(required))
+            info_.append("\n\nRequired fields:\n" + "\n".join(required))
 
-        info = "".join(_info)
+        info = "".join(info_)
 
         input_model_cls = ApifyActorsComponent.create_input_model_class(info)
         tool_cls = ApifyActorsComponent.create_tool_class(self, readme, input_model_cls, actor_id)
