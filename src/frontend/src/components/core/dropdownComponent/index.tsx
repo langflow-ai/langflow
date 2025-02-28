@@ -7,9 +7,14 @@ import { getStatusColor } from "@/utils/stringManipulation";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { DropDownComponent } from "../../../types/components";
-import { cn, formatName, formatPlaceholderName } from "../../../utils/utils";
+import {
+  cn,
+  filterNullOptions,
+  formatName,
+  formatPlaceholderName,
+} from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -43,11 +48,13 @@ export default function Dropdown({
   dialogInputs,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
+  const validOptions = useMemo(() => filterNullOptions(options), [options]);
+
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
   const [customValue, setCustomValue] = useState("");
-  const [filteredOptions, setFilteredOptions] = useState(options);
+  const [filteredOptions, setFilteredOptions] = useState(validOptions);
   const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
 
@@ -56,7 +63,7 @@ export default function Dropdown({
     ? formatPlaceholderName(name)
     : "Choose an option...";
   const { firstWord } = formatName(name);
-  const fuse = new Fuse(options, { keys: ["name", "value"] });
+  const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
   const { nodeClass, nodeId, handleNodeClass, tooltip } = baseInputProps;
@@ -84,7 +91,7 @@ export default function Dropdown({
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
     if (!filtered.includes(value) && combobox && value) filtered.push(value);
-    setFilteredOptions(value ? filtered : options);
+    setFilteredOptions(value ? filtered : validOptions);
     setCustomValue(value);
   };
 
@@ -133,7 +140,7 @@ export default function Dropdown({
 
   useEffect(() => {
     if (open) {
-      const filtered = cloneDeep(options);
+      const filtered = cloneDeep(validOptions);
       if (customValue === value && value && combobox) {
         filtered.push(customValue);
       }
@@ -159,7 +166,7 @@ export default function Dropdown({
         <Button
           disabled={
             disabled ||
-            (Object.keys(options).length === 0 &&
+            (Object.keys(validOptions).length === 0 &&
               !combobox &&
               !dialogInputs?.fields?.data?.node?.template)
           }
@@ -397,7 +404,7 @@ export default function Dropdown({
   );
 
   // Loading state
-  if (Object.keys(options).length === 0 && !combobox && isLoading) {
+  if (Object.keys(validOptions).length === 0 && !combobox && isLoading) {
     return (
       <div>
         <span className="text-sm italic">Loading...</span>
