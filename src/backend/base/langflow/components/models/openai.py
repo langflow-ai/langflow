@@ -41,6 +41,7 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=False,
             options=OPENAI_MODEL_NAMES,
             value=OPENAI_MODEL_NAMES[0],
+            combobox=True,
         ),
         StrInput(
             name="openai_api_base",
