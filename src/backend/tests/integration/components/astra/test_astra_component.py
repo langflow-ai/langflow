@@ -30,8 +30,8 @@ ALL_COLLECTIONS = [
 
 @pytest.fixture
 def astradb_client():
-    api_client = DataAPIClient(token=get_astradb_application_token())
-    client = api_client.get_database(get_astradb_api_endpoint())
+    api_client = DataAPIClient()
+    client = api_client.get_database(get_astradb_api_endpoint(), token=get_astradb_application_token())
 
     yield client  # Provide the client to the test functions
 
