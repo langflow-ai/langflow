@@ -180,9 +180,6 @@ async def generate_flow_events(
             graph.validate_stream()
             first_layer = sort_vertices(graph)
 
-            if inputs is not None and getattr(inputs, "session", None) is not None:
-                graph.session_id = inputs.session
-
             for vertex_id in first_layer:
                 graph.run_manager.add_to_vertices_being_run(vertex_id)
 
@@ -218,8 +215,18 @@ async def generate_flow_events(
         )
 
     async def create_graph(fresh_session, flow_id_str: str) -> Graph:
+        if inputs is not None and getattr(inputs, "session", None) is not None:
+            effective_session_id = inputs.session
+        else:
+            effective_session_id = flow_id_str
         if not data:
-            return await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
+            return await build_graph_from_db(
+                flow_id=flow_id,
+                session=fresh_session,
+                chat_service=chat_service,
+                user_id=str(current_user.id),
+                session_id=effective_session_id,
+            )
 
         result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
         flow_name = result.first()
@@ -228,6 +235,7 @@ async def generate_flow_events(
             flow_id=flow_id_str,
             payload=data.model_dump(),
             user_id=str(current_user.id),
+            session_id=effective_session_id,
             flow_name=flow_name,
         )
 
