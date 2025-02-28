@@ -172,7 +172,7 @@ class RunFlowBaseComponent(Component):
                             "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
                             "name": f"{vertex.id}~{input_name}",
                             "tool_mode": not (field_template[input_name].get("advanced", False))
-                            and "File" not in field_template[input_name]["display_name"]
+                            and "File" not in field_template[input_name]["display_name"],
                         }
                     )
                     for input_name in field_order
