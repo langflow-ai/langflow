@@ -76,12 +76,12 @@ class MaritalkModelComponent(LCModelComponent):
             # Sort models by creation date (newest first)
             sorted_models = sorted(models, key=lambda x: x.get("created", 0), reverse=True)
             model_ids = [model["id"] for model in sorted_models]
-
-            # If no models were returned from the API, use default models
-            return model_ids if model_ids else DEFAULT_MODELS
         except requests.RequestException as e:
             self.log(f"Error fetching models: {e!s}", "maritalk_api_error")
             return DEFAULT_MODELS  # Return default models on request exception
+        else:
+            # If no models were returned from the API, use default models
+            return model_ids if model_ids else DEFAULT_MODELS
 
     async def update_build_config(self, build_config: dict, _: Any, field_name: str | None = None) -> dict:
         """Update build configuration based on field updates."""
