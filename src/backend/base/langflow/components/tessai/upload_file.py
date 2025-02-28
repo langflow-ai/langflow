@@ -21,13 +21,41 @@ class TessAIUploadFileComponent(Component):
             display_name="Tess AI API Key",
             info="The API key to use for TessAI.",
             advanced=False,
+            input_types=[]
         ),
         FileInput(
             name="file",
             display_name="File",
             info="The file to upload.",
             required=True,
-            file_types=["pdf"],
+            file_types=[
+                "pdf",
+                "docx",
+                "txt",
+                "csv",
+                "xlsx",
+                "xls",
+                "ppt",
+                "pptx",
+                "png",
+                "jpg",
+                "jpeg",
+                "gif",
+                "bmp",
+                "tiff",
+                "ico",
+                "webp",
+                "mp3",
+                "mp4",
+                "wav",
+                "webm",
+                "m4a",
+                "m4v",
+                "mov",
+                "avi",
+                "mkv",
+                "webm"
+            ],
         ),
         BoolInput(
             name="process",
@@ -38,11 +66,11 @@ class TessAIUploadFileComponent(Component):
 
     outputs = [Output(display_name="File Data", name="file_data", method="upload_file")]
 
-    BASE_URL = "https://tess.pareto.io"
+    BASE_URL = "https://tess.pareto.io/api"
 
     def upload_file(self) -> Data:
         headers = self._get_headers()
-        upload_endpoint = f"{self.BASE_URL}/api/files"
+        upload_endpoint = f"{self.BASE_URL}/files"
 
         try:
             files = {"file": open(Path(self.file), "rb")}

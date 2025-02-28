@@ -20,6 +20,7 @@ class TessAIExecuteAgentComponent(Component):
             display_name="Tess AI API Key",
             info="The API key to use for TessAI.",
             advanced=False,
+            input_types=[]
         ),
         StrInput(
             name="agent_id",
@@ -36,7 +37,7 @@ class TessAIExecuteAgentComponent(Component):
     FIELD_SUFFIX = "_tess_ai_dynamic_field"
     CHAT_MESSAGE_INPUT_SUFFIX = "_tess_ai_chat_message_input"
 
-    def execute_agent(self) -> str:
+    def execute_agent(self) -> Message:
         headers = self._get_headers()
         execute_endpoint = f"{self.BASE_URL}/agents/{self.agent_id.strip()}/execute?waitExecution=true"
         attributes = self._collect_dynamic_attributes()
@@ -50,7 +51,8 @@ class TessAIExecuteAgentComponent(Component):
                 raise ValueError(json.dumps(execution_data))
 
             response_id = execution_data["responses"][0]["id"]
-            return self._get_agent_response(headers, response_id)
+            response = self._get_agent_response(headers, response_id)
+            return Message(text=response.get("output", ""))
         except requests.RequestException as e:
             error_json = e.response.json() if e.response is not None else {"error": str(e)}
             raise RuntimeError(json.dumps(error_json)) from e
@@ -108,7 +110,7 @@ class TessAIExecuteAgentComponent(Component):
         try:
             response = requests.get(endpoint, headers=headers)
             response.raise_for_status()
-            return response.json().get("output", "")
+            return response.json()
         except requests.RequestException as e:
             error_json = e.response.json() if e.response is not None else {"error": str(e)}
             raise RuntimeError(json.dumps(error_json)) from e
