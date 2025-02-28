@@ -571,7 +571,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Go over each possible provider and add metadata to configure in Astra DB Portal
         for provider in provider_options:
             # Skip Bring your own and Nvidia, automatically configured
-            if provider in ["Bring your own", "Nvidia"]:
+            if provider in {"Bring your own", "Nvidia"}:
                 build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
                     "embedding_generation_provider"
                 ]["options_metadata"].append({"icon": self.get_provider_icon(provider_name=provider.lower())})
@@ -601,7 +601,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If we retrieved options based on the token, show the dropdown
         build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
         build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+            {k: v for k, v in col.items() if k != "name"} for col in collection_options
         ]
 
         # Reset the selected collection
@@ -620,7 +620,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If we retrieved options based on the token, show the dropdown
         build_config["database_name"]["options"] = [db["name"] for db in database_options]
         build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            {k: v for k, v in db.items() if k != "name"} for db in database_options
         ]
 
         # Reset the selected database
@@ -667,12 +667,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 raise ValueError(msg) from e
 
             # Add the new database to the list of options
-            build_config["database_name"]["options"] = build_config["database_name"]["options"] + [
-                field_value["new_database_name"]
-            ]
-            build_config["database_name"]["options_metadata"] = build_config["database_name"]["options_metadata"] + [
-                {"status": "PENDING"}
-            ]
+            build_config["database_name"]["options"] += [field_value["new_database_name"]]
+            build_config["database_name"]["options_metadata"] += [{"status": "PENDING"}]
 
             return self.reset_collection_list(build_config)
 
@@ -726,9 +722,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Add the new collection to the list of options
             icon = "NVIDIA" if provider == "Nvidia" else "vectorstores"
-            build_config["collection_name"]["options_metadata"] = build_config["collection_name"][
-                "options_metadata"
-            ] + [{"records": 0, "provider": provider, "icon": icon, "model": model}]
+            build_config["collection_name"]["options_metadata"] += [
+                {"records": 0, "provider": provider, "icon": icon, "model": model}
+            ]
 
             return build_config
 
@@ -748,7 +744,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return self.reset_build_config(build_config)
 
         # If this is the first execution of the component, reset and build database list
-        if first_run or field_name in ["token", "environment"]:
+        if first_run or field_name in {"token", "environment"}:
             return self.reset_database_list(build_config)
 
         # Refresh the collection name options
@@ -790,7 +786,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 # Add the new collection to the list of options
                 build_config["collection_name"]["options"].append(field_value)
                 build_config["collection_name"]["options_metadata"].append(
-                    {"records": 0, "provider": None, "icon": "", "model": None}
+                    {
+                        "records": 0,
+                        "provider": None,
+                        "icon": "",
+                        "model": None,
+                    }
                 )
 
                 # Ensure that autodetect collection is set to False, since its a new collection
