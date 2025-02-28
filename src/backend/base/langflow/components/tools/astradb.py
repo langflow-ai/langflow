@@ -7,7 +7,6 @@ from langchain_core.tools import StructuredTool, Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
-from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
 from langflow.schema import Data
 from langflow.schema.table import EditMode
 
@@ -54,7 +53,6 @@ class AstraDBToolComponent(LCToolComponent):
         SecretStrInput(
             name="api_endpoint",
             display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
-            display_name="Database" if os.getenv("ASTRA_ENHANCED", "false").lower() == "true" else "API Endpoint",
             info="API endpoint URL for the Astra DB service.",
             value="ASTRA_DB_API_ENDPOINT",
             required=True,
@@ -96,7 +94,6 @@ class AstraDBToolComponent(LCToolComponent):
                     "type": "boolean",
                     "edit_mode": EditMode.INLINE,
                     "description": ("Indicate if the field is included in the metadata field."),
-                    "description": ("Indicate if the field is included in the metadata field."),
                     "options": ["True", "False"],
                     "default": "False",
                 },
@@ -105,7 +102,6 @@ class AstraDBToolComponent(LCToolComponent):
                     "display_name": "Is Mandatory",
                     "type": "boolean",
                     "edit_mode": EditMode.INLINE,
-                    "description": ("Indicate if the field is mandatory."),
                     "description": ("Indicate if the field is mandatory."),
                     "options": ["True", "False"],
                     "default": "False",
@@ -121,7 +117,6 @@ class AstraDBToolComponent(LCToolComponent):
                     "edit_mode": EditMode.INLINE,
                 },
             ],
-            value=[],
             value=[],
         ),
         DictInput(
@@ -204,7 +199,6 @@ class AstraDBToolComponent(LCToolComponent):
     def create_args_schema_v2(self) -> dict[str, BaseModel]:
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
-
         for tool_param in self.tools_params_v2:
             if tool_param["mandatory"]:
                 args[tool_param["name"]] = (str, Field(description=tool_param["description"]))
@@ -268,12 +262,10 @@ class AstraDBToolComponent(LCToolComponent):
         """
         filters = {**self.static_filters}
 
-
         for key, value in args.items():
             # Skip search_query as it's handled separately
             if key == "search_query":
                 continue
-
 
             filter_setting = next((x for x in filter_settings if x["name"] == key), None)
             if filter_setting and value is not None:
@@ -292,7 +284,6 @@ class AstraDBToolComponent(LCToolComponent):
     def run_model(self, **args) -> Data | list[Data]:
         collection = self._build_collection()
         sort = {}
-
 
         # Build filters using the new method
         filters = self.build_filter(args, self.tools_params_v2)
