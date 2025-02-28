@@ -1633,7 +1633,8 @@
                   "gpt-4-turbo-preview",
                   "gpt-4",
                   "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
+                  "gpt-3.5-turbo-0125",
+                  "gpt-4.5-preview"
                 ],
                 "placeholder": "",
                 "required": false,
@@ -2837,7 +2838,8 @@
                   "gpt-4-turbo-preview",
                   "gpt-4",
                   "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
+                  "gpt-3.5-turbo-0125",
+                  "gpt-4.5-preview"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3220,7 +3222,8 @@
                   "gpt-4-turbo-preview",
                   "gpt-4",
                   "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
+                  "gpt-3.5-turbo-0125",
+                  "gpt-4.5-preview"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
