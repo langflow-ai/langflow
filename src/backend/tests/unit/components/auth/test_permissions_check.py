@@ -1,110 +1,102 @@
 """Test cases for Permissions Check component."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from langflow.base.auth.error_constants import AuthErrors
-from langflow.components.auth.permissions_check import PermissionsCheckComponent
+from langflow.components.auth import PermissionsCheckComponent
+from langflow.schema.message import Message
+
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithClient
 
 
-@pytest.fixture
-def mock_permit_client():
-    return Mock()
+@pytest.mark.usefixtures("client")
+class TestPermissionsCheckComponent(ComponentTestBaseWithClient):
+    @pytest.fixture
+    def component_class(self):
+        """Return the component class to test."""
+        return PermissionsCheckComponent
 
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "user_id": "test-user",
+            "action": "book",
+            "resource": "flight",
+            "pdp_url": "http://localhost:7766",
+            "api_key": "permit_key_",
+        }
 
-@pytest.fixture
-def component():
-    return PermissionsCheckComponent()
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return the file names mapping for different versions."""
+        return [
+            {"version": "1.0.19", "module": "components", "file_name": DID_NOT_EXIST},
+            {"version": "1.1.0", "module": "components", "file_name": DID_NOT_EXIST},
+            {"version": "1.1.1", "module": "components", "file_name": DID_NOT_EXIST},
+        ]
 
+    @pytest.mark.asyncio
+    async def test_latest_version(self, component_class, default_kwargs):
+        """Test that the component works with the latest version."""
+        component = await self.component_setup(component_class, default_kwargs)
+        with patch("components.permissions_check.Permit") as mock_permit:
+            mock_instance = mock_permit.return_value
+            mock_instance.check = AsyncMock(return_value=True)
+            result = await component.validate_auth()
+            assert result is not None, "Component returned None for the latest version"
+            assert result is True, "Expected True for allowed permission"
 
-@pytest.mark.asyncio
-async def test_initialization(component):
-    assert component.display_name == "Permissions Check"
-    assert component.permit is None
+    @pytest.mark.asyncio
+    async def test_initialization(self, component_class, default_kwargs):
+        """Test Permissions Check initialization."""
+        component = await self.component_setup(component_class, default_kwargs)
+        assert component.display_name == "Permissions Check"
 
+    @pytest.mark.asyncio
+    async def test_allowed_result(self, component_class, default_kwargs):
+        """Test allowed result output."""
+        component = await self.component_setup(component_class, default_kwargs)
+        with patch("components.permissions_check.Permit") as mock_permit:
+            mock_instance = mock_permit.return_value
+            mock_instance.check = AsyncMock(return_value=True)
+            await component.validate_auth()
+            result = component.allowed_result()
+            assert isinstance(result, Message), "Result should be a Message"
+            assert result.content == "Permission granted for test-user to book on flight"
 
-@pytest.mark.asyncio
-async def test_evaluate_access():
-    assert PermissionsCheckComponent.evaluate_access("granted") == "proceed"
-    assert "error" in PermissionsCheckComponent.evaluate_access("")
+            mock_instance.check = AsyncMock(return_value=False)
+            await component.validate_auth()
+            result = component.allowed_result()
+            assert isinstance(result, Message), "Result should be a Message"
+            assert result.content == "", "Expected empty content when denied"
 
+    @pytest.mark.asyncio
+    async def test_denied_result(self, component_class, default_kwargs):
+        """Test denied result output."""
+        component = await self.component_setup(component_class, default_kwargs)
+        with patch("components.permissions_check.Permit") as mock_permit:
+            mock_instance = mock_permit.return_value
+            mock_instance.check = AsyncMock(return_value=False)
+            await component.validate_auth()
+            result = component.denied_result()
+            assert isinstance(result, Message), "Result should be a Message"
+            assert result.content == "Permission denied for test-user to book on flight"
 
-@pytest.mark.asyncio
-async def test_validate_auth_no_permit(component):
-    with pytest.raises(ValueError, match=AuthErrors.PERMIT_NOT_INITIALIZED.message):
-        await component.validate_auth()
+            mock_instance.check = AsyncMock(return_value=True)
+            await component.validate_auth()
+            result = component.denied_result()
+            assert isinstance(result, Message), "Result should be a Message"
+            assert result.content == "", "Expected empty content when allowed"
 
-
-def test_filter_response(component):
-    test_response = {"id": "123", "sensitive_data": "confidential", "contact": "private"}
-    sensitive_fields = ["sensitive_data", "contact"]
-
-    result = component.filter_response(test_response, sensitive_fields)
-
-    assert result["id"] == "123"
-    assert result["sensitive_data"] == "[REDACTED]"
-    assert result["contact"] == "[REDACTED]"
-
-
-@pytest.mark.asyncio
-async def test_permission_check(component, mock_permit_client):
-    with patch("permit.Permit") as mock_permit:
-        mock_permit.return_value = mock_permit_client
-        mock_permit_client.check.return_value = True
-
-        component.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
-        component.user_id = "test-user"
-        component.action = "read"
-        component.resource = "document-1"
-
-        result = await component.validate_auth()
-        assert result is True
-
-
-@pytest.mark.asyncio
-async def test_permission_check_with_tenant(component, mock_permit_client):
-    with patch("permit.Permit") as mock_permit:
-        mock_permit.return_value = mock_permit_client
-        mock_permit_client.check.return_value = True
-
-        component.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
-        component.user_id = "test-user"
-        component.action = "read"
-        component.resource = "document-1"
-        component.tenant = "tenant-1"
-
-        result = await component.validate_auth()
-        assert result is True
-        mock_permit_client.check.assert_called_with(
-            user="test-user", action="read", resource="document-1", context={"tenant": "tenant-1"}
-        )
-
-
-@pytest.mark.asyncio
-async def test_get_allowed(component, mock_permit_client):
-    with patch("permit.Permit") as mock_permit:
-        mock_permit.return_value = mock_permit_client
-        mock_permit_client.check.return_value = True
-
-        component.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
-        component.user_id = "test-user"
-        component.action = "read"
-        component.resource = "document-1"
-
-        result = await component.get_allowed()
-        assert result is True
-
-
-@pytest.mark.asyncio
-async def test_get_denied(component, mock_permit_client):
-    with patch("permit.Permit") as mock_permit:
-        mock_permit.return_value = mock_permit_client
-        mock_permit_client.check.return_value = False
-
-        component.build(pdp_url="https://test.pdp.permit.io", api_key="test-key")
-        component.user_id = "test-user"
-        component.action = "read"
-        component.resource = "document-1"
-
-        result = await component.get_denied()
-        assert result is True
+    @pytest.mark.asyncio
+    async def test_validate_auth_with_tenant(self, component_class, default_kwargs):
+        """Test validation with tenant context."""
+        default_kwargs["tenant"] = "tenant-1"
+        component = await self.component_setup(component_class, default_kwargs)
+        with patch("components.permissions_check.Permit") as mock_permit:
+            mock_instance = mock_permit.return_value
+            mock_instance.check = AsyncMock(return_value=True)
+            result = await component.validate_auth()
+            assert result is True, "Expected True for allowed permission with tenant"
+            mock_instance.check.assert_awaited_with("test-user", "book", "flight", context={"tenant": "tenant-1"})
