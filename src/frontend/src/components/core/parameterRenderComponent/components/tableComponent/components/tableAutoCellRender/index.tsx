@@ -7,7 +7,7 @@ import { cn, isTimeStampString } from "@/utils/utils";
 import { CustomCellRendererProps } from "ag-grid-react";
 
 interface CustomCellRender extends CustomCellRendererProps {
-  formatter?: "json" | "text";
+  formatter?: "json" | "text" | "boolean" | "number" | "undefined" | "null";
 }
 
 export default function TableAutoCellRender({
@@ -71,13 +71,32 @@ export default function TableAutoCellRender({
         }
       case "number":
         return <NumberReader number={value} />;
+      case "undefined":
+        return "";
+      case "null":
+        return "";
+      case "boolean":
+        value =
+          (typeof value === "string" && value.toLowerCase() === "true") ||
+          value === true
+            ? true
+            : false;
+        return (
+          <Badge
+            variant={value ? "successStatic" : "errorStatic"}
+            size="sq"
+            className="h-[18px]"
+          >
+            {String(value).toLowerCase()}
+          </Badge>
+        );
       default:
         return String(value);
     }
   }
 
   return (
-    <div className="group flex h-full w-full truncate text-align-last-left">
+    <div className="group flex h-full w-full items-center truncate text-align-last-left">
       {getCellType()}
     </div>
   );

@@ -179,6 +179,10 @@ export default function TableNodeComponent({
           pagination={!table_options?.hide_options}
           addRow={addRow}
           onDelete={deleteRow}
+          gridOptions={{
+            ensureDomOrder: true,
+            suppressRowClickSelection: true,
+          }}
           onDuplicate={duplicateRow}
           displayEmptyAlert={false}
           className="h-full w-full"
