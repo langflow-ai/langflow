@@ -233,7 +233,7 @@ For more information, see the [Hugging Face documentation](https://huggingface.c
 
 | Name           | Type          | Description                                                     |
 |----------------|---------------|-----------------------------------------------------------------|
-| model_id       | String        | The model ID from Hugging Face Hub (e.g., "gpt2", "facebook/bart-large"). |
+| model_id       | String        | The model ID from Hugging Face Hub. For example, "gpt2", "facebook/bart-large". |
 | huggingfacehub_api_token | SecretString | Your Hugging Face API token for authentication.       |
 | temperature    | Float         | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
 | max_new_tokens | Integer       | Maximum number of tokens to generate. Default: 512.             |
