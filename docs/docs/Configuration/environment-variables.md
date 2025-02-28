@@ -128,6 +128,8 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_HEALTH_CHECK_MAX_RETRIES"/>`LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for the health check.<br/>See [`--health-check-max-retries` option](./configuration-cli.md#run-health-check-max-retries). |
 | <Link id="LANGFLOW_HOST"/>`LANGFLOW_HOST` | String | `127.0.0.1` | The host on which the Langflow server will run.<br/>See [`--host` option](./configuration-cli.md#run-host). |
 | <Link id="LANGFLOW_LANGCHAIN_CACHE"/>`LANGFLOW_LANGCHAIN_CACHE` | `InMemoryCache`<br/>`SQLiteCache` | `InMemoryCache` | Type of cache to use.<br/>See [`--cache` option](./configuration-cli.md#run-cache). |
+| <Link id="LANGFLOW_LOG_LEVEL"/>`LANGFLOW_LOG_LEVEL` | `DEBUG`<br/>`INFO`<br/>`WARNING`<br/>`ERROR`<br/>`CRITICAL` | `INFO` | Set the logging level for Langflow. |
+| <Link id="LANGFLOW_LOG_FILE"/>`LANGFLOW_LOG_FILE` | String | Not set | Path to the log file. If not set, logs will be written to stdout. |
 | <Link id="LANGFLOW_MAX_FILE_SIZE_UPLOAD"/>`LANGFLOW_MAX_FILE_SIZE_UPLOAD` | Integer | `100` | Set the maximum file size for the upload in megabytes.<br/>See [`--max-file-size-upload` option](./configuration-cli.md#run-max-file-size-upload). |
 | <Link id="LANGFLOW_MCP_SERVER_ENABLED"/>`LANGFLOW_MCP_SERVER_ENABLED` | Boolean | `true` | If set to False, Langflow will not enable the MCP server. |
 | <Link id="LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS"/>`LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | `false` | If set to True, Langflow will send progress notifications in the MCP server. |

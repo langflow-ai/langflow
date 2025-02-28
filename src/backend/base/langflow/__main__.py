@@ -25,9 +25,9 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.database.models.folder.utils import create_default_folder_if_it_doesnt_exist
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service, get_settings_service, session_scope
 from langflow.services.settings.constants import DEFAULT_SUPERUSER
@@ -464,7 +464,7 @@ def superuser(
                     typer.echo("Superuser creation failed.")
                     return
                 # Now create the first folder for the user
-                result = await create_default_folder_if_it_doesnt_exist(session, user.id)
+                result = await get_or_create_default_folder(session, user.id)
                 if result:
                     typer.echo("Default folder created successfully.")
                 else:

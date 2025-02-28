@@ -3,7 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to interact with starter projects",
-  { tag: ["@release", "@starter-projects"] },
+  { tag: ["@release", "@starter-projectss"] },
   async ({ page, context }) => {
     await awaitBootstrapTest(page);
 
@@ -16,6 +16,8 @@ test(
     });
 
     await page.getByTestId("search-input-template").fill("Document");
+
+    await page.waitForTimeout(1000);
 
     expect(
       page.getByTestId("template_basic-prompting-(hello,-world)"),

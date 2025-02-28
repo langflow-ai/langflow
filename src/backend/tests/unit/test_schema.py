@@ -139,6 +139,7 @@ class TestOutput:
             "display_name": "test_output",
             "cache": True,
             "value": "__UNDEFINED__",
+            "tool_mode": True,
         }
 
     def test_output_validate_display_name(self):

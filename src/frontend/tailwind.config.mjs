@@ -175,6 +175,10 @@ const config = {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        "accent-amber": {
+          DEFAULT: "hsl(var(--accent-amber))",
+          foreground: "hsl(var(--accent-amber-foreground))",
+        },
         "accent-emerald": {
           DEFAULT: "hsl(var(--accent-emerald))",
           foreground: "hsl(var(--accent-emerald-foreground))",
@@ -257,6 +261,7 @@ const config = {
         "terminal-green": "hsl(var(--terminal-green))",
         "cosmic-void": "hsl(var(--cosmic-void))",
         "slider-input-border": "var(--slider-input-border)",
+        "zinc-foreground": "hsl(var(--zinc-foreground))",
       },
       borderRadius: {
         lg: `var(--radius)`,

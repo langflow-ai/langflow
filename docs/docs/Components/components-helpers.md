@@ -17,6 +17,25 @@ This example flow stores and retrieves chat history from an [AstraDBChatMemory](
 
 ![Sample Flow storing Chat Memory in AstraDB](/img/astra_db_chat_memory_rounded.png)
 
+## Batch Run Component
+
+The Batch Run component runs a language model over each row of a [DataFrame](/concepts-objects#dataframe-object) text column and returns a new DataFrame with the original text and the model's response.
+
+### Inputs
+
+| Name | Display Name | Type | Info | Required |
+|------|--------------|------|------|----------|
+| model | Language Model | HandleInput | Connect the 'Language Model' output from your LLM component here. | Yes |
+| system_message | System Message | MultilineInput | Multi-line system instruction for all rows in the DataFrame. | No |
+| df | DataFrame | DataFrameInput | The DataFrame whose column (specified by 'column_name') will be treated as text messages. | Yes |
+| column_name | Column Name | StrInput | The name of the DataFrame column to treat as text messages. Default='text'. | Yes |
+
+### Outputs
+
+| Name | Display Name | Method | Info |
+|------|--------------|--------|------|
+| batch_results | Batch Results | run_batch | A DataFrame with two columns: 'text_input' and 'model_response'. |
+
 ## Create List
 
 This component dynamically creates a record with a specified number of fields.
@@ -27,6 +46,12 @@ This component dynamically creates a record with a specified number of fields.
 |------|--------------|------|
 | n_fields | Number of Fields | Number of fields to be added to the record. |
 | text_key | Text Key | Key used as text. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| list | List | The dynamically created list with the specified number of fields. |
 
 ## Current date
 
@@ -48,11 +73,17 @@ The Current Date component returns the current date and time in a selected timez
 
 This component generates a unique ID.
 
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| unique_id| Value | The generated unique ID. |
+
 ### Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| value | Value | Unique ID generated. |
+| id | ID | The generated unique ID. |
 
 ## Message history
 
@@ -82,7 +113,7 @@ This component retrieves and manages chat messages from Langflow tables or an ex
 | messages_text | Messages (Text) | Retrieved messages formatted as text. |
 | lc_memory | Memory | A constructed Langchain [ConversationBufferMemory](https://api.python.langchain.com/en/latest/memory/langchain.memory.buffer.ConversationBufferMemory.html) object  |
 
-## Store Message
+## Message store
 
 This component stores chat messages or text into Langflow tables or an external memory.
 
@@ -108,16 +139,39 @@ It provides flexibility in managing message storage and retrieval within a chat 
 
 This component transforms LLM responses into structured data formats.
 
-### Input
+In this example from the **Financial Support Parser** template, the **Structured Output** component transforms unstructured financial reports into structured data.
+
+![Structured output example](/img/component-structured-output.png)
+
+The connected LLM model is prompted by the **Structured Output** component's `Format Instructions` parameter to extract structured output from the unstructured text. `Format Instructions` is utilized as the system prompt for the **Structured Output** component.
+
+In the **Structured Output** component, click the **Open table** button to view the `Output Schema` table.
+The `Output Schema` parameter defines the structure and data types for the model's output using a table with the following fields:
+
+* **Name**: The name of the output field.
+* **Description**: The purpose of the output field.
+* **Type**: The data type of the output field. The available types are `str`, `int`, `float`, `bool`, `list`, or `dict`. The default is `text`.
+* **Multiple**: This feature is deprecated. Currently, it is set to `True` by default if you expect multiple values for a single field. For example, a `list` of `features` is set to `True` to contain multiple values, such as `["waterproof", "durable", "lightweight"]`. Default: `True`.
+
+The **Parse DataFrame** component parses the structured output into a template for orderly presentation in chat output. The template receives the values from the `output_schema` table with curly braces.
+
+For example, the template `EBITDA: {EBITDA}  ,  Net Income: {NET_INCOME} , GROSS_PROFIT: {GROSS_PROFIT}` presents the extracted values in the **Playground** as `EBITDA: 900 million , Net Income: 500 million , GROSS_PROFIT: 1.2 billion`.
+
+### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
 | llm | Language Model | The language model to use to generate the structured output. |
-| input_value | Input message | The input message for the language model to process. |
-| schema_name | Schema Name | Provide a name for the output data schema. |
-| output_schema | Output Schema | Define the structure and data types for the model's output. |
-| multiple | Generate Multiple | Set to True if the model should generate a list of outputs instead of a single output. |
+| input_value | Input Message | The input message to the language model. |
+| system_prompt | Format Instructions | Instructions to the language model for formatting the output. |
+| schema_name | Schema Name | The name for the output data schema. |
+| output_schema | Output Schema | Defines the structure and data types for the model's output.|
+| multiple | Generate Multiple | [Deprecated] Always set to `True`. |
 
-### Output
+### Outputs
 
-| structured_output | Structured Output | The resulting structured output based on the defined schema. |
+| Name | Display Name | Info |
+|------|--------------|------|
+| structured_output | Structured Output | The structured output is a Data object based on the defined schema. |
+| structured_output_dataframe | DataFrame | The structured output converted to a [DataFrame](/concepts-objects#dataframe-object) format. |
+

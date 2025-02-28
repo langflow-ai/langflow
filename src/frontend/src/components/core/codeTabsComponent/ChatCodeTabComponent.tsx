@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrow } from "react-syntax-highlighter/dist/cjs/styles/prism";
-import { useDarkStore } from "../../../stores/darkStore";
 import IconComponent from "../../common/genericIconComponent";
 import { Button } from "../../ui/button";
 
