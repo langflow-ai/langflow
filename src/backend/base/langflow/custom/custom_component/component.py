@@ -183,9 +183,15 @@ class Component(CustomComponent):
                 - _session_id: The ID of the current session
                 - _tracing_service: The tracing service instance for logging/monitoring
         """
+        if hasattr(self, "session_id"):
+            session_id = self.session_id
+        elif hasattr(self, "graph"):
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
         return {
             "_user_id": self.user_id,
-            "_session_id": self.session_id,
+            "_session_id": session_id,
             "_tracing_service": self._tracing_service,
         }
 
