@@ -1,34 +1,40 @@
-from typing import Any, Literal
-
 from permit import Permit
 
-from langflow.base.auth.error_constants import AuthErrors
-from langflow.base.auth.model import AuthComponent
-from langflow.io import MessageTextInput, SecretStrInput
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput, SecretStrInput
 from langflow.schema.message import Message
 from langflow.template import Output
 
 
-class PermissionsCheckComponent(AuthComponent):
-    """Component for performing authorization checks."""
-
+class PermissionsCheckComponent(Component):
     display_name = "Permissions Check"
-    description = "Performs authorization checks using Permit.io"
-    documentation = "https://docs.langflow.org/components-auth"
-    icon = "lock"
-
-    outputs = [
-        Output(display_name="Allowed Path", name="allowed", method="get_allowed"),
-        Output(display_name="Denied Path", name="denied", method="get_denied"),
-    ]
+    description = "Checks if a user is allowed an action on a resource, with separate outputs for allowed and denied."
+    icon = "check"
 
     inputs = [
-        SecretStrInput(
-            name="api_key",
-            display_name="Permit.io API Key",
+        MessageTextInput(
+            name="user_id",
+            display_name="User ID",
             required=True,
-            info="Your Permit.io API key",
-            real_time_refresh=True,
+            info="The ID of the user to check permissions for",
+        ),
+        MessageTextInput(
+            name="action",
+            display_name="Action",
+            required=True,
+            info="The action to check (e.g., read, write)",
+        ),
+        MessageTextInput(
+            name="resource",
+            display_name="Resource",
+            required=True,
+            info="The resource to check access for (e.g., document-1)",
+        ),
+        MessageTextInput(
+            name="tenant",
+            display_name="Tenant",
+            required=False,
+            info="The tenant ID for multi-tenancy (optional)",
         ),
         MessageTextInput(
             name="pdp_url",
@@ -37,55 +43,37 @@ class PermissionsCheckComponent(AuthComponent):
             value="https://cloudpdp.api.permit.io",
             info="URL of the Policy Decision Point",
         ),
-        MessageTextInput(
-            name="user_id", display_name="User ID", required=True, info="User identifier", input_types=["Text"]
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            required=True,
+            value="test-key",
+            info="API Key for authenticating with the Permit PDP",
         ),
-        MessageTextInput(name="action", display_name="Action", required=True),
-        MessageTextInput(name="resource", display_name="Resource", required=True),
-        MessageTextInput(name="tenant", display_name="Tenant", required=False),
+    ]
+    outputs = [
+        Output(display_name="Allowed", name="allowed", method="allowed_result"),
+        Output(display_name="Denied", name="denied", method="denied_result"),
     ]
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.permit: Permit | None = None
+        self._permission_result = False
 
-    def build(self, **kwargs: Any) -> None:
-        """Initialize the Permit client."""
-        pdp_url = kwargs.get("pdp_url") or getattr(self, "pdp_url", None)
-        api_key = kwargs.get("api_key") or getattr(self, "api_key", None)
+    async def validate_auth(self) -> bool:
+        permit = Permit(token=self.api_key, pdp=self.pdp_url)
+        context = {"tenant": self.tenant} if hasattr(self, "tenant") and self.tenant else {}
 
-        if pdp_url and api_key:
-            self.permit = Permit(pdp=pdp_url, token=api_key)
+        # Get the result from permit service
+        self._permission_result = await permit.check(self.user_id, self.action, self.resource, context=context)
+        return self._permission_result
 
-    async def validate_auth(self) -> Literal["allowed", "denied"]:
-        """Validate authorization for the current request."""
-        if not self.permit:
-            self.build(pdp_url=getattr(self, "pdp_url", None), api_key=getattr(self, "api_key", None))
-            if not self.permit:
-                error = AuthErrors.PERMIT_NOT_INITIALIZED
-                raise ValueError(error.message)
+    def allowed_result(self) -> Message:
+        if self._permission_result:
+            return Message(content=f"Permission granted for {self.user_id} to {self.action} on {self.resource}")
+        return Message(content="")
 
-        auth_result: Literal["allowed", "denied"] = "denied"  # Type annotation for initial value
-        try:
-            context = {"tenant": self.tenant} if hasattr(self, "tenant") else {}
-            is_allowed = await self.permit.check(
-                user=self.user_id, action=self.action, resource=self.resource, context=context
-            )
-            auth_result = "allowed" if is_allowed else "denied"
-            self.status = auth_result
-
-        except Exception as exc:
-            error = AuthErrors.validation_failed(exc)
-            raise ValueError(error.message) from exc
-
-        return auth_result
-
-    async def get_allowed(self) -> Message:
-        """Return 'proceed' message if permission is granted."""
-        result = await self.validate_auth()
-        return Message(content="proceed") if result == "allowed" else Message(content="")
-
-    async def get_denied(self) -> Message:
-        """Return error message if permission is denied."""
-        result = await self.validate_auth()
-        return Message(content="error: Access denied for this resource") if result == "denied" else Message(content="")
+    def denied_result(self) -> Message:
+        if not self._permission_result:
+            return Message(content=f"Permission denied for {self.user_id} to {self.action} on {self.resource}")
+        return Message(content="")

@@ -1,147 +1,65 @@
-from typing import Any
+import base64
 
+import jwt
 import requests
-from jwt import (
-    DecodeError,
-    ExpiredSignatureError,
-    InvalidSignatureError,
-    decode,
-    get_unverified_header,
-)
-from jwt.algorithms import RSAAlgorithm
+from jwt import PyJWK
 
-from langflow.base.auth.error_constants import AuthErrors
-from langflow.base.auth.model import AuthComponent
-from langflow.io import MessageTextInput, Output, StrInput
+from langflow.custom import Component
+from langflow.inputs import MessageTextInput
+from langflow.schema.message import Message
+from langflow.template import Output
 
 
-class JWTValidatorComponent(AuthComponent):
-    """Component for validating JWT tokens and extracting user IDs."""
-
+class JWTValidatorComponent(Component):
     display_name = "JWT Validator"
-    description = "Validates JWT tokens and extracts user ID using JWKs"
-    documentation = "https://docs.langflow.org/components-auth"
-    icon = "key"
-
-    outputs = [Output(display_name="User ID", name="auth_result", method="validate_auth")]
+    description = "Validates a JWT and extracts the user ID."
+    icon = "lock"
 
     inputs = [
-        StrInput(
-            name="jwks_url",
-            display_name="JWKS URL",
-            required=True,
-            info="URL to fetch the JSON Web Key Sets",
-        ),
         MessageTextInput(
             name="jwt_token",
             display_name="JWT Token",
             required=True,
-            placeholder="Enter JWT token",
-            info="JWT token to validate",
+            info="The JSON Web Token to validate",
+        ),
+        MessageTextInput(
+            name="jwks_url",
+            display_name="JWKS URL",
+            required=True,
+            value="https://test.com/.well-known/jwks.json",
+            info="URL of the JSON Web Key Set for token validation",
         ),
     ]
+    outputs = [
+        Output(display_name="User ID", name="user_id", method="validate_auth"),
+    ]
 
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.jwks: dict[str, Any] | None = None
-
-    def build(self, **kwargs: Any) -> None:
-        """Initialize the component with JWKS URL."""
-        super().build(**kwargs)
-
-        jwks_url = kwargs.get("jwks_url") or getattr(self, "jwks_url", None)
-        if jwks_url:
-            self.jwks_url = jwks_url
-            self.jwks = self._fetch_jwks()
-
-    def _fetch_jwks(self) -> dict[str, Any]:
-        """Fetch JWKs from the configured URL."""
-        try:
-            response = requests.get(self.jwks_url, timeout=10)
-            response.raise_for_status()
-            return response.json()
-        except requests.RequestException as e:
-            error = AuthErrors.validation_failed(e)
-            raise ValueError(error.message) from e
-
-    def _get_key(self, kid: str) -> str | None:
-        """Get the public key for a given key ID."""
-        if not self.jwks:
-            return None
-
-        for key in self.jwks.get("keys", []):
-            if key.get("kid") == kid:
-                try:
-                    return RSAAlgorithm.from_jwk(key)
-                except (ValueError, TypeError) as e:
-                    error = AuthErrors.validation_failed(e)
-                    raise ValueError(error.message) from e
-        return None
-
-    def _validate_token_header(self) -> str:
-        """Validate token header and extract key ID."""
-        if not self.jwt_token:
-            error = AuthErrors.AUTH_REQUIRED
-            raise ValueError(error.message)
+    def validate_auth(self) -> Message:
+        response = requests.get(self.jwks_url, timeout=10)
+        jwks = response.json()
+        headers = jwt.get_unverified_header(self.jwt_token)
 
         try:
-            header = get_unverified_header(self.jwt_token)
-        except Exception as e:
-            error = AuthErrors.INVALID_FORMAT
-            raise ValueError(error.message) from e
+            jwk = next(k for k in jwks["keys"] if k["kid"] == headers["kid"])
+            if isinstance(jwk.get("e"), int):
+                jwk["e"] = self._int_to_base64url(jwk["e"])
+            if isinstance(jwk.get("n"), int):
+                jwk["n"] = self._int_to_base64url(jwk["n"])
 
-        kid = header.get("kid")
-        if not kid:
-            error = AuthErrors.MISSING_IDENTIFIER
-            raise ValueError(error.message)
+            public_key = PyJWK(jwk).key
+            payload = jwt.decode(self.jwt_token, public_key, algorithms=["RS256"])
+            return Message(content=payload["sub"])
+        except KeyError as e:
+            error_message = f"Missing key in JWT or JWKS: {e!s}"
+            raise KeyError(error_message) from e
+        except jwt.ExpiredSignatureError:
+            raise
+        except jwt.PyJWTError as e:
+            error_message = f"JWT validation failed: {e!s}"
+            raise jwt.InvalidTokenError(error_message) from e
 
-        return kid
-
-    def _decode_token(self, public_key: str) -> dict[str, Any]:
-        """Decode and validate the JWT token."""
-        try:
-            return decode(self.jwt_token, key=public_key, algorithms=["RS256"])
-        except ExpiredSignatureError as e:
-            error = AuthErrors.AUTH_EXPIRED
-            raise ValueError(error.message) from e
-        except InvalidSignatureError as e:
-            error = AuthErrors.AUTH_INVALID
-            raise ValueError(error.message) from e
-        except DecodeError as e:
-            error = AuthErrors.MALFORMED
-            raise ValueError(error.message) from e
-        except Exception as e:
-            error = AuthErrors.validation_failed(e)
-            raise ValueError(error.message) from e
-
-    def validate_auth(self) -> str:
-        """Validate the JWT and extract the user ID."""
-        if not self.jwks:
-            self.build(jwks_url=getattr(self, "jwks_url", None))
-            if not self.jwks:
-                error = AuthErrors.JWKS_NOT_INITIALIZED
-                raise ValueError(error.message)
-
-        try:
-            # Validate token header and get key ID
-            kid = self._validate_token_header()
-
-            # Get public key
-            public_key = self._get_key(kid)
-            if not public_key:
-                error = AuthErrors.auth_not_found(kid)
-                raise ValueError(error.message)
-
-            # Decode and validate token
-            decoded = self._decode_token(public_key)
-
-            # Extract and validate user ID
-            user_id = decoded.get("sub")
-            if user_id:
-                self.status = user_id
-                return user_id
-            error = AuthErrors.MISSING_USER
-            raise ValueError(error.message)
-
-        except ValueError as e:
-            raise ValueError(str(e)) from e
+    def _int_to_base64url(self, value: int) -> str:
+        """Convert an integer to a Base64URL-encoded string."""
+        byte_length = (value.bit_length() + 7) // 8
+        value_bytes = value.to_bytes(byte_length, byteorder="big")
+        return base64.urlsafe_b64encode(value_bytes).rstrip(b"=").decode("ascii")
