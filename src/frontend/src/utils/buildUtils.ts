@@ -232,7 +232,7 @@ export async function buildFlowVertices({
 }: BuildVerticesParams) {
   const inputs = {};
 
-  let buildUrl = `${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow?`;
+  let buildUrl = `${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow`;
 
   const queryParams = new URLSearchParams();
 
