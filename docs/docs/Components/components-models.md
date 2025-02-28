@@ -211,19 +211,41 @@ For more information, see the [Groq documentation](https://groq.com/).
 
 ## Hugging Face API
 
-This component generates text using Hugging Face's language models.
+This component sends requests to the Hugging Face API to generate text using the model specified in the **Model ID** field.
+
+The Hugging Face API is a hosted inference API for models hosted on Hugging Face, and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate.
+
+In this example based on the [Basic prompting flow](/starter-projects-basic-prompting), the **Hugging Face API** model component replaces the **Open AI** model. By selecting different hosted models, you can see how different models return different results.
+
+1. Create a [Basic prompting flow](/starter-projects-basic-prompting).
+
+2. Replace the **OpenAI** model component with a **Hugging Face API** model component.
+
+3. In the **Hugging Face API** component, add your Hugging Face API token to the **API Token** field.
+
+4. Open the **Playground** and ask a question to the model, and see how it responds.
+
+5. Try different models, and see how they perform differently.
 
 For more information, see the [Hugging Face documentation](https://huggingface.co/).
 
 ### Inputs
 
-| Name                | Display Name     | Info                                      |
-|---------------------|-------------------|-------------------------------------------|
-| Endpoint URL        | Endpoint URL      | The URL of the Hugging Face Inference API endpoint. |
-| Task                | Task              | Specifies the task for text generation.   |
-| API Token           | API Token         | The API token required for authentication.|
-| Model Kwargs        | Model Kwargs      | Additional keyword arguments for the model.|
-| Input Value         | Input Value       | The input text for text generation.       |
+| Name           | Type          | Description                                                     |
+|----------------|---------------|-----------------------------------------------------------------|
+| model_id       | String        | The model ID from Hugging Face Hub. For example, "gpt2", "facebook/bart-large". |
+| huggingfacehub_api_token | SecretString | Your Hugging Face API token for authentication.       |
+| temperature    | Float         | Controls randomness in the output. Range: [0.0, 1.0]. Default: 0.7. |
+| max_new_tokens | Integer       | Maximum number of tokens to generate. Default: 512.             |
+| top_p          | Float         | Nucleus sampling parameter. Range: [0.0, 1.0]. Default: 0.95.   |
+| top_k          | Integer       | Top-k sampling parameter. Default: 50.                          |
+| model_kwargs   | Dictionary    | Additional keyword arguments to pass to the model.              |
+
+### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of HuggingFaceHub configured with the specified parameters. |
 
 ## LMStudio
 
