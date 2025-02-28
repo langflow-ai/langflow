@@ -76,11 +76,11 @@ class MaritalkModelComponent(LCModelComponent):
             # Sort models by creation date (newest first)
             sorted_models = sorted(models, key=lambda x: x.get("created", 0), reverse=True)
             model_ids = [model["id"] for model in sorted_models]
-            
+
             # If no models were returned from the API, use default models
             return model_ids if model_ids else DEFAULT_MODELS
         except requests.RequestException as e:
-            self.log(f"Error fetching models: {str(e)}", "maritalk_api_error")
+            self.log(f"Error fetching models: {e!s}", "maritalk_api_error")
             return DEFAULT_MODELS  # Return default models on request exception
 
     async def update_build_config(self, build_config: dict, _: Any, field_name: str | None = None) -> dict:
@@ -89,21 +89,21 @@ class MaritalkModelComponent(LCModelComponent):
             # Update model list on initialization or when API key changes
             if field_name is None or field_name == "api_key":
                 models = self.fetch_models()
-                
+
                 # Always ensure we have at least the default models in the list
                 unique_models = list(set(models + DEFAULT_MODELS))
                 build_config["model_name"]["options"] = unique_models
-                
+
                 # Only set default value if current value is empty or invalid
                 if not build_config["model_name"]["value"] or build_config["model_name"]["value"] not in unique_models:
                     build_config["model_name"]["value"] = unique_models[0] if unique_models else DEFAULT_MODELS[0]
 
         except (KeyError, AttributeError) as e:
-            self.log(f"Error updating build config: {str(e)}", "maritalk_config_error")
+            self.log(f"Error updating build config: {e!s}", "maritalk_config_error")
             # Ensure defaults are set even on error
             build_config["model_name"]["options"] = DEFAULT_MODELS
             build_config["model_name"]["value"] = DEFAULT_MODELS[0]
-            
+
         return build_config
 
     def build_model(self) -> LanguageModel:
