@@ -116,10 +116,10 @@ class Graph:
 
         self.top_level_vertices: list[str] = []
         self.vertex_map: dict[str, Vertex] = {}
-        self.predecessor_map: dict[str, set[str]] = defaultdict(set)
-        self.successor_map: dict[str, set[str]] = defaultdict(set)
+        self.predecessor_map: dict[str, list[str]] = defaultdict(list)
+        self.successor_map: dict[str, list[str]] = defaultdict(list)
         self.in_degree_map: dict[str, int] = defaultdict(int)
-        self.parent_child_map: dict[str, set[str]] = defaultdict(set)
+        self.parent_child_map: dict[str, list[str]] = defaultdict(list)
         self._run_queue: deque[str] = deque()
         self._first_layer: list[str] = []
         self._lock = asyncio.Lock()
@@ -469,10 +469,10 @@ class Graph:
         self.add_edge(edge)
         source_id = edge["data"]["sourceHandle"]["id"]
         target_id = edge["data"]["targetHandle"]["id"]
-        self.predecessor_map[target_id].add(source_id)
-        self.successor_map[source_id].add(target_id)
+        self.predecessor_map[target_id].append(source_id)
+        self.successor_map[source_id].append(target_id)
         self.in_degree_map[target_id] += 1
-        self.parent_child_map[source_id].add(target_id)
+        self.parent_child_map[source_id].append(target_id)
 
     def add_node(self, node: NodeData) -> None:
         self._vertices.append(node)
@@ -635,6 +635,15 @@ class Graph:
             raise ValueError(msg)
         return self._run_id
 
+    def set_tracing_session_id(self) -> None:
+        """Sets the ID of the current session.
+
+        Args:
+            session_id (str): The session ID.
+        """
+        if self.tracing_service:
+            self.tracing_service.set_session_id(self._session_id)
+
     def set_run_id(self, run_id: uuid.UUID | None = None) -> None:
         """Sets the ID of the current run.
 
@@ -647,6 +656,8 @@ class Graph:
         self._run_id = str(run_id)
         if self.tracing_service:
             self.tracing_service.set_run_id(run_id)
+        if self._session_id and self.tracing_service is not None:
+            self.tracing_service.set_session_id(self.session_id)
 
     def set_run_name(self) -> None:
         # Given a flow name, flow_id
@@ -1554,7 +1565,7 @@ class Graph:
         logger.debug("Graph processing complete")
         return self
 
-    def find_next_runnable_vertices(self, vertex_successors_ids: set[str]) -> list[str]:
+    def find_next_runnable_vertices(self, vertex_successors_ids: list[str]) -> list[str]:
         next_runnable_vertices = set()
         for v_id in sorted(vertex_successors_ids):
             if not self.is_vertex_runnable(v_id):
@@ -2023,7 +2034,10 @@ class Graph:
 
     def build_in_degree(self, edges: list[CycleEdge]) -> dict[str, int]:
         in_degree: dict[str, int] = defaultdict(int)
+
         for edge in edges:
+            # We don't need to count if a Component connects more than one
+            # time to the same vertex.
             in_degree[edge.target_id] += 1
         for vertex in self.vertices:
             if vertex.id not in in_degree:
@@ -2031,13 +2045,13 @@ class Graph:
         return in_degree
 
     @staticmethod
-    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
         """Returns the adjacency maps for the graph."""
-        predecessor_map: dict[str, set[str]] = defaultdict(set)
-        successor_map: dict[str, set[str]] = defaultdict(set)
+        predecessor_map: dict[str, list[str]] = defaultdict(list)
+        successor_map: dict[str, list[str]] = defaultdict(list)
         for edge in edges:
-            predecessor_map[edge.target_id].add(edge.source_id)
-            successor_map[edge.source_id].add(edge.target_id)
+            predecessor_map[edge.target_id].append(edge.source_id)
+            successor_map[edge.source_id].append(edge.target_id)
         return predecessor_map, successor_map
 
     def __to_dict(self) -> dict[str, dict[str, list[str]]]:
