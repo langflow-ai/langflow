@@ -20,7 +20,6 @@ class FileInputComponent(ChatComponent):
     description = "Get file inputs from the Playground."
     icon = "File"
     name = "FileInput"
-    minimized = True
 
     inputs = [
         MessageTextInput(

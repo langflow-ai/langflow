@@ -8,25 +8,18 @@ from langflow.schema.dotdict import dotdict
 
 
 class NVIDIAModelComponent(LCModelComponent):
-    display_name = "NVIDIA"
+    display_name = "NVIDIA LLM NIM"
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
 
     inputs = [
-        *LCModelComponent._base_inputs,
-        IntInput(
-            name="max_tokens",
-            display_name="Max Tokens",
-            advanced=True,
-            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
-        ),
-        DropdownInput(
-            name="model_name",
-            display_name="Model Name",
+        SecretStrInput(
+            name="api_key",
+            display_name="NVIDIA API Key",
+            info="The NVIDIA API Key.",
             advanced=False,
-            options=[],
-            refresh_button=True,
-            combobox=True,
+            value="NVIDIA_API_KEY",
+            real_time_refresh=True,
         ),
         MessageTextInput(
             name="base_url",
@@ -36,22 +29,22 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
             real_time_refresh=True,
         ),
+        DropdownInput(
+            name="model_name",
+            display_name="Model Name",
+            advanced=False,
+            options=[],
+            refresh_button=True,
+            combobox=True,
+        ),
         BoolInput(
             name="tool_model_enabled",
             display_name="Enable Tool Models",
             info=(
                 "Select if you want to use models that can work with tools. If yes, only those models will be shown."
             ),
-            advanced=False,
+            advanced=True,
             value=False,
-            real_time_refresh=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="NVIDIA API Key",
-            info="The NVIDIA API Key.",
-            advanced=False,
-            value="NVIDIA_API_KEY",
             real_time_refresh=True,
         ),
         SliderInput(
@@ -67,6 +60,13 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The seed controls the reproducibility of the job.",
             advanced=True,
             value=1,
+        ),
+        *LCModelComponent._base_inputs,
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            advanced=True,
+            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
         ),
     ]
 

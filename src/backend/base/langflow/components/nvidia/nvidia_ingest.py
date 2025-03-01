@@ -7,7 +7,7 @@ from langflow.schema import Data, DataFrame, Message
 
 
 class NvidiaIngestComponent(Component):
-    display_name = "NVIDIA Ingest"
+    display_name = "NeMo Retriever Extraction"
     description = "Process, transform, and store data."
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
@@ -32,6 +32,7 @@ class NvidiaIngestComponent(Component):
             name="base_url",
             display_name="NVIDIA Ingestion URL",
             info="The URL of the NVIDIA Ingestion API.",
+            advanced=True,
         ),
         FileInput(
             name="path",
@@ -74,6 +75,7 @@ class NvidiaIngestComponent(Component):
             display_name="Split Text",
             info="Split text into smaller chunks",
             value=True,
+            advanced=True,
         ),
         DropdownInput(
             name="split_by",

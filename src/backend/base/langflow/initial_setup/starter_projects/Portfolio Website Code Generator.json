@@ -851,7 +851,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -1187,7 +1187,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",

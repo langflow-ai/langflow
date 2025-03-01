@@ -8,7 +8,7 @@ from langflow.schema.dotdict import dotdict
 
 
 class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
-    display_name: str = "NVIDIA Embeddings"
+    display_name: str = "NeMo Retriever Embedding"
     description: str = "Generate embeddings using NVIDIA models."
     icon = "NVIDIA"
 
