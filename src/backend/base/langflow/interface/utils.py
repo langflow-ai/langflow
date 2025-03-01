@@ -64,7 +64,7 @@ def extract_input_variables_from_prompt(prompt: str) -> list[str]:
     remaining_text = prompt
 
     # Pattern to match single {var} and double {{var}} braces.
-    pattern = r"\{\{(.*?)\}\}|\{([^{}]+)\}"
+    pattern = r"\{\{([^{}]+)\}\}|\{([^{}]+)\}"
 
     while True:
         match = re.search(pattern, remaining_text)
