@@ -14,6 +14,7 @@ __all__ = [
     "DirectoryComponent",
     "FileComponent",
     "JSONToDataComponent",
+    "S3BucketRetrieverComponent",
     "SQLExecutorComponent",
     "URLComponent",
     "WebhookComponent",
