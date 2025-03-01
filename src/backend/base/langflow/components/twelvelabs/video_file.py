@@ -1,6 +1,7 @@
 from langflow.base.data import BaseFileComponent
 from langflow.io import FileInput
 from langflow.schema import Data
+from langchain_core.documents import Document
 import os
 
 
@@ -54,49 +55,65 @@ class VideoFileComponent(BaseFileComponent):
                 if not file_path.lower().endswith(tuple(self.VALID_EXTENSIONS)):
                     raise ValueError(f"Invalid file type. Expected: {', '.join(self.VALID_EXTENSIONS)}")
                 
-                # Create video data structure
-                file.data = Data(data={"path": file_path})
+                # Create a dictionary instead of a Document
+                doc_data = {
+                    "text": file_path,
+                    "metadata": {
+                        "source": file_path,
+                        "type": "video"
+                    }
+                }
+                
+                # Pass the dictionary to Data
+                file.data = Data(data=doc_data)
+                
+                self.log(f"DEBUG: Created data: {doc_data}")
                 processed_files.append(file)
-                self.log(f"DEBUG: Processed video file: {file_path}")
                 
             except Exception as e:
                 self.log(f"Error processing video file: {str(e)}", "ERROR")
-                if not self.silent_errors:
-                    raise
+                raise
         
         return processed_files
 
-    def load_files(self) -> Data:
-        """Load video files and return in proper format"""
+    def load_files(self) -> list[Data]:
+        """Load video files and return a list of Data objects"""
         try:
             self.log("DEBUG: Starting video file load")
             if not hasattr(self, 'file_path') or not self.file_path:
                 self.log("DEBUG: No video file path provided")
-                return Data(data={"error": "No video file path provided"})
+                return []
 
             self.log(f"DEBUG: Loading video from path: {self.file_path}")
             
-            # Create BaseFile with path
-            base_file = self.BaseFile(
-                path=self.file_path,
-                data=None
-            )
+            # Verify file exists
+            if not os.path.exists(self.file_path):
+                self.log(f"DEBUG: Video file not found at path: {self.file_path}")
+                return []
             
-            processed_files = self.process_files([base_file])
+            # Verify file size
+            file_size = os.path.getsize(self.file_path)
+            self.log(f"DEBUG: Video file size: {file_size} bytes")
             
-            if processed_files:
-                # Create the data structure that TwelveLabsEmbed2 expects
-                # Return a single Data object with the path
-                result = {
-                    "data": {
-                        "path": str(processed_files[0].path)
-                    }
+            # Create a proper Data object with the video path
+            video_data = {
+                "text": self.file_path,
+                "metadata": {
+                    "source": self.file_path,
+                    "type": "video",
+                    "size": file_size
                 }
-                self.log(f"DEBUG: Final output structure: {result}")
-                return Data(**result)
+            }
             
-            return Data(data={"error": "Failed to process video file"})
+            self.log(f"DEBUG: Created video data: {video_data}")
+            result = [Data(data=video_data)]
+            
+            # Log the result to verify it's a proper Data object
+            self.log(f"DEBUG: Returning list with Data objects")
+            return result
             
         except Exception as e:
             self.log(f"DEBUG: Error in video load_files: {str(e)}", "ERROR")
-            return Data(data={"error": str(e)})
+            import traceback
+            self.log(f"DEBUG: Traceback: {traceback.format_exc()}", "ERROR")
+            return []  # Return empty list on error
