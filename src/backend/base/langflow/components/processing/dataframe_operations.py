@@ -19,6 +19,8 @@ class DataFrameOperationsComponent(Component):
         "Select Columns",
         "Sort",
         "Tail",
+        "Unique",
+        "Value Count",
     ]
 
     inputs = [
@@ -150,6 +152,8 @@ class DataFrameOperationsComponent(Component):
                 build_config["column_name"]["show"] = True
                 build_config["replace_value"]["show"] = True
                 build_config["replacement_value"]["show"] = True
+            elif field_value in {"Unique", "Value Count"}:
+                build_config["column_name"]["show"] = True
 
         return build_config
 
@@ -157,6 +161,8 @@ class DataFrameOperationsComponent(Component):
         dataframe_copy = self.df.copy()
         operation = self.operation
 
+        if operation == "Value Count":
+            return self.value_counts(dataframe_copy)
         if operation == "Filter":
             return self.filter_rows_by_value(dataframe_copy)
         if operation == "Sort":
@@ -175,38 +181,10 @@ class DataFrameOperationsComponent(Component):
             return self.tail(dataframe_copy)
         if operation == "Replace Value":
             return self.replace_values(dataframe_copy)
+        if operation == "Unique":
+            return self.unique_values(dataframe_copy)
         msg = f"Unsupported operation: {operation}"
-
         raise ValueError(msg)
 
-    # Existing methods
-    def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
-        return DataFrame(df[df[self.column_name] == self.filter_value])
-
-    def sort_by_column(self, df: DataFrame) -> DataFrame:
-        return DataFrame(df.sort_values(by=self.column_name, ascending=self.ascending))
-
-    def drop_column(self, df: DataFrame) -> DataFrame:
-        return DataFrame(df.drop(columns=[self.column_name]))
-
-    def rename_column(self, df: DataFrame) -> DataFrame:
-        return DataFrame(df.rename(columns={self.column_name: self.new_column_name}))
-
-    def add_column(self, df: DataFrame) -> DataFrame:
-        df[self.new_column_name] = [self.new_column_value] * len(df)
-        return DataFrame(df)
-
-    def select_columns(self, df: DataFrame) -> DataFrame:
-        columns = [col.strip() for col in self.columns_to_select]
-        return DataFrame(df[columns])
-
-    # New methods
-    def head(self, df: DataFrame) -> DataFrame:
-        return DataFrame(df.head(self.num_rows))
-
-    def tail(self, df: DataFrame) -> DataFrame:
-        return DataFrame(df.tail(self.num_rows))
-
-    def replace_values(self, df: DataFrame) -> DataFrame:
-        df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
-        return DataFrame(df)
+    def value_counts(self, df: DataFrame) -> DataFrame:
+        return DataFrame(df[self.column_name].value_counts().reset_index())
