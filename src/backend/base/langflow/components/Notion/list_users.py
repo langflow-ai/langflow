@@ -1,18 +1,19 @@
+import pandas as pd
 import requests
-from langchain.tools import StructuredTool
-from pydantic import BaseModel
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
+from langflow.custom import Component
 from langflow.inputs import SecretStrInput
-from langflow.schema import Data
+from langflow.schema import DataFrame
+from langflow.template import Output
 
 
-class NotionUserList(LCToolComponent):
-    display_name = "List Users "
-    description = "Retrieve users from Notion."
-    documentation = "https://docs.langflow.org/integrations/notion/list-users"
-    icon = "NotionDirectoryLoader"
+class NotionUserList(Component):
+    """A component that retrieves users from Notion."""
+
+    display_name: str = "List Users"
+    description: str = "Retrieve users from Notion."
+    documentation: str = "https://docs.langflow.org/integrations/notion/list-users"
+    icon: str = "NotionDirectoryLoader"
 
     inputs = [
         SecretStrInput(
@@ -23,55 +24,45 @@ class NotionUserList(LCToolComponent):
         ),
     ]
 
-    class NotionUserListSchema(BaseModel):
-        pass
+    outputs = [
+        Output(name="users", display_name="Users", method="list_users"),
+    ]
 
-    def run_model(self) -> list[Data]:
-        users = self._list_users()
-        records = []
-        combined_text = ""
-
-        for user in users:
-            output = "User:\n"
-            for key, value in user.items():
-                output += f"{key.replace('_', ' ').title()}: {value}\n"
-            output += "________________________\n"
-
-            combined_text += output
-            records.append(Data(text=output, data=user))
-
-        self.status = records
-        return records
-
-    def build_tool(self) -> Tool:
-        return StructuredTool.from_function(
-            name="notion_list_users",
-            description="Retrieve users from Notion.",
-            func=self._list_users,
-            args_schema=self.NotionUserListSchema,
-        )
-
-    def _list_users(self) -> list[dict]:
+    def list_users(self) -> DataFrame:
+        """Retrieve users from Notion."""
         url = "https://api.notion.com/v1/users"
         headers = {
             "Authorization": f"Bearer {self.notion_secret}",
             "Notion-Version": "2022-06-28",
         }
 
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
 
-        data = response.json()
-        results = data["results"]
+            data = response.json()
+            results = data["results"]
 
-        users = []
-        for user in results:
-            user_data = {
-                "id": user["id"],
-                "type": user["type"],
-                "name": user.get("name", ""),
-                "avatar_url": user.get("avatar_url", ""),
-            }
-            users.append(user_data)
+            users = []
+            for user in results:
+                user_data = {
+                    "id": user["id"],
+                    "type": user["type"],
+                    "name": user.get("name", ""),
+                    "avatar_url": user.get("avatar_url", ""),
+                }
+                users.append(user_data)
 
-        return users
+            # Convert to DataFrame with ordered columns
+            users_df = pd.DataFrame(users)
+            column_order = ["id", "name", "type", "avatar_url"]
+            users_df = users_df[column_order]
+
+            return DataFrame(users_df)
+
+        except requests.exceptions.RequestException as e:
+            return DataFrame(pd.DataFrame({"error": [f"Error fetching Notion users: {e}"]}))
+        except KeyError:
+            return DataFrame(pd.DataFrame({"error": ["Unexpected response format from Notion API"]}))
+        except (ValueError, TypeError) as e:
+            return DataFrame(pd.DataFrame({"error": [f"Error processing user data: {e}"]}))
