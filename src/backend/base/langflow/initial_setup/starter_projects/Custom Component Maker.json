@@ -2108,7 +2108,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "admin@admin.com"
+                "value": ""
               },
               "temperature": {
                 "_input_type": "SliderInput",
