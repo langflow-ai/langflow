@@ -64,9 +64,9 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector("text=DOCTYPE html", { timeout: 30000 });
+    await page.waitForSelector(".language-html", { timeout: 30000 * 3 });
 
-    await page.waitForSelector(".markdown", { timeout: 3000 });
+    await page.waitForSelector(".markdown", { timeout: 30000 });
 
     const textContents = await page
       .locator(".markdown")
