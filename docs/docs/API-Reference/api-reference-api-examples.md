@@ -469,10 +469,18 @@ curl -X GET \
   -H "accept: application/json"
 ```
 
-#### Build endpoint parameters
+### Build endpoint headers and parameters
+
+**Headers**
+| Header | Info | Example |
+|--------|------|---------|
+| Content-Type | Required. Specifies JSON format | "application/json" |
+| accept | Required. Specifies response format | "application/json" |
+| x-api-key | Optional. Required only if authentication is enabled | "sk-..." |
 
 The `/build/{flow_id}/flow` endpoint accepts the following parameters in its request body:
 
+**Parameters**
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | inputs | object | Optional. Input values for flow components. |
