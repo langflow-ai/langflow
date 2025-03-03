@@ -4,7 +4,7 @@ import contextlib
 import inspect
 import re
 import traceback
-from typing import Any
+from typing import Any, List
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -560,3 +560,66 @@ async def update_component_build_config(
     if inspect.iscoroutinefunction(component.update_build_config):
         return await component.update_build_config(build_config, field_value, field_name)
     return await asyncio.to_thread(component.update_build_config, build_config, field_value, field_name)
+
+
+async def get_all_types_dict(components_paths: list[str]):
+    """Get all types dictionary with full component loading."""
+    # This is the async version of the existing function
+    return await abuild_custom_components(components_paths=components_paths)
+
+
+async def get_single_component_dict(component_type: str, component_name: str, components_paths: list[str]):
+    """Load a single component and return its full template dictionary."""
+    # This function needs to know how to load different component types
+    
+    # For custom components, we need to load the full component class
+    if component_type == "custom_components":
+        return await load_custom_component(component_name, components_paths)
+    
+    # For regular components, we need to load the component module
+    return await load_regular_component(component_type, component_name, components_paths)
+
+
+async def load_custom_component(component_name: str, components_paths: list[str]):
+    """Load a custom component by name."""
+    from langflow.interface.custom_component import get_custom_component_from_name
+    
+    try:
+        # Try to load the custom component
+        component_class = get_custom_component_from_name(component_name)
+        if component_class:
+            # Convert to component template
+            from langflow.interface.custom_component import get_custom_component_template
+            template = get_custom_component_template(component_class)
+            return template
+    except Exception as e:
+        logger.error(f"Error loading custom component {component_name}: {str(e)}")
+    
+    return None
+
+
+async def load_regular_component(component_type: str, component_name: str, components_paths: list[str]):
+    """Load a regular (non-custom) component by type and name."""
+    # This is a placeholder for the actual implementation
+    # The actual implementation would depend on how components are loaded in your system
+    
+    # For example, if components are loaded by importing Python modules:
+    for base_path in components_paths:
+        module_path = os.path.join(base_path, component_type, f"{component_name}.py")
+        if os.path.exists(module_path):
+            # Try to import the module
+            module_name = f"langflow.components.{component_type}.{component_name}"
+            try:
+                # Use importlib to dynamically import the module
+                spec = importlib.util.spec_from_file_location(module_name, module_path)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    # Extract the component template if available
+                    if hasattr(module, "template"):
+                        return module.template
+            except Exception as e:
+                logger.error(f"Error importing component {module_path}: {str(e)}")
+    
+    return None

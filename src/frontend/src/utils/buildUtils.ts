@@ -64,6 +64,10 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   return inactiveVertexData;
 }
 
+function logFlowLoad(message: string, data?: any) {
+  console.log(`[FlowLoad] ${message}`, data || '');
+}
+
 export async function updateVerticesOrder(
   flowId: string,
   setLockChat?: (lock: boolean) => void,
@@ -77,6 +81,7 @@ export async function updateVerticesOrder(
   runId?: string;
   verticesToRun: string[];
 }> {
+  logFlowLoad('Updating vertices order');
   return new Promise(async (resolve, reject) => {
     const setErrorData = useAlertStore.getState().setErrorData;
     let orderResponse;
@@ -88,7 +93,9 @@ export async function updateVerticesOrder(
         nodes,
         edges,
       );
+      logFlowLoad('Got vertices order response:', orderResponse);
     } catch (error: any) {
+      logFlowLoad('Error getting vertices order:', error);
       setErrorData({
         title: "Oops! Looks like you missed something",
         list: [error.response?.data?.detail ?? "Unknown Error"],
@@ -126,9 +133,11 @@ export async function updateVerticesOrder(
 export async function buildFlowVerticesWithFallback(
   params: BuildVerticesParams,
 ) {
+  logFlowLoad('Starting flow load');
   try {
     return await buildFlowVertices(params);
   } catch (e: any) {
+    logFlowLoad('Error in buildFlowVertices:', e);
     if (e.message === "Endpoint not available") {
       return await buildVertices(params);
     }
