@@ -233,7 +233,7 @@ class TwelveLabsPegasus(Component):
             if not self.videodata or not isinstance(self.videodata, list) or len(self.videodata) != 1:
                 return Message(text="Please provide exactly one video")
 
-            video_path = self.videodata[0].data.get('path')
+            video_path = self.videodata[0].data.get('text')
             if not video_path or not os.path.exists(video_path):
                 return Message(text="Invalid video path")
 
