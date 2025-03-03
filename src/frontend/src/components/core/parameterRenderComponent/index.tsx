@@ -5,6 +5,7 @@ import SliderComponent from "@/components/core/parameterRenderComponent/componen
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import ButtonComponent from "./components/buttonComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -204,6 +205,8 @@ export function ParameterRenderComponent({
             id={`slider_${id}`}
           />
         );
+      case "button":
+        return <ButtonComponent {...baseInputProps} id={`button_${id}`} />;
       default:
         return <EmptyParameterComponent {...baseInputProps} />;
     }

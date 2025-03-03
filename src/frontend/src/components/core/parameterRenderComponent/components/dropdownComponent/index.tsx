@@ -1,5 +1,6 @@
 import Dropdown from "../../../dropdownComponent";
 import { DropDownComponentType, InputProps } from "../../types";
+import ButtonComponent from "../buttonComponent";
 
 export default function DropdownComponent({
   id,
@@ -19,19 +20,27 @@ export default function DropdownComponent({
   };
 
   return (
-    <Dropdown
-      disabled={disabled}
-      editNode={editNode}
-      options={options}
-      optionsMetaData={optionsMetaData}
-      onSelect={onChange}
-      combobox={combobox}
-      value={value || ""}
-      id={`dropdown_${id}`}
-      name={name}
-      dialogInputs={dialogInputs}
-      handleOnNewValue={handleOnNewValue} // TODO: Remove this
+    <ButtonComponent
       {...baseInputProps}
+      value={value || "something"}
+      id={`button_${id}`}
+      editNode={editNode}
+      handleOnNewValue={handleOnNewValue}
+      disabled={disabled}
     />
+    // <Dropdown
+    //   disabled={disabled}
+    //   editNode={editNode}
+    //   options={options}
+    //   optionsMetaData={optionsMetaData}
+    //   onSelect={onChange}
+    //   combobox={combobox}
+    //   value={value || ""}
+    //   id={`dropdown_${id}`}
+    //   name={name}
+    //   dialogInputs={dialogInputs}
+    //   handleOnNewValue={handleOnNewValue} // TODO: Remove this
+    //   {...baseInputProps}
+    // />
   );
 }
