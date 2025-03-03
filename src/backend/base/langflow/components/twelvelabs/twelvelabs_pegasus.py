@@ -30,6 +30,11 @@ class TwelveLabsPegasus(Component):
             info="Enter your Twelve Labs API Key.",
             required=True
         ),
+        SecretStrInput(
+            name="video_id",
+            display_name="Pegasus Video ID",
+            info="Enter a Video ID for a previously indexed video.",
+        ),
         MultilineInput(
             name="message",
             display_name="Prompt",
@@ -190,7 +195,10 @@ class TwelveLabsPegasus(Component):
         """Process video using Pegasus and generate response if message is provided"""
         try:
             # If we have a message and already processed video, use existing video_id
-            if self.message and self._video_id:
+            if self.message and self.video_id:
+                self._video_id = self.video_id
+                self.status = f"Have video id: {self.video_id}"
+                
                 client = TwelveLabs(api_key=self.api_key)
                 
                 # Get message text from either string or Message object
@@ -200,26 +208,24 @@ class TwelveLabsPegasus(Component):
                 if self.stream:
                     self.status = f"Streaming response for query: {message_text}"
                     self.log(self.status)
+
                     
                     # For streaming, we'll return a generator that yields chunks
-                    response_stream = client.generate.text(
+                    response_stream = client.generate.text_stream(
                         video_id=self._video_id,
                         prompt=message_text,
                         temperature=self.temperature,
-                        max_clip_length=self.clip_length,
-                        stream=True
                     )
                     
                     return Message(text=response_stream)
                 else:
-                    self.status = f"Processing query: {message_text}"
+                    self.status = f"Processing query (w/ video ID): {self._video_id} {message_text} "
                     self.log(self.status)
                     
                     response = client.generate.text(
-                        video_id=self._video_id,
+                        video_id=self.video_id,
                         prompt=message_text,
                         temperature=self.temperature,
-                        max_clip_length=self.clip_length
                     )
                     return Message(text=response.data)
 
@@ -269,12 +275,10 @@ class TwelveLabsPegasus(Component):
 
                 # Handle streaming if enabled
                 if self.stream:
-                    response_stream = client.generate.text(
+                    response_stream = client.generate.text_stream(
                         video_id=self._video_id,
                         prompt=message_text,
-                        temperature=self.temperature,
-                        max_clip_length=self.clip_length,
-                        stream=True
+                        temperature=self.temperature
                     )
                     return Message(text=response_stream)
                 else:
@@ -282,7 +286,6 @@ class TwelveLabsPegasus(Component):
                         video_id=self._video_id,
                         prompt=message_text,
                         temperature=self.temperature,
-                        max_clip_length=self.clip_length
                     )
                     return Message(text=response.data)
             else:
