@@ -19,7 +19,7 @@ To add tracing to your Langflow application, add the `ARIZE_SPACE_ID` and `ARIZE
 3. Copy the **SpaceID** and **API Key (Ingestion Service Account Key)** values.
 4. Create a `.env` file in the root of your Langflow application.
 5. Add the `ARIZE_SPACE_ID` and `ARIZE_API_KEY` environment variables to your Langflow application.
-You do not need to specify the **Arize Project** name if you're using the standard Arize platform. The **Project** name in Arize is as same as the Langflow **Flow** name.
+You do not need to specify the **Arize Project** name if you're using the standard Arize platform. The **Project** name in Arize is the same as the Langflow **Flow** name.
 
 ```bash
 export ARIZE_SPACE_ID=<your-arize-space-id>
