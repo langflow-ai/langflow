@@ -154,7 +154,7 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_WORKER_TIMEOUT"/>`LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds.<br/>See [`--worker-timeout` option](./configuration-cli.md#run-worker-timeout). |
 | <Link id="LANGFLOW_WORKERS"/>`LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes.<br/>See [`--workers` option](./configuration-cli.md#run-workers). |
 
-## Configuration examples
+## Configure .env, override.conf, and tasks.json files
 
 The following examples show how to configure Langflow using environment variables in different scenarios.
 
