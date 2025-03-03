@@ -230,7 +230,7 @@ class YouTubeVideoDetailsComponent(Component):
                 thumb_cols = [col for col in video_df.columns if col.startswith("thumbnail_")]
 
                 # Reorder columns based on what's included
-                ordered_cols = basic_cols[:]
+                ordered_cols = basic_cols.copy()
 
                 if self.include_statistics:
                     ordered_cols.extend([col for col in stat_cols if col in video_df.columns])
