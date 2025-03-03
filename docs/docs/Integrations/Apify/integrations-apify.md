@@ -52,9 +52,7 @@ Add the [Google Search Results Scraper Actor](https://apify.com/apify/google-sea
 The agent collects the links from Google and content from TikTok and analyzes the data to provide insights about a person, brand, or topic.
 ![Apify Agent Flow](./apify_agent_flow.png)
 
-## Parameters
-
-### Inputs
+## Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -62,7 +60,7 @@ The agent collects the links from Google and content from TikTok and analyzes th
 | actor | Actor | The Apify Actor to run, for example `apify/website-content-crawler`. |
 | run_input | Run Input | The JSON input for configuring the Actor run. For more information, see the [Apify documentation](https://apify.com/apify/website-content-crawler/input-schema). |
 
-### Outputs
+## Outputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
