@@ -40,6 +40,9 @@ export default defineConfig(({ mode }) => {
         env.ACCESS_TOKEN_EXPIRE_SECONDS,
       ),
       "process.env.CI": JSON.stringify(env.CI),
+      "process.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
+        env.LANGFLOW_AUTO_LOGIN,
+      ),
     },
     plugins: [react(), svgr(), tsconfigPaths()],
     server: {

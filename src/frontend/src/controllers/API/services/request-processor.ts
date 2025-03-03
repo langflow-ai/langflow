@@ -23,6 +23,8 @@ export function UseRequestProcessor(): {
     return useQuery({
       queryKey,
       queryFn,
+      retry: 5,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       ...options,
     });
   }
@@ -40,6 +42,8 @@ export function UseRequestProcessor(): {
         options.onSettled && options.onSettled(data, error, variables, context);
       },
       ...options,
+      retry: options.retry ?? 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
   }
 
