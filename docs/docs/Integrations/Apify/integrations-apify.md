@@ -5,7 +5,7 @@ slug: /integrations-apify
 
 # Integrate Apify with Langflow
 
-[Apify](https://apify.com/) is a web scraping and data extraction platform. It provides an [Actor Store](https://apify.com/store) with more than three thousand ready-made cloud tools called **Actors**.
+[Apify](https://apify.com/) is a web scraping and data extraction platform. It provides an [Actor Store](https://apify.com/store) with more than 3,000 ready-made cloud tools called **Actors**.
 
 Apify components in Langflow run **Actors** to accomplish tasks like data extraction, content analysis, and SQL operations.
 
@@ -35,9 +35,9 @@ Use the [Website Content Crawler Actor](https://apify.com/apify/website-content-
 
 ![Apify Flow - Website Content Crawler](./apify_flow_wcc.png)
 
-### Process web content with an Agent
+### Process web content with an agent
 
-Extract website content using the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler), and then process  it with an agent.
+Extract website content using the [Website Content Crawler Actor](https://apify.com/apify/website-content-crawler), and then process it with an agent.
 
 The agent takes the extracted data and transforms it into summaries, insights, or structured responses to make the information more actionable.
 
@@ -47,7 +47,7 @@ The agent takes the extracted data and transforms it into summaries, insights, o
 
 Perform comprehensive social media research with multiple Apify Actors.
 
-Add the [Google Search Results Scraper Actor](https://apify.com/apify/google-search-scraper) to find relevant social media profiles, then add the [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) to gather data and videos.
+Add the [Google Search Results Scraper Actor](https://apify.com/apify/google-search-scraper) to find relevant social media profiles, and then add the [TikTok Data Extractor Actor](https://apify.com/clockworks/free-tiktok-scraper) to gather data and videos.
 
 The agent collects the links from Google and content from TikTok and analyzes the data to provide insights about a person, brand, or topic.
 ![Apify Agent Flow](./apify_agent_flow.png)
