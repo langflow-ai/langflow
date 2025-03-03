@@ -2,6 +2,8 @@ export const workletCode = `
   class StreamProcessor extends AudioWorkletProcessor {
     constructor() {
       super();
+      // manipulate this to change the buffer size, 24000 is one per second
+      // this.inputBuffer = new Float32Array(24000);
       this.inputBuffer = new Float32Array(128);
       this.inputOffset = 0;
       this.outputBuffers = [];
@@ -38,6 +40,8 @@ export const workletCode = `
               type: 'input',
               audio: outputData
             });
+            // manipulate this to change the buffer size, 24000 is one per second
+            // this.inputBuffer = new Float32Array(24000);
             this.inputBuffer = new Float32Array(128);
             this.inputOffset = 0;
           }

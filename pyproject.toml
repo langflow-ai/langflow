@@ -111,7 +111,8 @@ dependencies = [
     "scipy>=1.14.1",
     "ag2>=0.1.0",
     "scrapegraph-py>=1.10.2",
-    "pydantic-ai>=0.0.19"
+    "pydantic-ai>=0.0.19",
+    "elevenlabs>=1.52.0",
 ]
 
 [tool.uv.sources]

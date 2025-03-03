@@ -1761,6 +1761,23 @@ vectorstore-mmr = [
 ]
 
 [[package]]
+name = "elevenlabs"
+version = "1.52.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+    { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f1/67/e78d49bfb9251a57c7a170ce0cecbaedc097f1f96767976868954c4bc21b/elevenlabs-1.52.0.tar.gz", hash = "sha256:af1fcd8d450fb69e0ffff271bc6bea7cee3e63a938da5949cd23466cff5337e2", size = 139420 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/be/35/8378ecaa24b2b06e1dbf861f50be354034f8f1468f25c4724367a74df0ce/elevenlabs-1.52.0-py3-none-any.whl", hash = "sha256:9c83fe1b8cc6cd9f687fe055aae0fa2fe68f598bc7464fa30dda28e9be8413d2", size = 319971 },
+]
+
+[[package]]
 name = "embedchain"
 version = "0.1.125"
 source = { registry = "https://pypi.org/simple" }
@@ -3808,6 +3825,7 @@ dependencies = [
     { name = "dspy-ai" },
     { name = "duckduckgo-search" },
     { name = "elasticsearch" },
+    { name = "elevenlabs" },
     { name = "faiss-cpu" },
     { name = "fake-useragent" },
     { name = "fastavro" },
@@ -3971,6 +3989,7 @@ requires-dist = [
     { name = "dspy-ai", specifier = "==2.5.41" },
     { name = "duckduckgo-search", specifier = "==7.2.1" },
     { name = "elasticsearch", specifier = "==8.16.0" },
+    { name = "elevenlabs", specifier = ">=1.52.0" },
     { name = "faiss-cpu", specifier = "==1.9.0.post1" },
     { name = "fake-useragent", specifier = "==1.5.1" },
     { name = "fastavro", specifier = "==1.9.7" },
