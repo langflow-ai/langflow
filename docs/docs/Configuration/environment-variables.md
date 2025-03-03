@@ -202,14 +202,6 @@ A systemd service configuration file configures Linux system services.
 
 To add environment variables, create or edit a service configuration file and add an `override.conf` file. This file allows you to override the default environment variables for the service.
 
-1. Create the override directory and file:
-```bash
-sudo mkdir -p /etc/systemd/system/langflow_internal.service.d/
-sudo nano /etc/systemd/system/langflow_internal.service.d/override.conf
-```
-
-2. Add your environment variables:
-
 ```ini title="override.conf"
 [Service]
 Environment="DO_NOT_TRACK=true"
@@ -241,12 +233,6 @@ Environment="LANGFLOW_SUPERUSER=adminuser"
 Environment="LANGFLOW_SUPERUSER_PASSWORD=adminpass"
 Environment="LANGFLOW_WORKER_TIMEOUT=60000"
 Environment="LANGFLOW_WORKERS=32"
-```
-
-3. After creating or modifying the override file, reload the systemd daemon and restart the service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart langflow_internal.service
 ```
 
 For more information on systemd, see the [Red Hat documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_systemd_unit_files_to_customize_and_optimize_your_system/assembly_working-with-systemd-unit-files_working-with-systemd#assembly_working-with-systemd-unit-files_working-with-systemd).
