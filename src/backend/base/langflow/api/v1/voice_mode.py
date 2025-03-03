@@ -28,7 +28,7 @@ from langflow.utils.voice_utils import (
     BYTES_PER_24K_FRAME,
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
-    write_audio_to_file,
+    #write_audio_to_file,
 )
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
@@ -49,6 +49,8 @@ elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
 elevenlabs_model = "eleven_multilingual_v2"
 elevenlabs_client = None
 elevenlabs_key = None
+
+barge_in_enabled = False
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
@@ -319,7 +321,7 @@ async def flow_as_tool_websocket(
                             continue
 
                         # Optional: Write audio to file for debugging
-                        asyncio.create_task(write_audio_to_file(base64_data))
+                        #asyncio.create_task(write_audio_to_file(base64_data))
 
                         # Send audio directly to OpenAI while also queueing for VAD
                         await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
@@ -328,6 +330,29 @@ async def flow_as_tool_websocket(
                         logger.info(f"elevenlabs.config {msg}")
                         use_elevenlabs = msg['enabled']
                         elevenlabs_voice = msg['voice_id']
+
+                        session_update = {
+                            "type": "session.update",
+                            "session": {
+                                #"modalities": ["text","audio"],
+                                "modalities": ["text"],
+                                "instructions": SESSION_INSTRUCTIONS,
+                                "voice": "echo",
+                                "temperature": 0.8,
+                                "input_audio_format": "pcm16",
+                                "output_audio_format": "pcm16",
+                                "turn_detection": {
+                                    "type": "server_vad",
+                                    "threshold": SILENCE_THRESHOLD,
+                                    "prefix_padding_ms": PREFIX_PADDING_MS,
+                                    "silence_duration_ms": SILENCE_DURATION_MS,
+                                },
+                                "input_audio_transcription": {"model": "whisper-1"},
+                                "tools": [flow_tool],
+                                "tool_choice": "auto",
+                            },
+                        }
+                        await openai_ws.send(json.dumps(session_update))
                     else:
                         await openai_ws.send(message_text)
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
@@ -359,48 +384,21 @@ async def flow_as_tool_websocket(
                             text = event.get('transcript')
                             print(f"\n      bot transcript: {text}")
                             if use_elevenlabs:
+                                elevenlabs_client = await get_or_create_elevenlabs_client()
                                 if elevenlabs_client is None:
-                                    if elevenlabs_key is None:
-                                        try:
-                                            elevenlabs_key = await variable_service.get_variable(
-                                                user_id=current_user.id, name="ELEVENLABS_API_KEY", field="elevenlabs_api_key", session=session
-                                            )
-                                        except (InvalidToken, ValueError):
-                                            elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
-                                            if not elevenlabs_key:
-                                                await client_websocket.send_json(
-                                                    {
-                                                        "type": "error",
-                                                        "code": "api_key_missing",
-                                                        "message": "OpenAI API key not found. Please set your API key as an env var or a global variable.",
-                                                    }
-                                                )
-                                                return
-                                        except Exception as e:
-                                            logger.error("exception")
-                                            print(e)
-                                            trace = traceback.format_exc()
-                                            print(trace)
-                                    elevenlabs_client = ElevenLabs(
-                                        api_key=elevenlabs_key,
-                                    )
-                                audio_base64 = elevenlabs_client.text_to_speech.convert(
-                                    voice_id=elevenlabs_voice,
-                                    output_format="pcm_24000",  # sets sample rate to 24kHz in PCM16 format
-                                    text=text,
-                                    model_id=elevenlabs_model,
-                                )
-                                for chunk in audio_base64:
-                                    base64_audio = base64.b64encode(chunk).decode()  # Convert PCM16 to float array
-                                    #asyncio.create_task(write_audio_to_file(audio_delta, "elevenlabs"))
-                                    await client_websocket.send_json(
-                                        {
-                                            "type": "response.audio.delta",
-                                            "delta": base64_audio
-                                        }
-                                    )
+                                    return
+                                await elevenlabs_generate_and_send_audio(elevenlabs_client, text)
                         else:
                             print(f"\n      user transcript: {event.get('transcript')}")
+
+                    if event_type == "response.text.delta":
+                        text = event.get('delta')
+                        print(f"\n      bot response: {text}")
+                        if use_elevenlabs:
+                            elevenlabs_client = await get_or_create_elevenlabs_client()
+                            if elevenlabs_client is None:
+                                return
+                            await elevenlabs_generate_and_send_audio(elevenlabs_client, text)
                     if event_type == "response.output_item.added":
                         print("Bot speaking = True")
                         bot_speaking_flag[0] = True
@@ -431,13 +429,61 @@ async def flow_as_tool_websocket(
                             function_call_args = ""
                     elif event_type == "response.audio.delta":
                         audio_delta = event.get("delta", "")
-                        if audio_delta:
-                            asyncio.create_task(write_audio_to_file(audio_delta))
+                        #if audio_delta:
+                        #    asyncio.create_task(write_audio_to_file(audio_delta))
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
                 print(f"Websocket exception: {e}")
 
+        async def elevenlabs_generate_and_send_audio(elevenlabs_client, text):
+            audio_base64 = elevenlabs_client.text_to_speech.convert(
+                voice_id=elevenlabs_voice,
+                output_format="pcm_24000",  # sets sample rate to 24kHz in PCM16 format
+                text=text,
+                model_id=elevenlabs_model,
+            )
+            for chunk in audio_base64:
+                base64_audio = base64.b64encode(chunk).decode()  # Convert PCM16 to float array
+                # asyncio.create_task(write_audio_to_file(audio_delta, "elevenlabs"))
+                await client_websocket.send_json(
+                    {
+                        "type": "response.audio.delta",
+                        "delta": base64_audio
+                    }
+                )
+
+        async def get_or_create_elevenlabs_client():
+            global elevenlabs_key, elevenlabs_client
+            if elevenlabs_client is None:
+                if elevenlabs_key is None:
+                    try:
+                        elevenlabs_key = await variable_service.get_variable(
+                            user_id=current_user.id, name="ELEVENLABS_API_KEY", field="elevenlabs_api_key",
+                            session=session
+                        )
+                    except (InvalidToken, ValueError):
+                        elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
+                        if not elevenlabs_key:
+                            await client_websocket.send_json(
+                                {
+                                    "type": "error",
+                                    "code": "api_key_missing",
+                                    "message": "OpenAI API key not found. Please set your API key as an env var or a global variable.",
+                                }
+                            )
+                            return None
+                    except Exception as e:
+                        logger.error("exception")
+                        print(e)
+                        trace = traceback.format_exc()
+                        print(trace)
+                elevenlabs_client = ElevenLabs(
+                    api_key=elevenlabs_key,
+                )
+            return elevenlabs_client
+
         # Start the background VAD processing task.
-        asyncio.create_task(process_vad_audio())
+        if barge_in_enabled:
+            asyncio.create_task(process_vad_audio())
 
         # Run both the client → OpenAI and OpenAI → client tasks concurrently.
         await asyncio.gather(
