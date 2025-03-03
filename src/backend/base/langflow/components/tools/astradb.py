@@ -177,6 +177,11 @@ class AstraDBToolComponent(LCToolComponent):
             return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:
+        """
+        DEPRECATED: This method is deprecated. Please use create_args_schema_v2 instead.
+                    It is keep only for backward compatibility.
+
+        """
         self.log.warning("This is the old way to define the tool parameters. Please use the new way.")
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
@@ -184,7 +189,6 @@ class AstraDBToolComponent(LCToolComponent):
             if key.startswith("!"):  # Mandatory
                 args[key[1:]] = (str, Field(description=self.tool_params[key]))
             else:  # Optional
-                args[key] = (str | None, Field(description=self.tool_params[key], default=None))
                 args[key] = (str | None, Field(description=self.tool_params[key], default=None))
 
         if self.use_search_query:
@@ -197,13 +201,15 @@ class AstraDBToolComponent(LCToolComponent):
         return {"ToolInput": model}
 
     def create_args_schema_v2(self) -> dict[str, BaseModel]:
+        """
+        Create the tool input schema using the new tool parameters configuration
+        """
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
         for tool_param in self.tools_params_v2:
             if tool_param["mandatory"]:
                 args[tool_param["name"]] = (str, Field(description=tool_param["description"]))
             else:
-                args[tool_param["name"]] = (str | None, Field(description=tool_param["description"], default=None))
                 args[tool_param["name"]] = (str | None, Field(description=tool_param["description"], default=None))
 
         if self.use_search_query:
@@ -235,14 +241,19 @@ class AstraDBToolComponent(LCToolComponent):
         return tool
 
     def projection_args(self, input_str: str) -> dict:
+        """
+        Build the projection arguments for the AstraDB query.
+        """
         elements = input_str.split(",")
         result = {}
 
         if elements == ["*"]:
             return None
 
+        # Force the projection to exclude the $vector field as it is not required by the tool
         result["$vector"] = False
 
+        # Fields with ! as prefix should be removed from the projection
         for element in elements:
             if element.startswith("!"):
                 result[element[1:]] = False
@@ -282,12 +293,16 @@ class AstraDBToolComponent(LCToolComponent):
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
+        """
+        Run the query to get the data from the AstraDB collection.
+        """
         collection = self._build_collection()
         sort = {}
 
         # Build filters using the new method
         filters = self.build_filter(args, self.tools_params_v2)
 
+        # Build the vector search on 
         if self.use_search_query and args["search_query"] is not None and args["search_query"] != "":
             if self.use_vectorize:
                 sort["$vectorize"] = args["search_query"]
