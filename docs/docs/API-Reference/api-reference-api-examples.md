@@ -404,8 +404,9 @@ For a simpler execution of your flows, use the [`/run` endpoint](/api-reference-
 
 ### Build flow
 
-This example builds a flow with a given `flow_id`.
+This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
 
+1. Send a POST request to the `/build/{flow_id}/flow` endpoint.
 <Tabs>
    <TabItem value="curl" label="curl" default>
 
@@ -414,48 +415,79 @@ curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{"input_value": "hello, how are you doing?"}'
+  -d '{
+    "inputs": {
+      "input_value": "Tell me a story"
+    }
+  }'
 ```
 
    </TabItem>
    <TabItem value="result" label="Result">
 
-```plain
-{"event": "vertices_sorted", "data": {"ids": ["ChatInput-TAEvF"], "to_run": ["Prompt-2gtLN", "ChatInput-TAEvF", "ChatOutput-HnFx1", "OpenAIModel-g7uMN"]}}
-
-{"event": "add_message", "data": {"timestamp": "2025-02-05T14:45:33", "sender": "User", "sender_name": "User", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "12be981b-9816-4361-b0f9-ce65d0ba6cc1", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}}
-
-{"event": "end_vertex", "data": {"build_data": {"id": "ChatInput-TAEvF", "inactivated_vertices": [], "next_vertices_ids": ["Prompt-2gtLN"], "top_level_vertices": ["Prompt-2gtLN"], "valid": true, "params": "- Files: []\n  Message: Hello\n  Sender: User\n  Sender Name: User\n  Type: object\n", "data": {"results": {"message": {"text_key": "text", "data": {"timestamp": "2025-02-05T14:45:33+00:00", "sender": "User", "sender_name": "User", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "12be981b-9816-4361-b0f9-ce65d0ba6cc1", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "default_value": "", "text": "Hello", "sender": "User", "sender_name": "User", "files": [], "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "timestamp": "2025-02-05T14:45:33+00:00", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": []}}, "outputs": {"message": {"message": {"timestamp": "2025-02-05T14:45:33+00:00", "sender": "User", "sender_name": "User", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "12be981b-9816-4361-b0f9-ce65d0ba6cc1", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "type": "message"}}, "logs": {"message": []}, "message": {"message": "Hello", "sender": "User", "sender_name": "User", "files": [], "type": "object"}, "artifacts": {"message": "Hello", "sender": "User", "sender_name": "User", "files": [], "type": "object"}, "timedelta": 0.01409304200205952, "duration": "14 ms", "used_frozen_result": false}, "timestamp": "2025-02-05T14:45:33.486696Z"}}}
-
-{"event": "end_vertex", "data": {"build_data": {"id": "Prompt-2gtLN", "inactivated_vertices": [], "next_vertices_ids": ["OpenAIModel-g7uMN"], "top_level_vertices": ["OpenAIModel-g7uMN"], "valid": true, "params": "None", "data": {"results": {}, "outputs": {"prompt": {"message": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "logs": {"prompt": []}, "message": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "artifacts": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}},"timedelta":0.005742790992371738,"duration":"6 ms","used_frozen_result":false},"timestamp":"2025-02-05T14:45:33.503829Z"}}}
-
-{"event": "end_vertex", "data": {"build_data": {"id": "OpenAIModel-g7uMN", "inactivated_vertices": [], "next_vertices_ids": ["ChatOutput-HnFx1"], "top_level_vertices": ["ChatOutput-HnFx1"], "valid": true, "params": "None", "data": {"results": {}, "outputs": {"text_output": {"message": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "type": "text"}, "model_output": {"message": "", "type": "unknown"}}, "logs": {"text_output": []}, "message": {"text_output": {"repr": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "raw": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "type": "text"}}, "artifacts": {"text_output": {"repr": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "raw": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "type": "text"}}, "timedelta":1.8065362079942133,"duration":"1.81 seconds","used_frozen_result":false},"timestamp":"2025-02-05T14:45:35.310876Z"}}}
-
-{"event": "add_message", "data": {"timestamp": "2025-02-05T14:45:35", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "56db271c-1dab-4a47-8464-d0058ac0943b", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}}
-
-{"event": "end_vertex", "data": {"build_data": {"id": "ChatOutput-HnFx1", "inactivated_vertices": [], "next_vertices_ids": [], "top_level_vertices": [], "valid": true, "params": "- Files: []\n  Message: Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building\n    something fresh! What do you have in mind? Whether it's a project, an idea, or\n    a concept, let's dive in and make it happen!\n  Sender: Machine\n  Sender Name: AI\n  Type: object\n", "data": {"results": {"message": {"text_key": "text", "data": {"timestamp": "2025-02-05T14:45:35+00:00", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "56db271c-1dab-4a47-8464-d0058ac0943b", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "default_value": "", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "sender": "Machine", "sender_name": "AI", "files": [], "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "timestamp": "2025-02-05T14:45:35+00:00", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": []}}, "outputs": {"message": {"message": {"timestamp": "2025-02-05T14:45:35+00:00", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","files":[],"error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-g7uMN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"5688356d-9f30-40ca-9907-79a7a2fc16fd","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"},"type":"object"}},"logs":{"message":[]},"message":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"artifacts":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"timedelta":0.017838125000707805,"duration":"18 ms","used_frozen_result":false},"artifacts":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"params":"- Files: []\n  Message: Hello! 🌟 I'm excited to help you get started on your journey to building\n    something fresh! What do you have in mind? Whether it's a project, an idea, or\n    a concept, let's dive in and make it happen!\n  Sender: Machine\n  Sender Name: AI\n  Type: object\n","valid":true,"build_id":"1e8b908b-aba7-403b-9e9b-eca92bb78668","id":"ChatOutput-sfUhT","timestamp":"2024-12-23T19:10:58.813268Z","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"}]}}
+```json
+{
+    "job_id": "123e4567-e89b-12d3-a456-426614174000"
+}
 ```
 
    </TabItem>
 </Tabs>
 
-This output is abbreviated, but the order of events illustrates how Langflow runs components.
+2. After receiving a job ID from the build endpoint, use the `/build/{job_id}/events` endpoint to stream the execution results:
 
-1. Langflow first sorts the vertices by dependencies (edges) in the `vertices_sorted` event:
+<Tabs>
+   <TabItem value="curl" label="curl" default>
+
+```curl
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events" \
+  -H "accept: application/json"
 ```
-ChatInput → Prompt → OpenAIModel → ChatOutput
+
+   </TabItem>
+   <TabItem value="result" label="Result">
+
+```json
+  -H "accept: application/json"
+{"event": "vertices_sorted", "data": {"ids": ["ChatInput-XtBLx"], "to_run": ["Prompt-x74Ze", "ChatOutput-ylMzN", "ChatInput-XtBLx", "OpenAIModel-d1wOZ"]}}
+
+{"event": "add_message", "data": {"timestamp": "2025-03-03T17:42:23", "sender": "User", "sender_name": "User", "session_id": "d2bbd92b-187e-4c84-b2d4-5df365704201", "text": "Tell me a story", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "28879bd8-6a68-4dd5-b658-74d643a4dd92", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
+
+// ... Additional events as the flow executes ...
+
+{"event": "end", "data": {}}
 ```
-2. The Chat Input component receives user input in the `add_message` event.
-3. The Prompt component is built and executed with the received input in the `end_vertex` event.
-4. The Open AI model's responses stream as `token` events.
-The `token` event represents individual pieces of text as they're generated by an LLM.
-5. The clean `end` event tells you the flow executed with no errors.
-If your flow executes with errors, the `error` event handler prints the errors to the playground.
+
+   </TabItem>
+</Tabs>
+
+The events endpoint accepts an optional `stream` query parameter which defaults to `true`.
+To disable streaming and get all events at once, set `stream` to `false`.
+```curl
+# Disable streaming (get all events at once)
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events?stream=false" \
+  -H "accept: application/json"
+```
+
+#### Build endpoint parameters
+
+The `/build/{flow_id}/flow` endpoint accepts the following parameters in its request body:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| inputs | object | Optional. Input values for flow components |
+| data | object | Optional. Flow data to override stored configuration |
+| files | array[string] | Optional. List of file paths to use |
+| stop_component_id | string | Optional. ID of component where execution should stop |
+| start_component_id | string | Optional. ID of component where execution should start |
+| log_builds | boolean | Optional. Control build logging (default: true) |
+
 
 ### Configure the build endpoint
 
-The `/build` endpoint accepts values for `start_component_id` and `stop_component_id` to control where the flow run will start and stop.
+The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run will start and stop.
 Setting `stop_component_id` for a component triggers the same behavior as clicking the **Play** button on that component, where all dependent components leading up to that component are also run.
 For example, to stop flow execution at the Open AI model component, run the following command:
 
@@ -495,9 +527,7 @@ curl -X POST \
   <TabItem value="result" label="Result">
 
 ```json
-{"event": "vertices_sorted", "data": {"ids": [], "to_run": []}}
-
-{"event": "end", "data": {}}
+{"job_id":"0bcc7f23-40b4-4bfa-9b8a-a44181fd1175"}
 ```
 
   </TabItem>
