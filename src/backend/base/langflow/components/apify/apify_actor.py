@@ -41,6 +41,7 @@ class ApifyActorsComponent(Component):
                 "Actor name from Apify store to run. For example 'apify/website-content-crawler' "
                 "to use the Website Content Crawler Actor."
             ),
+            value="apify/website-content-crawler",
             required=True,
         ),
         # multiline input is more pleasant to use than the nested dict input
@@ -51,7 +52,7 @@ class ApifyActorsComponent(Component):
                 'The JSON input for the Actor run. For example for the "apify/website-content-crawler" Actor: '
                 '{"startUrls":[{"url":"https://docs.apify.com/academy/web-scraping-for-beginners"}],"maxCrawlDepth":0}'
             ),
-            value="{}",
+            value='{"startUrls":[{"url":"https://docs.apify.com/academy/web-scraping-for-beginners"}],"maxCrawlDepth":0}',
             required=True,
         ),
         MultilineInput(

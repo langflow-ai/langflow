@@ -6,27 +6,56 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ScrapeGraphSearchApi",
-            "id": "ScrapeGraphSearchApi-4qF2k",
-            "name": "component_as_tool",
+            "dataType": "ApifyActors",
+            "id": "ApifyActors-jgemH",
+            "name": "tool",
             "output_types": [
               "Tool"
             ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-CBAEF",
+            "id": "Agent-tJ6hy",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ScrapeGraphSearchApi-4qF2k{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-4qF2kœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-CBAEF{œfieldNameœ:œtoolsœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ScrapeGraphSearchApi-4qF2k",
-        "sourceHandle": "{œdataTypeœ: œScrapeGraphSearchApiœ, œidœ: œScrapeGraphSearchApi-4qF2kœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-CBAEF",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ApifyActors-jgemH{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-jgemHœ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-tJ6hy{œfieldNameœ:œtoolsœ,œidœ:œAgent-tJ6hyœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ApifyActors-jgemH",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-jgemHœ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-tJ6hy",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-tJ6hyœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ApifyActors",
+            "id": "ApifyActors-cP4n5",
+            "name": "tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-tJ6hy",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-ApifyActors-cP4n5{œdataTypeœ:œApifyActorsœ,œidœ:œApifyActors-cP4n5œ,œnameœ:œtoolœ,œoutput_typesœ:[œToolœ]}-Agent-tJ6hy{œfieldNameœ:œtoolsœ,œidœ:œAgent-tJ6hyœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ApifyActors-cP4n5",
+        "sourceHandle": "{œdataTypeœ: œApifyActorsœ, œidœ: œApifyActors-cP4n5œ, œnameœ: œtoolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-tJ6hy",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-tJ6hyœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -34,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-8hLIp",
+            "id": "ChatInput-4qBA5",
             "name": "message",
             "output_types": [
               "Message"
@@ -42,18 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-CBAEF",
+            "id": "Agent-tJ6hy",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-8hLIp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8hLIpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-CBAEF{œfieldNameœ:œinput_valueœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-8hLIp",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8hLIpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-CBAEF",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-4qBA5{œdataTypeœ:œChatInputœ,œidœ:œChatInput-4qBA5œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-tJ6hy{œfieldNameœ:œinput_valueœ,œidœ:œAgent-tJ6hyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-4qBA5",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-4qBA5œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-tJ6hy",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-tJ6hyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-CBAEF",
+            "id": "Agent-tJ6hy",
             "name": "response",
             "output_types": [
               "Message"
@@ -69,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-9EKQJ",
+            "id": "ChatOutput-JXgBE",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -78,36 +108,40 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-CBAEF{œdataTypeœ:œAgentœ,œidœ:œAgent-CBAEFœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9EKQJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9EKQJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "Agent-CBAEF",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-CBAEFœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-9EKQJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-9EKQJœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Agent-tJ6hy{œdataTypeœ:œAgentœ,œidœ:œAgent-tJ6hyœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-JXgBE{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-JXgBEœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-tJ6hy",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-tJ6hyœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-JXgBE",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-JXgBEœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ScrapeGraphSearchApi-4qF2k",
+          "id": "ApifyActors-jgemH",
           "node": {
             "base_classes": [
-              "Data"
+              "Data",
+              "Tool"
             ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
-            "display_name": "ScrapeGraphSearchApi",
-            "documentation": "https://docs.scrapegraphai.com/introduction",
+            "description": "Use Apify Actors to extract data from hundreds of places fast. This component can be used in a flow to retrieve data or as a tool with an agent.",
+            "display_name": "Apify Actors",
+            "documentation": "http://docs.langflow.org/integrations-apify",
             "edited": false,
             "field_order": [
-              "api_key",
-              "user_prompt"
+              "apify_token",
+              "actor_id",
+              "run_input",
+              "dataset_fields",
+              "flatten_dataset"
             ],
             "frozen": false,
-            "icon": "ScrapeGraph",
+            "icon": "Apify",
             "legacy": false,
-            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -115,10 +149,25 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Toolset",
+                "display_name": "Output",
                 "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
+                "method": "run_model",
+                "name": "output",
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Tool",
+                "hidden": null,
+                "method": "build_tool",
+                "name": "tool",
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -131,17 +180,36 @@
             "pinned": false,
             "template": {
               "_type": "Component",
-              "api_key": {
+              "actor_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Actor",
+                "dynamic": false,
+                "info": "Actor name from Apify store to run. For example 'apify/website-content-crawler' to use the Website Content Crawler Actor.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "actor_id",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "clockworks/free-tiktok-scraper"
+              },
+              "apify_token": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "ScrapeGraph API Key",
+                "display_name": "Apify Token",
                 "dynamic": false,
-                "info": "The API key to use ScrapeGraph API.",
+                "info": "The API token for the Apify account.",
                 "input_types": [
                   "Message"
                 ],
                 "load_from_db": false,
-                "name": "api_key",
+                "name": "apify_token",
                 "password": true,
                 "placeholder": "",
                 "required": true,
@@ -166,141 +234,384 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import (\n    MessageTextInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass ScrapeGraphSearchApi(Component):\n    display_name: str = \"ScrapeGraphSearchApi\"\n    description: str = \"\"\"ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper\"\"\"\n    name = \"ScrapeGraphSearchApi\"\n\n    documentation: str = \"https://docs.scrapegraphai.com/introduction\"\n    icon = \"ScrapeGraph\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"ScrapeGraph API Key\",\n            required=True,\n            password=True,\n            info=\"The API key to use ScrapeGraph API.\",\n        ),\n        MessageTextInput(\n            name=\"user_prompt\",\n            display_name=\"Search Prompt\",\n            tool_mode=True,\n            info=\"The search prompt to use.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"search\"),\n    ]\n\n    def search(self) -> list[Data]:\n        try:\n            from scrapegraph_py import Client\n            from scrapegraph_py.logger import sgai_logger\n        except ImportError as e:\n            msg = \"Could not import scrapegraph-py package. Please install it with `pip install scrapegraph-py`.\"\n            raise ImportError(msg) from e\n\n        # Set logging level\n        sgai_logger.set_logging(level=\"INFO\")\n\n        # Initialize the client with API key\n        sgai_client = Client(api_key=self.api_key)\n\n        try:\n            # SearchScraper request\n            response = sgai_client.searchscraper(\n                user_prompt=self.user_prompt,\n            )\n\n            # Close the client\n            sgai_client.close()\n\n            return Data(data=response)\n        except Exception:\n            sgai_client.close()\n            raise\n"
+                "value": "import json\nimport string\nfrom typing import Any, cast\n\nfrom apify_client import ApifyClient\nfrom langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader\nfrom langchain_core.tools import BaseTool\nfrom pydantic import BaseModel, Field, field_serializer\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import Tool\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import MultilineInput, Output, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\nMAX_DESCRIPTION_LEN = 250\n\n\nclass ApifyActorsComponent(Component):\n    display_name = \"Apify Actors\"\n    description = (\n        \"Use Apify Actors to extract data from hundreds of places fast. \"\n        \"This component can be used in a flow to retrieve data or as a tool with an agent.\"\n    )\n    documentation: str = \"http://docs.langflow.org/integrations-apify\"\n    icon = \"Apify\"\n    name = \"ApifyActors\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"apify_token\",\n            display_name=\"Apify Token\",\n            info=\"The API token for the Apify account.\",\n            required=True,\n            password=True,\n        ),\n        StrInput(\n            name=\"actor_id\",\n            display_name=\"Actor\",\n            info=(\n                \"Actor name from Apify store to run. For example 'apify/website-content-crawler' \"\n                \"to use the Website Content Crawler Actor.\"\n            ),\n            value=\"apify/website-content-crawler\",\n            required=True,\n        ),\n        # multiline input is more pleasant to use than the nested dict input\n        MultilineInput(\n            name=\"run_input\",\n            display_name=\"Run input\",\n            info=(\n                'The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: '\n                '{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}'\n            ),\n            value='{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}',\n            required=True,\n        ),\n        MultilineInput(\n            name=\"dataset_fields\",\n            display_name=\"Output fields\",\n            info=(\n                \"Fields to extract from the dataset, split by commas. \"\n                \"Other fields will be ignored. Dots in nested structures will be replaced by underscores. \"\n                \"Sample input: 'text, metadata.title'. \"\n                \"Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. \"\n                \"For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, \"\n                \"which is the content of the website in markdown format.\"\n            ),\n        ),\n        BoolInput(\n            name=\"flatten_dataset\",\n            display_name=\"Flatten output\",\n            info=(\n                \"The output dataset will be converted from a nested format to a flat structure. \"\n                \"Dots in nested structure will be replaced by underscores. \"\n                \"This is useful for further processing of the Data object. \"\n                \"For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.\"\n            ),\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", type_=list[Data], method=\"run_model\"),\n        Output(display_name=\"Tool\", name=\"tool\", type_=Tool, method=\"build_tool\"),\n    ]\n\n    def __init__(self, *args, **kwargs) -> None:\n        super().__init__(*args, **kwargs)\n        self._apify_client: ApifyClient | None = None\n\n    def run_model(self) -> list[Data]:\n        \"\"\"Run the Actor and return node output.\"\"\"\n        input_ = json.loads(self.run_input)\n        fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None\n        res = self._run_actor(self.actor_id, input_, fields=fields)\n        if self.flatten_dataset:\n            res = [ApifyActorsComponent.flatten(item) for item in res]\n        data = [Data(data=item) for item in res]\n\n        self.status = data\n        return data\n\n    def build_tool(self) -> Tool:\n        \"\"\"Build a tool for an agent that runs the Apify Actor.\"\"\"\n        actor_id = self.actor_id\n\n        build = self._get_actor_latest_build(actor_id)\n        readme = build.get(\"readme\", \"\")[:250] + \"...\"\n        if not (input_schema_str := build.get(\"inputSchema\")):\n            msg = \"Input schema not found\"\n            raise ValueError(msg)\n        input_schema = json.loads(input_schema_str)\n        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(input_schema)\n        properties = {\"run_input\": properties}\n\n        # works from input schema\n        info_ = [\n            (\n                \"JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\\n\\n\"\n                f\"{json.dumps(properties, separators=(',', ':'))}\"\n            )\n        ]\n        if required:\n            info_.append(\"\\n\\nRequired fields:\\n\" + \"\\n\".join(required))\n\n        info = \"\".join(info_)\n\n        input_model_cls = ApifyActorsComponent.create_input_model_class(info)\n        tool_cls = ApifyActorsComponent.create_tool_class(self, readme, input_model_cls, actor_id)\n\n        return cast(\"Tool\", tool_cls())\n\n    @staticmethod\n    def create_tool_class(\n        parent: \"ApifyActorsComponent\", readme: str, input_model: type[BaseModel], actor_id: str\n    ) -> type[BaseTool]:\n        \"\"\"Create a tool class that runs an Apify Actor.\"\"\"\n\n        class ApifyActorRun(BaseTool):\n            \"\"\"Tool that runs Apify Actors.\"\"\"\n\n            name: str = f\"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}\"\n            description: str = (\n                \"Run an Apify Actor with the given input. \"\n                \"Here is a part of the currently loaded Actor README:\\n\\n\"\n                f\"{readme}\\n\\n\"\n            )\n\n            args_schema: type[BaseModel] = input_model\n\n            @field_serializer(\"args_schema\")\n            def serialize_args_schema(self, args_schema):\n                return args_schema.schema()\n\n            def _run(self, run_input: str | dict) -> str:\n                \"\"\"Use the Apify Actor.\"\"\"\n                input_dict = json.loads(run_input) if isinstance(run_input, str) else run_input\n\n                # retrieve if nested, just in case\n                input_dict = input_dict.get(\"run_input\", input_dict)\n\n                res = parent._run_actor(actor_id, input_dict)\n                return \"\\n\\n\".join([ApifyActorsComponent.dict_to_json_str(item) for item in res])\n\n        return ApifyActorRun\n\n    @staticmethod\n    def create_input_model_class(description: str) -> type[BaseModel]:\n        \"\"\"Create a Pydantic model class for the Actor input.\"\"\"\n\n        class ActorInput(BaseModel):\n            \"\"\"Input for the Apify Actor tool.\"\"\"\n\n            run_input: str = Field(..., description=description)\n\n        return ActorInput\n\n    def _get_apify_client(self) -> ApifyClient:\n        \"\"\"Get the Apify client.\n\n        Is created if not exists or token changes.\n        \"\"\"\n        if not self.apify_token:\n            msg = \"API token is required.\"\n            raise ValueError(msg)\n        # when token changes, create a new client\n        if self._apify_client is None or self._apify_client.token != self.apify_token:\n            self._apify_client = ApifyClient(self.apify_token)\n            if httpx_client := self._apify_client.http_client.httpx_client:\n                httpx_client.headers[\"user-agent\"] += \"; Origin/langflow\"\n        return self._apify_client\n\n    def _get_actor_latest_build(self, actor_id: str) -> dict:\n        \"\"\"Get the latest build of an Actor from the default build tag.\"\"\"\n        client = self._get_apify_client()\n        actor = client.actor(actor_id=actor_id)\n        if not (actor_info := actor.get()):\n            msg = f\"Actor {actor_id} not found.\"\n            raise ValueError(msg)\n\n        default_build_tag = actor_info.get(\"defaultRunOptions\", {}).get(\"build\")\n        latest_build_id = actor_info.get(\"taggedBuilds\", {}).get(default_build_tag, {}).get(\"buildId\")\n\n        if (build := client.build(latest_build_id).get()) is None:\n            msg = f\"Build {latest_build_id} not found.\"\n            raise ValueError(msg)\n\n        return build\n\n    @staticmethod\n    def get_actor_input_schema_from_build(input_schema: dict) -> tuple[dict, list[str]]:\n        \"\"\"Get the input schema from the Actor build.\n\n        Trim the description to 250 characters.\n        \"\"\"\n        properties = input_schema.get(\"properties\", {})\n        required = input_schema.get(\"required\", [])\n\n        properties_out: dict = {}\n        for item, meta in properties.items():\n            properties_out[item] = {}\n            if desc := meta.get(\"description\"):\n                properties_out[item][\"description\"] = (\n                    desc[:MAX_DESCRIPTION_LEN] + \"...\" if len(desc) > MAX_DESCRIPTION_LEN else desc\n                )\n            for key_name in (\"type\", \"default\", \"prefill\", \"enum\"):\n                if value := meta.get(key_name):\n                    properties_out[item][key_name] = value\n\n        return properties_out, required\n\n    def _get_run_dataset_id(self, run_id: str) -> str:\n        \"\"\"Get the dataset id from the run id.\"\"\"\n        client = self._get_apify_client()\n        run = client.run(run_id=run_id)\n        if (dataset := run.dataset().get()) is None:\n            msg = \"Dataset not found\"\n            raise ValueError(msg)\n        if (did := dataset.get(\"id\")) is None:\n            msg = \"Dataset id not found\"\n            raise ValueError(msg)\n        return did\n\n    @staticmethod\n    def dict_to_json_str(d: dict) -> str:\n        \"\"\"Convert a dictionary to a JSON string.\"\"\"\n        return json.dumps(d, separators=(\",\", \":\"), default=lambda _: \"<n/a>\")\n\n    @staticmethod\n    def actor_id_to_tool_name(actor_id: str) -> str:\n        \"\"\"Turn actor_id into a valid tool name.\n\n        Tool name must only contain letters, numbers, underscores, dashes,\n            and cannot contain spaces.\n        \"\"\"\n        valid_chars = string.ascii_letters + string.digits + \"_-\"\n        return \"\".join(char if char in valid_chars else \"_\" for char in actor_id)\n\n    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:\n        \"\"\"Run an Apify Actor and return the output dataset.\n\n        Args:\n            actor_id: Actor name from Apify store to run.\n            run_input: JSON input for the Actor.\n            fields: List of fields to extract from the dataset. Other fields will be ignored.\n        \"\"\"\n        client = self._get_apify_client()\n        if (details := client.actor(actor_id=actor_id).call(run_input=run_input, wait_secs=1)) is None:\n            msg = \"Actor run details not found\"\n            raise ValueError(msg)\n        if (run_id := details.get(\"id\")) is None:\n            msg = \"Run id not found\"\n            raise ValueError(msg)\n\n        if (run_client := client.run(run_id)) is None:\n            msg = \"Run client not found\"\n            raise ValueError(msg)\n\n        # stream logs\n        with run_client.log().stream() as response:\n            if response:\n                for line in response.iter_lines():\n                    self.log(line)\n        run_client.wait_for_finish()\n\n        dataset_id = self._get_run_dataset_id(run_id)\n\n        loader = ApifyDatasetLoader(\n            dataset_id=dataset_id,\n            dataset_mapping_function=lambda item: item\n            if not fields\n            else {k.replace(\".\", \"_\"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},\n        )\n        return loader.load()\n\n    @staticmethod\n    def get_nested_value(data: dict[str, Any], key: str) -> Any:\n        \"\"\"Get a nested value from a dictionary.\"\"\"\n        keys = key.split(\".\")\n        value = data\n        for k in keys:\n            if not isinstance(value, dict) or k not in value:\n                return None\n            value = value[k]\n        return value\n\n    @staticmethod\n    def parse_dataset_fields(dataset_fields: str) -> list[str]:\n        \"\"\"Convert a string of comma-separated fields into a list of fields.\"\"\"\n        dataset_fields = dataset_fields.replace(\"'\", \"\").replace('\"', \"\").replace(\"`\", \"\")\n        return [field.strip() for field in dataset_fields.split(\",\")]\n\n    @staticmethod\n    def flatten(d: dict) -> dict:\n        \"\"\"Flatten a nested dictionary.\"\"\"\n\n        def items():\n            for key, value in d.items():\n                if isinstance(value, dict):\n                    for subkey, subvalue in ApifyActorsComponent.flatten(value).items():\n                        yield key + \"_\" + subkey, subvalue\n                else:\n                    yield key, value\n\n        return dict(items())\n"
               },
-              "tools_metadata": {
-                "_input_type": "TableInput",
+              "dataset_fields": {
+                "_input_type": "MultilineInput",
                 "advanced": false,
-                "display_name": "Edit tools",
+                "display_name": "Output fields",
                 "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "search(api_key: Message) - ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
-                    "name": "ScrapeGraphSearchApi-search",
-                    "tags": [
-                      "ScrapeGraphSearchApi-search"
-                    ]
-                  }
-                ]
-              },
-              "user_prompt": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Search Prompt",
-                "dynamic": false,
-                "info": "The search prompt to use.",
+                "info": "Fields to extract from the dataset, split by commas. Other fields will be ignored. Dots in nested structures will be replaced by underscores. Sample input: 'text, metadata.title'. Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, which is the content of the website in markdown format.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "name": "user_prompt",
+                "multiline": true,
+                "name": "dataset_fields",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": true,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "flatten_dataset": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Flatten output",
+                "dynamic": false,
+                "info": "The output dataset will be converted from a nested format to a flat structure. Dots in nested structure will be replaced by underscores. This is useful for further processing of the Data object. For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "flatten_dataset",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "run_input": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Run input",
+                "dynamic": false,
+                "info": "The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: {\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "run_input",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{}"
               }
             },
-            "tool_mode": true
+            "tool_mode": false
           },
           "showNode": true,
-          "type": "ScrapeGraphSearchApi"
+          "type": "ApifyActors"
         },
         "dragging": false,
-        "id": "ScrapeGraphSearchApi-4qF2k",
+        "id": "ApifyActors-jgemH",
         "measured": {
-          "height": 497,
+          "height": 628,
           "width": 320
         },
         "position": {
-          "x": 42.512465889820305,
-          "y": 172.783808513074
+          "x": 283.15772574454707,
+          "y": 39.657725744547065
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-CBAEF",
+          "id": "ApifyActors-cP4n5",
+          "node": {
+            "base_classes": [
+              "Data",
+              "Tool"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Use Apify Actors to extract data from hundreds of places fast. This component can be used in a flow to retrieve data or as a tool with an agent.",
+            "display_name": "Apify Actors",
+            "documentation": "http://docs.langflow.org/integrations-apify",
+            "edited": false,
+            "field_order": [
+              "apify_token",
+              "actor_id",
+              "run_input",
+              "dataset_fields",
+              "flatten_dataset"
+            ],
+            "frozen": false,
+            "icon": "Apify",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output",
+                "hidden": null,
+                "method": "run_model",
+                "name": "output",
+                "required_inputs": null,
+                "selected": "Data",
+                "tool_mode": true,
+                "types": [
+                  "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Tool",
+                "hidden": null,
+                "method": "build_tool",
+                "name": "tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "actor_id": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "display_name": "Actor",
+                "dynamic": false,
+                "info": "Actor name from Apify store to run. For example 'apify/website-content-crawler' to use the Website Content Crawler Actor.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "actor_id",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "apify/google-search-scraper"
+              },
+              "apify_token": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Apify Token",
+                "dynamic": false,
+                "info": "The API token for the Apify account.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "apify_token",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "import json\nimport string\nfrom typing import Any, cast\n\nfrom apify_client import ApifyClient\nfrom langchain_community.document_loaders.apify_dataset import ApifyDatasetLoader\nfrom langchain_core.tools import BaseTool\nfrom pydantic import BaseModel, Field, field_serializer\n\nfrom langflow.custom import Component\nfrom langflow.field_typing import Tool\nfrom langflow.inputs.inputs import BoolInput\nfrom langflow.io import MultilineInput, Output, SecretStrInput, StrInput\nfrom langflow.schema import Data\n\nMAX_DESCRIPTION_LEN = 250\n\n\nclass ApifyActorsComponent(Component):\n    display_name = \"Apify Actors\"\n    description = (\n        \"Use Apify Actors to extract data from hundreds of places fast. \"\n        \"This component can be used in a flow to retrieve data or as a tool with an agent.\"\n    )\n    documentation: str = \"http://docs.langflow.org/integrations-apify\"\n    icon = \"Apify\"\n    name = \"ApifyActors\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"apify_token\",\n            display_name=\"Apify Token\",\n            info=\"The API token for the Apify account.\",\n            required=True,\n            password=True,\n        ),\n        StrInput(\n            name=\"actor_id\",\n            display_name=\"Actor\",\n            info=(\n                \"Actor name from Apify store to run. For example 'apify/website-content-crawler' \"\n                \"to use the Website Content Crawler Actor.\"\n            ),\n            value=\"apify/website-content-crawler\",\n            required=True,\n        ),\n        # multiline input is more pleasant to use than the nested dict input\n        MultilineInput(\n            name=\"run_input\",\n            display_name=\"Run input\",\n            info=(\n                'The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: '\n                '{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}'\n            ),\n            value='{\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}',\n            required=True,\n        ),\n        MultilineInput(\n            name=\"dataset_fields\",\n            display_name=\"Output fields\",\n            info=(\n                \"Fields to extract from the dataset, split by commas. \"\n                \"Other fields will be ignored. Dots in nested structures will be replaced by underscores. \"\n                \"Sample input: 'text, metadata.title'. \"\n                \"Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. \"\n                \"For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, \"\n                \"which is the content of the website in markdown format.\"\n            ),\n        ),\n        BoolInput(\n            name=\"flatten_dataset\",\n            display_name=\"Flatten output\",\n            info=(\n                \"The output dataset will be converted from a nested format to a flat structure. \"\n                \"Dots in nested structure will be replaced by underscores. \"\n                \"This is useful for further processing of the Data object. \"\n                \"For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.\"\n            ),\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Output\", name=\"output\", type_=list[Data], method=\"run_model\"),\n        Output(display_name=\"Tool\", name=\"tool\", type_=Tool, method=\"build_tool\"),\n    ]\n\n    def __init__(self, *args, **kwargs) -> None:\n        super().__init__(*args, **kwargs)\n        self._apify_client: ApifyClient | None = None\n\n    def run_model(self) -> list[Data]:\n        \"\"\"Run the Actor and return node output.\"\"\"\n        input_ = json.loads(self.run_input)\n        fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None\n        res = self._run_actor(self.actor_id, input_, fields=fields)\n        if self.flatten_dataset:\n            res = [ApifyActorsComponent.flatten(item) for item in res]\n        data = [Data(data=item) for item in res]\n\n        self.status = data\n        return data\n\n    def build_tool(self) -> Tool:\n        \"\"\"Build a tool for an agent that runs the Apify Actor.\"\"\"\n        actor_id = self.actor_id\n\n        build = self._get_actor_latest_build(actor_id)\n        readme = build.get(\"readme\", \"\")[:250] + \"...\"\n        if not (input_schema_str := build.get(\"inputSchema\")):\n            msg = \"Input schema not found\"\n            raise ValueError(msg)\n        input_schema = json.loads(input_schema_str)\n        properties, required = ApifyActorsComponent.get_actor_input_schema_from_build(input_schema)\n        properties = {\"run_input\": properties}\n\n        # works from input schema\n        info_ = [\n            (\n                \"JSON encoded as a string with input schema (STRICTLY FOLLOW JSON FORMAT AND SCHEMA):\\n\\n\"\n                f\"{json.dumps(properties, separators=(',', ':'))}\"\n            )\n        ]\n        if required:\n            info_.append(\"\\n\\nRequired fields:\\n\" + \"\\n\".join(required))\n\n        info = \"\".join(info_)\n\n        input_model_cls = ApifyActorsComponent.create_input_model_class(info)\n        tool_cls = ApifyActorsComponent.create_tool_class(self, readme, input_model_cls, actor_id)\n\n        return cast(\"Tool\", tool_cls())\n\n    @staticmethod\n    def create_tool_class(\n        parent: \"ApifyActorsComponent\", readme: str, input_model: type[BaseModel], actor_id: str\n    ) -> type[BaseTool]:\n        \"\"\"Create a tool class that runs an Apify Actor.\"\"\"\n\n        class ApifyActorRun(BaseTool):\n            \"\"\"Tool that runs Apify Actors.\"\"\"\n\n            name: str = f\"apify_actor_{ApifyActorsComponent.actor_id_to_tool_name(actor_id)}\"\n            description: str = (\n                \"Run an Apify Actor with the given input. \"\n                \"Here is a part of the currently loaded Actor README:\\n\\n\"\n                f\"{readme}\\n\\n\"\n            )\n\n            args_schema: type[BaseModel] = input_model\n\n            @field_serializer(\"args_schema\")\n            def serialize_args_schema(self, args_schema):\n                return args_schema.schema()\n\n            def _run(self, run_input: str | dict) -> str:\n                \"\"\"Use the Apify Actor.\"\"\"\n                input_dict = json.loads(run_input) if isinstance(run_input, str) else run_input\n\n                # retrieve if nested, just in case\n                input_dict = input_dict.get(\"run_input\", input_dict)\n\n                res = parent._run_actor(actor_id, input_dict)\n                return \"\\n\\n\".join([ApifyActorsComponent.dict_to_json_str(item) for item in res])\n\n        return ApifyActorRun\n\n    @staticmethod\n    def create_input_model_class(description: str) -> type[BaseModel]:\n        \"\"\"Create a Pydantic model class for the Actor input.\"\"\"\n\n        class ActorInput(BaseModel):\n            \"\"\"Input for the Apify Actor tool.\"\"\"\n\n            run_input: str = Field(..., description=description)\n\n        return ActorInput\n\n    def _get_apify_client(self) -> ApifyClient:\n        \"\"\"Get the Apify client.\n\n        Is created if not exists or token changes.\n        \"\"\"\n        if not self.apify_token:\n            msg = \"API token is required.\"\n            raise ValueError(msg)\n        # when token changes, create a new client\n        if self._apify_client is None or self._apify_client.token != self.apify_token:\n            self._apify_client = ApifyClient(self.apify_token)\n            if httpx_client := self._apify_client.http_client.httpx_client:\n                httpx_client.headers[\"user-agent\"] += \"; Origin/langflow\"\n        return self._apify_client\n\n    def _get_actor_latest_build(self, actor_id: str) -> dict:\n        \"\"\"Get the latest build of an Actor from the default build tag.\"\"\"\n        client = self._get_apify_client()\n        actor = client.actor(actor_id=actor_id)\n        if not (actor_info := actor.get()):\n            msg = f\"Actor {actor_id} not found.\"\n            raise ValueError(msg)\n\n        default_build_tag = actor_info.get(\"defaultRunOptions\", {}).get(\"build\")\n        latest_build_id = actor_info.get(\"taggedBuilds\", {}).get(default_build_tag, {}).get(\"buildId\")\n\n        if (build := client.build(latest_build_id).get()) is None:\n            msg = f\"Build {latest_build_id} not found.\"\n            raise ValueError(msg)\n\n        return build\n\n    @staticmethod\n    def get_actor_input_schema_from_build(input_schema: dict) -> tuple[dict, list[str]]:\n        \"\"\"Get the input schema from the Actor build.\n\n        Trim the description to 250 characters.\n        \"\"\"\n        properties = input_schema.get(\"properties\", {})\n        required = input_schema.get(\"required\", [])\n\n        properties_out: dict = {}\n        for item, meta in properties.items():\n            properties_out[item] = {}\n            if desc := meta.get(\"description\"):\n                properties_out[item][\"description\"] = (\n                    desc[:MAX_DESCRIPTION_LEN] + \"...\" if len(desc) > MAX_DESCRIPTION_LEN else desc\n                )\n            for key_name in (\"type\", \"default\", \"prefill\", \"enum\"):\n                if value := meta.get(key_name):\n                    properties_out[item][key_name] = value\n\n        return properties_out, required\n\n    def _get_run_dataset_id(self, run_id: str) -> str:\n        \"\"\"Get the dataset id from the run id.\"\"\"\n        client = self._get_apify_client()\n        run = client.run(run_id=run_id)\n        if (dataset := run.dataset().get()) is None:\n            msg = \"Dataset not found\"\n            raise ValueError(msg)\n        if (did := dataset.get(\"id\")) is None:\n            msg = \"Dataset id not found\"\n            raise ValueError(msg)\n        return did\n\n    @staticmethod\n    def dict_to_json_str(d: dict) -> str:\n        \"\"\"Convert a dictionary to a JSON string.\"\"\"\n        return json.dumps(d, separators=(\",\", \":\"), default=lambda _: \"<n/a>\")\n\n    @staticmethod\n    def actor_id_to_tool_name(actor_id: str) -> str:\n        \"\"\"Turn actor_id into a valid tool name.\n\n        Tool name must only contain letters, numbers, underscores, dashes,\n            and cannot contain spaces.\n        \"\"\"\n        valid_chars = string.ascii_letters + string.digits + \"_-\"\n        return \"\".join(char if char in valid_chars else \"_\" for char in actor_id)\n\n    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:\n        \"\"\"Run an Apify Actor and return the output dataset.\n\n        Args:\n            actor_id: Actor name from Apify store to run.\n            run_input: JSON input for the Actor.\n            fields: List of fields to extract from the dataset. Other fields will be ignored.\n        \"\"\"\n        client = self._get_apify_client()\n        if (details := client.actor(actor_id=actor_id).call(run_input=run_input, wait_secs=1)) is None:\n            msg = \"Actor run details not found\"\n            raise ValueError(msg)\n        if (run_id := details.get(\"id\")) is None:\n            msg = \"Run id not found\"\n            raise ValueError(msg)\n\n        if (run_client := client.run(run_id)) is None:\n            msg = \"Run client not found\"\n            raise ValueError(msg)\n\n        # stream logs\n        with run_client.log().stream() as response:\n            if response:\n                for line in response.iter_lines():\n                    self.log(line)\n        run_client.wait_for_finish()\n\n        dataset_id = self._get_run_dataset_id(run_id)\n\n        loader = ApifyDatasetLoader(\n            dataset_id=dataset_id,\n            dataset_mapping_function=lambda item: item\n            if not fields\n            else {k.replace(\".\", \"_\"): ApifyActorsComponent.get_nested_value(item, k) for k in fields},\n        )\n        return loader.load()\n\n    @staticmethod\n    def get_nested_value(data: dict[str, Any], key: str) -> Any:\n        \"\"\"Get a nested value from a dictionary.\"\"\"\n        keys = key.split(\".\")\n        value = data\n        for k in keys:\n            if not isinstance(value, dict) or k not in value:\n                return None\n            value = value[k]\n        return value\n\n    @staticmethod\n    def parse_dataset_fields(dataset_fields: str) -> list[str]:\n        \"\"\"Convert a string of comma-separated fields into a list of fields.\"\"\"\n        dataset_fields = dataset_fields.replace(\"'\", \"\").replace('\"', \"\").replace(\"`\", \"\")\n        return [field.strip() for field in dataset_fields.split(\",\")]\n\n    @staticmethod\n    def flatten(d: dict) -> dict:\n        \"\"\"Flatten a nested dictionary.\"\"\"\n\n        def items():\n            for key, value in d.items():\n                if isinstance(value, dict):\n                    for subkey, subvalue in ApifyActorsComponent.flatten(value).items():\n                        yield key + \"_\" + subkey, subvalue\n                else:\n                    yield key, value\n\n        return dict(items())\n"
+              },
+              "dataset_fields": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Output fields",
+                "dynamic": false,
+                "info": "Fields to extract from the dataset, split by commas. Other fields will be ignored. Dots in nested structures will be replaced by underscores. Sample input: 'text, metadata.title'. Sample output: {'text': 'page content here', 'metadata_title': 'page title here'}. For example, for the 'apify/website-content-crawler' Actor, you can extract the 'markdown' field, which is the content of the website in markdown format.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "dataset_fields",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "flatten_dataset": {
+                "_input_type": "BoolInput",
+                "advanced": false,
+                "display_name": "Flatten output",
+                "dynamic": false,
+                "info": "The output dataset will be converted from a nested format to a flat structure. Dots in nested structure will be replaced by underscores. This is useful for further processing of the Data object. For example, {'a': {'b': 1}} will be flattened to {'a_b': 1}.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "flatten_dataset",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "run_input": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "Run input",
+                "dynamic": false,
+                "info": "The JSON input for the Actor run. For example for the \"apify/website-content-crawler\" Actor: {\"startUrls\":[{\"url\":\"https://docs.apify.com/academy/web-scraping-for-beginners\"}],\"maxCrawlDepth\":0}",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "run_input",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{}"
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "ApifyActors"
+        },
+        "dragging": false,
+        "id": "ApifyActors-cP4n5",
+        "measured": {
+          "height": 628,
+          "width": 320
+        },
+        "position": {
+          "x": 667.740737396329,
+          "y": 38.23718269967556
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-rYOSR",
+          "node": {
+            "description": "### 💡 Add your Apify API key here ",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "id": "note-rYOSR",
+        "measured": {
+          "height": 324,
+          "width": 324
+        },
+        "position": {
+          "x": 283.28440720113247,
+          "y": -12.197383176721686
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "note-yEsNf",
+          "node": {
+            "description": "### 💡 Add your Apify API key here ",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 324,
+        "id": "note-yEsNf",
+        "measured": {
+          "height": 324,
+          "width": 324
+        },
+        "position": {
+          "x": 670.9327129574519,
+          "y": -13.541445827465466
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 324
+      },
+      {
+        "data": {
+          "id": "note-nMqA3",
+          "node": {
+            "description": "# Social Media Agent\n\nExtract data with **Apify Actors** and analyze the data with an **Agent**.\n\n## Prerequisites\n\n* An [Apify API token](https://docs.apify.com/platform/integrations/api#api-token)\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Enter your **Apify** API token in the **Apify Token** fields of the **Apify Actors** components.  \n2. Enter your **OpenAI** API token in the **OpenAI API Key** field of the **Agent** component.\n3. Open the **Playground** and chat with the agent. For example, task it with retrieving a profile bio and the latest video by using this prompt:  \n   ```\n   Find the TikTok profile of the company OpenAI using Google search, then show me the profile bio and their latest video.\n   ```",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "amber"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 657,
+        "id": "note-nMqA3",
+        "measured": {
+          "height": 657,
+          "width": 525
+        },
+        "position": {
+          "x": -313.0627945618906,
+          "y": 7.352701184369295
+        },
+        "resizing": false,
+        "selected": true,
+        "type": "noteNode",
+        "width": 524
+      },
+      {
+        "data": {
+          "id": "Agent-tJ6hy",
           "node": {
             "base_classes": [
               "Message"
@@ -949,21 +1260,21 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-CBAEF",
+        "id": "Agent-tJ6hy",
         "measured": {
           "height": 624,
           "width": 320
         },
         "position": {
-          "x": 422.19675050009755,
-          "y": 174.69884952068273
+          "x": 1037.7286589753014,
+          "y": 289.4379030553223
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-8hLIp",
+          "id": "ChatInput-4qBA5",
           "node": {
             "base_classes": [
               "Message"
@@ -1257,21 +1568,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-8hLIp",
+        "id": "ChatInput-4qBA5",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 47.525451402968315,
-          "y": 675.7967517472522
+          "x": 656.0956221831866,
+          "y": 792.3772894800933
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-9EKQJ",
+          "id": "ChatOutput-JXgBE",
           "node": {
             "base_classes": [
               "Message"
@@ -1564,50 +1875,23 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-9EKQJ",
+        "id": "ChatOutput-JXgBE",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 809.444027447054,
-          "y": 739.9352693570207
+          "x": 1413.848308689952,
+          "y": 856.7319843711496
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "note-d88zH",
+          "id": "note-vxJmA",
           "node": {
-            "description": "## 🚀 ScrapeGraphAI Template 🔍\n\nThis template connects the **Search Point** endpoint from [ScrapeGraphAI](https://scrapegraphai.com) to an **Agent** component.\n\n## Prerequisites\n\n* [OpenAI API key](https://platform.openai.com/docs/overview)\n* [ScrapeGraphAI API key](https://dashboard.scrapegraphai.com)\n\n## Quickstart\n\n1. Add your **ScrapeGraphAI API key**  to the **ScrapeGraphSearchApi** component.\n\n2. Add your **OpenAI API key** to the **Agent** component.\n\n3. Open the **Playground** and ask your Agent a question. The Agent uses ScrapeGraph as a tool to answer you.",
-            "display_name": "",
-            "documentation": "",
-            "template": {}
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 584,
-        "id": "note-d88zH",
-        "measured": {
-          "height": 584,
-          "width": 346
-        },
-        "position": {
-          "x": -322.8560821408546,
-          "y": 163.07379721011972
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 345
-      },
-      {
-        "data": {
-          "id": "note-K97PH",
-          "node": {
-            "description": "### 💡 Add your OpenAI API key here 👇",
+            "description": "### 💡 Add your OpenAI API key here ",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1617,65 +1901,29 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-K97PH",
+        "id": "note-vxJmA",
         "measured": {
           "height": 324,
           "width": 324
         },
         "position": {
-          "x": 417.976712381606,
-          "y": 122.2833671724412
+          "x": 1035.6043472316023,
+          "y": 238.36639317703757
         },
         "selected": false,
         "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-Q9gWp",
-          "node": {
-            "description": "### 💡 Add your ScrapeGraphAI API key here 👇",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-Q9gWp",
-        "measured": {
-          "height": 324,
-          "width": 389
-        },
-        "position": {
-          "x": 8.432436918410303,
-          "y": 130.15072721938364
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 390
       }
     ],
     "viewport": {
-      "x": 386.73940143606825,
-      "y": 27.399081408903214,
-      "zoom": 0.9940070432926703
+      "x": 268.35408678474107,
+      "y": 148.7396124973913,
+      "zoom": 0.7057227006491215
     }
   },
-  "description": "Search the web for information.",
+  "description": "Utilize Apify Actors as agent tools to search and analyze social media profiles.",
   "endpoint_name": null,
-  "gradient": "3",
-  "icon": "search",
-  "id": "99aa93b0-8c09-4608-b6ca-b7edc07c5cc3",
+  "id": "a2c35c7a-e669-4bf4-b24c-f591a0d79ead",
   "is_component": false,
-  "last_tested_version": "1.1.5",
-  "name": "Search agent",
-  "tags": [
-    "web-scraping",
-    "agents",
-    "assistants"
-  ]
+  "last_tested_version": "1.2.0",
+  "name": "Social Media Agent"
 }
