@@ -177,9 +177,8 @@ class AstraDBToolComponent(LCToolComponent):
             return self._cached_collection
 
     def create_args_schema(self) -> dict[str, BaseModel]:
-        """
-        DEPRECATED: This method is deprecated. Please use create_args_schema_v2 instead.
-                    It is keep only for backward compatibility.
+        """DEPRECATED: This method is deprecated. Please use create_args_schema_v2 instead.
+        It is keep only for backward compatibility.
 
         """
         self.log.warning("This is the old way to define the tool parameters. Please use the new way.")
@@ -201,9 +200,7 @@ class AstraDBToolComponent(LCToolComponent):
         return {"ToolInput": model}
 
     def create_args_schema_v2(self) -> dict[str, BaseModel]:
-        """
-        Create the tool input schema using the new tool parameters configuration
-        """
+        """Create the tool input schema using the new tool parameters configuration"""
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
         for tool_param in self.tools_params_v2:
@@ -241,9 +238,7 @@ class AstraDBToolComponent(LCToolComponent):
         return tool
 
     def projection_args(self, input_str: str) -> dict:
-        """
-        Build the projection arguments for the AstraDB query.
-        """
+        """Build the projection arguments for the AstraDB query."""
         elements = input_str.split(",")
         result = {}
 
@@ -293,16 +288,14 @@ class AstraDBToolComponent(LCToolComponent):
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
-        """
-        Run the query to get the data from the AstraDB collection.
-        """
+        """Run the query to get the data from the AstraDB collection."""
         collection = self._build_collection()
         sort = {}
 
         # Build filters using the new method
         filters = self.build_filter(args, self.tools_params_v2)
 
-        # Build the vector search on 
+        # Build the vector search on
         if self.use_search_query and args["search_query"] is not None and args["search_query"] != "":
             if self.use_vectorize:
                 sort["$vectorize"] = args["search_query"]
