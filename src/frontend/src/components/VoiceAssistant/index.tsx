@@ -301,7 +301,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
             JSON.stringify({
               type: "elevenlabs.config",
               enabled: true,
-              voice_id: "21m00Tcm4TlvDq8ikWAM",
+              voice_id: "NOpBlnGInO9m6vDvFkFC",
             }),
           )
         }
