@@ -449,7 +449,6 @@ curl -X GET \
    <TabItem value="result" label="Result">
 
 ```json
-  -H "accept: application/json"
 {"event": "vertices_sorted", "data": {"ids": ["ChatInput-XtBLx"], "to_run": ["Prompt-x74Ze", "ChatOutput-ylMzN", "ChatInput-XtBLx", "OpenAIModel-d1wOZ"]}}
 
 {"event": "add_message", "data": {"timestamp": "2025-03-03T17:42:23", "sender": "User", "sender_name": "User", "session_id": "d2bbd92b-187e-4c84-b2d4-5df365704201", "text": "Tell me a story", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "28879bd8-6a68-4dd5-b658-74d643a4dd92", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
@@ -465,7 +464,6 @@ curl -X GET \
 The events endpoint accepts an optional `stream` query parameter which defaults to `true`.
 To disable streaming and get all events at once, set `stream` to `false`.
 ```curl
-# Disable streaming (get all events at once)
 curl -X GET \
   "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events?stream=false" \
   -H "accept: application/json"
@@ -477,12 +475,12 @@ The `/build/{flow_id}/flow` endpoint accepts the following parameters in its req
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| inputs | object | Optional. Input values for flow components |
-| data | object | Optional. Flow data to override stored configuration |
-| files | array[string] | Optional. List of file paths to use |
-| stop_component_id | string | Optional. ID of component where execution should stop |
-| start_component_id | string | Optional. ID of component where execution should start |
-| log_builds | boolean | Optional. Control build logging (default: true) |
+| inputs | object | Optional. Input values for flow components. |
+| data | object | Optional. Flow data to override stored configuration. |
+| files | array[string] | Optional. List of file paths to us. |
+| stop_component_id | string | Optional. ID of component where execution should stop. |
+| start_component_id | string | Optional. ID of component where execution should start. |
+| log_builds | boolean | Optional. Control build logging. Default: `true`. |
 
 
 ### Configure the build endpoint
