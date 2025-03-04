@@ -138,7 +138,6 @@ langflow run [OPTIONS]
 - `--workers`: 设置工作进程的数量，可以使用 LANGFLOW_WORKERS 环境变量设置，默认值为 1。
 - `--worker-timeout`: 设置工作进程的超时时间（秒），默认值为 60。
 - `--port`: 设置服务监听的端口，可以使用 LANGFLOW_PORT 环境变量设置，默认值为 7860。
-- `--config`: 定义配置文件的路径，默认值为 config.yaml。
 - `--env-file`: 指定包含环境变量的 .env 文件路径，默认值为 .env。
 - `--log-level`: 定义日志记录级别，可以使用 LANGFLOW_LOG_LEVEL 环境变量设置，默认值为 critical。
 - `--components-path`: 指定包含自定义组件的目录路径，可以使用 LANGFLOW_COMPONENTS_PATH 环境变量设置，默认值为 langflow/components。
