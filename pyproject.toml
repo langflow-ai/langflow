@@ -97,7 +97,7 @@ dependencies = [
     "langchain-ollama==0.2.1",
     "langchain-sambanova==0.1.0",
     "langchain-community~=0.3.10",
-    "sqlalchemy[aiosqlite,postgresql_psycopg2binary,postgresql_psycopgbinary]>=2.0.38,<3.0.0",
+    "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
     "atlassian-python-api==3.41.16",
     "mem0ai==0.1.34",
     "needle-python>=0.4.0",
@@ -121,7 +121,7 @@ dev = [
     "types-redis>=4.6.0.5",
     "ipykernel>=6.29.0",
     "mypy>=1.11.0",
-    "ruff>=0.9.1,<0.10",
+    "ruff>=0.9.7,<0.10",
     "httpx>=0.27.0",
     "pytest>=8.2.0",
     "types-requests>=2.32.0",
@@ -155,6 +155,7 @@ dev = [
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust>=2.32.9",
+    "pytest-rerunfailures>=15.0",
 ]
 
 [tool.uv.sources]
@@ -199,6 +200,12 @@ nv-ingest = [
     "python-pptx==0.6.23",
     "pymilvus[bulk_writer,model]==2.5.0",
     "llama-index-embeddings-nvidia==0.1.5",
+]
+
+postgresql = [
+  "sqlalchemy[postgresql_psycopg2binary]",
+    "sqlalchemy[postgresql_psycopg]",
+
 ]
 
 [project.scripts]

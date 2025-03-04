@@ -6,8 +6,35 @@
         "className": "",
         "data": {
           "sourceHandle": {
+            "dataType": "ScrapeGraphSearchApi",
+            "id": "ScrapeGraphSearchApi-4qF2k",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-CBAEF",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-ScrapeGraphSearchApi-4qF2k{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-4qF2kœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-CBAEF{œfieldNameœ:œtoolsœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "ScrapeGraphSearchApi-4qF2k",
+        "sourceHandle": "{œdataTypeœ: œScrapeGraphSearchApiœ, œidœ: œScrapeGraphSearchApi-4qF2kœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-CBAEF",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-vSKY8",
+            "id": "ChatInput-8hLIp",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +42,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-EPjLx",
+            "id": "Agent-CBAEF",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-vSKY8{œdataTypeœ:œChatInputœ,œidœ:œChatInput-vSKY8œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-EPjLx{œfieldNameœ:œinput_valueœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-vSKY8",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-vSKY8œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-EPjLx",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-8hLIp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8hLIpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-CBAEF{œfieldNameœ:œinput_valueœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8hLIp",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8hLIpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-CBAEF",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +61,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-EPjLx",
+            "id": "Agent-CBAEF",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,81 +69,238 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-x6tZi",
+            "id": "ChatOutput-9EKQJ",
             "inputTypes": [
               "Data",
               "DataFrame",
               "Message"
             ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-EPjLx{œdataTypeœ:œAgentœ,œidœ:œAgent-EPjLxœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-x6tZi{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-x6tZiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-EPjLx",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-EPjLxœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-x6tZi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-x6tZiœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "CalculatorComponent",
-            "id": "CalculatorComponent-zxpIu",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-EPjLx",
-            "inputTypes": [
-              "Tool"
-            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-CalculatorComponent-zxpIu{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-zxpIuœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-EPjLx{œfieldNameœ:œtoolsœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "CalculatorComponent-zxpIu",
-        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-zxpIuœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-EPjLx",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "URL",
-            "id": "URL-yM3pY",
-            "name": "component_as_tool",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-EPjLx",
-            "inputTypes": [
-              "Tool"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-URL-yM3pY{œdataTypeœ:œURLœ,œidœ:œURL-yM3pYœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-EPjLx{œfieldNameœ:œtoolsœ,œidœ:œAgent-EPjLxœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "URL-yM3pY",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-yM3pYœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-EPjLx",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-EPjLxœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Agent-CBAEF{œdataTypeœ:œAgentœ,œidœ:œAgent-CBAEFœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9EKQJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9EKQJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "source": "Agent-CBAEF",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-CBAEFœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-9EKQJ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-9EKQJœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "description": "Define the agent's instructions, then enter a task to complete using tools.",
-          "display_name": "Agent",
-          "id": "Agent-EPjLx",
+          "id": "ScrapeGraphSearchApi-4qF2k",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
+            "display_name": "ScrapeGraphSearchApi",
+            "documentation": "https://docs.scrapegraphai.com/introduction",
+            "edited": false,
+            "field_order": [
+              "api_key",
+              "user_prompt"
+            ],
+            "frozen": false,
+            "icon": "ScrapeGraph",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "ScrapeGraph API Key",
+                "dynamic": false,
+                "info": "The API key to use ScrapeGraph API.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import Component\nfrom langflow.io import (\n    MessageTextInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass ScrapeGraphSearchApi(Component):\n    display_name: str = \"ScrapeGraphSearchApi\"\n    description: str = \"\"\"ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper\"\"\"\n    name = \"ScrapeGraphSearchApi\"\n\n    documentation: str = \"https://docs.scrapegraphai.com/introduction\"\n    icon = \"ScrapeGraph\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"ScrapeGraph API Key\",\n            required=True,\n            password=True,\n            info=\"The API key to use ScrapeGraph API.\",\n        ),\n        MessageTextInput(\n            name=\"user_prompt\",\n            display_name=\"Search Prompt\",\n            tool_mode=True,\n            info=\"The search prompt to use.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"search\"),\n    ]\n\n    def search(self) -> list[Data]:\n        try:\n            from scrapegraph_py import Client\n            from scrapegraph_py.logger import sgai_logger\n        except ImportError as e:\n            msg = \"Could not import scrapegraph-py package. Please install it with `pip install scrapegraph-py`.\"\n            raise ImportError(msg) from e\n\n        # Set logging level\n        sgai_logger.set_logging(level=\"INFO\")\n\n        # Initialize the client with API key\n        sgai_client = Client(api_key=self.api_key)\n\n        try:\n            # SearchScraper request\n            response = sgai_client.searchscraper(\n                user_prompt=self.user_prompt,\n            )\n\n            # Close the client\n            sgai_client.close()\n\n            return Data(data=response)\n        except Exception:\n            sgai_client.close()\n            raise\n"
+              },
+              "tools_metadata": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": true,
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "search(api_key: Message) - ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
+                    "name": "ScrapeGraphSearchApi-search",
+                    "tags": [
+                      "ScrapeGraphSearchApi-search"
+                    ]
+                  }
+                ]
+              },
+              "user_prompt": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Search Prompt",
+                "dynamic": false,
+                "info": "The search prompt to use.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "user_prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": true
+          },
+          "showNode": true,
+          "type": "ScrapeGraphSearchApi"
+        },
+        "dragging": false,
+        "id": "ScrapeGraphSearchApi-4qF2k",
+        "measured": {
+          "height": 497,
+          "width": 320
+        },
+        "position": {
+          "x": 42.512465889820305,
+          "y": 172.783808513074
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Agent-CBAEF",
           "node": {
             "base_classes": [
               "Message"
@@ -134,13 +317,13 @@
               "max_tokens",
               "model_kwargs",
               "json_mode",
-              "output_schema",
               "model_name",
               "openai_api_base",
               "api_key",
               "temperature",
               "seed",
-              "output_parser",
+              "max_retries",
+              "timeout",
               "system_prompt",
               "tools",
               "input_value",
@@ -160,8 +343,9 @@
             "frozen": false,
             "icon": "bot",
             "legacy": false,
-            "lf_version": "1.1.1",
+            "lf_version": "1.1.5",
             "metadata": {},
+            "minimized": false,
             "output_types": [],
             "outputs": [
               {
@@ -188,11 +372,13 @@
                 "dynamic": false,
                 "info": "If true, will add a tool to the agent that returns the current date.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "add_current_date_tool",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -207,6 +393,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "agent_description",
@@ -224,6 +411,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Model Provider",
                 "dynamic": false,
                 "info": "The provider of the language model that the agent will use to generate responses.",
@@ -240,6 +428,7 @@
                   "SambaNova",
                   "Custom"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "real_time_refresh": true,
                 "required": false,
@@ -259,7 +448,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -267,7 +456,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -294,11 +483,13 @@
                 "dynamic": false,
                 "info": "Should the Agent fix errors when reading user input for better processing?",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "handle_parsing_errors",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -313,6 +504,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
@@ -332,11 +524,13 @@
                 "dynamic": false,
                 "info": "If True, it will output JSON regardless of passing a schema.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "json_mode",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": false
@@ -348,11 +542,13 @@
                 "dynamic": false,
                 "info": "The maximum number of attempts the agent can make to complete its task before it stops.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_iterations",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 15
@@ -382,6 +578,7 @@
                 "dynamic": false,
                 "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "max_tokens",
                 "placeholder": "",
                 "range_spec": {
@@ -393,6 +590,7 @@
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": ""
@@ -407,6 +605,7 @@
                   "Memory"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "memory",
                 "placeholder": "",
                 "required": false,
@@ -423,11 +622,13 @@
                 "dynamic": false,
                 "info": "Additional keyword arguments to pass to the model.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "model_kwargs",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_input": true,
                 "type": "dict",
                 "value": {}
@@ -436,6 +637,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": false,
                 "combobox": true,
+                "dialog_inputs": {},
                 "display_name": "Model Name",
                 "dynamic": false,
                 "info": "To see the model names, first choose a provider. Then, enter your API key and click the refresh button next to the model name.",
@@ -449,7 +651,9 @@
                   "gpt-3.5-turbo",
                   "gpt-3.5-turbo-0125"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
+                "real_time_refresh": false,
                 "required": false,
                 "show": true,
                 "title_case": false,
@@ -465,11 +669,13 @@
                 "dynamic": false,
                 "info": "Number of messages to retrieve.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "n_messages",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 100
@@ -481,12 +687,14 @@
                 "dynamic": false,
                 "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "openai_api_base",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
@@ -495,6 +703,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Order",
                 "dynamic": false,
                 "info": "Order of the messages.",
@@ -503,11 +712,12 @@
                   "Ascending",
                   "Descending"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
+                "tool_mode": true,
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
@@ -519,11 +729,13 @@
                 "dynamic": false,
                 "info": "The seed controls the reproducibility of the job.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "seed",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "int",
                 "value": 1
@@ -532,6 +744,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Filter by sender type.",
@@ -541,6 +754,7 @@
                   "User",
                   "Machine and User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -560,6 +774,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -582,6 +797,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -604,6 +820,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "system_prompt",
@@ -615,22 +832,34 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks.\nUse markdown to format your answer, properly embedding images and urls."
+                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
               },
               "temperature": {
-                "_input_type": "FloatInput",
+                "_input_type": "SliderInput",
                 "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "",
-                "list": false,
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
                 "name": "temperature",
                 "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
                 "required": false,
                 "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
                 "title_case": false,
-                "trace_as_metadata": true,
-                "type": "float",
+                "tool_mode": false,
+                "type": "slider",
                 "value": 0.1
               },
               "template": {
@@ -643,6 +872,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "template",
@@ -684,6 +914,7 @@
                   "Tool"
                 ],
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "tools",
                 "placeholder": "",
                 "required": false,
@@ -700,11 +931,13 @@
                 "dynamic": false,
                 "info": "",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "verbose",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -712,24 +945,25 @@
             },
             "tool_mode": false
           },
+          "showNode": true,
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-EPjLx",
+        "id": "Agent-CBAEF",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
-          "x": 1652.2479633316434,
-          "y": 297.9085084144251
+          "x": 422.19675050009755,
+          "y": 174.69884952068273
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-vSKY8",
+          "id": "ChatInput-8hLIp",
           "node": {
             "base_classes": [
               "Message"
@@ -755,8 +989,9 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.1",
+            "lf_version": "1.1.5",
             "metadata": {},
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
@@ -786,6 +1021,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -808,6 +1044,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -871,6 +1108,7 @@
                 "file_path": "",
                 "info": "Files to be sent with the message.",
                 "list": true,
+                "list_add_label": "Add More",
                 "name": "files",
                 "placeholder": "",
                 "required": false,
@@ -888,6 +1126,7 @@
                 "info": "Message to be passed as input.",
                 "input_types": [],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "multiline": true,
                 "name": "input_value",
@@ -905,6 +1144,7 @@
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -913,6 +1153,7 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -932,6 +1173,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -954,6 +1196,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -973,11 +1216,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -992,6 +1237,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -1007,26 +1253,25 @@
             },
             "tool_mode": false
           },
+          "showNode": false,
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-vSKY8",
+        "id": "ChatInput-8hLIp",
         "measured": {
-          "height": 229,
-          "width": 320
+          "height": 66,
+          "width": 192
         },
         "position": {
-          "x": 1241.9566260691947,
-          "y": 930.7462715570136
+          "x": 47.525451402968315,
+          "y": 675.7967517472522
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "description": "Display a chat message in the Playground.",
-          "display_name": "Chat Output",
-          "id": "ChatOutput-x6tZi",
+          "id": "ChatOutput-9EKQJ",
           "node": {
             "base_classes": [
               "Message"
@@ -1047,13 +1292,15 @@
               "data_template",
               "background_color",
               "chat_icon",
-              "text_color"
+              "text_color",
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.1",
+            "lf_version": "1.1.5",
             "metadata": {},
+            "minimized": true,
             "output_types": [],
             "outputs": [
               {
@@ -1083,6 +1330,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "background_color",
                 "placeholder": "",
@@ -1105,6 +1353,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "chat_icon",
                 "placeholder": "",
@@ -1163,6 +1412,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "data_template",
                 "placeholder": "",
@@ -1176,7 +1426,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Text",
                 "dynamic": false,
@@ -1187,21 +1437,21 @@
                   "Message"
                 ],
                 "list": false,
-                "load_from_db": false,
+                "list_add_label": "Add More",
                 "name": "input_value",
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
                 "combobox": false,
+                "dialog_inputs": {},
                 "display_name": "Sender Type",
                 "dynamic": false,
                 "info": "Type of sender.",
@@ -1210,6 +1460,7 @@
                   "Machine",
                   "User"
                 ],
+                "options_metadata": [],
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -1229,6 +1480,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "sender_name",
                 "placeholder": "",
@@ -1251,6 +1503,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "session_id",
                 "placeholder": "",
@@ -1270,11 +1523,13 @@
                 "dynamic": false,
                 "info": "Store the message in the history.",
                 "list": false,
+                "list_add_label": "Add More",
                 "name": "should_store_message",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
+                "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "bool",
                 "value": true
@@ -1289,6 +1544,7 @@
                   "Message"
                 ],
                 "list": false,
+                "list_add_label": "Add More",
                 "load_from_db": false,
                 "name": "text_color",
                 "placeholder": "",
@@ -1304,276 +1560,54 @@
             },
             "tool_mode": false
           },
+          "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-x6tZi",
-        "measured": {
-          "height": 229,
-          "width": 320
-        },
-        "position": {
-          "x": 2029.726227044409,
-          "y": 521.9624030396819
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "description": "Load and retrive data from specified URLs.",
-          "display_name": "URL",
-          "id": "URL-yM3pY",
-          "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Load and retrive data from specified URLs.",
-            "display_name": "URL",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "urls",
-              "format"
-            ],
-            "frozen": false,
-            "icon": "layout-template",
-            "legacy": false,
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import re\n\nfrom langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\n\n\nclass URLComponent(Component):\n    display_name = \"URL\"\n    description = \"Load and retrive data from specified URLs.\"\n    icon = \"layout-template\"\n    name = \"URL\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            is_list=True,\n            tool_mode=True,\n            placeholder=\"Enter a URL...\",\n            list_add_label=\"Add URL\",\n        ),\n        DropdownInput(\n            name=\"format\",\n            display_name=\"Output Format\",\n            info=\"Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.\",\n            options=[\"Text\", \"Raw HTML\"],\n            value=\"Text\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Message\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def ensure_url(self, string: str) -> str:\n        \"\"\"Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.\n\n        Raises an error if the string is not a valid URL.\n\n        Parameters:\n            string (str): The string to be checked and possibly modified.\n\n        Returns:\n            str: The modified string that is ensured to be a URL.\n\n        Raises:\n            ValueError: If the string is not a valid URL.\n        \"\"\"\n        if not string.startswith((\"http://\", \"https://\")):\n            string = \"http://\" + string\n\n        # Basic URL validation regex\n        url_regex = re.compile(\n            r\"^(https?:\\/\\/)?\"  # optional protocol\n            r\"(www\\.)?\"  # optional www\n            r\"([a-zA-Z0-9.-]+)\"  # domain\n            r\"(\\.[a-zA-Z]{2,})?\"  # top-level domain\n            r\"(:\\d+)?\"  # optional port\n            r\"(\\/[^\\s]*)?$\",  # optional path\n            re.IGNORECASE,\n        )\n\n        if not url_regex.match(string):\n            msg = f\"Invalid URL: {string}\"\n            raise ValueError(msg)\n\n        return string\n\n    def fetch_content(self) -> list[Data]:\n        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]\n        if self.format == \"Raw HTML\":\n            loader = AsyncHtmlLoader(web_path=urls, encoding=\"utf-8\")\n        else:\n            loader = WebBaseLoader(web_paths=urls, encoding=\"utf-8\")\n        docs = loader.load()\n        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]\n        self.status = data\n        return data\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.fetch_content())\n"
-              },
-              "format": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "display_name": "Output Format",
-                "dynamic": false,
-                "info": "Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
-                "name": "format",
-                "options": [
-                  "Text",
-                  "Raw HTML"
-                ],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Text"
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "fetch_content() - Load and retrive data from specified URLs.",
-                    "name": "URL-fetch_content",
-                    "tags": [
-                      "URL-fetch_content"
-                    ]
-                  },
-                  {
-                    "description": "fetch_content_text() - Load and retrive data from specified URLs.",
-                    "name": "URL-fetch_content_text",
-                    "tags": [
-                      "URL-fetch_content_text"
-                    ]
-                  },
-                  {
-                    "description": "as_dataframe() - Load and retrive data from specified URLs.",
-                    "name": "URL-as_dataframe",
-                    "tags": [
-                      "URL-as_dataframe"
-                    ]
-                  }
-                ]
-              },
-              "urls": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "URLs",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": true,
-                "list_add_label": "Add URL",
-                "load_from_db": false,
-                "name": "urls",
-                "placeholder": "Enter a URL...",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": true
-          },
-          "type": "URL"
-        },
         "dragging": false,
-        "id": "URL-yM3pY",
+        "id": "ChatOutput-9EKQJ",
         "measured": {
-          "height": 403,
-          "width": 320
+          "height": 66,
+          "width": 192
         },
         "position": {
-          "x": 1225.8773509111968,
-          "y": 27.333577318641687
+          "x": 809.444027447054,
+          "y": 739.9352693570207
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "note-Zo71g",
+          "id": "note-d88zH",
           "node": {
-            "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Add your OpenAI API key to the Agent.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
+            "description": "## 🚀 ScrapeGraphAI Template 🔍\n\nThis template connects the **Search Point** endpoint from [ScrapeGraphAI](https://scrapegraphai.com) to an **Agent** component.\n\n## Prerequisites\n\n* [OpenAI API key](https://platform.openai.com/docs/overview)\n* [ScrapeGraphAI API key](https://dashboard.scrapegraphai.com)\n\n## Quickstart\n\n1. Add your **ScrapeGraphAI API key**  to the **ScrapeGraphSearchApi** component.\n\n2. Add your **OpenAI API key** to the **Agent** component.\n\n3. Open the **Playground** and ask your Agent a question. The Agent uses ScrapeGraph as a tool to answer you.",
             "display_name": "",
             "documentation": "",
-            "template": {
-              "backgroundColor": "neutral"
-            }
+            "template": {}
           },
           "type": "note"
         },
         "dragging": false,
-        "id": "note-Zo71g",
+        "height": 584,
+        "id": "note-d88zH",
         "measured": {
-          "height": 324,
-          "width": 324
+          "height": 584,
+          "width": 346
         },
         "position": {
-          "x": 775.5268622081468,
-          "y": 27.927425537464444
+          "x": -322.8560821408546,
+          "y": 163.07379721011972
         },
-        "selected": true,
-        "type": "noteNode"
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 345
       },
       {
         "data": {
-          "id": "note-enlN0",
+          "id": "note-K97PH",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here👇",
+            "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -1582,224 +1616,66 @@
           },
           "type": "note"
         },
-        "id": "note-enlN0",
+        "dragging": false,
+        "id": "note-K97PH",
         "measured": {
-          "height": 698,
+          "height": 324,
           "width": 324
         },
         "position": {
-          "x": 1648.6876745095624,
-          "y": 253.8646618156497
+          "x": 417.976712381606,
+          "y": 122.2833671724412
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "CalculatorComponent-zxpIu",
+          "id": "note-Q9gWp",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "category": "tools",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Perform basic arithmetic operations on a given expression.",
-            "display_name": "Calculator",
+            "description": "### 💡 Add your ScrapeGraphAI API key here 👇",
+            "display_name": "",
             "documentation": "",
-            "edited": false,
-            "field_order": [
-              "expression"
-            ],
-            "frozen": false,
-            "icon": "calculator",
-            "key": "CalculatorComponent",
-            "legacy": false,
-            "lf_version": "1.1.1",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.001,
             "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import ast\nimport operator\nfrom collections.abc import Callable\n\nfrom langflow.custom import Component\nfrom langflow.inputs import MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\n\n\nclass CalculatorComponent(Component):\n    display_name = \"Calculator\"\n    description = \"Perform basic arithmetic operations on a given expression.\"\n    icon = \"calculator\"\n\n    # Cache operators dictionary as a class variable\n    OPERATORS: dict[type[ast.operator], Callable] = {\n        ast.Add: operator.add,\n        ast.Sub: operator.sub,\n        ast.Mult: operator.mul,\n        ast.Div: operator.truediv,\n        ast.Pow: operator.pow,\n    }\n\n    inputs = [\n        MessageTextInput(\n            name=\"expression\",\n            display_name=\"Expression\",\n            info=\"The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').\",\n            tool_mode=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"result\", type_=Data, method=\"evaluate_expression\"),\n    ]\n\n    def _eval_expr(self, node: ast.AST) -> float:\n        \"\"\"Evaluate an AST node recursively.\"\"\"\n        if isinstance(node, ast.Constant):\n            if isinstance(node.value, int | float):\n                return float(node.value)\n            error_msg = f\"Unsupported constant type: {type(node.value).__name__}\"\n            raise TypeError(error_msg)\n        if isinstance(node, ast.Num):  # For backwards compatibility\n            if isinstance(node.n, int | float):\n                return float(node.n)\n            error_msg = f\"Unsupported number type: {type(node.n).__name__}\"\n            raise TypeError(error_msg)\n\n        if isinstance(node, ast.BinOp):\n            op_type = type(node.op)\n            if op_type not in self.OPERATORS:\n                error_msg = f\"Unsupported binary operator: {op_type.__name__}\"\n                raise TypeError(error_msg)\n\n            left = self._eval_expr(node.left)\n            right = self._eval_expr(node.right)\n            return self.OPERATORS[op_type](left, right)\n\n        error_msg = f\"Unsupported operation or expression type: {type(node).__name__}\"\n        raise TypeError(error_msg)\n\n    def evaluate_expression(self) -> Data:\n        \"\"\"Evaluate the mathematical expression and return the result.\"\"\"\n        try:\n            tree = ast.parse(self.expression, mode=\"eval\")\n            result = self._eval_expr(tree.body)\n\n            formatted_result = f\"{float(result):.6f}\".rstrip(\"0\").rstrip(\".\")\n            self.log(f\"Calculation result: {formatted_result}\")\n\n            self.status = formatted_result\n            return Data(data={\"result\": formatted_result})\n\n        except ZeroDivisionError:\n            error_message = \"Error: Division by zero\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n        except (SyntaxError, TypeError, KeyError, ValueError, AttributeError, OverflowError) as e:\n            error_message = f\"Invalid expression: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message, \"input\": self.expression})\n\n    def build(self):\n        \"\"\"Return the main evaluation function.\"\"\"\n        return self.evaluate_expression\n"
-              },
-              "expression": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Expression",
-                "dynamic": false,
-                "info": "The arithmetic expression to evaluate (e.g., '4*4*(33/22)+12-20').",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "expression",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "evaluate_expression() - Perform basic arithmetic operations on a given expression.",
-                    "name": "None-evaluate_expression",
-                    "tags": [
-                      "None-evaluate_expression"
-                    ]
-                  }
-                ]
-              }
-            },
-            "tool_mode": true
+              "backgroundColor": "transparent"
+            }
           },
-          "showNode": true,
-          "type": "CalculatorComponent"
+          "type": "note"
         },
         "dragging": false,
-        "id": "CalculatorComponent-zxpIu",
+        "height": 324,
+        "id": "note-Q9gWp",
         "measured": {
-          "height": 333,
-          "width": 320
+          "height": 324,
+          "width": 389
         },
         "position": {
-          "x": 1233.166256931297,
-          "y": 514.7544001650839
+          "x": 8.432436918410303,
+          "y": 130.15072721938364
         },
+        "resizing": false,
         "selected": false,
-        "type": "genericNode"
+        "type": "noteNode",
+        "width": 390
       }
     ],
     "viewport": {
-      "x": 528.5325055091846,
-      "y": 51.2172319875898,
-      "zoom": 0.12508906569071757
+      "x": 386.73940143606825,
+      "y": 27.399081408903214,
+      "zoom": 0.9940070432926703
     }
   },
-  "description": "A simple but powerful starter agent.",
+  "description": "Search the web for information.",
   "endpoint_name": null,
-  "id": "263070d6-3560-4f4d-a6c4-003f4a586e6e",
+  "gradient": "3",
+  "icon": "search",
+  "id": "99aa93b0-8c09-4608-b6ca-b7edc07c5cc3",
   "is_component": false,
-  "last_tested_version": "1.1.1",
-  "name": "Simple Agent",
+  "last_tested_version": "1.1.5",
+  "name": "Search agent",
   "tags": [
-    "assistants",
-    "agents"
+    "web-scraping",
+    "agents",
+    "assistants"
   ]
 }
