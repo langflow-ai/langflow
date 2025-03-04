@@ -3,10 +3,10 @@ import json
 import logging
 from datetime import datetime, timezone
 from io import BytesIO
-from huggingface_hub import HfApi
 
 import httpx
 import pandas as pd
+from huggingface_hub import HfApi
 
 from langflow.custom import Component
 from langflow.io import (
@@ -14,7 +14,6 @@ from langflow.io import (
     DropdownInput,
     FloatInput,
     IntInput,
-    MessageTextInput,
     Output,
     StrInput,
 )
@@ -140,9 +139,12 @@ class NvidiaCustomizerComponent(Component):
                     if selected_model_name:
                         # Find the selected model in the response
                         selected_model = next(
-                            (model for model in models_data.get("data", []) if
-                             model["base_model"] == selected_model_name),
-                            None
+                            (
+                                model
+                                for model in models_data.get("data", [])
+                                if model["base_model"] == selected_model_name
+                            ),
+                            None,
                         )
 
                         if selected_model:
@@ -189,10 +191,7 @@ class NvidiaCustomizerComponent(Component):
             # Build the data payload
             data = {
                 "config": self.model_name,
-                "dataset": {
-                    "name": dataset_name,
-                    "namespace": tenant
-                },
+                "dataset": {"name": dataset_name, "namespace": tenant},
                 "description": self.description,
                 "hyperparameters": {
                     "training_type": self.training_type,
@@ -223,9 +222,7 @@ class NvidiaCustomizerComponent(Component):
                     attempt += 1
                     # If this was the 10th attempt, raise an error on the next iteration (attempt will be 11)
                     if attempt > 10:
-                        error_msg = (
-                            "Received 409 conflict 10 times. Please choose a different dataset name or delete the model."
-                        )
+                        error_msg = "Received 409 conflict 10 times. Please choose a different dataset name or delete the model."
                         raise ValueError(error_msg)
                     continue
 
@@ -253,19 +250,16 @@ class NvidiaCustomizerComponent(Component):
                     self.log(f"Received HTTP 409 Conflict on attempt {attempt}. Retrying with a new dataset name.")
                     attempt += 1
                     if attempt > 10:
-                        error_msg = (
-                            "There are already 10 version for the model with the dataset.. Please choose a different dataset name or delete the models."
-                        )
+                        error_msg = "There are already 10 version for the model with the dataset.. Please choose a different dataset name or delete the models."
                         raise ValueError(error_msg) from exc
                     continue
-                else:
-                    status_code = exc.response.status_code
-                    response_content = exc.response.text
-                    error_msg = (
-                        f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
-                    )
-                    self.log(error_msg)
-                    raise ValueError(error_msg) from exc
+                status_code = exc.response.status_code
+                response_content = exc.response.text
+                error_msg = (
+                    f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
+                )
+                self.log(error_msg)
+                raise ValueError(error_msg) from exc
 
             except (httpx.RequestError, ValueError) as exc:
                 exception_str = str(exc)
@@ -371,7 +365,7 @@ class NvidiaCustomizerComponent(Component):
 
             total_records = len(valid_records)
             if total_records < 2:
-                error_msg =f"Not enough records for processing. Record count : {total_records}"
+                error_msg = f"Not enough records for processing. Record count : {total_records}"
                 raise ValueError(error_msg)
 
             # =====================================================
@@ -439,7 +433,7 @@ class NvidiaCustomizerComponent(Component):
                 "description": description,
                 "files_url": file_url,
                 "format": "jsonl",
-                "project": user_dataset_name
+                "project": user_dataset_name,
             }
 
             async with httpx.AsyncClient() as client:
@@ -466,7 +460,11 @@ class NvidiaCustomizerComponent(Component):
             json_data = chunk_df.to_json(orient="records", lines=True)
 
             # Build file paths
-            file_name_training = f"validation/{file_name_prefix}_validation.jsonl" if is_validation else f"training/{file_name_prefix}_chunk_{chunk_number}.jsonl"
+            file_name_training = (
+                f"validation/{file_name_prefix}_validation.jsonl"
+                if is_validation
+                else f"training/{file_name_prefix}_chunk_{chunk_number}.jsonl"
+            )
 
             # Prepare BytesIO objects
             training_file_obj = BytesIO(json_data.encode("utf-8"))
@@ -476,7 +474,7 @@ class NvidiaCustomizerComponent(Component):
                     path_in_repo=file_name_training,
                     repo_id=repo_id,
                     repo_type="dataset",
-                    commit_message=f"Updated training file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                    commit_message=f"Updated training file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
                 )
             finally:
                 training_file_obj.close()

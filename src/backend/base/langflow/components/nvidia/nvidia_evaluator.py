@@ -2,9 +2,10 @@ import io
 import json
 import logging
 from datetime import datetime, timezone
-from huggingface_hub import HfApi
 
 import httpx
+from huggingface_hub import HfApi
+
 from langflow.custom import Component
 from langflow.io import (
     BoolInput,
@@ -12,7 +13,6 @@ from langflow.io import (
     DropdownInput,
     FloatInput,
     IntInput,
-    MessageTextInput,
     MultiselectInput,
     Output,
     SecretStrInput,
@@ -220,7 +220,8 @@ class NvidiaEvaluatorComponent(Component):
             display_name="Dataset",
             info="Enter the dataset ID or name used to train the model",
             value="testing",
-        ), DataInput(
+        ),
+        DataInput(
             name="evaluation_data",
             display_name="Training Data",
             is_list=True,
@@ -233,7 +234,7 @@ class NvidiaEvaluatorComponent(Component):
         model_url = f"{self.entity_service_base_url}/v1/models"
         params = {
             "filter[namespace]": namespace,  # This ensures proper encoding
-            "page_size": 100
+            "page_size": 100,
         }
         try:
             response = httpx.get(model_url, headers=self.headers, params=params)
@@ -335,9 +336,7 @@ class NvidiaEvaluatorComponent(Component):
         try:
             # Format the data as a JSON string for logging
             formatted_data = json.dumps(data, indent=2)
-            self.log(
-                f"Sending evaluation request to NeMo API with data: {formatted_data}"
-            )
+            self.log(f"Sending evaluation request to NeMo API with data: {formatted_data}")
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.post(evaluator_url, headers=self.headers, json=data)
@@ -379,7 +378,7 @@ class NvidiaEvaluatorComponent(Component):
                         "batch_size": getattr(self, "113_batch_size", 16),
                         "bootstrap_iters": getattr(self, "114_bootstrap_iterations", 100000),
                         "limit": getattr(self, "115_limit", -1),
-                    }
+                    },
                 }
             ],
             "params": {
@@ -390,7 +389,7 @@ class NvidiaEvaluatorComponent(Component):
                 "temperature": getattr(self, "153_temperature", 0.0),
                 "stop": [],  # not exposing this for now, would be 154_stop
                 "tokens_to_generate": getattr(self, "155_tokens_to_generate", 1024),
-            }
+            },
         }
 
         eval_config_url = f"{self.evaluator_base_url}/v1/evaluation/configs"
@@ -410,9 +409,7 @@ class NvidiaEvaluatorComponent(Component):
                     raise ValueError(f"Missing 'id' in response: {result}")  # Ensure "id" exists
 
                 return {
-                    "tags": [
-                        getattr(self, "001_tag", "")
-                    ],
+                    "tags": [getattr(self, "001_tag", "")],
                     "namespace": namespace,
                     "target": f"{namespace}/{target_id}",
                     "config": f"{namespace}/{config_id}",
@@ -460,17 +457,15 @@ class NvidiaEvaluatorComponent(Component):
                 {
                     "type": "default",
                     "metrics": metrics_to_eval,
-                    "dataset": {
-                        "files_url": input_file
-                    },
+                    "dataset": {"files_url": input_file},
                     "params": {
                         "tokens_to_generate": getattr(self, "311_tokens_to_generate", 1024),
                         "temperature": getattr(self, "312_temperature", 0.0),
                         "top_k": getattr(self, "313_top_k", 0.0),
-                        "n_samples": getattr(self, "350_num_of_samples", -1)
-                    }
+                        "n_samples": getattr(self, "350_num_of_samples", -1),
+                    },
                 }
-            ]
+            ],
         }
 
         eval_config_url = f"{self.evaluator_base_url}/v1/evaluation/configs"
@@ -488,11 +483,8 @@ class NvidiaEvaluatorComponent(Component):
                     "namespace": namespace,
                     "target": f"{namespace}/{target_id}",
                     "config": f"{namespace}/{config_id}",
-                    "tags": [
-                        getattr(self, "001_tag", "")
-                    ]
+                    "tags": [getattr(self, "001_tag", "")],
                 }
-
 
         except httpx.TimeoutException as exc:
             error_msg = f"Request to {eval_config_url} timed out"
@@ -520,11 +512,7 @@ class NvidiaEvaluatorComponent(Component):
                 request_body = {
                     "type": "model",
                     "namespace": namespace,
-                    "model": {
-                        "cached_outputs": {
-                            "files_url": "nds:my-dataset/answers.jsonl"
-                        }
-                    }
+                    "model": {"cached_outputs": {"files_url": "nds:my-dataset/answers.jsonl"}},
                 }
             else:
                 request_body = {
@@ -533,9 +521,9 @@ class NvidiaEvaluatorComponent(Component):
                     "model": {
                         "api_endpoint": {
                             "url": f"{self.nemo_model_base_url}/v1/completions",
-                            "model_id": getattr(self, "000_llm_name", "")
+                            "model_id": getattr(self, "000_llm_name", ""),
                         }
-                    }
+                    },
                 }
             self.log(f"Sending customization request to endpoint {eval_target_url} with data: {request_body}")
 
@@ -608,26 +596,30 @@ class NvidiaEvaluatorComponent(Component):
                 # Check if both fields are present
                 if filtered_data["prompt"] is not None and filtered_data["ideal_response"] is not None:
                     # Create data for the first file
-                    input_file_data.append({
-                        "prompt": filtered_data["prompt"],
-                        "ideal_response": filtered_data["ideal_response"],
-                        "category": filtered_data["category"],
-                        "source": filtered_data["source"],
-                    })
+                    input_file_data.append(
+                        {
+                            "prompt": filtered_data["prompt"],
+                            "ideal_response": filtered_data["ideal_response"],
+                            "category": filtered_data["category"],
+                            "source": filtered_data["source"],
+                        }
+                    )
                     if generate_output_file:
                         # Create data for the second file
-                        output_file_data.append({
-                            "input": {
-                                "prompt": filtered_data["prompt"],
-                                "ideal_response": filtered_data["ideal_response"],
-                                "category": filtered_data["category"],
-                                "source": filtered_data["source"],
-                            },
-                            "response": filtered_data["response"],
-                            "llm_name": filtered_data["llm_name"],
-                        })
+                        output_file_data.append(
+                            {
+                                "input": {
+                                    "prompt": filtered_data["prompt"],
+                                    "ideal_response": filtered_data["ideal_response"],
+                                    "category": filtered_data["category"],
+                                    "source": filtered_data["source"],
+                                },
+                                "response": filtered_data["response"],
+                                "llm_name": filtered_data["llm_name"],
+                            }
+                        )
             # Create in-memory JSON files
-            input_file_buffer = io.BytesIO(json.dumps(input_file_data, indent=4).encode('utf-8'))
+            input_file_buffer = io.BytesIO(json.dumps(input_file_data, indent=4).encode("utf-8"))
             input_file_name = "input.json"
             try:
                 hf_api.upload_file(
@@ -635,13 +627,13 @@ class NvidiaEvaluatorComponent(Component):
                     path_in_repo=input_file_name,
                     repo_id=repo_id,
                     repo_type="dataset",
-                    commit_message=f"Input evaluation file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                    commit_message=f"Input evaluation file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
                 )
             finally:
                 input_file_buffer.close()
 
             if generate_output_file:
-                output_file_buffer = io.BytesIO(json.dumps(output_file_data, indent=4).encode('utf-8'))
+                output_file_buffer = io.BytesIO(json.dumps(output_file_data, indent=4).encode("utf-8"))
                 output_file_name = "input.json"
                 try:
                     hf_api.upload_file(
@@ -649,7 +641,7 @@ class NvidiaEvaluatorComponent(Component):
                         path_in_repo=output_file_name,
                         repo_id=repo_id,
                         repo_type="dataset",
-                        commit_message=f"Output evaluation file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                        commit_message=f"Output evaluation file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
                     )
                 finally:
                     input_file_buffer.close()
@@ -666,15 +658,15 @@ class NvidiaEvaluatorComponent(Component):
     async def get_repo_id(self, tenant_id: str, user_dataset_name: str, hf_api: HfApi) -> str:
         """Fetches the repo id by checking if a dataset with the constructed name exists.
 
-                If the dataset does not exist, creates a new dataset and returns its ID.
+        If the dataset does not exist, creates a new dataset and returns its ID.
 
-                Args:
-                    tenant_id (str): The tenant ID.
-                    user_dataset_name (str): The user-provided dataset name.
+        Args:
+            tenant_id (str): The tenant ID.
+            user_dataset_name (str): The user-provided dataset name.
 
-                Returns:
-                    str: The dataset ID if found or created, or None if an error occurs.
-                """
+        Returns:
+            str: The dataset ID if found or created, or None if an error occurs.
+        """
         dataset_name = self.get_dataset_name(user_dataset_name)
         namespace = tenant_id if tenant_id else "tenant"
 
