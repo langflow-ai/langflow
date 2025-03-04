@@ -14,6 +14,7 @@ from langflow.inputs.inputs import (
     DropdownInput,
     InputTypes,
     MessageInput,
+    MessageTextInput,
 )
 from langflow.schema import Data, dotdict
 from langflow.schema.dataframe import DataFrame
@@ -46,15 +47,34 @@ class RunFlowBaseComponent(Component):
             value="",
             advanced=True,
         ),
+        MessageTextInput(
+            name="runflow_tool_placeholder",
+            display_name="Run Flow Tool Placeholder",
+            tool_mode=True,
+            advanced=True,
+            info="A placeholder input for tool mode.",
+        ),
     ]
     _base_outputs: list[Output] = [
-        Output(name="flow_outputs_data", display_name="Flow Data Output", method="data_output", hidden=True),
         Output(
-            name="flow_outputs_dataframe", display_name="Flow Dataframe Output", method="dataframe_output", hidden=True
+            name="flow_outputs_data",
+            display_name="Flow Data Output",
+            method="data_output",
+            hidden=True,
+            tool_mode=False,
         ),
-        Output(name="flow_outputs_message", display_name="Flow Message Output", method="message_output"),
+        Output(
+            name="flow_outputs_dataframe",
+            display_name="Flow Dataframe Output",
+            method="dataframe_output",
+            hidden=True,
+            tool_mode=False,
+        ),
+        Output(
+            name="flow_outputs_message", display_name="Flow Message Output", method="message_output", tool_mode=True
+        ),
     ]
-    default_keys = ["code", "_type", "flow_name_selected", "session_id"]
+    default_keys = ["code", "_type", "flow_name_selected", "session_id", "runflow_tool_placeholder"]
     FLOW_INPUTS: list[dotdict] = []
     flow_tweak_data: dict = {}
 
@@ -151,7 +171,8 @@ class RunFlowBaseComponent(Component):
                             **field_template[input_name],
                             "display_name": vertex.display_name + " - " + field_template[input_name]["display_name"],
                             "name": f"{vertex.id}~{input_name}",
-                            "tool_mode": not (field_template[input_name].get("advanced", False)),
+                            "tool_mode": not (field_template[input_name].get("advanced", False))
+                            and "File" not in field_template[input_name]["display_name"],
                         }
                     )
                     for input_name in field_order

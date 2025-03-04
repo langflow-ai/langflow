@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
 
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, HandleInput, Output
+from langflow.io import BoolInput, FileInput, HandleInput, MessageTextInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
 
@@ -159,9 +159,32 @@ class BaseFileComponent(Component, ABC):
             value=False,
             info=f"If true, Data with no '{SERVER_FILE_PATH_FIELDNAME}' property will be ignored.",
         ),
+        MessageTextInput(
+            name="tool_placeholder",
+            display_name="Tool Placeholder",
+            tool_mode=True,
+            advanced=True,
+            info="A placeholder input for tool mode.",
+        ),
     ]
 
-    _base_outputs = [Output(display_name="Data", name="data", method="load_files")]
+    _base_outputs = [
+        Output(display_name="Data", name="data", method="load_files", tool_mode=False),
+        Output(
+            name="Filepath",
+            display_name="Filepath",
+            method="get_path",
+            tool_mode=True,
+        ),
+    ]
+
+    def get_path(self) -> Message:
+        data_list = self.load_files()
+        if not data_list:
+            return Message(text="")
+
+        file_path = data_list[0].data.get(self.SERVER_FILE_PATH_FIELDNAME, "")
+        return Message(text=str(file_path))
 
     @abstractmethod
     def process_files(self, file_list: list[BaseFile]) -> list[BaseFile]:
