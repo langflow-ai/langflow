@@ -4,6 +4,7 @@ from loguru import logger
 from langflow.api.v1.base import Code, CodeValidationResponse, PromptValidationResponse, ValidatePromptRequest
 from langflow.base.prompts.api_utils import process_prompt_template
 from langflow.utils.validate import validate_code
+from langflow.api.utils import CurrentActiveUser
 
 # build router
 router = APIRouter(prefix="/validate", tags=["Validate"])
