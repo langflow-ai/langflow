@@ -196,11 +196,15 @@ class ChatOutput(ChatComponent):
                     data = data.replace(r"^\s*$", "", regex=True)
                     # Replace multiple newlines with a single newline
                     data = data.replace(r"\n+", "\n", regex=True)
-                return (
-                    data.replace(r"\|", r"\\|", regex=True)
-                    .applymap(lambda x: (str(x).replace("\n", "<br/>") if isinstance(x, str) else x))
-                    .to_markdown(index=False)
+
+                # Replace pipe characters to avoid markdown table issues
+                processed_data = data.replace(r"\|", r"\\|", regex=True)
+
+                processed_data = processed_data.map(
+                    lambda x: str(x).replace("\n", "<br/>") if isinstance(x, str) else x
                 )
+
+                return processed_data.to_markdown(index=False)
             return str(data)
         except (ValueError, TypeError, AttributeError) as e:
             msg = f"Error converting data: {e!s}"
