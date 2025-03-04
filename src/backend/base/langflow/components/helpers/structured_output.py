@@ -184,8 +184,9 @@ class StructuredOutputComponent(Component):
 
     def build_structured_output(self) -> Data:
         output = self.build_structured_output_base()
-
-        return Data(results=output)
+        if isinstance(output, list) and len(output) > 0:
+            return [Data(data=item) for item in output]
+        return Data(data=output)
 
     def as_dataframe(self) -> DataFrame:
         output = self.build_structured_output_base()
