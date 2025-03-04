@@ -156,7 +156,7 @@ export default function UpdateAllComponents({}: {}) {
       <div className="flex items-center gap-3">
         <ForwardedIconComponent
           name="AlertTriangle"
-          className="!h-[18px] !w-[18px] shrink-0"
+          className="h-[18px]! w-[18px]! shrink-0"
           strokeWidth={1.5}
         />
         <span>
