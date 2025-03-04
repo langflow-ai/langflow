@@ -42,6 +42,7 @@ class GmailAPIComponent(LCToolComponent):
         "GMAIL_CREATE_LABEL": ["label_name", "label_list_visibility", "message_list_visibility"],
         "GMAIL_GET_PEOPLE": ["resource_name", "person_fields"],
         "GMAIL_REMOVE_LABEL": ["label_id"],
+        "GMAIL_GET_ATTACHMENT": ["message_id", "attachment_id", "file_name"],
     }
 
     _bool_variables = {"is_html", "include_spam_trash"}
@@ -225,6 +226,20 @@ class GmailAPIComponent(LCToolComponent):
             display_name="Person fields",
             info="A field mask to restrict which fields on the person are returned. Multiple fields can be specified by separating them with commas.Valid values are: addresses, ageRanges, biographies, birthdays, calendarUrls, clientData, coverPhotos, email Addresses etc",  # noqa: E501
             show=False,
+        ),
+        StrInput(
+            name="attachment_id",
+            display_name="Attachment ID",
+            info="Id of the attachment",
+            show=False,
+            required=True,
+        ),
+        StrInput(
+            name="file_name",
+            display_name="File name",
+            info="File name of the attachment file",
+            show=False,
+            required=True,
         ),
         FileInput(
             name="attachment",
