@@ -10,8 +10,8 @@ import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
+import ModalsComponent from "../components/modalsComponent";
 import useFileDrop from "../hooks/use-on-file-drop";
-import ModalsComponent from "../oldComponents/modalsComponent";
 import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {

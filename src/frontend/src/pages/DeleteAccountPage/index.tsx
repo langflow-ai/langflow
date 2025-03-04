@@ -1,5 +1,4 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -19,14 +18,10 @@ export default function DeleteAccountPage() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
-        {ENABLE_NEW_LOGO ? (
-          <LangflowLogo
-            title="Langflow logo"
-            className="mb-4 h-10 w-10 scale-[1.5]"
-          />
-        ) : (
-          <span className="mb-4 text-5xl">⛓️</span>
-        )}
+        <LangflowLogo
+          title="Langflow logo"
+          className="mb-4 h-10 w-10 scale-[1.5]"
+        />
         <span className="mb-4 text-center text-2xl font-semibold text-primary">
           Delete your account
         </span>

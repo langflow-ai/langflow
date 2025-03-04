@@ -12,8 +12,8 @@ import GridSkeleton from "../../components/gridSkeleton";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
+import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
-import ModalsComponent from "../../oldComponents/modalsComponent";
 import EmptyFolder from "../emptyFolder";
 
 const HomePage = ({ type }) => {
