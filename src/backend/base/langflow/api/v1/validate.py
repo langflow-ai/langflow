@@ -11,7 +11,7 @@ router = APIRouter(prefix="/validate", tags=["Validate"])
 
 
 @router.post("/code", status_code=200)
-async def post_validate_code(code: Code, current_user: CurrentActiveUser) -> CodeValidationResponse:
+async def post_validate_code(code: Code, _current_user: CurrentActiveUser) -> CodeValidationResponse:
     try:
         errors = validate_code(code.code)
         return CodeValidationResponse(
