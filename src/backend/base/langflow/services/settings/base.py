@@ -382,6 +382,32 @@ class Settings(BaseSettings):
         logger.debug(f"Components path: {value}")
         return value
 
+    @field_validator("db_driver_connection_settings", mode="before")
+    @classmethod
+    def set_db_driver_connection_settings(cls, value):
+        if isinstance(value, str):
+            try:
+                parsed_value = json.loads(value)
+                if isinstance(parsed_value, dict):
+                    return parsed_value
+                logger.warning("db_driver_connection_settings must be a valid JSON dictionary")
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse db_driver_connection_settings as JSON")
+        return value
+
+    @field_validator("db_connection_settings", mode="before")
+    @classmethod
+    def set_db_connection_settings(cls, value):
+        if isinstance(value, str):
+            try:
+                parsed_value = json.loads(value)
+                if isinstance(parsed_value, dict):
+                    return parsed_value
+                logger.warning("db_connection_settings must be a valid JSON dictionary")
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse db_connection_settings as JSON")
+        return value
+
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
     async def update_from_yaml(self, file_path: str, *, dev: bool = False) -> None:
