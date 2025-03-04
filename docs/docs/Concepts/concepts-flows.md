@@ -20,7 +20,7 @@ The option to export a flow is available in the same menu as shown above. Once e
 
 ## Langflow JSON file contents
 
-Langflow JSON files contain **nodes**, **edges**, and **additional information** that describe the flow's components and settings.
+Langflow JSON files contain [nodes](#nodes) and [edges](#edges) that describe components and connections, and [additional metadata](#additional-metadata-and-project-information) that describe the flow.
 
 For an example Langflow JSON file, examine the [Basic Prompting.json](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/initial_setup/starter_projects/Basic%20Prompting.json) file in the Langflow repository.
 
@@ -104,7 +104,7 @@ The connection between the `ChatInput` node and the `OpenAIModel` node is repres
 This edge shows that the `ChatInput` component outputs a `Message` type to the `target` node, which is the `OpenAIModel` node.
 The `OpenAIModel` component accepts the `Message` type at the `input_value` field.
 
-### Additional information
+### Additional metadata and project information
 
 Additional information about the flow is stored in the root `data` object.
 
