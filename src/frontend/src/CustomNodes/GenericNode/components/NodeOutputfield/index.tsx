@@ -1,9 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useShortcutsStore } from "@/stores/shortcuts";
 import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -19,6 +21,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import {
   cn,
+  logFirstMessage,
   logHasMessage,
   logTypeIsError,
   logTypeIsUnknown,
@@ -250,6 +253,46 @@ function NodeOutputField({
     }
   }, [disabledOutput, data.node?.outputs, handleUpdateOutputHide, index]);
 
+  const [openOutputModal, setOpenOutputModal] = useState(false);
+
+  const outputShortcutOpenable = useMemo(() => {
+    if (!displayOutputPreview || !selected) return;
+
+    const sortedEdges = edges
+      .filter((edge) => edge.source === data.id)
+      .toSorted((a, b) => {
+        const indexA =
+          data?.node?.outputs?.findIndex(
+            (output) => output.name === a.data?.sourceHandle?.name,
+          ) ?? 0;
+        const indexB =
+          data?.node?.outputs?.findIndex(
+            (output) => output.name === b.data?.sourceHandle?.name,
+          ) ?? 0;
+        return indexA - indexB;
+      });
+
+    const isFirstOutput =
+      sortedEdges[0]?.sourceHandle === scapedJSONStringfy(id);
+    const hasNoEdges = !edges.some((edge) => edge.source === data.id);
+    const isValidFirstMessage =
+      hasNoEdges && logFirstMessage(flowPoolNode?.data, internalOutputName);
+
+    if (isFirstOutput || isValidFirstMessage) {
+      return true;
+    }
+    return false;
+  }, [displayOutputPreview, edges, data.id, data?.node?.outputs, selected]);
+
+  const handleOpenOutputModal = () => {
+    if (outputShortcutOpenable) {
+      setOpenOutputModal(true);
+    }
+  };
+
+  const outputInspection = useShortcutsStore((state) => state.outputInspection);
+  useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
+
   const LoopHandle = useMemo(() => {
     if (data.node?.outputs![index].allows_loop) {
       return (
@@ -383,6 +426,8 @@ function NodeOutputField({
           >
             <div className="flex items-center gap-2">
               <OutputModal
+                open={openOutputModal}
+                setOpen={setOpenOutputModal}
                 disabled={!displayOutputPreview || unknownOutput}
                 nodeId={flowPoolId}
                 outputName={internalOutputName}
