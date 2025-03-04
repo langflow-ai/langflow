@@ -210,8 +210,8 @@ Environment="LANGFLOW_AUTO_SAVING=true"
 Environment="LANGFLOW_AUTO_SAVING_INTERVAL=1000"
 Environment="LANGFLOW_BACKEND_ONLY=false"
 Environment="LANGFLOW_CACHE_TYPE=async"
-Environment="LANGFLOW_COMPONENTS_PATH=/langflow_settings/components/"
-Environment="LANGFLOW_CONFIG_DIR=/langflow_settings/config/"
+Environment="LANGFLOW_COMPONENTS_PATH=/path/to/components/"
+Environment="LANGFLOW_CONFIG_DIR=/path/to/config"
 Environment="LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow"
 Environment="LANGFLOW_DEV=false"
 Environment="LANGFLOW_FALLBACK_TO_ENV_VAR=false"
@@ -255,8 +255,8 @@ Create or edit the `.vscode/tasks.json` file in your project root:
             "LANGFLOW_AUTO_SAVING_INTERVAL": "1000",
             "LANGFLOW_BACKEND_ONLY": "false",
             "LANGFLOW_CACHE_TYPE": "async",
-            "LANGFLOW_COMPONENTS_PATH": "D:/langflow_settings/components/",
-            "LANGFLOW_CONFIG_DIR": "D:/langflow_internal/langflow_settings/config/",
+            "LANGFLOW_COMPONENTS_PATH": "D:/path/to/components/",
+            "LANGFLOW_CONFIG_DIR": "D:/path/to/config/",
             "LANGFLOW_DATABASE_URL": "postgresql://postgres:password@localhost:5432/langflow",
             "LANGFLOW_DEV": "false",
             "LANGFLOW_FALLBACK_TO_ENV_VAR": "false",
@@ -268,7 +268,7 @@ Create or edit the `.vscode/tasks.json` file in your project root:
             "LANGFLOW_LOG_FILE": "langflow.log",
             "LANGFLOW_LOG_LEVEL": "error",
             "LANGFLOW_OPEN_BROWSER": "false",
-            "LANGFLOW_PORT": "4242",
+            "LANGFLOW_PORT": "7860",
             "LANGFLOW_REMOVE_API_KEYS": "true",
             "LANGFLOW_SAVE_DB_IN_CONFIG_DIR": "false",
             "LANGFLOW_SECRET_KEY": "somesecretkey",
