@@ -153,3 +153,146 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_LOAD_FLOWS_PATH"/>`LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Note that this feature only works if `LANGFLOW_AUTO_LOGIN` is enabled. |
 | <Link id="LANGFLOW_WORKER_TIMEOUT"/>`LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds.<br/>See [`--worker-timeout` option](./configuration-cli.md#run-worker-timeout). |
 | <Link id="LANGFLOW_WORKERS"/>`LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes.<br/>See [`--workers` option](./configuration-cli.md#run-workers). |
+
+## Configure .env, override.conf, and tasks.json files
+
+The following examples show how to configure Langflow using environment variables in different scenarios.
+
+<Tabs>
+<TabItem value="env" label=".env File" default>
+
+The `.env` file is a text file that contains key-value pairs of environment variables.
+
+Create or edit a file named `.env` in your project root directory and add your configuration:
+
+```plaintext title=".env"
+DO_NOT_TRACK=true
+LANGFLOW_AUTO_LOGIN=false
+LANGFLOW_AUTO_SAVING=true
+LANGFLOW_AUTO_SAVING_INTERVAL=1000
+LANGFLOW_BACKEND_ONLY=false
+LANGFLOW_CACHE_TYPE=async
+LANGFLOW_COMPONENTS_PATH=/path/to/components/
+LANGFLOW_CONFIG_DIR=/path/to/config/
+LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
+LANGFLOW_DEV=false
+LANGFLOW_FALLBACK_TO_ENV_VAR=false
+LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
+LANGFLOW_HOST=127.0.0.1
+LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
+LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
+LANGFLOW_LOG_LEVEL=error
+LANGFLOW_OPEN_BROWSER=false
+LANGFLOW_PORT=7860
+LANGFLOW_REMOVE_API_KEYS=false
+LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true
+LANGFLOW_SECRET_KEY=somesecretkey
+LANGFLOW_STORE=true
+LANGFLOW_STORE_ENVIRONMENT_VARIABLES=true
+LANGFLOW_SUPERUSER=adminuser
+LANGFLOW_SUPERUSER_PASSWORD=adminpass
+LANGFLOW_WORKER_TIMEOUT=60000
+LANGFLOW_WORKERS=3
+```
+
+</TabItem>
+<TabItem value="systemd" label="Systemd service">
+
+A systemd service configuration file configures Linux system services.
+
+To add environment variables, create or edit a service configuration file and add an `override.conf` file. This file allows you to override the default environment variables for the service.
+
+```ini title="override.conf"
+[Service]
+Environment="DO_NOT_TRACK=true"
+Environment="LANGFLOW_AUTO_LOGIN=false"
+Environment="LANGFLOW_AUTO_SAVING=true"
+Environment="LANGFLOW_AUTO_SAVING_INTERVAL=1000"
+Environment="LANGFLOW_BACKEND_ONLY=false"
+Environment="LANGFLOW_CACHE_TYPE=async"
+Environment="LANGFLOW_COMPONENTS_PATH=/path/to/components/"
+Environment="LANGFLOW_CONFIG_DIR=/path/to/config"
+Environment="LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow"
+Environment="LANGFLOW_DEV=false"
+Environment="LANGFLOW_FALLBACK_TO_ENV_VAR=false"
+Environment="LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5"
+Environment="LANGFLOW_HOST=127.0.0.1"
+Environment="LANGFLOW_LANGCHAIN_CACHE=InMemoryCache"
+Environment="LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000"
+Environment="LANGFLOW_LOG_ENV=container_json"
+Environment="LANGFLOW_LOG_FILE=logs/langflow.log"
+Environment="LANGFLOW_LOG_LEVEL=error"
+Environment="LANGFLOW_OPEN_BROWSER=false"
+Environment="LANGFLOW_PORT=7860"
+Environment="LANGFLOW_REMOVE_API_KEYS=false"
+Environment="LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true"
+Environment="LANGFLOW_SECRET_KEY=somesecretkey"
+Environment="LANGFLOW_STORE=true"
+Environment="LANGFLOW_STORE_ENVIRONMENT_VARIABLES=true"
+Environment="LANGFLOW_SUPERUSER=adminuser"
+Environment="LANGFLOW_SUPERUSER_PASSWORD=adminpass"
+Environment="LANGFLOW_WORKER_TIMEOUT=60000"
+Environment="LANGFLOW_WORKERS=3"
+```
+
+For more information on systemd, see the [Red Hat documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_systemd_unit_files_to_customize_and_optimize_your_system/assembly_working-with-systemd-unit-files_working-with-systemd#assembly_working-with-systemd-unit-files_working-with-systemd).
+
+</TabItem>
+<TabItem value="vscode" label="VSCode tasks.json">
+
+The `tasks.json` file located in `.vscode/tasks.json` is a configuration file for development environments using Visual Studio Code.
+
+Create or edit the `.vscode/tasks.json` file in your project root:
+
+```json title=".vscode/tasks.json"
+{
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "DO_NOT_TRACK": "true",
+            "LANGFLOW_AUTO_LOGIN": "false",
+            "LANGFLOW_AUTO_SAVING": "true",
+            "LANGFLOW_AUTO_SAVING_INTERVAL": "1000",
+            "LANGFLOW_BACKEND_ONLY": "false",
+            "LANGFLOW_CACHE_TYPE": "async",
+            "LANGFLOW_COMPONENTS_PATH": "D:/path/to/components/",
+            "LANGFLOW_CONFIG_DIR": "D:/path/to/config/",
+            "LANGFLOW_DATABASE_URL": "postgresql://postgres:password@localhost:5432/langflow",
+            "LANGFLOW_DEV": "false",
+            "LANGFLOW_FALLBACK_TO_ENV_VAR": "false",
+            "LANGFLOW_HEALTH_CHECK_MAX_RETRIES": "5",
+            "LANGFLOW_HOST": "localhost",
+            "LANGFLOW_LANGCHAIN_CACHE": "InMemoryCache",
+            "LANGFLOW_MAX_FILE_SIZE_UPLOAD": "10000",
+            "LANGFLOW_LOG_ENV": "container_csv",
+            "LANGFLOW_LOG_FILE": "langflow.log",
+            "LANGFLOW_LOG_LEVEL": "error",
+            "LANGFLOW_OPEN_BROWSER": "false",
+            "LANGFLOW_PORT": "7860",
+            "LANGFLOW_REMOVE_API_KEYS": "true",
+            "LANGFLOW_SAVE_DB_IN_CONFIG_DIR": "false",
+            "LANGFLOW_SECRET_KEY": "somesecretkey",
+            "LANGFLOW_STORE": "true",
+            "LANGFLOW_STORE_ENVIRONMENT_VARIABLES": "true",
+            "LANGFLOW_SUPERUSER": "adminuser",
+            "LANGFLOW_SUPERUSER_PASSWORD": "adminpass",
+            "LANGFLOW_WORKER_TIMEOUT": "60000",
+            "LANGFLOW_WORKERS": "3"
+        }
+    },
+    "tasks": [
+        {
+            "label": "langflow backend",
+            "type": "shell",
+            "command": ". ./langflownightly/Scripts/activate && langflow run",
+            "isBackground": true,
+            "problemMatcher": []
+        }
+    ]
+}
+```
+
+To run Langflow using the above VSCode `tasks.json` file, in the VSCode command palette, select **Tasks: Run Task** > **langflow backend**.
+
+</TabItem>
+</Tabs>
