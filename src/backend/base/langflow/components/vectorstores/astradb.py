@@ -39,15 +39,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         "name": "create_database",
                         "description": "Please allow several minutes for creation to complete.",
                         "display_name": "Create new database",
-                        "field_order": ["new_database_name", "cloud_provider", "region"],
+                        "field_order": ["01_new_database_name", "02_cloud_provider", "03_region"],
                         "template": {
-                            "new_database_name": StrInput(
+                            "01_new_database_name": StrInput(
                                 name="new_database_name",
                                 display_name="Name",
                                 info="Name of the new database to create in Astra DB.",
                                 required=True,
                             ),
-                            "cloud_provider": DropdownInput(
+                            "02_cloud_provider": DropdownInput(
                                 name="cloud_provider",
                                 display_name="Cloud provider",
                                 info="Cloud provider for the new database.",
@@ -55,7 +55,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 required=True,
                                 real_time_refresh=True,
                             ),
-                            "region": DropdownInput(
+                            "03_region": DropdownInput(
                                 name="region",
                                 display_name="Region",
                                 info="Region for the new database.",
@@ -79,19 +79,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         "description": "Please allow several seconds for creation to complete.",
                         "display_name": "Create new collection",
                         "field_order": [
-                            "new_collection_name",
-                            "embedding_generation_provider",
-                            "embedding_generation_model",
-                            "dimension",
+                            "01_new_collection_name",
+                            "02_embedding_generation_provider",
+                            "03_embedding_generation_model",
+                            "04_dimension",
                         ],
                         "template": {
-                            "new_collection_name": StrInput(
+                            "01_new_collection_name": StrInput(
                                 name="new_collection_name",
                                 display_name="Name",
                                 info="Name of the new collection to create in Astra DB.",
                                 required=True,
                             ),
-                            "embedding_generation_provider": DropdownInput(
+                            "02_embedding_generation_provider": DropdownInput(
                                 name="embedding_generation_provider",
                                 display_name="Embedding generation method",
                                 info="Provider to use for generating embeddings.",
@@ -99,14 +99,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 required=True,
                                 options=[],
                             ),
-                            "embedding_generation_model": DropdownInput(
+                            "03_embedding_generation_model": DropdownInput(
                                 name="embedding_generation_model",
                                 display_name="Embedding model",
                                 info="Model to use for generating embeddings.",
                                 required=True,
                                 options=[],
                             ),
-                            "dimension": IntInput(
+                            "04_dimension": IntInput(
                                 name="dimension",
                                 display_name="Dimensions (Required only for `Bring your own`)",
                                 info="Dimensions of the embeddings to generate.",
@@ -537,7 +537,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "jina ai": "JinaAI",
             "mistral ai": "MistralAI",
             "upstage": "Upstage",
-            "voyage ai": "Voyage AI",
+            "voyage ai": "VoyageAI",
         }
 
         # Adjust the casing on some like nvidia
@@ -584,7 +584,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # If the collection is set, allow user to see embedding options
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_provider"
+            "02_embedding_generation_provider"
         ]["options"] = [
             "Bring your own",
             "Nvidia",
@@ -593,7 +593,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # For all not Bring your own or Nvidia providers, add metadata saying configure in Astra DB Portal
         provider_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_provider"
+            "02_embedding_generation_provider"
         ]["options"]
 
         # Go over each possible provider and add metadata to configure in Astra DB Portal
@@ -608,17 +608,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Add the metadata to the options metadata
             build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "embedding_generation_provider"
+                "02_embedding_generation_provider"
             ]["options_metadata"].append(my_metadata)
 
         # And allow the user to see the models based on a selected provider
         embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_provider"
+            "02_embedding_generation_provider"
         ]["value"]
 
         # Set the options for the embedding model based on the provider
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "embedding_generation_model"
+            "03_embedding_generation_model"
         ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
 
         return build_config
@@ -648,7 +648,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Update the list of cloud providers
         my_env = self.environment or "prod"
-        build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["cloud_provider"][
+        build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["02_cloud_provider"][
             "options"
         ] = list(self.map_cloud_providers()[my_env].keys())
 
@@ -687,71 +687,82 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         # Callback for database creation
-        if field_name == "database_name" and isinstance(field_value, dict) and "new_database_name" in field_value:
+        if field_name == "database_name" and isinstance(field_value, dict) and "01_new_database_name" in field_value:
             try:
                 await self.create_database_api(
-                    new_database_name=field_value["new_database_name"],
+                    new_database_name=field_value["01_new_database_name"],
                     token=self.token,
                     keyspace=self.get_keyspace(),
                     environment=self.environment,
-                    cloud_provider=field_value["cloud_provider"],
-                    region=field_value["region"],
+                    cloud_provider=field_value["02_cloud_provider"],
+                    region=field_value["03_region"],
                 )
             except Exception as e:
                 msg = f"Error creating database: {e}"
                 raise ValueError(msg) from e
 
             # Add the new database to the list of options
-            build_config["database_name"]["options"] += [field_value["new_database_name"]]
+            build_config["database_name"]["options"] += [field_value["01_new_database_name"]]
             build_config["database_name"]["options_metadata"] += [{"status": "PENDING"}]
 
             return self.reset_collection_list(build_config)
 
         # This is the callback required to update the list of regions for a cloud provider
-        if field_name == "database_name" and isinstance(field_value, dict) and "new_database_name" not in field_value:
-            cloud_provider = field_value["cloud_provider"]
+        if (
+            field_name == "database_name"
+            and isinstance(field_value, dict)
+            and "01_new_database_name" not in field_value
+        ):
+            # Get the cloud provider and environment
+            cloud_provider = field_value["02_cloud_provider"]
             my_env = self.environment or "prod"
-            build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["region"][
+
+            # Update the list of regions for the cloud provider
+            build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_region"][
                 "options"
             ] = self.map_cloud_providers()[my_env][cloud_provider]["regions"]
 
             return build_config
 
         # Callback for the creation of collections
-        if field_name == "collection_name" and isinstance(field_value, dict) and "new_collection_name" in field_value:
+        if (
+            field_name == "collection_name"
+            and isinstance(field_value, dict)
+            and "01_new_collection_name" in field_value
+        ):
             try:
                 # Get the dimension if its a BYO provider
                 dimension = (
-                    field_value["dimension"]
-                    if field_value["embedding_generation_provider"] == "Bring your own"
+                    field_value["04_dimension"]
+                    if field_value["02_embedding_generation_provider"] == "Bring your own"
                     else None
                 )
 
                 # Create the collection
                 await self.create_collection_api(
-                    new_collection_name=field_value["new_collection_name"],
+                    new_collection_name=field_value["01_new_collection_name"],
                     token=self.token,
                     api_endpoint=build_config["api_endpoint"]["value"],
                     environment=self.environment,
                     keyspace=self.get_keyspace(),
                     dimension=dimension,
-                    embedding_generation_provider=field_value["embedding_generation_provider"],
-                    embedding_generation_model=field_value["embedding_generation_model"],
+                    embedding_generation_provider=field_value["02_embedding_generation_provider"],
+                    embedding_generation_model=field_value["03_embedding_generation_model"],
                 )
             except Exception as e:
                 msg = f"Error creating collection: {e}"
                 raise ValueError(msg) from e
 
             # Add the new collection to the list of options
-            build_config["collection_name"]["value"] = field_value["new_collection_name"]
-            build_config["collection_name"]["options"].append(field_value["new_collection_name"])
+            build_config["collection_name"]["value"] = field_value["01_new_collection_name"]
+            build_config["collection_name"]["options"].append(field_value["01_new_collection_name"])
 
             # Get the provider and model for the new collection
-            generation_provider = field_value["embedding_generation_provider"]
+            generation_provider = field_value["02_embedding_generation_provider"]
             provider = (
                 generation_provider.lower() if generation_provider and generation_provider != "Bring your own" else None
             )
-            generation_model = field_value["embedding_generation_model"]
+            generation_model = field_value["03_embedding_generation_model"]
             model = generation_model if generation_model and generation_model != "Bring your own" else None
 
             # Set the embedding choice
@@ -770,7 +781,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         if (
             field_name == "collection_name"
             and isinstance(field_value, dict)
-            and "new_collection_name" not in field_value
+            and "01_new_collection_name" not in field_value
         ):
             return self.reset_provider_options(build_config)
 
@@ -827,7 +838,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     {
                         "records": 0,
                         "provider": None,
-                        "icon": "",
+                        "icon": "vectorstores",
                         "model": None,
                     }
                 )
@@ -844,12 +855,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
 
             # If we were able to determine the Vectorize provider, set it accordingly
-            if value_of_provider:
-                build_config["embedding_model"]["advanced"] = True
-                build_config["embedding_choice"]["value"] = "Astra Vectorize"
-            else:
-                build_config["embedding_model"]["advanced"] = False
-                build_config["embedding_choice"]["value"] = "Embedding Model"
+            build_config["embedding_model"]["advanced"] = bool(value_of_provider)
+            build_config["embedding_choice"]["value"] = "Astra Vectorize" if value_of_provider else "Embedding Model"
 
             return build_config
 
