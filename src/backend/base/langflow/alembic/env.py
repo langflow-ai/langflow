@@ -49,6 +49,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         render_as_batch=True,
+        prepare_threshold=None
     )
 
     with context.begin_transaction():
@@ -71,7 +72,12 @@ def _sqlite_do_begin(conn):
 
 
 def _do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        render_as_batch=True,
+        prepare_threshold=None
+    )
 
     with context.begin_transaction():
         if connection.dialect.name == "postgresql":
