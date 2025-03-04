@@ -37,7 +37,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "data": {
                     "node": {
                         "name": "create_database",
-                        "description": "",
+                        "description": "Please allow several minutes for creation to complete.",
                         "display_name": "Create new database",
                         "field_order": ["new_database_name", "cloud_provider", "region"],
                         "template": {
@@ -76,7 +76,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "data": {
                     "node": {
                         "name": "create_collection",
-                        "description": "",
+                        "description": "Please allow several seconds for creation to complete.",
                         "display_name": "Create new collection",
                         "field_order": [
                             "new_collection_name",
@@ -543,7 +543,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Adjust the casing on some like nvidia
         return case_map[provider_name.lower()] if provider_name.lower() in case_map else provider_name.title()
 
-
     def _initialize_collection_options(self, api_endpoint: str | None = None):
         # Nothing to generate if we don't have an API endpoint yet
         api_endpoint = api_endpoint or self.get_api_endpoint()
@@ -758,9 +757,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             build_config["embedding_model"]["advanced"] = bool(provider)
 
             # Add the new collection to the list of options
-            icon = "NVIDIA" if provider == "Nvidia" else "vectorstores"
+            icon = self.get_provider_icon(provider_name=generation_provider)
             build_config["collection_name"]["options_metadata"] += [
-                {"records": 0, "provider": provider, "icon": icon, "model": model}
+                {"records": 0, "provider": provider.lower(), "icon": icon, "model": model}
             ]
 
             return build_config
