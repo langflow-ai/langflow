@@ -1,3 +1,4 @@
+import { APIClassType, InputFieldType } from "@/types/api";
 import Dropdown from "../../../dropdownComponent";
 import { DropDownComponentType, InputProps } from "../../types";
 import ButtonComponent from "../buttonComponent";
@@ -13,6 +14,8 @@ export default function DropdownComponent({
   name,
   dialogInputs,
   optionsMetaData,
+  nodeClass,
+  nodeId,
   ...baseInputProps
 }: InputProps<string, DropDownComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
@@ -20,27 +23,20 @@ export default function DropdownComponent({
   };
 
   return (
-    <ButtonComponent
-      {...baseInputProps}
-      value={value || "something"}
-      id={`button_${id}`}
-      editNode={editNode}
-      handleOnNewValue={handleOnNewValue}
+    // <ButtonComponent />
+    <Dropdown
       disabled={disabled}
+      editNode={editNode}
+      options={options}
+      optionsMetaData={optionsMetaData}
+      onSelect={onChange}
+      combobox={combobox}
+      value={value || ""}
+      id={`dropdown_${id}`}
+      name={name}
+      dialogInputs={dialogInputs}
+      handleOnNewValue={handleOnNewValue} // TODO: Remove this
+      {...baseInputProps}
     />
-    // <Dropdown
-    //   disabled={disabled}
-    //   editNode={editNode}
-    //   options={options}
-    //   optionsMetaData={optionsMetaData}
-    //   onSelect={onChange}
-    //   combobox={combobox}
-    //   value={value || ""}
-    //   id={`dropdown_${id}`}
-    //   name={name}
-    //   dialogInputs={dialogInputs}
-    //   handleOnNewValue={handleOnNewValue} // TODO: Remove this
-    //   {...baseInputProps}
-    // />
   );
 }

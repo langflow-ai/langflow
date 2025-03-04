@@ -206,7 +206,7 @@ export function ParameterRenderComponent({
           />
         );
       case "button":
-        return <ButtonComponent {...baseInputProps} id={`button_${id}`} />;
+        return <ButtonComponent />;
       default:
         return <EmptyParameterComponent {...baseInputProps} />;
     }

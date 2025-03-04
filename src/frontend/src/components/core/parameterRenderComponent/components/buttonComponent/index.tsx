@@ -1,50 +1,31 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/utils/utils";
-import { InputProps } from "../../types";
+import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
+import { useState } from "react";
 
-type ButtonComponentType = {
-  value: string;
-  isAuth?: boolean;
+type ButtonComponentProps = {
+  tooltip?: string;
 };
 
-const ButtonComponent = ({
-  value,
-  isAuth = true,
-  ...baseInputProps
-}: InputProps<string, ButtonComponentType>) => {
-  const { tooltip } = baseInputProps;
-  const icon = "github";
-
-  const handleClick = () => {
-    console.log("clicked");
-  };
+const ButtonComponent = ({ tooltip = "" }: ButtonComponentProps) => {
+  const [open, setOpen] = useState(false);
 
   return (
-    <ShadTooltip content={!value ? (tooltip as string) : ""}>
-      <Button
-        variant="default"
-        size="xs"
-        onClick={handleClick}
-        className="w-full py-2"
-      >
-        <div className="flex w-full items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {icon && <ForwardedIconComponent name={icon} className="h-4 w-4" />}
-            {value}
+    <>
+      <ShadTooltip content={!(tooltip as string) ? "" : tooltip}>
+        <Button
+          variant="default"
+          size="xs"
+          onClick={() => setOpen(true)}
+          className="w-full py-2"
+        >
+          <div className="flex items-center text-sm font-semibold">
+            Select action
           </div>
-          {isAuth && (
-            <div className="accent-amber-foreground flex items-center gap-2">
-              <ForwardedIconComponent name="lock" />
-              <span className="accent-amber-foreground text-base--medium">
-                Connect
-              </span>
-            </div>
-          )}
-        </div>
-      </Button>
-    </ShadTooltip>
+        </Button>
+      </ShadTooltip>
+      <ListSelectionComponent open={open} onClose={() => setOpen(false)} />
+    </>
   );
 };
 
