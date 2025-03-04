@@ -749,9 +749,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Get the provider and model for the new collection
             generation_provider = field_value["embedding_generation_provider"]
             provider = (
-                generation_provider.lower()
-                if generation_provider and generation_provider != "Bring your own"
-                else None
+                generation_provider.lower() if generation_provider and generation_provider != "Bring your own" else None
             )
             generation_model = field_value["embedding_generation_model"]
             model = generation_model if generation_model and generation_model != "Bring your own" else None
