@@ -13,6 +13,7 @@ import {
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
@@ -46,10 +47,18 @@ export default function AppHeader(): JSX.Element {
     };
   }, []);
 
+  useResetDismissUpdateAll();
+
   return (
-    <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
+    <div
+      className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background"
+      data-testid="app-header"
+    >
       {/* Left Section */}
-      <div className={`flex items-center gap-2`}>
+      <div
+        className={`flex items-center gap-2`}
+        data-testid="header_left_section_wrapper"
+      >
         <Button
           unstyled
           onClick={() => navigate("/")}
@@ -78,7 +87,10 @@ export default function AppHeader(): JSX.Element {
       </div>
 
       {/* Right Section */}
-      <div className={`flex items-center gap-2`}>
+      <div
+        className={`flex items-center gap-2`}
+        data-testid="header_right_section_wrapper"
+      >
         {!ENABLE_DATASTAX_LANGFLOW && (
           <>
             <Button

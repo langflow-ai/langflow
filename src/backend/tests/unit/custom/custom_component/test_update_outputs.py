@@ -4,7 +4,7 @@ from langflow.custom.custom_component.component import Component
 
 
 class TestComponentOutputs:
-    def test_run_and_validate_update_outputs_tool_mode(self):
+    async def test_run_and_validate_update_outputs_tool_mode(self):
         """Test run_and_validate_update_outputs with tool_mode field."""
 
         class TestComponent(Component):
@@ -33,7 +33,7 @@ class TestComponentOutputs:
         }
 
         # Test enabling tool mode
-        updated_node = component.run_and_validate_update_outputs(
+        updated_node = await component.run_and_validate_update_outputs(
             frontend_node=frontend_node.copy(),  # Use a copy to avoid modifying original
             field_name="tool_mode",
             field_value=True,
@@ -45,7 +45,7 @@ class TestComponentOutputs:
         assert updated_node["outputs"][0]["display_name"] == TOOL_OUTPUT_DISPLAY_NAME
 
         # Test disabling tool mode - use the original frontend node
-        updated_node = component.run_and_validate_update_outputs(
+        updated_node = await component.run_and_validate_update_outputs(
             frontend_node={"outputs": original_outputs.copy()},  # Use original outputs
             field_name="tool_mode",
             field_value=False,
@@ -60,7 +60,7 @@ class TestComponentOutputs:
         assert "types" in updated_node["outputs"][0]
         assert "selected" in updated_node["outputs"][0]
 
-    def test_run_and_validate_update_outputs_invalid_output(self):
+    async def test_run_and_validate_update_outputs_invalid_output(self):
         """Test run_and_validate_update_outputs with invalid output structure."""
 
         class TestComponent(Component):
@@ -74,11 +74,11 @@ class TestComponentOutputs:
 
         # Test validation fails for invalid output
         with pytest.raises(ValueError, match="Invalid output: 1 validation error for Output"):
-            component.run_and_validate_update_outputs(
+            await component.run_and_validate_update_outputs(
                 frontend_node=frontend_node, field_name="some_field", field_value="some_value"
             )
 
-    def test_run_and_validate_update_outputs_custom_update(self):
+    async def test_run_and_validate_update_outputs_custom_update(self):
         """Test run_and_validate_update_outputs with custom update logic."""
 
         class CustomComponent(Component):
@@ -111,7 +111,7 @@ class TestComponentOutputs:
         frontend_node = {"outputs": []}
 
         # Test custom update logic
-        updated_node = component.run_and_validate_update_outputs(
+        updated_node = await component.run_and_validate_update_outputs(
             frontend_node=frontend_node, field_name="custom_field", field_value="custom_value"
         )
 
@@ -122,14 +122,14 @@ class TestComponentOutputs:
         assert "types" in updated_node["outputs"][0]
         assert "selected" in updated_node["outputs"][0]
 
-    def test_run_and_validate_update_outputs_with_existing_tool_output(self):
+    async def test_run_and_validate_update_outputs_with_existing_tool_output(self):
         """Test run_and_validate_update_outputs when tool output already exists."""
 
         class TestComponent(Component):
             def build(self) -> None:
                 pass
 
-            def to_toolkit(self) -> list:
+            async def to_toolkit(self) -> list:
                 """Method that returns a list of tools."""
                 return []
 
@@ -154,7 +154,7 @@ class TestComponentOutputs:
         }
 
         # Test enabling tool mode doesn't duplicate tool output
-        updated_node = component.run_and_validate_update_outputs(
+        updated_node = await component.run_and_validate_update_outputs(
             frontend_node=frontend_node, field_name="tool_mode", field_value=True
         )
 
@@ -164,7 +164,7 @@ class TestComponentOutputs:
         assert "types" in updated_node["outputs"][0]
         assert "selected" in updated_node["outputs"][0]
 
-    def test_run_and_validate_update_outputs_with_multiple_outputs(self):
+    async def test_run_and_validate_update_outputs_with_multiple_outputs(self):
         """Test run_and_validate_update_outputs with multiple outputs."""
 
         class TestComponent(Component):
@@ -203,7 +203,7 @@ class TestComponentOutputs:
         frontend_node = {"outputs": []}
 
         # Test adding multiple outputs
-        updated_node = component.run_and_validate_update_outputs(
+        updated_node = await component.run_and_validate_update_outputs(
             frontend_node=frontend_node, field_name="add_output", field_value=True
         )
 
@@ -217,7 +217,7 @@ class TestComponentOutputs:
             assert set(output["types"]) == {"Text"}
             assert output["selected"] == "Text"
 
-    def test_run_and_validate_update_outputs_output_validation(self):
+    async def test_run_and_validate_update_outputs_output_validation(self):
         """Test output validation in run_and_validate_update_outputs."""
 
         class TestComponent(Component):
@@ -236,10 +236,14 @@ class TestComponentOutputs:
         }
 
         with pytest.raises(AttributeError, match="nonexistent_method not found in TestComponent"):
-            component.run_and_validate_update_outputs(frontend_node=invalid_node, field_name="test", field_value=True)
+            await component.run_and_validate_update_outputs(
+                frontend_node=invalid_node, field_name="test", field_value=True
+            )
 
         # Test missing method case
         invalid_node = {"outputs": [{"name": "test", "type": "str", "display_name": "Test"}]}
 
         with pytest.raises(ValueError, match="Output test does not have a method"):
-            component.run_and_validate_update_outputs(frontend_node=invalid_node, field_name="test", field_value=True)
+            await component.run_and_validate_update_outputs(
+                frontend_node=invalid_node, field_name="test", field_value=True
+            )

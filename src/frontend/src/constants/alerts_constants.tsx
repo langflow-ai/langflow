@@ -1,5 +1,7 @@
 // ERROR
 export const MISSED_ERROR_ALERT = "Oops! Looks like you missed something";
+export const INCOMPLETE_LOOP_ERROR_ALERT =
+  "The flow has an incomplete loop. Check your connections and try again.";
 export const INVALID_FILE_ALERT =
   "Please select a valid file. Only these file types are allowed:";
 export const CONSOLE_ERROR_MSG = "Error occurred while uploading file";

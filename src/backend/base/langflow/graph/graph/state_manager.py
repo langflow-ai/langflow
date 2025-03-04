@@ -33,3 +33,6 @@ class GraphStateManager:
 
     def subscribe(self, key, observer: Callable) -> None:
         self.state_service.subscribe(key, observer)
+
+    def unsubscribe(self, key, observer: Callable) -> None:
+        self.state_service.unsubscribe(key, observer)

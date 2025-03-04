@@ -32,7 +32,7 @@ class TavilySearchSchema(BaseModel):
 
 
 class TavilySearchToolComponent(LCToolComponent):
-    display_name = "Tavily AI Search"
+    display_name = "Tavily AI Search [DEPRECATED]"
     description = """**Tavily AI** is a search engine optimized for LLMs and RAG, \
         aimed at efficient, quick, and persistent search results. It can be used independently or as an agent tool.
 
@@ -41,6 +41,7 @@ Note: Check 'Advanced' for all options.
     icon = "TavilyIcon"
     name = "TavilyAISearch"
     documentation = "https://docs.tavily.com/"
+    legacy = True
 
     inputs = [
         SecretStrInput(

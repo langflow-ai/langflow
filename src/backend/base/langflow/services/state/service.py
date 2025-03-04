@@ -23,6 +23,9 @@ class StateService(Service):
     def subscribe(self, key, observer: Callable) -> None:
         raise NotImplementedError
 
+    def unsubscribe(self, key, observer: Callable) -> None:
+        raise NotImplementedError
+
     def notify_observers(self, key, new_state) -> None:
         raise NotImplementedError
 
@@ -30,8 +33,8 @@ class StateService(Service):
 class InMemoryStateService(StateService):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
-        self.states: dict = {}
-        self.observers: dict = defaultdict(list)
+        self.states: dict[str, dict] = {}
+        self.observers: dict[str, list[Callable]] = defaultdict(list)
         self.lock = Lock()
 
     def append_state(self, key, new_state, run_id: str) -> None:
@@ -72,3 +75,9 @@ class InMemoryStateService(StateService):
             except Exception:  # noqa: BLE001
                 logger.exception(f"Error in observer {callback} for key {key}")
                 logger.warning("Callbacks not implemented yet")
+
+    def unsubscribe(self, key, observer: Callable) -> None:
+        with self.lock:
+            if observer in self.observers[key]:
+                # Use list.remove() since observers[key] is a list
+                self.observers[key].remove(observer)

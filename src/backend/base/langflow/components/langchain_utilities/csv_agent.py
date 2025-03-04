@@ -43,6 +43,7 @@ class CSVAgentComponent(LCAgentComponent):
             name="input_value",
             display_name="Text",
             info="Text to be passed as input and extract info from the CSV File.",
+            required=True,
         ),
         DictInput(
             name="pandas_kwargs",
@@ -55,7 +56,7 @@ class CSVAgentComponent(LCAgentComponent):
 
     outputs = [
         Output(display_name="Response", name="response", method="build_agent_response"),
-        Output(display_name="Agent", name="agent", method="build_agent"),
+        Output(display_name="Agent", name="agent", method="build_agent", hidden=True, tool_mode=False),
     ]
 
     def _path(self) -> str:

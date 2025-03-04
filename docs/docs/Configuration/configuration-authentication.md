@@ -169,6 +169,18 @@ The generated secret key value is now used to encrypt your global variables.
 
 If no key is provided, Langflow will automatically generate a secure key. This is not recommended for production environments, because in a multi-instance deployment like Kubernetes, auto-generated keys won't be able to decrypt data encrypted by other instances. Instead, you should explicitly set the `LANGFLOW_SECRET_KEY` environment variable in the deployment configuration to be the same across all instances.
 
+### Rotate the LANGFLOW_SECRET_KEY
+
+To rotate the key, follow these steps.
+
+1. Create a new `LANGFLOW_SECRET_KEY` with the command in [Create a LANGFLOW_SECRET_KEY](#create-a-langflow_secret_key).
+2. Stop your Langflow instance.
+3. Update the `LANGFLOW_SECRET_KEY` in your `.env` file with the new key.
+4. Restart Langflow with the updated environment file:
+```bash
+langflow run --env-file .env
+```
+
 ### LANGFLOW_NEW_USER_IS_ACTIVE
 
 By default, this variable is set to `False`. When enabled, new users are automatically activated and can log in without requiring explicit activation by the superuser.

@@ -31,6 +31,12 @@ class CSVToDataComponent(Component):
             display_name="CSV String",
             info="Paste a CSV string directly to convert to a list of Data objects",
         ),
+        MessageTextInput(
+            name="text_key",
+            display_name="Text Key",
+            info="The key to use for the text column. Defaults to 'text'.",
+            value="text",
+        ),
     ]
 
     outputs = [
@@ -66,7 +72,7 @@ class CSVToDataComponent(Component):
 
             if csv_data:
                 csv_reader = csv.DictReader(io.StringIO(csv_data))
-                result = [Data(data=row) for row in csv_reader]
+                result = [Data(data=row, text_key=self.text_key) for row in csv_reader]
 
                 if not result:
                     self.status = "The CSV data is empty."

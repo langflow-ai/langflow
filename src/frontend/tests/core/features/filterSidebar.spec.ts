@@ -111,6 +111,10 @@ test(
     ).not.toBeVisible();
     await expect(page.getByTestId("logicCondition")).not.toBeVisible();
 
+    await page.getByTestId("edit-button-modal").click();
+
+    await page.getByTestId("showheaders").click();
+    await page.getByText("Close").last().click();
     await page.getByTestId("handle-apirequest-shownode-headers-left").click();
 
     await expect(page.getByTestId("disclosure-data")).toBeVisible();
@@ -124,7 +128,7 @@ test(
     await expect(page.getByTestId("helpersMessage History")).toBeVisible();
     await expect(page.getByTestId("vectorstoresAstra DB")).toBeVisible();
     await expect(page.getByTestId("toolsSearch API")).toBeVisible();
-    await expect(page.getByTestId("logicSub Flow")).not.toBeVisible();
+    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
 
     await page.getByTestId("sidebar-options-trigger").click();
     await page.getByTestId("sidebar-beta-switch").isVisible({ timeout: 5000 });
@@ -132,7 +136,7 @@ test(
     await expect(page.getByTestId("sidebar-beta-switch")).toBeChecked();
     await page.getByTestId("sidebar-options-trigger").click();
 
-    await expect(page.getByTestId("logicSub Flow")).toBeVisible();
+    await expect(page.getByTestId("logicSub Flow [Deprecated]")).toBeVisible();
 
     await expect(page.getByTestId("processingSplit Text")).toBeVisible();
     await expect(page.getByTestId("toolsSearch API")).toBeVisible();
@@ -143,7 +147,9 @@ test(
     await expect(page.getByTestId("helpersMessage History")).not.toBeVisible();
     await expect(page.getByTestId("vectorstoresAstra DB")).not.toBeVisible();
     await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();
-    await expect(page.getByTestId("logicSub Flow")).not.toBeVisible();
+    await expect(
+      page.getByTestId("logicSub Flow [Deprecated]"),
+    ).not.toBeVisible();
 
     await expect(page.getByTestId("processingSplit Text")).not.toBeVisible();
     await expect(page.getByTestId("toolsSearch API")).not.toBeVisible();

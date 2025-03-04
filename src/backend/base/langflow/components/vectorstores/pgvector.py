@@ -17,7 +17,7 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
         SecretStrInput(name="pg_server_url", display_name="PostgreSQL Server Connection String", required=True),
         StrInput(name="collection_name", display_name="Table", required=True),
         *LCVectorStoreComponent.inputs,
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"], required=True),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -25,7 +25,6 @@ class PGVectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
         ),
-        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
     ]
 
     @check_cached_vector_store

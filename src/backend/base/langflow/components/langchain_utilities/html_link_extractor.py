@@ -22,6 +22,7 @@ class HtmlLinkExtractorComponent(LCDocumentTransformerComponent):
             display_name="Input",
             info="The texts from which to extract links.",
             input_types=["Document", "Data"],
+            required=True,
         ),
     ]
 

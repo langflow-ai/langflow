@@ -17,11 +17,13 @@ class AssemblyAIGetSubtitles(Component):
             name="api_key",
             display_name="Assembly API Key",
             info="Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+            required=True,
         ),
         DataInput(
             name="transcription_result",
             display_name="Transcription Result",
             info="The transcription result from AssemblyAI",
+            required=True,
         ),
         DropdownInput(
             name="subtitle_format",

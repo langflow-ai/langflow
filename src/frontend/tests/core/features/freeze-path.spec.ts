@@ -1,8 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { evaluateReactStateChanges } from "../../utils/evaluate-input-react-state-changes";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
@@ -45,14 +44,6 @@ test(
       .getByTestId("default_slider_display_value")
       .click({ force: true });
 
-    await evaluateReactStateChanges(
-      page,
-      '[data-testid="slider_input"]',
-      "1.0",
-    );
-
-    await page.keyboard.press("Enter");
-
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
     });
@@ -65,24 +56,23 @@ test(
       timeout: 15000,
     });
 
-    await page.getByTestId("output-inspection-text").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
     const randomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").first().click();
+    await page.getByText("Close").last().click();
 
     await page.waitForSelector('[data-testid="default_slider_display_value"]', {
       timeout: 1000,
     });
 
-    await evaluateReactStateChanges(
-      page,
-      '[data-testid="slider_input"]',
-      "1.2",
-    );
+    await moveSlider(page, "right", false);
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
@@ -95,14 +85,17 @@ test(
       timeout: 15000,
     });
 
-    await page.getByTestId("output-inspection-text").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
     const secondRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").first().click();
+    await page.getByText("Close").last().click();
 
     await page.waitForSelector("text=OpenAI", {
       timeout: 1000,
@@ -140,17 +133,44 @@ test(
       timeout: 15000,
     });
 
-    await page.getByTestId("output-inspection-text").first().click();
+    await page
+      .getByTestId("output-inspection-message-chatoutput")
+      .first()
+      .click();
 
     const thirdRandomTextGeneratedByAI = await page
       .getByPlaceholder("Empty")
       .first()
       .inputValue();
 
-    await page.getByText("Close").first().click();
+    await page.getByText("Close").last().click();
 
     expect(randomTextGeneratedByAI).not.toEqual(secondRandomTextGeneratedByAI);
     expect(randomTextGeneratedByAI).not.toEqual(thirdRandomTextGeneratedByAI);
     expect(secondRandomTextGeneratedByAI).toEqual(thirdRandomTextGeneratedByAI);
   },
 );
+
+async function moveSlider(
+  page: Page,
+  side: "left" | "right",
+  advanced: boolean = false,
+) {
+  const thumbSelector = `slider_thumb${advanced ? "_advanced" : ""}`;
+  const trackSelector = `slider_track${advanced ? "_advanced" : ""}`;
+
+  await page.getByTestId(thumbSelector).click();
+
+  const trackBoundingBox = await page.getByTestId(trackSelector).boundingBox();
+
+  if (trackBoundingBox) {
+    const moveDistance =
+      trackBoundingBox.width * 0.1 * (side === "left" ? -1 : 1);
+    const centerX = trackBoundingBox.x + trackBoundingBox.width / 2;
+    const centerY = trackBoundingBox.y + trackBoundingBox.height / 2;
+
+    await page.mouse.move(centerX + moveDistance, centerY);
+    await page.mouse.down();
+    await page.mouse.up();
+  }
+}

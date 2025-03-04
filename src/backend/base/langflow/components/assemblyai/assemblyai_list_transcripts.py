@@ -17,6 +17,7 @@ class AssemblyAIListTranscripts(Component):
             name="api_key",
             display_name="Assembly API Key",
             info="Your AssemblyAI API key. You can get one from https://www.assemblyai.com/",
+            required=True,
         ),
         IntInput(
             name="limit",

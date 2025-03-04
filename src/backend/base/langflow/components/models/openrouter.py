@@ -50,6 +50,7 @@ class OpenRouterComponent(LCModelComponent):
             options=["Loading providers..."],
             value="Loading providers...",
             real_time_refresh=True,
+            required=True,
         ),
         DropdownInput(
             name="model_name",
@@ -58,9 +59,14 @@ class OpenRouterComponent(LCModelComponent):
             options=["Select a provider first"],
             value="Select a provider first",
             real_time_refresh=True,
+            required=True,
         ),
         SliderInput(
-            name="temperature", display_name="Temperature", value=0.7, range_spec=RangeSpec(min=0, max=2, step=0.01)
+            name="temperature",
+            display_name="Temperature",
+            value=0.7,
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
         ),
         IntInput(
             name="max_tokens",

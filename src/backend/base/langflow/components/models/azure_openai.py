@@ -2,8 +2,9 @@ from langchain_openai import AzureChatOpenAI
 
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import MessageTextInput
-from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput
+from langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput
 
 
 class AzureChatOpenAIComponent(LCModelComponent):
@@ -35,7 +36,7 @@ class AzureChatOpenAIComponent(LCModelComponent):
             required=True,
         ),
         MessageTextInput(name="azure_deployment", display_name="Deployment Name", required=True),
-        SecretStrInput(name="api_key", display_name="API Key"),
+        SecretStrInput(name="api_key", display_name="API Key", required=True),
         DropdownInput(
             name="api_version",
             display_name="API Version",
@@ -49,7 +50,13 @@ class AzureChatOpenAIComponent(LCModelComponent):
                 AZURE_OPENAI_API_VERSIONS[0],
             ),
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.7),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.7,
+            range_spec=RangeSpec(min=0, max=2, step=0.01),
+            info="Controls randomness. Lower values are more deterministic, higher values are more creative.",
+        ),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",

@@ -10,10 +10,11 @@ from langflow.schema import Data
 
 
 class WikipediaAPIComponent(LCToolComponent):
-    display_name = "Wikipedia API"
+    display_name = "Wikipedia API [Deprecated]"
     description = "Call Wikipedia API."
     name = "WikipediaAPI"
     icon = "Wikipedia"
+    legacy = True
 
     inputs = [
         MultilineInput(

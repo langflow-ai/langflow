@@ -20,9 +20,6 @@ const config = {
   projectName: "langflow",
   trailingSlash: false,
   staticDirectories: ["static"],
-  customFields: {
-    mendableAnonKey: "b7f52734-297c-41dc-8737-edbd13196394", // Mendable Anon Client-side key, safe to expose to the public
-  },
   i18n: {
     defaultLocale: "en",
     locales: ["en"],
@@ -116,8 +113,9 @@ const config = {
             ],
           },
           {
-            to: "/workspace-overview",
+            to: "concepts-overview",
             from: [
+              "/workspace-overview",
               "/365085a8-a90a-43f9-a779-f8769ec7eca1",
               "/My-Collection",
               "/workspace",
@@ -125,20 +123,30 @@ const config = {
             ],
           },
           {
-            to: "/components-overview",
-            from: "/components",
-          },
+            to: "/concepts-components",
+            from: [
+              "/components",
+              "/components-overview"
+            ],
+            },
           {
             to: "/configuration-global-variables",
             from: "/settings-global-variables",
           },
           {
-            to: "/workspace-playground",
-            from: "/guides-chat-memory",
+            to: "/concepts-playground",
+            from: [
+              "/workspace-playground",
+              "/workspace-logs",
+              "/guides-chat-memory",
+            ],
           },
           {
-            to: "/configuration-objects",
-            from: "/guides-data-message",
+            to: "/concepts-objects",
+            from: [
+              "/guides-data-message",
+              "/configuration-objects",
+            ]
           },
           {
             to: "/tutorials-sequential-agent",
@@ -159,6 +167,14 @@ const config = {
           {
             to: "/components-vector-stores",
             from: "/components-rag",
+          },
+          {
+            to: "/concepts-api",
+            from: "/workspace-api",
+          },
+          {
+            to: "/components-custom-components",
+            from: "/components/custom",
           },
           // add more redirects like this
           // {
@@ -236,8 +252,17 @@ const config = {
       },
       docs: {
         sidebar: {
-          hideable: true,
+          hideable: false,
         },
+      },
+      algolia: {
+        appId: 'UZK6BDPCVY',
+        // public key, safe to commit
+        apiKey: 'adbd7686dceb1cd510d5ce20d04bf74c',
+        indexName: 'langflow',
+        contextualSearch: true,
+        searchParameters: {},
+        searchPagePath: 'search',
       },
     }),
 };

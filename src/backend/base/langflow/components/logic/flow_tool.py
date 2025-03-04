@@ -14,12 +14,12 @@ from langflow.schema.dotdict import dotdict
 
 
 class FlowToolComponent(LCToolComponent):
-    display_name = "Flow as Tool"
+    display_name = "Flow as Tool [Deprecated]"
     description = "Construct a Tool from a function that runs the loaded Flow."
     field_order = ["flow_name", "name", "description", "return_direct"]
     trace_type = "tool"
     name = "FlowTool"
-    beta = True
+    legacy: bool = True
     icon = "hammer"
 
     async def get_flow_names(self) -> list[str]:

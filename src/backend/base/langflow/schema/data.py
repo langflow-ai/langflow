@@ -1,6 +1,6 @@
 import copy
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import cast
 from uuid import UUID
@@ -230,7 +230,8 @@ class Data(BaseModel):
 
 def custom_serializer(obj):
     if isinstance(obj, datetime):
-        return obj.astimezone().isoformat()
+        utc_date = obj.replace(tzinfo=timezone.utc)
+        return utc_date.strftime("%Y-%m-%d %H:%M:%S %Z")
     if isinstance(obj, Decimal):
         return float(obj)
     if isinstance(obj, UUID):

@@ -1,5 +1,5 @@
 > [!WARNING]
-> Tout les liens externes sont susceptibles d'être en anglais.
+> Tous les liens externes sont susceptibles d'être en anglais.
 
 ![Langflow](./docs/static/img/hero.png)
 

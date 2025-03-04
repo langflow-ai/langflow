@@ -11,11 +11,12 @@ from langflow.schema import Data
 
 
 class SearchAPIComponent(LCToolComponent):
-    display_name: str = "Search API"
+    display_name: str = "Search API [DEPRECATED]"
     description: str = "Call the searchapi.io API with result limiting"
     name = "SearchAPI"
     documentation: str = "https://www.searchapi.io/docs/google"
     icon = "SearchAPI"
+    legacy = True
 
     inputs = [
         MessageTextInput(name="engine", display_name="Engine", value="google"),

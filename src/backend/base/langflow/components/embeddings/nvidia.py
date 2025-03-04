@@ -21,12 +21,14 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
                 "snowflake/arctic-embed-I",
             ],
             value="nvidia/nv-embed-v1",
+            required=True,
         ),
         MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
             refresh_button=True,
             value="https://integrate.api.nvidia.com/v1",
+            required=True,
         ),
         SecretStrInput(
             name="nvidia_api_key",
@@ -34,6 +36,7 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
             info="The NVIDIA API Key.",
             advanced=False,
             value="NVIDIA_API_KEY",
+            required=True,
         ),
         FloatInput(
             name="temperature",

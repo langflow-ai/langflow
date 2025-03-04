@@ -203,7 +203,7 @@ export default function GlobalVariableModal({
               password={false}
               placeholder="Choose a field for the variable..."
               id="apply-to-fields"
-              popoverWidth="520px"
+              popoverWidth="29rem"
               optionsPlaceholder="Fields"
             />
             <div className="text-xs text-muted-foreground">

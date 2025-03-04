@@ -39,9 +39,7 @@ The **Travel Planning Agent** flow consists of these components:
 ## Run the travel planning agent flow
 
 1. Add your credentials to the Open AI and Search API components.
-2. In the **Chat output** component, click ▶️ Play to start the end-to-end application flow.
-   A **Chat output built successfully** message and a ✅ Check on all components indicate that the flow ran successfully.
-3. Click **Playground** to start a chat session.
-   You should receive a detailed, helpful answer to the journey defined in the **Chat input** component.
+2. Click **Playground** to start a chat session.
+You should receive a detailed, helpful answer to the journey defined in the **Chat input** component.
 
 Now that your query has completed the journey from **Chat input** to **Chat output**, you have completed the **Travel Planning Agent** flow.

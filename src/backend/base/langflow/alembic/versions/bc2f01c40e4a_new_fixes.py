@@ -7,6 +7,7 @@ Create Date: 2024-01-26 13:34:14.496769
 """
 
 from typing import Sequence, Union
+import warnings
 
 import sqlalchemy as sa
 import sqlmodel
@@ -25,7 +26,11 @@ def upgrade() -> None:
     inspector = sa.inspect(conn)  # type: ignore
     flow_columns = {column["name"] for column in inspector.get_columns("flow")}
     flow_indexes = {index["name"] for index in inspector.get_indexes("flow")}
-    flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
+
+    # Suppress the SQLite foreign key warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*SQL-parsed foreign key constraint.*")
+        flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
 
     with op.batch_alter_table("flow", schema=None) as batch_op:
         if "is_component" not in flow_columns:
@@ -47,7 +52,11 @@ def downgrade() -> None:
     inspector = sa.inspect(conn)  # type: ignore
     flow_columns = {column["name"] for column in inspector.get_columns("flow")}
     flow_indexes = {index["name"] for index in inspector.get_indexes("flow")}
-    flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
+
+    # Suppress the SQLite foreign key warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*SQL-parsed foreign key constraint.*")
+        flow_fks = {fk["name"] for fk in inspector.get_foreign_keys("flow")}
 
     with op.batch_alter_table("flow", schema=None) as batch_op:
         if "flow_user_id_fkey" in flow_fks:

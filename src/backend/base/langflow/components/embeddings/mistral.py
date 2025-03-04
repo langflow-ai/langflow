@@ -20,7 +20,7 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
             options=["mistral-embed"],
             value="mistral-embed",
         ),
-        SecretStrInput(name="mistral_api_key", display_name="Mistral API Key"),
+        SecretStrInput(name="mistral_api_key", display_name="Mistral API Key", required=True),
         IntInput(
             name="max_concurrent_requests",
             display_name="Max Concurrent Requests",

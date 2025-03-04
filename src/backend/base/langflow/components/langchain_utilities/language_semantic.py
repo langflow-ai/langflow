@@ -30,6 +30,7 @@ class SemanticTextSplitterComponent(LCTextSplitterComponent):
             info="List of Data objects containing text and metadata to split.",
             input_types=["Data"],
             is_list=True,
+            required=True,
         ),
         HandleInput(
             name="embeddings",
@@ -37,6 +38,7 @@ class SemanticTextSplitterComponent(LCTextSplitterComponent):
             info="Embeddings model to use for semantic similarity. Required.",
             input_types=["Embeddings"],
             is_list=False,
+            required=True,
         ),
         DropdownInput(
             name="breakpoint_threshold_type",

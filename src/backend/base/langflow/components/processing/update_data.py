@@ -27,6 +27,7 @@ class UpdateDataComponent(Component):
             display_name="Data",
             info="The record to update.",
             is_list=True,  # Changed to True to handle list of Data objects
+            required=True,
         ),
         IntInput(
             name="number_of_fields",
@@ -97,7 +98,7 @@ class UpdateDataComponent(Component):
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        input_types=["Text", "Data"],
+                        input_types=["Message", "Data"],
                     )
                     build_config[field.name] = field.to_dict()
 

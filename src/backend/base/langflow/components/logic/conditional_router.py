@@ -20,11 +20,13 @@ class ConditionalRouterComponent(Component):
             name="input_text",
             display_name="Text Input",
             info="The primary text input for the operation.",
+            required=True,
         ),
         MessageTextInput(
             name="match_text",
             display_name="Match Text",
             info="The text input to compare against.",
+            required=True,
         ),
         DropdownInput(
             name="operator",
@@ -44,7 +46,6 @@ class ConditionalRouterComponent(Component):
             name="message",
             display_name="Message",
             info="The message to pass through either route.",
-            advanced=True,
         ),
         IntInput(
             name="max_iterations",

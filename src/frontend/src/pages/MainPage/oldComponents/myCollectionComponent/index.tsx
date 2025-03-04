@@ -2,7 +2,7 @@ import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-fol
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import ComponentsComponent from "../componentsComponent";
 import HeaderTabsSearchComponent from "./components/headerTabsSearchComponent";

@@ -54,7 +54,7 @@ class NotDiamondComponent(Component):
         self._selected_model_name = None
 
     inputs = [
-        MessageInput(name="input_value", display_name="Input"),
+        MessageInput(name="input_value", display_name="Input", required=True),
         MessageTextInput(
             name="system_message",
             display_name="System Message",
@@ -75,6 +75,7 @@ class NotDiamondComponent(Component):
             info="The Not Diamond API Key to use for routing.",
             advanced=False,
             value="NOTDIAMOND_API_KEY",
+            required=True,
         ),
         StrInput(
             name="preference_id",

@@ -5,11 +5,11 @@ from langflow.components.agents.agent import AgentComponent
 from langflow.components.tools.calculator import CalculatorToolComponent
 
 
-def test_component_to_toolkit():
+async def test_component_to_toolkit():
     calculator_component = CalculatorToolComponent()
     agent_component = AgentComponent().set(tools=[calculator_component])
 
-    tools = agent_component.to_toolkit()
+    tools = await agent_component.to_toolkit()
     assert len(tools) == 1
     tool = tools[0]
 
