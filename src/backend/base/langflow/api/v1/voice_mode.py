@@ -391,8 +391,8 @@ async def flow_as_tool_websocket(
                         else:
                             print(f"\n      user transcript: {event.get('transcript')}")
 
-                    if event_type == "response.text.delta":
-                        text = event.get('delta')
+                    if event_type == "response.text.done":
+                        text = event.get('text')
                         print(f"\n      bot response: {text}")
                         if use_elevenlabs:
                             elevenlabs_client = await get_or_create_elevenlabs_client()
@@ -435,21 +435,18 @@ async def flow_as_tool_websocket(
                 print(f"Websocket exception: {e}")
 
         async def elevenlabs_generate_and_send_audio(elevenlabs_client, text):
-            audio_base64 = elevenlabs_client.text_to_speech.convert(
+            audio_stream = elevenlabs_client.text_to_speech.convert_as_stream(
                 voice_id=elevenlabs_voice,
-                output_format="pcm_24000",  # sets sample rate to 24kHz in PCM16 format
+                output_format="pcm_24000",
                 text=text,
-                model_id=elevenlabs_model,
+                model_id=elevenlabs_model
             )
-            for chunk in audio_base64:
-                base64_audio = base64.b64encode(chunk).decode()  # Convert PCM16 to float array
-                # asyncio.create_task(write_audio_to_file(audio_delta, "elevenlabs"))
-                await client_websocket.send_json(
-                    {
-                        "type": "response.audio.delta",
-                        "delta": base64_audio
-                    }
-                )
+            for chunk in audio_stream:
+                base64_audio = base64.b64encode(chunk).decode("utf-8")
+                await client_websocket.send_json({
+                    "type": "response.audio.delta",
+                    "delta": base64_audio
+                })
 
         async def get_or_create_elevenlabs_client():
             global elevenlabs_key, elevenlabs_client
