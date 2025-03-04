@@ -87,13 +87,11 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
         } group justify-between rounded-lg border border-border p-4 hover:border-placeholder-foreground hover:shadow-sm`}
         data-testid="list-card"
       >
-        {/* left side */}
         <div
           className={`flex min-w-0 ${
             isComponent ? "cursor-default" : "cursor-pointer"
           } items-center gap-4`}
         >
-          {/* Icon */}
           <div
             className={cn(
               `item-center flex justify-center rounded-lg p-3`,
@@ -124,7 +122,6 @@ const ListComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
         </div>
 
-        {/* right side */}
         <div className="ml-5 flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
