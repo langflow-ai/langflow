@@ -8,7 +8,9 @@ from loguru import logger
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import (
+    BoolInput,
     DropdownInput,
+    FileInput,
     IntInput,
     LinkInput,
     MessageTextInput,
@@ -26,20 +28,23 @@ class GmailAPIComponent(LCToolComponent):
     name = "GmailAPI"
     icon = "Gmail"
     documentation: str = "https://docs.composio.dev"
+
     _actions_data: dict = {
-        "GMAIL_SEND_EMAIL": ["recipient_email", "subject", "body"],
-        "GMAIL_FETCH_EMAILS": ["max_results", "query"],
+        "GMAIL_SEND_EMAIL": ["recipient_email", "subject", "body", "cc", "bcc", "is_html", "attachment"],
+        "GMAIL_FETCH_EMAILS": ["max_results", "query", "page_token", "label_ids", "include_spam_trash"],
         "GMAIL_GET_PROFILE": [],
-        "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": ["message_id"],
-        "GMAIL_CREATE_EMAIL_DRAFT": ["recipient_email", "subject", "body"],
-        "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": ["thread_id"],
-        "GMAIL_LIST_THREADS": ["max_results", "query"],
-        "GMAIL_REPLY_TO_THREAD": ["thread_id", "message_body", "recipient_email"],
+        "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": ["message_id", "format"],
+        "GMAIL_CREATE_EMAIL_DRAFT": ["recipient_email", "subject", "body", "cc", "bcc", "is_html", "attachment"],
+        "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": ["thread_id", "page_token"],
+        "GMAIL_LIST_THREADS": ["max_results", "query", "page_token"],
+        "GMAIL_REPLY_TO_THREAD": ["thread_id", "message_body", "recipient_email", "cc", "bcc", "is_html"],
         "GMAIL_LIST_LABELS": [],
-        "GMAIL_CREATE_LABEL": ["label_name"],
-        "GMAIL_GET_PEOPLE": [],
+        "GMAIL_CREATE_LABEL": ["label_name", "label_list_visibility", "message_list_visibility"],
+        "GMAIL_GET_PEOPLE": ["resource_name", "person_fields"],
         "GMAIL_REMOVE_LABEL": ["label_id"],
     }
+
+    _bool_variables = {"is_html", "include_spam_trash"}
 
     inputs = [
         MessageTextInput(
@@ -93,6 +98,7 @@ class GmailAPIComponent(LCToolComponent):
             info="Select Gmail action to pass to the agent",
             show=True,
             real_time_refresh=True,
+            required=True,
         ),
         MessageTextInput(
             name="recipient_email",
@@ -152,6 +158,97 @@ class GmailAPIComponent(LCToolComponent):
             info="The ID of the Gmail label",
             show=False,
         ),
+        StrInput(
+            name="cc",
+            display_name="CC",
+            info="Email addresses to CC (Carbon Copy) in the email, separated by commas",
+            show=False,
+        ),
+        StrInput(
+            name="bcc",
+            display_name="BCC",
+            info="Email addresses to BCC (Blid Carbon Copy) in the email, separated by commas",
+            show=False,
+        ),
+        BoolInput(
+            name="is_html",
+            display_name="Is HTML",
+            info="Specify whether the email body contains HTML content (true/false)",
+            show=False,
+            value=False,
+        ),
+        StrInput(
+            name="page_token",
+            display_name="Page Token",
+            info="Token for retrieving the next page of results",
+            show=False,
+        ),
+        StrInput(
+            name="label_ids",
+            display_name="Label Ids",
+            info="Comma-separated list of label IDs to filter messages",
+            show=False,
+        ),
+        BoolInput(
+            name="include_spam_trash",
+            display_name="Include messages from Spam/Trash",
+            info="Include messages from SPAM and TRASH in the results",
+            show=False,
+            value=False,
+        ),
+        StrInput(
+            name="format",
+            display_name="Format",
+            info="The format to return the message in. Possible values: minimal, full, raw, metadata",
+            show=False,
+        ),
+        StrInput(
+            name="label_list_visibility",
+            display_name="Label List Visibility",
+            info="The visibility of the label in the label list in the Gmail web interface. Possible values: 'labelShow' to show the label in the label list, 'labelShowIfUnread' to show the label if there are any unread messages with that label, 'labelHide' to not show the label in the label list",  # noqa: E501
+            show=False,
+        ),
+        StrInput(
+            name="message_list_visibility",
+            display_name="Message List Visibility",
+            info="The visibility of the label in the message list in the Gmail web interface. Possible values: 'show' to show the label in the message list, 'hide' to not show the label in the message list",  # noqa: E501
+            show=False,
+        ),
+        StrInput(
+            name="resource_name",
+            display_name="Resource Name",
+            info="The resource name of the person to provide information about. To get information about a google account, specify 'people/account_id'",  # noqa: E501
+            show=False,
+        ),
+        StrInput(
+            name="person_fields",
+            display_name="Person fields",
+            info="A field mask to restrict which fields on the person are returned. Multiple fields can be specified by separating them with commas.Valid values are: addresses, ageRanges, biographies, birthdays, calendarUrls, clientData, coverPhotos, email Addresses etc",  # noqa: E501
+            show=False,
+        ),
+        FileInput(
+            name="attachment",
+            display_name="Add Attachment",
+            file_types=[
+                "csv",
+                "txt",
+                "doc",
+                "docx",
+                "xls",
+                "xlsx",
+                "pdf",
+                "png",
+                "jpg",
+                "jpeg",
+                "gif",
+                "zip",
+                "rar",
+                "ppt",
+                "pptx",
+            ],
+            info="Add an attachment",
+            show=False,
+        ),
     ]
 
     outputs = [
@@ -167,7 +264,14 @@ class GmailAPIComponent(LCToolComponent):
             params = {}
             if self.action in self._actions_data:
                 for field in self._actions_data[self.action]:
-                    params[field] = getattr(self, field)
+                    value = getattr(self, field)
+
+                    if value is None or value == "":
+                        continue
+
+                    if field in ["cc", "bcc", "label_ids"] and value:
+                        value = [email.strip() for email in value.split(",")]
+                    params[field] = value
 
             result = toolset.execute_action(
                 action=enum_name,
@@ -187,7 +291,11 @@ class GmailAPIComponent(LCToolComponent):
 
         for field in all_fields:
             build_config[field]["show"] = False
-            build_config[field]["value"] = ""
+
+            if field in self._bool_variables:
+                build_config[field]["value"] = False
+            else:
+                build_config[field]["value"] = ""
 
         if field_value in self._actions_data:
             for field in self._actions_data[field_value]:
