@@ -141,6 +141,7 @@ module.exports = {
       label: "Integrations",
       items: [
         "Integrations/Apify/integrations-apify",
+        "Integrations/Arize/integrations-arize",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
