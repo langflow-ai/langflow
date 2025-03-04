@@ -232,7 +232,7 @@ Environment="LANGFLOW_STORE_ENVIRONMENT_VARIABLES=true"
 Environment="LANGFLOW_SUPERUSER=adminuser"
 Environment="LANGFLOW_SUPERUSER_PASSWORD=adminpass"
 Environment="LANGFLOW_WORKER_TIMEOUT=60000"
-Environment="LANGFLOW_WORKERS=32"
+Environment="LANGFLOW_WORKERS=3"
 ```
 
 For more information on systemd, see the [Red Hat documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_systemd_unit_files_to_customize_and_optimize_your_system/assembly_working-with-systemd-unit-files_working-with-systemd#assembly_working-with-systemd-unit-files_working-with-systemd).
