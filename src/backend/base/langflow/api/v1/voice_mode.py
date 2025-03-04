@@ -498,10 +498,15 @@ async def flow_as_tool_websocket(
                 print(f"Websocket exception: {e}")
 
         async def elevenlabs_generate_and_send_audio(elevenlabs_client, text):
-            """
-            Convert text to speech using ElevenLabs and stream the audio to the client.
-            The text parameter may be a string or a synchronous generator of text chunks.
-            """
+            loop = asyncio.get_running_loop()
+            try:
+                # Offload the blocking TTS generation to a background thread.
+                await asyncio.to_thread(_blocking_tts, elevenlabs_client, text, client_websocket, loop)
+            except Exception as e:
+                print(e)
+                print(traceback.format_exc())
+
+        def _blocking_tts(elevenlabs_client, text, client_websocket, loop):
             try:
                 audio_stream = elevenlabs_client.generate(
                     voice=elevenlabs_voice,
@@ -513,10 +518,16 @@ async def flow_as_tool_websocket(
                 )
                 for chunk in audio_stream:
                     base64_audio = base64.b64encode(chunk).decode("utf-8")
-                    await client_websocket.send_json({
-                        "type": "response.audio.delta",
-                        "delta": base64_audio
-                    })
+                    # Use asyncio.run_coroutine_threadsafe to send the audio chunk back to the client.
+                    future = asyncio.run_coroutine_threadsafe(
+                        client_websocket.send_json({
+                            "type": "response.audio.delta",
+                            "delta": base64_audio
+                        }),
+                        loop
+                    )
+                    # Optionally, wait for the send to complete.
+                    future.result()
             except Exception as e:
                 print(e)
                 print(traceback.format_exc())
