@@ -53,6 +53,9 @@ elevenlabs_key = None
 
 barge_in_enabled = False
 
+async def safe_build_flow(*args, **kwargs):
+    # Offload the potentially blocking build_flow call
+    return await asyncio.to_thread(build_flow, *args, **kwargs)
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
@@ -226,14 +229,13 @@ async def flow_as_tool_websocket(
         )
     except (InvalidToken, ValueError):
         openai_key = os.getenv("OPENAI_API_KEY")
-        if not openai_key or openai_key == "dummy":
-            await client_websocket.send_json(
-                {
-                    "type": "error",
-                    "code": "api_key_missing",
-                    "message": "OpenAI API key not found. Please set your API key as an env var or a global variable.",
-                }
-            )
+        if not openai_key or openai_key == 'dummy':
+            await client_websocket.send_json({
+                "type": "error",
+                "code": "api_key_missing",
+                "key_name": "OPENAI_API_KEY",
+                "message": "OpenAI API key not found. Please set your API key as an env var or a global variable.",
+            })
             return
     except Exception as e:
         logger.error("exception")
@@ -497,6 +499,8 @@ async def flow_as_tool_websocket(
                     elif event_type == "response.audio.delta":
                         # Audio deltas from OpenAI are not forwarded if ElevenLabs is used.
                         audio_delta = event.get("delta", "")
+                    elif event_type == "error":
+                        print(event)
                     else:
                         await client_websocket.send_text(data)
                     log_event(event_type, "↓")
@@ -548,13 +552,12 @@ async def flow_as_tool_websocket(
                     except (InvalidToken, ValueError):
                         elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
                         if not elevenlabs_key:
-                            await client_websocket.send_json(
-                                {
-                                    "type": "error",
-                                    "code": "api_key_missing",
-                                    "message": "ELEVENLABS API key not found. Please set your API key as an env var or a global variable.",
-                                }
-                            )
+                            await client_websocket.send_json({
+                                "type": "error",
+                                "code": "api_key_missing",
+                                "key_name": "ELEVENLABS_API_KEY",
+                                "message": "ELEVENLABS API key not found. Please set your API key as an env var or a global variable.",
+                            })
                             return None
                     except Exception as e:
                         logger.error("exception")
@@ -615,7 +618,7 @@ async def flow_audio_websocket(
                         session=websocket_session_id,
                     )
                     try:
-                        response = await build_flow(
+                        response = await safe_build_flow(
                             flow_id=UUID(flow_id),
                             inputs=input_request,
                             background_tasks=background_tasks,
