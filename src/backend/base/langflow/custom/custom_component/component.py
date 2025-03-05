@@ -101,12 +101,14 @@ class Component(CustomComponent):
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
+
         self._output_logs: dict[str, list[Log]] = {}
         self._current_output: str = ""
         self._metadata: dict = {}
         self._ctx: dict = {}
         self._code: str | None = None
         self._logs: list[Log] = []
+        self._append_tool_output()
 
         # Initialize component-specific collections
         self._inputs: dict[str, InputTypes] = {}
