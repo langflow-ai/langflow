@@ -16,8 +16,9 @@ from pydantic import BaseModel
 
 from langflow.graph.graph.state_model import create_output_state_model_from_graph
 from langflow.services.base import Service
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.task.model import TaskCreate, TaskRead, TaskUpdate
-from langflow.services.deps import get_chat_service, get_task_service
+from langflow.services.deps import get_chat_service, get_task_service, session_scope
 
 if TYPE_CHECKING:
     from langflow.api.v1.schemas import InputValueRequest
@@ -220,9 +221,26 @@ class TaskOrchestrationService(Service):
 
             # Get the task data
             task_data = self._tasks[task_id]
-            flow_data = task_data.get("flow_data")
-            input_request = task_data.get("input_request", {})
+            # The assignee_id is a flow_id. We need to get the flow_data by getting the flow from the flow_id
+            async with session_scope() as session:
+                flow = await session.get(Flow, task_data.get("assignee_id"))
+                if not flow:
+                    msg = f"Flow with id {task_data.get('assignee_id')} not found"
+                    raise ValueError(msg)
+                flow_data = flow.data
+                user_id = flow.user_id
 
+            input_value = f"""You are a task processing agent. Your job is to complete the following task:
+
+Task Title: {task_data.get("title")}
+Task Description: {task_data.get("description")}
+Task Author: {task_data.get("author_id")}
+Your ID: {task_data.get("assignee_id")}
+
+Please process this task according to the description and provide a complete response.
+Focus on addressing all requirements in the task description."""
+
+            input_value_request = {"input_value": input_value, "session": str(task_id)}
             if not flow_data:
                 logger.error(f"Task {task_id} has no flow_data")
                 msg = "No flow data provided for task processing"
@@ -234,13 +252,13 @@ class TaskOrchestrationService(Service):
                 graph = await build_graph_from_data(
                     flow_id=str(task_id),
                     payload=flow_data,
-                    user_id=str(task_data.get("author_id")),
+                    user_id=str(user_id),
                     flow_name=task_data.get("title", "Untitled Flow"),
                 )
 
                 # Set session_id from input_request if available
-                if input_request and "session_id" in input_request:
-                    session_id = input_request.get("session_id")
+                if input_value_request and "session" in input_value_request:
+                    session_id = input_value_request.get("session")
                     if session_id:
                         logger.debug(f"Setting session_id {session_id} for task {task_id}")
                         graph.session_id = session_id
@@ -251,8 +269,8 @@ class TaskOrchestrationService(Service):
                                 logger.debug(f"Setting session_id on Agent component {vertex.id}")
                                 if hasattr(vertex, "set") and callable(vertex.set):
                                     # Set session_id, sender and sender_name
-                                    sender = input_request.get("sender", "Machine")
-                                    sender_name = input_request.get("sender_name", "Agent")
+                                    sender = input_value_request.get("sender", "Machine")
+                                    sender_name = input_value_request.get("sender_name", "Agent")
                                     vertex.set(session_id=session_id, sender=sender, sender_name=sender_name)
                     else:
                         logger.warning(f"Empty session_id provided for task {task_id}")
@@ -262,19 +280,8 @@ class TaskOrchestrationService(Service):
                     graph.session_id = str(task_id)
 
                 # Create input value request and set it in the graph
-                input_value = input_request.get("input_value", "")
+                input_value = input_value_request.get("input_value", "")
                 logger.debug(f"Input value for task {task_id}: {input_value}")
-
-                # If there's an input_value in the input_request, set it in the graph
-                if input_value and hasattr(graph.start, "set"):
-                    logger.debug(f"Setting input_value for task {task_id}")
-                    graph.start.set(input_value=input_value)
-
-                # If there's a message in the input_request, set it in the graph
-                message = input_request.get("message", "")
-                if message and hasattr(graph.start, "set"):
-                    logger.debug(f"Setting message for task {task_id}: {message}")
-                    graph.start.set(message=message)
 
                 # Prepare the graph for processing
                 logger.debug(f"Preparing graph for task {task_id}")
@@ -286,7 +293,7 @@ class TaskOrchestrationService(Service):
                 # Process the graph
                 logger.info(f"Starting graph execution for task {task_id}")
                 results = []
-                async for result in graph.async_start():
+                async for result in graph.async_start(inputs=input_value_request):
                     if hasattr(result, "vertex") and result.vertex.is_output:
                         # Get the output state for this vertex
                         vertex_state = getattr(output_state_model, result.vertex.id, None)
@@ -371,7 +378,7 @@ class TaskOrchestrationService(Service):
         vertex_id: str,
         graph: Graph,
         event_manager: EventManager,
-        inputs: InputValueRequest,
+        inputs: InputValueRequest | dict,
     ) -> None:
         """Build a single vertex and handle its downstream effects.
 
@@ -386,7 +393,7 @@ class TaskOrchestrationService(Service):
             vertex_build_result = await graph.build_vertex(
                 vertex_id=vertex_id,
                 user_id=str(graph.user_id),
-                inputs_dict=inputs.model_dump(),
+                inputs_dict=inputs,
                 get_cache=self.chat_service.get_cache,
                 set_cache=self.chat_service.set_cache,
                 event_manager=event_manager,
