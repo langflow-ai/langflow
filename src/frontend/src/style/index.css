@@ -167,6 +167,8 @@
     --tool-mode-gradient-2: #ff3276;
 
     --slider-input-border: #d4d4d8;
+
+    --zinc-foreground: 240 5.9% 90%;
   }
 
   .dark {
@@ -194,6 +196,8 @@
     --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
     --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --canvas-dot: 240 5.3% 26.1%; /* hsl(240, 5.3%, 26.1%) */
+    --accent-amber: 26 90% 37%; /* hsl(26, 90%, 37%) */
+    --accent-amber-foreground: 26 90% 37%; /* hsl(26, 90%, 37%) */
     --accent-emerald: 164 86% 16%; /* hsl(164, 86%, 16%) */
     --accent-emerald-foreground: 158 64% 52%; /* hsl(158, 64%, 52%) */
     --accent-emerald-hover: 163.1 88.1% 19.8%; /* hsl(163.1, 88.1%, 19.8%) */
@@ -307,7 +311,7 @@
 
     --datatype-fuchsia: 291.1 93.1% 82.9%;
     --datatype-fuchsia-foreground: 293.4 69.5% 48.8%;
-    
+
     --datatype-purple: 268.6 100% 91.8%;
     --datatype-purple-foreground: 272.1 71.7% 47.1%;
 
@@ -323,5 +327,7 @@
     --node-ring: 240 6% 90%;
 
     --slider-input-border: #d4d4d8;
+
+    --zinc-foreground: 240 5.2% 33.9%;
   }
 }

@@ -57,23 +57,29 @@ jobs:
         with:
           script: |
             const workflow_name = 'nightly_build.yml';
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set to beginning of day
+
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: workflow_name,
-              per_page: 1,
+              created: `>=${today.toISOString()}`,
+              per_page: 100, // Get more runs to check
               status: 'completed'
             });
 
             if (runs.workflow_runs.length === 0) {
-              console.log('No completed workflow runs found');
+              console.log('No completed workflow runs found today');
               return core.setOutput('success', 'true');
             }
 
-            const lastRun = runs.workflow_runs[0];
-            const success = lastRun.conclusion === 'success';
-            console.log(`Last nightly build status: ${lastRun.conclusion}`);
-            core.setOutput('success', success.toString());
+            // Check if any runs today were successful
+            const successfulTodayRuns = runs.workflow_runs.filter(run => run.conclusion === 'success');
+            const hasSuccessfulRunToday = successfulTodayRuns.length > 0;
+
+            console.log(`Found ${runs.workflow_runs.length} completed runs today, ${successfulTodayRuns.length} successful`);
+            core.setOutput('success', hasSuccessfulRunToday.toString());
 
   set-ci-condition:
     needs: check-nightly-status
@@ -101,6 +107,12 @@ jobs:
       frontend-tests: ${{ steps.filter.outputs.frontend-tests }}
       components-changes: ${{ steps.filter.outputs.components-changes }}
       starter-projects-changes: ${{ steps.filter.outputs.starter-projects-changes }}
+      starter-projects: ${{ steps.filter.outputs.starter-projects }}
+      components: ${{ steps.filter.outputs.components }}
+      workspace: ${{ steps.filter.outputs.workspace }}
+      api: ${{ steps.filter.outputs.api }}
+      database: ${{ steps.filter.outputs.database }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -119,11 +131,10 @@ jobs:
     uses: ./.github/workflows/python_test.yml
     with:
       python-versions: ${{ inputs.python-versions || '["3.10"]' }}
-
   test-frontend:
     needs: path-filter
     name: Run Frontend Tests
-    if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' }}
+    if: ${{ needs.path-filter.outputs.frontend == 'true' || needs.path-filter.outputs.frontend-tests == 'true' || needs.path-filter.outputs.components-changes == 'true' || needs.path-filter.outputs.starter-projects-changes == 'true' || needs.path-filter.outputs.starter-projects == 'true' || needs.path-filter.outputs.components == 'true' || needs.path-filter.outputs.workspace == 'true' || needs.path-filter.outputs.api == 'true' || needs.path-filter.outputs.database == 'true' }}
     uses: ./.github/workflows/typescript_test.yml
     with:
       tests_folder: ${{ inputs.frontend-tests-folder }}

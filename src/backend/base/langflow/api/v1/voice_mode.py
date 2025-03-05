@@ -1,16 +1,20 @@
 import asyncio
-import numpy as np
 import base64
-from elevenlabs.client import ElevenLabs
 import json
 import os
+
+# For sync queue and thread
+import queue
+import threading
 import traceback
 from datetime import datetime
 from uuid import UUID, uuid4
 
+import numpy as np
 import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
+from elevenlabs.client import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -27,10 +31,6 @@ from langflow.utils.voice_utils import (
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
-
-# For sync queue and thread
-import queue
-import threading
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -68,14 +68,15 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
             raise ValueError(error_message)
         return flow.description
 
+
 def pcm16_to_float_array(pcm_data):
     values = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32)
     normalized = values / 32768.0  # Normalize to -1.0 to 1.0
     return normalized
 
+
 async def text_chunker_with_timeout(chunks, timeout=0.3):
-    """
-    Async generator that takes an async iterable (of text pieces),
+    """Async generator that takes an async iterable (of text pieces),
     accumulates them and yields chunks without breaking sentences.
     If no new text is received within 'timeout' seconds and there is
     buffered text, it flushes that text.
@@ -108,6 +109,7 @@ async def text_chunker_with_timeout(chunks, timeout=0.3):
     if buffer:
         yield buffer + " "
 
+
 async def queue_generator(queue: asyncio.Queue):
     """Async generator that yields items from a queue."""
     while True:
@@ -116,15 +118,16 @@ async def queue_generator(queue: asyncio.Queue):
             break
         yield item
 
+
 async def handle_function_call(
-        websocket: WebSocket,
-        openai_ws: websockets.WebSocketClientProtocol,
-        function_call: dict,
-        function_call_args: str,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        current_user: CurrentActiveUser,
-        session: DbSession,
+    websocket: WebSocket,
+    openai_ws: websockets.WebSocketClientProtocol,
+    function_call: dict,
+    function_call_args: str,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: CurrentActiveUser,
+    session: DbSession,
 ):
     try:
         conversation_id = str(uuid4())
@@ -176,10 +179,10 @@ async def handle_function_call(
         }
         await openai_ws.send(json.dumps(function_output))
 
+
 # --- Synchronous text chunker using a standard queue ---
 def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
-    """
-    Synchronous generator that reads text pieces from a sync queue,
+    """Synchronous generator that reads text pieces from a sync queue,
     accumulates them and yields complete chunks.
     """
     splitters = (".", ",", "?", "!", ";", ":", "—", "-", "(", ")", "[", "]", "}", " ")
@@ -207,12 +210,13 @@ def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
     if buffer:
         yield buffer + " "
 
+
 @router.websocket("/ws/flow_as_tool/{flow_id}")
 async def flow_as_tool_websocket(
-        client_websocket: WebSocket,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        session: DbSession,
+    client_websocket: WebSocket,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
     current_user = await get_current_user_by_jwt(client_websocket.cookies.get("access_token_lf"), session)
@@ -246,9 +250,7 @@ async def flow_as_tool_websocket(
             "description": flow_description or "Execute the flow with the given input",
             "parameters": {
                 "type": "object",
-                "properties": {
-                    "input": {"type": "string", "description": "The input to send to the flow"}
-                },
+                "properties": {"input": {"type": "string", "description": "The input to send to the flow"}},
                 "required": ["input"],
             },
         }
@@ -326,6 +328,7 @@ async def flow_as_tool_websocket(
                         logger.trace("_", end="")
 
         shared_state = {"last_event_type": None, "event_count": 0}
+
         def log_event(event_type: str, direction: str) -> None:
             if event_type != shared_state["last_event_type"]:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -339,8 +342,7 @@ async def flow_as_tool_websocket(
         text_delta_task = None  # Will hold our background task.
 
         async def process_text_deltas(async_q: asyncio.Queue):
-            """
-            Transfer text deltas from the async queue to a synchronous queue,
+            """Transfer text deltas from the async queue to a synchronous queue,
             then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
             """
             sync_q = queue.Queue()
@@ -351,6 +353,7 @@ async def flow_as_tool_websocket(
                     sync_q.put(item)
                     if item is None:
                         break
+
             # Schedule the transfer task in the main event loop.
             asyncio.create_task(transfer_text_deltas())
 
@@ -366,6 +369,7 @@ async def flow_as_tool_websocket(
                 # Create a new event loop for this thread.
                 new_loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(new_loop)
+
                 async def run_tts():
                     try:
                         audio_stream = eleven_client.generate(
@@ -374,23 +378,22 @@ async def flow_as_tool_websocket(
                             text=sync_gen,  # synchronous generator expected by ElevenLabs
                             model=elevenlabs_model,
                             voice_settings=None,
-                            stream=True
+                            stream=True,
                         )
                         for chunk in audio_stream:
                             base64_audio = base64.b64encode(chunk).decode("utf-8")
                             # Schedule sending the audio chunk in the main event loop.
                             asyncio.run_coroutine_threadsafe(
-                                client_websocket.send_json({
-                                    "type": "response.audio.delta",
-                                    "delta": base64_audio
-                                }),
-                                main_loop
+                                client_websocket.send_json({"type": "response.audio.delta", "delta": base64_audio}),
+                                main_loop,
                             ).result()
                     except Exception as e:
                         print(e)
                         print(traceback.format_exc())
+
                 new_loop.run_until_complete(run_tts())
                 new_loop.close()
+
             threading.Thread(target=tts_thread, daemon=True).start()
 
         async def forward_to_openai() -> None:
@@ -521,17 +524,13 @@ async def flow_as_tool_websocket(
                     text=text,
                     model=elevenlabs_model,
                     voice_settings=None,
-                    stream=True
+                    stream=True,
                 )
                 for chunk in audio_stream:
                     base64_audio = base64.b64encode(chunk).decode("utf-8")
                     # Use asyncio.run_coroutine_threadsafe to send the audio chunk back to the client.
                     future = asyncio.run_coroutine_threadsafe(
-                        client_websocket.send_json({
-                            "type": "response.audio.delta",
-                            "delta": base64_audio
-                        }),
-                        loop
+                        client_websocket.send_json({"type": "response.audio.delta", "delta": base64_audio}), loop
                     )
                     # Optionally, wait for the send to complete.
                     future.result()
@@ -545,8 +544,10 @@ async def flow_as_tool_websocket(
                 if elevenlabs_key is None:
                     try:
                         elevenlabs_key = await variable_service.get_variable(
-                            user_id=current_user.id, name="ELEVENLABS_API_KEY", field="elevenlabs_api_key",
-                            session=session
+                            user_id=current_user.id,
+                            name="ELEVENLABS_API_KEY",
+                            field="elevenlabs_api_key",
+                            session=session,
                         )
                     except (InvalidToken, ValueError):
                         elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
@@ -573,12 +574,13 @@ async def flow_as_tool_websocket(
             forward_to_client(),
         )
 
+
 @router.websocket("/ws/{flow_id}")
 async def flow_audio_websocket(
-        client_websocket: WebSocket,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        session: DbSession,
+    client_websocket: WebSocket,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
 ):
     """WebSocket endpoint for streaming events to flow components."""
     current_user = await get_current_user_by_jwt(client_websocket.cookies.get("access_token_lf"), session)
@@ -613,7 +615,7 @@ async def flow_audio_websocket(
                         input_value=json.dumps(event),
                         components=[chat_input_id],
                         type="any",
-                        session=websocket_session_id
+                        session=websocket_session_id,
                     )
                     try:
                         response = await safe_build_flow(
@@ -646,18 +648,18 @@ async def flow_audio_websocket(
                         print(f"queue length {event_queue.qsize()}")
                         last_result_time = current_time
                     except Exception as e:
-                        logger.error(f"Error processing event through flow: {str(e)}")
+                        logger.error(f"Error processing event through flow: {e!s}")
                         try:
-                            await client_websocket.send_json({
-                                "type": "error",
-                                "message": f"Flow processing error: {str(e)}"
-                            })
+                            await client_websocket.send_json(
+                                {"type": "error", "message": f"Flow processing error: {e!s}"}
+                            )
                         except WebSocketDisconnect:
                             break
                 except Exception as e:
-                    logger.error(f"Error input request: {str(e)}")
+                    logger.error(f"Error input request: {e!s}")
                 finally:
                     event_queue.task_done()
+
         process_task = asyncio.create_task(process_events())
         try:
             while True:
@@ -671,19 +673,16 @@ async def flow_audio_websocket(
         except WebSocketDisconnect:
             logger.debug("Client disconnected")
         except Exception as e:
-            logger.error(f"Error receiving message: {str(e)}")
+            logger.error(f"Error receiving message: {e!s}")
             try:
-                await client_websocket.send_json({
-                    "type": "error",
-                    "message": str(e)
-                })
+                await client_websocket.send_json({"type": "error", "message": str(e)})
             except WebSocketDisconnect:
                 pass
     except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
+        logger.error(f"WebSocket error: {e!s}")
         logger.error(traceback.format_exc())
     finally:
-        if 'process_task' in locals():
+        if "process_task" in locals():
             await event_queue.put(None)
             await process_task
         try:

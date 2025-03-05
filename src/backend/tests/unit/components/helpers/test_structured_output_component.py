@@ -5,18 +5,39 @@ import pytest
 from langflow.components.helpers.structured_output import StructuredOutputComponent
 from langflow.helpers.base_model import build_model_from_schema
 from langflow.inputs.inputs import TableInput
-from langflow.schema.data import Data
 from pydantic import BaseModel
 
+from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
 
 
-class TestStructuredOutputComponent:
+class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
+    @pytest.fixture
+    def component_class(self):
+        """Return the component class to test."""
+        return StructuredOutputComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {
+            "llm": MockLanguageModel(),
+            "input_value": "Test input",
+            "schema_name": "TestSchema",
+            "output_schema": [{"name": "field", "type": "str", "description": "A test field"}],
+            "multiple": False,
+            "system_prompt": "Test system prompt",
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return the file names mapping for version-specific files."""
+
     def test_successful_structured_output_generation_with_patch_with_config(self):
-        def mock_get_chat_result(runnable, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
             class MockBaseModel(BaseModel):
-                def model_dump(self, **kwargs):  # noqa: ARG002
-                    return {"field": "value"}
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "value"}]}
 
             return MockBaseModel()
 
@@ -26,12 +47,13 @@ class TestStructuredOutputComponent:
             schema_name="TestSchema",
             output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
             multiple=False,
+            system_prompt="Test system prompt",
         )
 
         with patch("langflow.components.helpers.structured_output.get_chat_result", mock_get_chat_result):
-            result = component.build_structured_output()
-            assert isinstance(result, Data)
-            assert result.data == {"field": "value"}
+            result = component.build_structured_output_base()
+            assert isinstance(result, list)
+            assert result == [{"field": "value"}]
 
     def test_raises_value_error_for_unsupported_language_model(self):
         # Mocking an incompatible language model
@@ -155,10 +177,13 @@ class TestStructuredOutputComponent:
             child: str = "value"
 
         class ParentModel(BaseModel):
-            parent: ChildModel = ChildModel()
+            objects: list[dict] = [{"parent": {"child": "value"}}]
+
+            def model_dump(self, **__):
+                return {"objects": self.objects}
 
         mock_llm = MockLanguageModel()
-        mock_get_chat_result.return_value = ParentModel(parent=ChildModel(child="value"))
+        mock_get_chat_result.return_value = ParentModel()
 
         component = StructuredOutputComponent(
             llm=mock_llm,
@@ -173,20 +198,24 @@ class TestStructuredOutputComponent:
                 }
             ],
             multiple=False,
+            system_prompt="Test system prompt",
         )
 
-        result = component.build_structured_output()
-        assert isinstance(result, Data)
-        assert result.data == {"parent": {"child": "value"}}
+        result = component.build_structured_output_base()
+        assert isinstance(result, list)
+        assert result == [{"parent": {"child": "value"}}]
 
     @patch("langflow.components.helpers.structured_output.get_chat_result")
     def test_large_input_value(self, mock_get_chat_result):
         large_input = "Test input " * 1000
 
         class MockBaseModel(BaseModel):
-            field: str = "value"
+            objects: list[dict] = [{"field": "value"}]
 
-        mock_get_chat_result.return_value = MockBaseModel(field="value")
+            def model_dump(self, **__):
+                return {"objects": self.objects}
+
+        mock_get_chat_result.return_value = MockBaseModel()
 
         component = StructuredOutputComponent(
             llm=MockLanguageModel(),
@@ -194,9 +223,10 @@ class TestStructuredOutputComponent:
             schema_name="LargeInputSchema",
             output_schema=[{"name": "field", "type": "str", "description": "A test field"}],
             multiple=False,
+            system_prompt="Test system prompt",
         )
 
-        result = component.build_structured_output()
-        assert isinstance(result, Data)
-        assert result.data == {"field": "value"}
+        result = component.build_structured_output_base()
+        assert isinstance(result, list)
+        assert result == [{"field": "value"}]
         mock_get_chat_result.assert_called_once()

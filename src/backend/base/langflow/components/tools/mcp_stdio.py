@@ -1,13 +1,12 @@
 # from langflow.field_typing import Data
 import os
 from contextlib import AsyncExitStack
-from typing import Any
 
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 
-from langflow.base.mcp.util import create_tool_coroutine, create_tool_func, create_input_schema_from_json_schema
+from langflow.base.mcp.util import create_input_schema_from_json_schema, create_tool_coroutine, create_tool_func
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
@@ -36,7 +35,6 @@ class MCPStdioClient:
         return response.tools
 
 
-
 class MCPStdio(Component):
     client = MCPStdioClient()
     tools = types.ListToolsResult
@@ -45,7 +43,7 @@ class MCPStdio(Component):
     description = (
         "Connects to an MCP server over stdio and exposes it's tools as langflow tools to be used by an Agent."
     )
-    documentation: str = "http://docs.langflow.org/components/custom"
+    documentation: str = "https://docs.langflow.org/components-custom-components"
     icon = "code"
     name = "MCPStdio"
 

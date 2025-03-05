@@ -70,6 +70,7 @@ const HideShowButton = memo(
       unstyled
       onClick={onClick}
       data-testid={`input-inspection-${title.toLowerCase()}`}
+      className="cursor-pointer"
     >
       <ShadTooltip
         content={disabled ? null : hidden ? "Show output" : "Hide output"}
