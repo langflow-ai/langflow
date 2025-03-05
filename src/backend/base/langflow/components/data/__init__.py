@@ -3,6 +3,7 @@ from .csv_to_data import CSVToDataComponent
 from .directory import DirectoryComponent
 from .file import FileComponent
 from .json_to_data import JSONToDataComponent
+from .s3_bucket_retriever import S3BucketRetrieverComponent
 from .sql_executor import SQLExecutorComponent
 from .url import URLComponent
 from .webhook import WebhookComponent
@@ -13,6 +14,7 @@ __all__ = [
     "DirectoryComponent",
     "FileComponent",
     "JSONToDataComponent",
+    "S3BucketRetrieverComponent",
     "SQLExecutorComponent",
     "URLComponent",
     "WebhookComponent",
