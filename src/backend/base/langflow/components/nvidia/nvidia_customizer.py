@@ -223,7 +223,8 @@ class NvidiaCustomizerComponent(Component):
                             f"Please choose a different dataset name or delete the model."
                         )
                         raise ValueError(error_msg)
-                    continue
+                    else:
+                        continue
                 # For non-409 responses, raise for any HTTP error status
                 response.raise_for_status()
 
