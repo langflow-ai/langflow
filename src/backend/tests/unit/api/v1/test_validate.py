@@ -1,7 +1,7 @@
+import pytest
 from fastapi import status
 from httpx import AsyncClient
 
-import pytest
 
 @pytest.mark.usefixtures("active_user")
 async def test_post_validate_code(client: AsyncClient, logged_in_headers):
@@ -17,6 +17,7 @@ pprint(var)
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "imports" in result, "The result must have an 'imports' key"
     assert "function" in result, "The result must have a 'function' key"
+
 
 @pytest.mark.usefixtures("active_user")
 async def test_post_validate_prompt(client: AsyncClient, logged_in_headers):
@@ -58,18 +59,17 @@ async def test_post_validate_prompt(client: AsyncClient, logged_in_headers):
     assert "frontend_node" in result, "The result must have a 'frontend_node' key"
     assert "input_variables" in result, "The result must have an 'input_variables' key"
 
+
 @pytest.mark.usefixtures("active_user")
 async def test_post_validate_prompt_with_invalid_data(client: AsyncClient, logged_in_headers):
     invalid_case = {
         "name": "string",
         # Missing required fields
-        "frontend_node": {
-            "template": {},
-            "is_input": True
-        }
+        "frontend_node": {"template": {}, "is_input": True},
     }
     response = await client.post("api/v1/validate/prompt", json=invalid_case, headers=logged_in_headers)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
 
 async def test_post_validate_code_with_unauthenticated_user(client: AsyncClient):
     code = """
