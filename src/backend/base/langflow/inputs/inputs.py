@@ -242,6 +242,7 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolMode
     multiline: CoalesceBool = True
     copy_field: CoalesceBool = False
 
+
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):
     """Represents a multiline input field.
 
