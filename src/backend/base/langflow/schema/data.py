@@ -8,7 +8,7 @@ from uuid import UUID
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
-from pydantic import BaseModel, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from langflow.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from langflow.utils.image import create_data_url
@@ -21,6 +21,8 @@ class Data(BaseModel):
         data (dict, optional): Additional data associated with the record.
     """
 
+    model_config = ConfigDict(validate_assignment=True)
+
     text_key: str = "text"
     data: dict = {}
     default_value: str | None = ""
@@ -31,8 +33,14 @@ class Data(BaseModel):
         if not isinstance(values, dict):
             msg = "Data must be a dictionary"
             raise ValueError(msg)  # noqa: TRY004
-        if not values.get("data"):
+        if "data" not in values or values["data"] is None:
             values["data"] = {}
+        if not isinstance(values["data"], dict):
+            msg = (
+                f"Invalid data format: expected dictionary but got {type(values).__name__}."
+                " This will raise an error in version langflow==1.3.0."
+            )
+            logger.warning(msg)
         # Any other keyword should be added to the data dictionary
         for key in values:
             if key not in values["data"] and key not in {"text_key", "data", "default_value"}:
