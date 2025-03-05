@@ -4,8 +4,10 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
+from pydantic import field_serializer, field_validator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+
+from langflow.serialization.serialization import serialize
 
 if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
@@ -63,6 +65,11 @@ class TaskCreate(SQLModel):
 
 class TaskRead(TaskBase):
     id: UUID
+
+    @field_serializer("result")
+    @classmethod
+    def serialize_result(cls, v):
+        return serialize(v)
 
 
 class TaskUpdate(SQLModel):
