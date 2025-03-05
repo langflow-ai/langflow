@@ -14,7 +14,6 @@ class FirecrawlScrapeApi(Component):
     description: str = "Firecrawl Scrape API."
     name = "FirecrawlScrapeApi"
 
-    output_types: list[str] = ["Document"]
     documentation: str = "https://docs.firecrawl.dev/api-reference/endpoint/scrape"
 
     inputs = [
@@ -42,7 +41,7 @@ class FirecrawlScrapeApi(Component):
             display_name="Scrape Options",
             info="The page options to send with the request.",
         ),
-        DataInput(  # https://docs.firecrawl.dev/features/extract
+        DataInput(
             name="extractorOptions",
             display_name="Extractor Options",
             info="The extractor options to send with the request.",
@@ -50,20 +49,24 @@ class FirecrawlScrapeApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="crawl"),
+        Output(display_name="Data", name="data", method="scrape"),
     ]
 
-    def crawl(self) -> list[Data]:
+    def scrape(self) -> Data:
         try:
-            from firecrawl.firecrawl import FirecrawlApp
+            from firecrawl import FirecrawlApp
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
 
-        params = self.scrapeOptions.__dict__["data"] if self.scrapeOptions else {}
-        extractor_options_dict = self.extractorOptions.__dict__["data"] if self.extractorOptions else {}
+        params = self.scrapeOptions.__dict__.get("data", {}) if self.scrapeOptions else {}
+        extractor_options_dict = self.extractorOptions.__dict__.get("data", {}) if self.extractorOptions else {}
         if extractor_options_dict:
             params["extract"] = extractor_options_dict
+
+        # Set default values for parameters
+        params.setdefault("formats", ["markdown"])  # Default output format
+        params.setdefault("onlyMainContent", True)  # Default to only main content
 
         app = FirecrawlApp(api_key=self.api_key)
         results = app.scrape_url(self.url, params=params)
