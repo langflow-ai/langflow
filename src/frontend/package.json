@@ -81,6 +81,7 @@
     "remark-math": "^6.0.0",
     "shadcn-ui": "^0.9.4",
     "short-unique-id": "^5.2.0",
+    "sortablejs": "^1.15.6",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^10.0.0",

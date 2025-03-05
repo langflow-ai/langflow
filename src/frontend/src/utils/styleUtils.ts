@@ -2,6 +2,7 @@ import { AIMLIcon } from "@/icons/AIML";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
+import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
@@ -676,6 +677,7 @@ export const nodeIconsLucide: iconsType = {
   IFixitLoader: IFixIcon,
   CrewAI: CrewAiIcon,
   NotDiamond: NotDiamondIcon,
+  GridHorizontal: GridHorizontalIcon,
   Composio: ComposioIcon,
   Meta: MetaIcon,
   Midjorney: MidjourneyIcon,

@@ -42,7 +42,7 @@ const ListSelectionComponent = ({
                 placeholder="Search tools..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                inputClassName="border-none"
+                inputClassName="border-none focus:ring-0"
               />
             </div>
           )}
