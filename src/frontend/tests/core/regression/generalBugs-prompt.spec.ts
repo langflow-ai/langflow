@@ -5,7 +5,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "user must be able to edit an empty prompt",
-  { tag: ["@release", "@starter-project"] },
+  { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
     test.skip(
       !process?.env?.OPENAI_API_KEY,

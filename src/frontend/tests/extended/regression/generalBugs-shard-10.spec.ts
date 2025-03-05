@@ -29,7 +29,7 @@ test(
 
     await page.getByTestId("fit_view").click();
 
-    await page.getByText("openai").first().click();
+    await page.getByText("openai").last().click();
     await page.keyboard.press("Delete");
 
     //connection 1
@@ -94,8 +94,8 @@ test(
       .getByTestId("div-chat-message")
       .allTextContents();
 
-    const concatAllText2 = textContents2.join(" ");
-
-    expect(concatAllText2).toBe(concatAllText);
+    textContents2.forEach((text) => {
+      expect(text).toBe(concatAllText);
+    });
   },
 );

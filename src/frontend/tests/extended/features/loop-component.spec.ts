@@ -231,7 +231,6 @@ test(
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
-    await page.getByRole("gridcell").nth(4).click();
 
     const output = await page.getByPlaceholder("Empty").textContent();
     expect(output).toContain("modified_value");

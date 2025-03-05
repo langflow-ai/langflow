@@ -7,12 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
-import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_NEW_LOGO,
-} from "@/customization/feature-flags";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
+import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
 import useAlertStore from "@/stores/alertStore";
 import { useEffect, useRef, useState } from "react";
 import { AccountMenu } from "./components/AccountMenu";
@@ -46,8 +44,13 @@ export default function AppHeader(): JSX.Element {
     };
   }, []);
 
+  useResetDismissUpdateAll();
+
   return (
-    <div className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background">
+    <div
+      className="flex h-[62px] w-full items-center justify-between gap-2 border-b px-5 py-2.5 dark:bg-background"
+      data-testid="app-header"
+    >
       {/* Left Section */}
       <div
         className={`flex items-center gap-2`}
@@ -61,10 +64,8 @@ export default function AppHeader(): JSX.Element {
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
-          ) : ENABLE_NEW_LOGO ? (
-            <LangflowLogo className="h-5 w-6" />
           ) : (
-            <span className="fill-black text-2xl dark:fill-white">⛓️</span>
+            <LangflowLogo className="h-5 w-6" />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (

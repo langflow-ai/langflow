@@ -64,7 +64,10 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
       });
   };
 
-  const descriptionModal = useDescriptionModal([flowData?.id], "flow");
+  const descriptionModal = useDescriptionModal(
+    [flowData?.id],
+    flowData.is_component ? "component" : "flow",
+  );
 
   const { onDragStart } = useDragStart(flowData);
 
@@ -145,6 +148,11 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           setOpen={setOpenDelete}
           onConfirm={handleDelete}
           description={descriptionModal}
+          note={
+            !flowData.is_component
+              ? "Deleting the selected flow will remove all associated messages."
+              : ""
+          }
         >
           <></>
         </DeleteConfirmationModal>
