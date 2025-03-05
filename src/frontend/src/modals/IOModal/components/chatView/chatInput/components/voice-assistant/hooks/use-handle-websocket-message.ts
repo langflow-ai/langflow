@@ -107,6 +107,7 @@ export const useHandleWebsocketMessage = (
     case "error":
       if (data.code === "api_key_missing") {
         setShowApiKeyModal(true);
+        setStatus("Error: " + "API key is missing");
         return;
       }
       data.error.message === "Cancellation failed: no active response found"

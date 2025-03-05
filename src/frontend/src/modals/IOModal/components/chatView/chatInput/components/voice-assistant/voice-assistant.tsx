@@ -1,6 +1,9 @@
+import { SAVE_API_KEY_ALERT } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
+import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
 import { PROXY_TARGET } from "@/customization/config-constants";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
@@ -57,9 +60,13 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const variables = useGlobalVariablesStore(
     (state) => state.globalVariablesEntries,
   );
+  const createVariable = usePostGlobalVariables();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const hasOpenAIAPIKey = useMemo(() => {
-    return !variables?.find((variable) => variable === "OPENAI_API_KEY");
+    return (
+      variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
+    );
   }, [variables]);
 
   const targetUrl = useMemo(() => {
@@ -143,7 +150,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   };
 
   const toggleRecording = () => {
-    if (hasOpenAIAPIKey) {
+    if (!hasOpenAIAPIKey) {
       setShowApiKeyModal(true);
       return;
     }
@@ -151,12 +158,30 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     setIsRecording(!isRecording);
   };
 
-  const handleApiKeySubmit = (apiKey: string) => {
-    const findGlobalVariable = variables?.find(
-      (variable) => variable === apiKey,
-    );
+  const handleSave = async (apiKey: string) => {
+    try {
+      await createVariable.mutateAsync({
+        name: "OPENAI_API_KEY",
+        value: apiKey,
+        type: "secret",
+        default_fields: ["voice_mode"],
+      });
+      setSuccessData({
+        title: SAVE_API_KEY_ALERT,
+      });
+      setShowApiKeyModal(false);
+    } catch (error) {
+      console.error("Error saving API key:", error);
+    }
+  };
 
-    if (!isRecording && findGlobalVariable) {
+  const handleApiKeySubmit = (apiKey: string) => {
+    if (!hasOpenAIAPIKey) {
+      handleSave(apiKey);
+      return;
+    }
+
+    if (!isRecording && hasOpenAIAPIKey) {
       initializeAudio();
     }
   };
@@ -170,8 +195,6 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       }
     };
   }, []);
-
-  console.log(showApiKeyModal);
 
   return (
     <div className="">
