@@ -1,9 +1,8 @@
 import asyncio
 import inspect
-from pathlib import Path
 from typing import Any
 
-from aiofile import async_open
+from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.schemas import UpdateCustomComponentRequest
@@ -36,8 +35,8 @@ async def test_get_config(client: AsyncClient):
 
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
     path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
-    async with async_open(path, encoding="utf-8") as f:
-        code = await f.read()
+
+    code = await path.read_text(encoding="utf-8")
     frontend_node: dict[str, Any] = {"outputs": []}
     request = UpdateCustomComponentRequest(
         code=code,
@@ -57,7 +56,7 @@ async def test_update_component_outputs(client: AsyncClient, logged_in_headers: 
 async def test_update_component_model_name_options(client: AsyncClient, logged_in_headers: dict):
     """Test that model_name options are updated when selecting a provider."""
     component = AgentComponent()
-    component_node, cc_instance = build_custom_component_template(
+    component_node, _cc_instance = build_custom_component_template(
         component,
     )
 
@@ -69,8 +68,7 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     # we are at str/backend/tests/unit/api/v1/test_endpoints.py
     # find the file by using the class AgentComponent
     agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
-    async with async_open(agent_component_file, encoding="utf-8") as f:
-        code = await f.read()
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
 
     # Create the request to update the component
     request = UpdateCustomComponentRequest(
