@@ -1012,4 +1012,4 @@ export const POLLING_MESSAGES = {
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
-export const POLLING_INTERVAL = 100;
+export const POLLING_INTERVAL = 100; // milliseconds between polling attempts
