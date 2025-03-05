@@ -9,6 +9,7 @@ from langflow.api.v1 import (
     flows_router,
     folders_router,
     login_router,
+    mcp_router,
     monitor_router,
     starter_projects_router,
     store_router,
@@ -16,7 +17,6 @@ from langflow.api.v1 import (
     validate_router,
     variables_router,
     voice_mode_router,
-    mcp_router
 )
 from langflow.api.v2 import files_router as files_router_v2
 
