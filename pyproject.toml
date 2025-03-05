@@ -113,6 +113,7 @@ dependencies = [
     "pydantic-ai>=0.0.19",
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
+    "opik>=1.4.16",
 ]
 
 [dependency-groups]
