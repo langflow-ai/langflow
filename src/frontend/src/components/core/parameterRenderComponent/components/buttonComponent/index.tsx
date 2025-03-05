@@ -19,8 +19,7 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
   useEffect(() => {
     if (sortableRef?.current) {
       new Sortable(sortableRef.current, {
-        animation: 150,
-        dragClass: "rounded-none!",
+        animation: 200,
       });
     }
   }, []);
@@ -85,14 +84,14 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
               {actionData.map((data, index) => (
                 <li
                   key={data?.id}
-                  className="group inline-flex h-12 w-full cursor-grab items-center text-sm font-medium text-gray-800"
+                  className="group inline-flex h-12 w-full cursor-grab items-center gap-2 text-sm font-medium text-gray-800"
                 >
                   <ForwardedIconComponent
                     name="grid-horizontal"
                     className="h-5 w-5 fill-gray-300 text-gray-300"
                   />
 
-                  <div className="absolute left-12 flex w-full items-center gap-x-2">
+                  <div className="flex w-full items-center gap-x-2">
                     <div className="h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-center text-white">
                       {index + 1}
                     </div>
@@ -102,7 +101,7 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="absolute right-5 h-7 w-7 opacity-0 transition-opacity duration-200 hover:bg-red-100 hover:opacity-100"
+                    className="ml-auto h-7 w-7 opacity-0 transition-opacity duration-200 hover:bg-red-100 hover:opacity-100"
                     onClick={() => {
                       console.log("clicked");
                     }}
