@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from langflow.services.task_orchestration.service import TaskOrchestrationService
     from langflow.services.telemetry.service import TelemetryService
     from langflow.services.tracing.service import TracingService
+    from langflow.services.triggers.service import TriggerService
     from langflow.services.variable.service import VariableService
 
 
@@ -262,7 +263,7 @@ def get_event_bus_service() -> EventBusService:
     """
     from langflow.services.event_bus.factory import EventBusServiceFactory
 
-    return get_service(ServiceType.EVENTBUS_SERVICE, EventBusServiceFactory())
+    return get_service(ServiceType.EVENT_BUS_SERVICE, EventBusServiceFactory())
 
 
 def get_queue_service() -> JobQueueService:
@@ -270,3 +271,10 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_trigger_service() -> TriggerService:
+    """Retrieves the TriggerService instance from the service manager."""
+    from langflow.services.triggers.factory import TriggerServiceFactory
+
+    return get_service(ServiceType.TRIGGER_SERVICE, TriggerServiceFactory())
