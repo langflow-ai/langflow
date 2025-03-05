@@ -35,12 +35,13 @@ class OpenAIModelComponent(LCModelComponent):
             advanced=True,
             info="If True, it will output JSON regardless of passing a schema.",
         ),
-        DropdownInput(
-            name="model_name",
-            display_name="Model Name",
+        SecretStrInput(
+            name="api_key",
+            display_name="OpenAI API Key",
+            info="The OpenAI API Key to use for the OpenAI model.",
             advanced=False,
-            options=OPENAI_MODEL_NAMES,
-            value=OPENAI_MODEL_NAMES[0],
+            value="OPENAI_API_KEY",
+            required=True,
         ),
         StrInput(
             name="openai_api_base",
@@ -50,13 +51,12 @@ class OpenAIModelComponent(LCModelComponent):
             "Defaults to https://api.openai.com/v1. "
             "You can change this to use other APIs like JinaChat, LocalAI and Prem.",
         ),
-        SecretStrInput(
-            name="api_key",
-            display_name="OpenAI API Key",
-            info="The OpenAI API Key to use for the OpenAI model.",
+        DropdownInput(
+            name="model_name",
+            display_name="Model Name",
             advanced=False,
-            value="OPENAI_API_KEY",
-            required=True,
+            options=OPENAI_MODEL_NAMES,
+            value=OPENAI_MODEL_NAMES[0],
         ),
         SliderInput(
             name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)

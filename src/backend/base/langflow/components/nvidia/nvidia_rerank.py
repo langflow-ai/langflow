@@ -9,7 +9,7 @@ from langflow.template.field.base import Output
 
 
 class NvidiaRerankComponent(LCCompressorComponent):
-    display_name = "NVIDIA Rerank"
+    display_name = "NeMo Retriever Reranking"
     description = "Rerank documents using the NVIDIA API."
     icon = "NVIDIA"
 

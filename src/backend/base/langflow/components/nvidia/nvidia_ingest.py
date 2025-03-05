@@ -3,11 +3,11 @@ from urllib.parse import urlparse
 
 from langflow.custom import Component
 from langflow.io import BoolInput, DropdownInput, FileInput, IntInput, MessageTextInput, Output
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame, Message
 
 
 class NvidiaIngestComponent(Component):
-    display_name = "NVIDIA Ingest"
+    display_name = "NeMo Retriever Extraction"
     description = "Process, transform, and store data."
     documentation: str = "https://github.com/NVIDIA/nv-ingest/tree/main/docs"
     icon = "NVIDIA"
@@ -32,13 +32,14 @@ class NvidiaIngestComponent(Component):
             name="base_url",
             display_name="NVIDIA Ingestion URL",
             info="The URL of the NVIDIA Ingestion API.",
+            advanced=True,
         ),
         FileInput(
             name="path",
             display_name="Path",
             file_types=file_types,
             info=supported_file_types_info,
-            required=True,
+            input_types=["Message"],
         ),
         BoolInput(
             name="extract_text",
@@ -74,6 +75,7 @@ class NvidiaIngestComponent(Component):
             display_name="Split Text",
             info="Split text into smaller chunks",
             value=True,
+            advanced=True,
         ),
         DropdownInput(
             name="split_by",
@@ -114,10 +116,10 @@ class NvidiaIngestComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="load_file"),
+        Output(display_name="DataFrame", name="DataFrame", method="load_file"),
     ]
 
-    def load_file(self) -> list[Data]:
+    def load_file(self) -> DataFrame:
         try:
             from nv_ingest_client.client import Ingestor
         except ImportError as e:
@@ -128,13 +130,24 @@ class NvidiaIngestComponent(Component):
             raise ImportError(msg) from e
 
         self.base_url: str | None = self.base_url.strip() if self.base_url else None
+        self.path: str | Message
 
         if not self.path:
             err_msg = "Upload a file to use this component."
             self.log(err_msg, name="NVIDIAIngestComponent")
             raise ValueError(err_msg)
 
-        resolved_path = self.resolve_path(self.path)
+        # Convert path to string if it's a Message
+        path_str: str
+        # path_str = str(self.path.files) if isinstance(self.path, Message) else str(self.path)
+        if isinstance(self.path, Message):
+            path_str = str(self.path.files[0]) if self.path.files is not None else str(self.path.text)
+        else:
+            path_str = str(self.path)
+        resolved_path = self.resolve_path(path_str)
+        if not isinstance(resolved_path, str):
+            msg = "Failed to resolve path to a valid string"
+            raise TypeError(msg)
         extension = Path(resolved_path).suffix[1:].lower()
         if extension not in self.file_types:
             err_msg = f"Unsupported file type: {extension}"
@@ -229,4 +242,4 @@ class NvidiaIngestComponent(Component):
                     self.log(f"Unsupported document type: {document_type}", name="NVIDIAIngestComponent")
 
         self.status = data or "No data"
-        return data
+        return DataFrame(data)
