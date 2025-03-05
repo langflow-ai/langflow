@@ -33,7 +33,7 @@ class Data(BaseModel):
         if not isinstance(values, dict):
             msg = "Data must be a dictionary"
             raise ValueError(msg)  # noqa: TRY004
-        if "data" not in values:
+        if "data" not in values or values["data"] is None:
             values["data"] = {}
         if not isinstance(values["data"], dict):
             msg = (
