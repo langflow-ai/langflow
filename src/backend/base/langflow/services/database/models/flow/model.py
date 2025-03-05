@@ -200,6 +200,7 @@ class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+    tags: list[str] | None = Field(None, description="The tags of the flow")
 
 
 class FlowHeader(BaseModel):
@@ -215,6 +216,7 @@ class FlowHeader(BaseModel):
     endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
     description: str | None = Field(None, description="A description of the flow")
     data: dict | None = Field(None, description="The data of the component, if is_component is True")
+    tags: list[str] | None = Field(None, description="The tags of the flow")
 
     @field_validator("data", mode="before")
     @classmethod
