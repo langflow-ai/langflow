@@ -6,7 +6,7 @@ slug: /integrations-opik
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-# Integrate Langfuse with Langflow
+# Integrate Opik with Langflow
 
 [Opik](https://www.comet.com/site/products/opik/) is an open-source platform designed for evaluating, testing, and monitoring large language model (LLM) applications. Developed by Comet, it aims to facilitate more intuitive collaboration, testing, and monitoring of LLM-based applications.
 
