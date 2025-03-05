@@ -4,6 +4,7 @@ from pathlib import Path
 from langflow.custom import Component
 from langflow.io import FileInput, Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
 class ImageUploadComponent(Component):
@@ -25,6 +26,7 @@ class ImageUploadComponent(Component):
 
     outputs = [
         Output(display_name="Base64 Output", name="base64_output", method="encode_image"),
+        Output(display_name="For Direct Input", name="image_upload", method="image_message"),
     ]
 
     def encode_image(self) -> Data:
@@ -45,3 +47,9 @@ class ImageUploadComponent(Component):
         except Exception as e:
             self.log(f"Error encoding image: {e}")
             raise
+
+    def image_message(self)-> Message:
+        if not self.image_path:
+            return "Image not uploaded"
+        image_name = Path(self.resolve_path(self.image_path)).name
+        return f"'{image_name}' uploade Successfully"
