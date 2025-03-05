@@ -14,7 +14,6 @@ from langflow.io import (
     DropdownInput,
     FloatInput,
     IntInput,
-    MessageTextInput,
     Output,
     StrInput,
 )
@@ -258,7 +257,6 @@ class NvidiaCustomizerComponent(Component):
                             f"Please choose a different dataset name or delete the models."
                         )
                         raise ValueError(error_msg) from exc
-                    continue
                 else:
                     status_code = exc.response.status_code
                     response_content = exc.response.text
@@ -320,8 +318,7 @@ class NvidiaCustomizerComponent(Component):
             raise ValueError(error_msg) from e
 
     async def process_and_upload_dataset(self) -> str:
-        """Asynchronously processes and uploads the dataset to the API in training chunks,
-        while holding out 10% of the data for validation (uploaded in one file at the end).
+        """Asynchronously processes and uploads the dataset for training(90%) and validation(10%)
 
         If the total valid record count is less than 10, at least one record is added to validation.
         """
@@ -342,10 +339,9 @@ class NvidiaCustomizerComponent(Component):
             chunk_size = 100000  # Ensure chunk_size is an integer
             self.log(f"repo_id : {repo_id}")
             if not repo_id:
-                raise ValueError("repo_id must be provided.")
+                err_msg ="repo_id must be provided."
+                raise ValueError(err_msg)
 
-            # Endpoint configuration
-            url = f"{self.datastore_base_url}/v1"
             tasks = []
             file_name_appender = user_dataset_name if user_dataset_name else "dataset"
 
@@ -394,7 +390,14 @@ class NvidiaCustomizerComponent(Component):
                 chunk.append(record)
                 if len(chunk) == chunk_size:
                     chunk_df = pd.DataFrame(chunk)
-                    task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, hf_api, is_validation)
+                    task = self.upload_chunk(
+                        chunk_df,
+                        self.chunk_number,
+                        file_name_appender,
+                        repo_id,
+                        hf_api,
+                        is_validation,
+                    )
                     tasks.append(task)
                     chunk = []  # Reset the chunk
                     self.chunk_number += 1
@@ -402,7 +405,14 @@ class NvidiaCustomizerComponent(Component):
             # Process any remaining training records
             if chunk:
                 chunk_df = pd.DataFrame(chunk)
-                task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, hf_api, is_validation)
+                task = self.upload_chunk(
+                    chunk_df,
+                    self.chunk_number,
+                    file_name_appender,
+                    repo_id,
+                    hf_api,
+                    is_validation,
+                )
                 tasks.append(task)
 
             # Await all training upload tasks
@@ -465,7 +475,10 @@ class NvidiaCustomizerComponent(Component):
             json_data = chunk_df.to_json(orient="records", lines=True)
 
             # Build file paths
-            file_name_training = f"validation/{file_name_prefix}_validation.jsonl" if is_validation else f"training/{file_name_prefix}_chunk_{chunk_number}.jsonl"
+            if is_validation:
+                file_name_training = f"validation/{file_name_prefix}_validation.jsonl"
+            else:
+                file_name_training = f"training/{file_name_prefix}_chunk_{chunk_number}.jsonl"
 
             # Prepare BytesIO objects
             training_file_obj = BytesIO(json_data.encode("utf-8"))
