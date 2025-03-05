@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import re
 from typing import TYPE_CHECKING, get_type_hints
 
 from cachetools import LRUCache, cached
@@ -47,15 +48,18 @@ def infer_service_types(factory: ServiceFactory, available_services=None) -> lis
         if param_name == "return":
             continue
 
-        # Convert the type to the expected enum format directly without appending "_SERVICE"
-        type_name = param_type.__name__.upper().replace("SERVICE", "_SERVICE")
+        # Split the class name by capital letters and join with underscores
+
+        type_name = re.sub(r"(?<!^)(?=[A-Z])", "_", param_type.__name__).upper()
+        if not type_name.endswith("_SERVICE"):
+            type_name += "_SERVICE"
 
         try:
             # Attempt to find a matching enum value
             service_type = ServiceType[type_name]
             service_types.append(service_type)
         except KeyError as e:
-            msg = f"No matching ServiceType for parameter type: {param_type.__name__}"
+            msg = f"No matching ServiceType for parameter type {param_type.__name__}. Tried {type_name}"
             raise ValueError(msg) from e
     return service_types
 
