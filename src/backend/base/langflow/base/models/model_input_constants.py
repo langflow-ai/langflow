@@ -2,6 +2,7 @@ from typing_extensions import TypedDict
 
 from langflow.base.models.model import LCModelComponent
 from langflow.components.models.amazon_bedrock import AmazonBedrockComponent
+from langflow.components.models.deepseek import DeepSeekModelComponent
 from langflow.components.models.anthropic import AnthropicModelComponent
 from langflow.components.models.azure_openai import AzureChatOpenAIComponent
 from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
@@ -160,6 +161,17 @@ def _get_sambanova_inputs_and_fields():
     return sambanova_inputs, create_input_fields_dict(sambanova_inputs, "")
 
 
+def _get_deepseek_inputs_and_fields():
+    try:
+        from langflow.components.models.deepseek import DeepSeekModelComponent
+
+        deepseek_inputs = get_filtered_inputs(DeepSeekModelComponent)
+    except ImportError as e:
+        msg = "Amazon Bedrock is not installed. Please install it with `pip install langchain-amazon-bedrock`."
+        raise ImportError(msg) from e
+    return deepseek_inputs, create_input_fields_dict(deepseek_inputs, "")
+
+
 MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
@@ -255,6 +267,19 @@ try:
         "prefix": "",
         "component_class": SambaNovaComponent(),
         "icon": SambaNovaComponent.icon,
+    }
+except ImportError:
+    pass
+
+try:
+    deepseek_inputs, deepseek_fields = _get_deepseek_inputs_and_fields()
+
+    MODEL_PROVIDERS_DICT["DeepSeek AI"] = {
+        "fields": deepseek_fields,
+        "inputs": deepseek_inputs,
+        "prefix": "",
+        "component_class": DeepSeekModelComponent(),
+        "icon": DeepSeekModelComponent.icon,
     }
 except ImportError:
     pass
