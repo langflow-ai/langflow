@@ -1065,10 +1065,91 @@ class Component(CustomComponent):
         """
         # Get tools from subclass implementation
         tools = await self._get_tools()
+        new_tools_metadata = self._create_tools_metadata(tools)
 
-        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            return self._update_tools_with_metadata(tools, self.tools_metadata)
-        return tools
+        if not hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            return self._update_tools_with_metadata(tools, new_tools_metadata)
+
+        return await self._handle_existing_tools_metadata(tools, new_tools_metadata)
+
+    async def _get_tools(self) -> list[Tool]:
+        """Get the list of tools for this component.
+
+        This method can be overridden by subclasses to provide custom tool implementations.
+        The default implementation uses ComponentToolkit.
+
+        Returns:
+            list[Tool]: List of tools provided by this component
+        """
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+
+    def _create_tools_metadata(self, tools: list[Tool]) -> list[dict]:
+        """Create metadata dictionary for each tool."""
+        return [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
+
+    def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
+        """Extract the first tag from each tool's metadata."""
+        return [tool["tags"][0] for tool in tools_metadata]
+
+    def _update_tools_with_metadata(self, tools: list[Tool], metadata: list[dict]) -> list[Tool]:
+        """Update tools with provided metadata."""
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
+
+    async def _handle_existing_tools_metadata(self, tools: list[Tool], new_tools_metadata: list[dict]) -> list[Tool]:
+        """Handle tools metadata when TOOLS_METADATA_INPUT_NAME exists."""
+        old_tools_metadata = self.tools_metadata
+        if not old_tools_metadata:
+            self.tools_metadata = new_tools_metadata
+            return self._update_tools_with_metadata(tools, new_tools_metadata)
+
+        # Compare tags to determine if update is needed
+        old_tags = self._extract_tools_tags(old_tools_metadata)
+        new_tags = self._extract_tools_tags(new_tools_metadata)
+
+        if old_tags != new_tags:
+            self.tools_metadata = new_tools_metadata
+            return self._update_tools_with_metadata(tools, new_tools_metadata)
+
+        return self._update_tools_with_metadata(tools, old_tools_metadata)
+
+    async def _build_tools_metadata_input(self):
+        tools = await self.to_toolkit()
+        # Always use the latest tool data
+        tool_data = [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
+        self.tools_metadata = tool_data
+        try:
+            from langflow.io import TableInput
+        except ImportError as e:
+            msg = "Failed to import TableInput from langflow.io"
+            raise ImportError(msg) from e
+
+        return TableInput(
+            name=TOOLS_METADATA_INPUT_NAME,
+            display_name="Edit tools",
+            real_time_refresh=True,
+            table_schema=TOOL_TABLE_SCHEMA,
+            value=tool_data,
+            table_icon="Hammer",
+            trigger_icon="Hammer",
+            trigger_text="",
+            table_options=TableOptions(
+                block_add=True,
+                block_delete=True,
+                block_edit=True,
+                block_sort=True,
+                block_filter=True,
+                block_hide=True,
+                block_select=True,
+                hide_options=True,
+                field_parsers={
+                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
+                    "commands": FieldParserType.COMMANDS,
+                },
+                description=TOOLS_METADATA_INFO,
+            ),
+        )
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
