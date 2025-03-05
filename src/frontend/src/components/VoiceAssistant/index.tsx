@@ -288,11 +288,23 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const startConversation = () => {
     try {
       wsRef.current = new WebSocket(
-        `ws://localhost:7860/api/v1/voice/ws/${flowId}`,
+        // Flow as tool
+        `ws://${window.location.hostname}:7860/api/v1/voice/ws/flow_as_tool/${flowId}`,
+        // Pass through to flow
+        //`ws://${window.location.hostname}:7860/api/v1/voice/ws/${flowId}`,
       );
 
       wsRef.current.onopen = () => {
         //setStatus('Connected');
+        if (wsRef.current) {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "elevenlabs.config",
+              enabled: true,
+              voice_id: "NOpBlnGInO9m6vDvFkFC",
+            }),
+          )
+        }
         startRecording();
       };
 
