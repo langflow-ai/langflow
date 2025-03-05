@@ -1,53 +1,33 @@
 import IconComponent from "@/components/common/genericIconComponent";
-import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputGlobalComponent from "@/components/core/parameterRenderComponent/components/inputGlobalComponent";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { FC, useEffect, useRef, useState } from "react";
 
-interface ApiKeyPopupProps {
+interface ApiKeyPopUpProps {
   onSubmit: (apiKey: string) => void;
   onClose?: () => void;
   isOpen: boolean;
   hasMessage?: string;
+  children: React.ReactNode;
 }
 
-const ApiKeyPopup: FC<ApiKeyPopupProps> = ({
+const ApiKeyPopUp = ({
   onSubmit,
   onClose,
   isOpen,
   hasMessage,
-}) => {
+  children,
+}: ApiKeyPopUpProps) => {
   const [apiKey, setApiKey] = useState<string>("");
   const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const globalVariableModalOpen = document.getElementById(
-        "global-variable-modal-inputs",
-      );
-
-      if (
-        popupRef.current &&
-        !popupRef.current.contains(event.target as Node) &&
-        onClose &&
-        !globalVariableModalOpen
-      ) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = () => {
     onSubmit(apiKey);
@@ -55,16 +35,10 @@ const ApiKeyPopup: FC<ApiKeyPopupProps> = ({
 
   return (
     <>
-      {isOpen && (
-        <div
-          className={`fixed z-[99] flex w-[420px] -translate-y-[19rem] ${
-            hasMessage ? "-translate-x-40" : "-translate-x-80"
-          } items-center justify-center`}
-        >
-          <div
-            ref={popupRef}
-            className="mx-4 w-full max-w-md overflow-hidden rounded-2xl border-2 border-border bg-background shadow-lg"
-          >
+      <DropdownMenu open={isOpen}>
+        <DropdownMenuTrigger>{children}</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <div ref={popupRef}>
             <div>
               <div className="p-4">
                 <span className="text-sm text-foreground">
@@ -114,10 +88,10 @@ const ApiKeyPopup: FC<ApiKeyPopupProps> = ({
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   );
 };
 
-export default ApiKeyPopup;
+export default ApiKeyPopUp;

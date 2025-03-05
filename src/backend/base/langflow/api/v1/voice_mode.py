@@ -363,7 +363,7 @@ async def flow_as_tool_websocket(
 
             # Create the synchronous generator from the sync queue.
             sync_gen = sync_text_chunker(sync_q, timeout=0.3)
-            eleven_client = await get_or_create_elevenlabs_client()
+            eleven_client = await get_or_create_elevenlabs_client(current_user.id, session)
             if eleven_client is None:
                 return
             # Capture the current event loop to schedule send operations.
@@ -471,7 +471,7 @@ async def flow_as_tool_websocket(
                         text = event.get("transcript")
                         print(f"\n      bot transcript: {text}")
                         if use_elevenlabs:
-                            elevenlabs_client = await get_or_create_elevenlabs_client()
+                            elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
                             if elevenlabs_client is None:
                                 return
                             await elevenlabs_generate_and_send_audio(elevenlabs_client, text)
@@ -544,36 +544,6 @@ async def flow_as_tool_websocket(
             except Exception as e:
                 print(e)
                 print(traceback.format_exc())
-
-        async def get_or_create_elevenlabs_client():
-            global elevenlabs_key, elevenlabs_client
-            if elevenlabs_client is None:
-                if elevenlabs_key is None:
-                    try:
-                        elevenlabs_key = await variable_service.get_variable(
-                            user_id=current_user.id,
-                            name="ELEVENLABS_API_KEY",
-                            field="elevenlabs_api_key",
-                            session=session,
-                        )
-                    except (InvalidToken, ValueError):
-                        elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
-                        if not elevenlabs_key:
-                            await client_websocket.send_json(
-                                {
-                                    "type": "error",
-                                    "code": "api_key_missing",
-                                    "key_name": "ELEVENLABS_API_KEY",
-                                    "message": "ELEVENLABS API key not found. Please set your API key as an env var or a global variable.",
-                                }
-                            )
-                            return None
-                    except Exception as e:
-                        logger.error("exception")
-                        print(e)
-                        print(traceback.format_exc())
-                elevenlabs_client = ElevenLabs(api_key=elevenlabs_key)
-            return elevenlabs_client
 
         if barge_in_enabled:
             asyncio.create_task(process_vad_audio())
@@ -699,3 +669,62 @@ async def flow_audio_websocket(
         except:
             pass
         logger.debug(f"WebSocket connection closed for flow {flow_id}")
+
+
+@router.get("/elevenlabs/voice_ids")
+async def get_elevenlabs_voice_ids(
+    current_user: CurrentActiveUser,
+    session: DbSession,
+):
+    """Get available voice IDs from ElevenLabs API."""
+    try:
+        # Get or create the ElevenLabs client
+        elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
+        if elevenlabs_client is None:
+            return {"error": "ElevenLabs API key not found or invalid"}
+        
+        voices_response = elevenlabs_client.voices.get_all()
+        voices = voices_response.voices
+        
+        voice_list = []
+        for voice in voices:
+            voice_list.append({
+                "voice_id": voice.voice_id,
+                "name": voice.name,
+            })
+        
+        return voice_list
+    except Exception as e:
+        logger.error(f"Error fetching ElevenLabs voices: {e}")
+        return {"error": str(e)}
+
+
+async def get_or_create_elevenlabs_client(user_id=None, session=None):
+    """Get or create an ElevenLabs client with the API key."""
+    global elevenlabs_key, elevenlabs_client
+    
+    if elevenlabs_client is None:
+        if elevenlabs_key is None and user_id and session:
+            variable_service = get_variable_service()
+            try:
+                elevenlabs_key = await variable_service.get_variable(
+                    user_id=user_id,
+                    name="ELEVENLABS_API_KEY",
+                    field="elevenlabs_api_key",
+                    session=session,
+                )
+            except (InvalidToken, ValueError):
+                elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
+                if not elevenlabs_key:
+                    logger.error("ElevenLabs API key not found")
+                    return None
+            except Exception as e:
+                logger.error(f"Exception getting ElevenLabs API key: {e}")
+                print(traceback.format_exc())
+                return None
+        
+        if elevenlabs_key:
+            elevenlabs_client = ElevenLabs(api_key=elevenlabs_key)
+    
+    return elevenlabs_client
+

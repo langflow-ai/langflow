@@ -24,10 +24,15 @@ const VoiceButton = ({
             isBuilding
               ? "cursor-not-allowed"
               : "text-muted-foreground hover:text-primary"
-          }`}
+          } ${isRecording ? "bg-destructive" : ""}`}
           unstyled
         >
-          <ForwardedIconComponent className="h-[18px] w-[18px]" name={"Mic"} />
+          <ForwardedIconComponent
+            className={`h-[18px] w-[18px] ${
+              isRecording ? "animate-pulse text-foreground" : ""
+            }`}
+            name={isRecording ? "AudioLines" : "Mic"}
+          />
         </Button>
       </div>
     </>

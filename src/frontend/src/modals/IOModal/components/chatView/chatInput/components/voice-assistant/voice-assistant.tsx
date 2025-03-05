@@ -1,17 +1,15 @@
 import { SAVE_API_KEY_ALERT } from "@/constants/constants";
-import { BuildStatus } from "@/constants/enums";
-import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
 import { PROXY_TARGET } from "@/customization/config-constants";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
-import { AudioLines } from "lucide-react";
+import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "../../../../../../../components/ui/button";
-import { useStoreStore } from "../../../../../../../stores/storeStore";
-import APIKeyModal from "./components/api-key-popup";
+import ApiKeyPopUp from "./components/api-key-popup";
+import SettingsVoiceModal from "./components/audio-settings-dialog";
+import SettingsVoiceButton from "./components/settings-voice-button";
 import VoiceButton from "./components/voice-button";
 import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message";
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
@@ -21,8 +19,6 @@ import { useStartConversation } from "./hooks/use-start-conversation";
 import { useStartRecording } from "./hooks/use-start-recording";
 import { useStopRecording } from "./hooks/use-stop-recording";
 import { workletCode } from "./streamProcessor";
-import { base64ToFloat32Array } from "./utils";
-
 interface VoiceAssistantProps {
   flowId: string;
 }
@@ -32,6 +28,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -68,13 +65,6 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
     );
   }, [variables]);
-
-  const targetUrl = useMemo(() => {
-    const httpUrl =
-      process.env.VITE_PROXY_TARGET || "localhost:7860" || PROXY_TARGET;
-    const cleanUrl = httpUrl.replace(/^https?:\/\//, "");
-    return cleanUrl;
-  }, []);
 
   const initializeAudio = async () => {
     useInitializeAudio(audioContextRef, setStatus, startConversation);
@@ -136,7 +126,6 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
 
   const startConversation = () => {
     useStartConversation(
-      targetUrl,
       flowId,
       wsRef,
       setStatus,
@@ -187,7 +176,21 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     }
   };
 
+  const checkProvider = () => {
+    const audioSettings = JSON.parse(
+      getLocalStorage("lf_audio_settings_playground") || "{}",
+    );
+    if (!audioSettings.provider) {
+      setLocalStorage(
+        "lf_audio_settings_playground",
+        JSON.stringify({ provider: "openai", voice: "alloy" }),
+      );
+    }
+  };
+
   useEffect(() => {
+    checkProvider();
+
     return () => {
       stopRecording();
       if (audioContextRef.current) {
@@ -207,19 +210,25 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
           <div className="text-sm text-muted-foreground">{message}</div>
         )}
 
-        <VoiceButton
-          isRecording={isRecording}
-          toggleRecording={toggleRecording}
-          isBuilding={isBuilding}
-        />
-      </div>
+        <SettingsVoiceModal open={showSettingsModal}>
+          <SettingsVoiceButton
+            isRecording={isRecording}
+            setShowSettingsModal={setShowSettingsModal}
+          />
+        </SettingsVoiceModal>
 
-      <APIKeyModal
-        isOpen={showApiKeyModal}
-        onClose={() => setShowApiKeyModal(false)}
-        onSubmit={handleApiKeySubmit}
-        hasMessage={status || message}
-      />
+        <ApiKeyPopUp
+          isOpen={showApiKeyModal}
+          onSubmit={handleApiKeySubmit}
+          hasMessage={status || message}
+        >
+          <VoiceButton
+            isRecording={isRecording}
+            toggleRecording={toggleRecording}
+            isBuilding={isBuilding}
+          />
+        </ApiKeyPopUp>
+      </div>
     </div>
   );
 }

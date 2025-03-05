@@ -1,5 +1,6 @@
+import { getLocalStorage } from "@/utils/local-storage-util";
+
 export const useStartConversation = (
-  targetUrl: string,
   flowId: string,
   wsRef: React.MutableRefObject<WebSocket | null>,
   setStatus: (status: string) => void,
@@ -10,6 +11,9 @@ export const useStartConversation = (
   try {
     // const url = `ws://${targetUrl}/api/v1/voice/ws/${flowId}`;
     const url = `ws://${window.location.hostname}:7860/api/v1/voice/ws/flow_as_tool/${flowId}`;
+    const audioSettings = JSON.parse(
+      getLocalStorage("lf_audio_settings_playground") || "{}",
+    );
 
     wsRef.current = new WebSocket(url);
 
@@ -19,8 +23,8 @@ export const useStartConversation = (
         wsRef.current.send(
           JSON.stringify({
             type: "elevenlabs.config",
-            enabled: true,
-            voice_id: "NOpBlnGInO9m6vDvFkFC",
+            enabled: audioSettings.provider === "elevenlabs",
+            voice_id: audioSettings.voice,
           }),
         );
       }

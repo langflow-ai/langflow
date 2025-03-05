@@ -26,6 +26,7 @@ import {
   ArrowRightLeft,
   ArrowUpRight,
   ArrowUpToLine,
+  AudioLines,
   Bell,
   Binary,
   Blocks,
@@ -982,4 +983,5 @@ export const nodeIconsLucide: iconsType = {
   Mic2,
   DollarSign,
   BookOpenText,
+  AudioLines,
 };
