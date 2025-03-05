@@ -407,7 +407,8 @@ class NvidiaEvaluatorComponent(Component):
 
                 config_id = result.get("id")  # ✅ Extract "id" safely
                 if not config_id:
-                    raise ValueError(f"Missing 'id' in response: {result}")  # Ensure "id" exists
+                    err_msg=f"Missing 'id' in response: {result}"
+                    raise ValueError(err_msg)  # Ensure "id" exists
 
                 return {
                     "tags": [
@@ -426,7 +427,7 @@ class NvidiaEvaluatorComponent(Component):
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
-            error_msg = f"HTTP error {status_code} on URL: {eval_config_url}. Config: {config_data}, Response content: {response_content}"
+            error_msg = f"HTTP error {status_code} Config: {config_data}, Response content: {response_content}"
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
@@ -502,7 +503,7 @@ class NvidiaEvaluatorComponent(Component):
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             response_content = exc.response.text
-            error_msg = f"HTTP error {status_code} on URL: {eval_config_url}. Response content: {response_content} Request: {config_data}"
+            error_msg = f"HTTP error {status_code} Response content: {response_content} Request: {config_data}"
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
@@ -547,8 +548,7 @@ class NvidiaEvaluatorComponent(Component):
                 formatted_result = json.dumps(result, indent=2)
                 self.log(f"Received successful response: {formatted_result}")
 
-                target_id = result.get("id")
-                return target_id
+                return result.get("id")
 
         except httpx.TimeoutException as exc:
             error_msg = f"Request to {eval_target_url} timed out"
@@ -577,14 +577,12 @@ class NvidiaEvaluatorComponent(Component):
             # Inputs
             user_dataset_name = getattr(self, "dataset", None)
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            repo_id = await self.get_repo_id(self.tenant_id, user_dataset_name, hf_api)
+            repo_id = await self.get_repo_id(self.tenant_id, user_dataset_name)
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
             self.log(f"repo_id : {repo_id}")
             generate_output_file = getattr(self, "310_run_inference", None) == "False"
 
-            # Endpoint configuration
-            url = f"{self.datastore_base_url}/v1"
             # Initialize lists for the two JSON structures
             input_file_data = []
             output_file_data = []
@@ -635,7 +633,7 @@ class NvidiaEvaluatorComponent(Component):
                     path_in_repo=input_file_name,
                     repo_id=repo_id,
                     repo_type="dataset",
-                    commit_message=f"Input evaluation file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                    commit_message=f"Input file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
                 )
             finally:
                 input_file_buffer.close()
@@ -649,7 +647,7 @@ class NvidiaEvaluatorComponent(Component):
                         path_in_repo=output_file_name,
                         repo_id=repo_id,
                         repo_type="dataset",
-                        commit_message=f"Output evaluation file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                        commit_message=f"Output file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
                     )
                 finally:
                     input_file_buffer.close()
@@ -663,7 +661,7 @@ class NvidiaEvaluatorComponent(Component):
 
         return repo_id
 
-    async def get_repo_id(self, tenant_id: str, user_dataset_name: str, hf_api: HfApi) -> str:
+    async def get_repo_id(self, tenant_id: str, user_dataset_name: str) -> str:
         """Fetches the repo id by checking if a dataset with the constructed name exists.
 
                 If the dataset does not exist, creates a new dataset and returns its ID.
@@ -679,22 +677,19 @@ class NvidiaEvaluatorComponent(Component):
         namespace = tenant_id if tenant_id else "tenant"
 
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
-        page = 1
 
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{url}/{namespace}")
                 response.raise_for_status()
                 self.log(f"returned data {response}")
-
-                if response.status_code == 404:
+                http_code_namespace_missing=404
+                if response.status_code == http_code_namespace_missing:
                     create_payload = {"namespace": namespace}
                     create_response = await client.post(url, json=create_payload)
                     create_response.raise_for_status()
-                    created_namespace_response = create_response.json()
 
-                repo_id = f"{namespace}/{dataset_name}"
-                return repo_id
+                return f"{namespace}/{dataset_name}"
         except httpx.HTTPStatusError as e:
             exception_str = str(e)
             error_msg = f"Error processing namespace: {exception_str}"

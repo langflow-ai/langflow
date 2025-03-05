@@ -173,16 +173,15 @@ class NvidiaCustomizerComponent(Component):
 
         # Process and upload the dataset if training_data is provided
         if self.training_data is not None:
-            repo_id = await self.process_and_upload_dataset()
-        else:
-            repo_id = None
+            await self.process_and_upload_dataset()
 
         tenant = self.tenant_id if self.tenant_id else "tenant"
         short_model_name = self.model_name.split("/")[-1]
         customizations_url = f"{self.base_url}/v1/customization/jobs"
-
+        max_attempt_allowed = 10
+        error_code_already_present = 409
         # Try up to 10 attempts
-        while attempt <= 10:
+        while attempt <= max_attempt_allowed:
             # Build the output_model string with the current attempt number
             output_model = f"{tenant}/{short_model_name}@{dataset_name}-{attempt}"
 
@@ -207,24 +206,24 @@ class NvidiaCustomizerComponent(Component):
             # Add `adapter_dim` if fine tuning type is "lora"
             if self.fine_tuning_type == "lora":
                 data["hyperparameters"]["lora"] = {"adapter_dim": 16}
-
             try:
                 formatted_data = json.dumps(data, indent=2)
                 self.log(
-                    f"Attempt {attempt}: Sending customization request to endpoint {customizations_url} with data: {formatted_data}"
+                    f"Attempt {attempt}: Sending customization request with data: {formatted_data}"
                 )
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.post(customizations_url, headers=self.headers, json=data)
 
                 # If a conflict is returned, try again with an incremented attempt counter
-                if response.status_code == 409:
+                if response.status_code == error_code_already_present:
                     self.log(f"Received HTTP 409 Conflict on attempt {attempt}. Retrying with a new dataset name.")
                     attempt += 1
                     # If this was the 10th attempt, raise an error on the next iteration (attempt will be 11)
-                    if attempt > 10:
+                    if attempt > max_attempt_allowed:
                         error_msg = (
-                            "Received 409 conflict 10 times. Please choose a different dataset name or delete the model."
+                            f"Received 409 conflict {error_code_already_present} times. "
+                            f"Please choose a different dataset name or delete the model."
                         )
                         raise ValueError(error_msg)
                     continue
@@ -249,12 +248,14 @@ class NvidiaCustomizerComponent(Component):
 
             except httpx.HTTPStatusError as exc:
                 # Check if the error is due to a 409 Conflict
-                if exc.response.status_code == 409:
+
+                if exc.response.status_code == error_code_already_present:
                     self.log(f"Received HTTP 409 Conflict on attempt {attempt}. Retrying with a new dataset name.")
                     attempt += 1
-                    if attempt > 10:
+                    if attempt > max_attempt_allowed:
                         error_msg = (
-                            "There are already 10 version for the model with the dataset.. Please choose a different dataset name or delete the models."
+                            f"There are already {max_attempt_allowed} version for the model with the dataset. "
+                            f"Please choose a different dataset name or delete the models."
                         )
                         raise ValueError(error_msg) from exc
                     continue
@@ -300,21 +301,18 @@ class NvidiaCustomizerComponent(Component):
         namespace = tenant_id if tenant_id else "tenant"
 
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
-        page = 1
 
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{url}/{namespace}")
                 self.log(f"returned data {response}")
-
-                if response.status_code == 404:
+                http_status_code_non_found =404
+                if response.status_code == http_status_code_non_found:
                     create_payload = {"namespace": namespace}
                     create_response = await client.post(url, json=create_payload)
                     create_response.raise_for_status()
-                    created_namespace_response = create_response.json()
 
-                repo_id = f"{namespace}/{dataset_name}"
-                return repo_id
+                return f"{namespace}/{dataset_name}"
         except httpx.HTTPStatusError as e:
             exception_str = str(e)
             error_msg = f"Error processing namespace: {exception_str}"
@@ -370,7 +368,9 @@ class NvidiaCustomizerComponent(Component):
                     valid_records.append(filtered_data)
 
             total_records = len(valid_records)
-            if total_records < 2:
+            min_records_process = 2
+            min_records_validation=10
+            if total_records < min_records_process:
                 error_msg =f"Not enough records for processing. Record count : {total_records}"
                 raise ValueError(error_msg)
 
@@ -378,11 +378,7 @@ class NvidiaCustomizerComponent(Component):
             # STEP 2: Split into validation (10%) and training (90%)
             # =====================================================
             # If the total size is less than 10, force at least one record into validation.
-            if total_records < 10:
-                validation_count = 1
-            else:
-                # Here we round to the nearest integer but ensure at least one record.
-                validation_count = max(1, int(round(total_records * 0.1)))
+            validation_count = 1 if total_records < min_records_validation else max(1, int(round(total_records * 0.1)))
 
             # For simplicity, we take the first validation_count records for validation.
             # (You could also randomize the order if needed.)
@@ -393,11 +389,12 @@ class NvidiaCustomizerComponent(Component):
             # STEP 3: Process training data in chunks (90%)
             # =====================================================
             chunk = []
+            is_validation = False
             for record in training_records:
                 chunk.append(record)
                 if len(chunk) == chunk_size:
                     chunk_df = pd.DataFrame(chunk)
-                    task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, url, hf_api)
+                    task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, hf_api, is_validation)
                     tasks.append(task)
                     chunk = []  # Reset the chunk
                     self.chunk_number += 1
@@ -405,7 +402,7 @@ class NvidiaCustomizerComponent(Component):
             # Process any remaining training records
             if chunk:
                 chunk_df = pd.DataFrame(chunk)
-                task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, url, hf_api, False)
+                task = self.upload_chunk(chunk_df, self.chunk_number, file_name_appender, repo_id, hf_api, is_validation)
                 tasks.append(task)
 
             # Await all training upload tasks
@@ -415,10 +412,11 @@ class NvidiaCustomizerComponent(Component):
             # STEP 4: Upload validation data (without chunking)
             # =====================================================
             if validation_records:
+                is_validation = True
                 validation_df = pd.DataFrame(validation_records)
                 # Note: You will need to implement upload_validation to handle the
                 # upload of the full validation DataFrame.
-                await self.upload_chunk(validation_df, 1, file_name_appender, repo_id, url, hf_api, True)
+                await self.upload_chunk(validation_df, 1, file_name_appender, repo_id, hf_api, is_validation)
 
         except Exception as exc:
             exception_str = str(exc)
@@ -445,7 +443,8 @@ class NvidiaCustomizerComponent(Component):
             async with httpx.AsyncClient() as client:
                 response = await client.post(entity_registry_url, json=create_payload)
 
-            if response.status_code == 200:
+            success_status_code = 200
+            if response.status_code == success_status_code:
                 logger.info("Chunk %s uploaded successfully!", self.chunk_number)
             else:
                 logger.warning("Failed to upload chunk %s. Status code: %s", self.chunk_number, response.status_code)
@@ -460,7 +459,7 @@ class NvidiaCustomizerComponent(Component):
 
         return repo_id
 
-    async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, repo_id, base_url, hf_api, is_validation):
+    async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, repo_id, hf_api, is_validation):
         """Asynchronously uploads a chunk of data to the REST API."""
         try:
             json_data = chunk_df.to_json(orient="records", lines=True)
@@ -470,13 +469,14 @@ class NvidiaCustomizerComponent(Component):
 
             # Prepare BytesIO objects
             training_file_obj = BytesIO(json_data.encode("utf-8"))
+            commit_message = f"Updated training file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
             try:
                 hf_api.upload_file(
                     path_or_fileobj=training_file_obj,
                     path_in_repo=file_name_training,
                     repo_id=repo_id,
                     repo_type="dataset",
-                    commit_message=f"Updated training file at time: {datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                    commit_message= commit_message
                 )
             finally:
                 training_file_obj.close()
