@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
 
@@ -36,7 +36,6 @@ class RunFlowBaseComponent(Component):
             info="The name of the flow to run.",
             options=[],
             real_time_refresh=True,
-            refresh_button=True,
             value=None,
         ),
         MessageInput(
@@ -201,12 +200,13 @@ class RunFlowBaseComponent(Component):
                 field.input_types = []
         return fields
 
-    async def to_toolkit(self) -> list[Tool]:
+    @override
+    async def _get_tools(self) -> list[Tool]:
         component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         flow_description, tool_mode_inputs = await self.get_required_data(self.flow_name_selected)
         # # convert list of dicts to list of dotdicts
         tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]
-        tools = component_toolkit(component=self).get_tools(
+        return component_toolkit(component=self).get_tools(
             tool_name=f"{self.flow_name_selected}_tool",
             tool_description=(
                 f"Tool designed to execute the flow '{self.flow_name_selected}'. Flow details: {flow_description}."
@@ -214,6 +214,3 @@ class RunFlowBaseComponent(Component):
             callbacks=self.get_langchain_callbacks(),
             flow_mode_inputs=tool_mode_inputs,
         )
-        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
-        return tools
