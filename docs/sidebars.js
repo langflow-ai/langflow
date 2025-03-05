@@ -88,18 +88,59 @@ module.exports = {
       type: "category",
       label: "Deployment",
       items: [
-        "Deployment/deployment-docker",
-        "Deployment/deployment-gcp",
-        "Deployment/deployment-hugging-face-spaces",
-        "Deployment/deployment-kubernetes",
-        "Deployment/deployment-railway",
-        "Deployment/deployment-render",
+        {
+          type: "doc",
+          id: "Deployment/deployment-docker",
+          label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-gcp",
+          label: "Google Cloud Platform"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-hugging-face-spaces",
+          label: "Hugging Face Spaces"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-kubernetes",
+          label: "Kubernetes"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-railway",
+          label: "Railway"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-render",
+          label: "Render"
+        }
+      ],
+    },
+    {
+      type: "category",
+      label: "API reference",
+      items: [
+        {
+          type: "link",
+          label: "API documentation",
+          href: "/api",
+        },
+        {
+          type: "doc",
+          id: "API-Reference/api-reference-api-examples",
+          label: "API examples",
+        },
       ],
     },
     {
       type: "category",
       label: "Integrations",
       items: [
+        "Integrations/Apify/integrations-apify",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
@@ -122,6 +163,13 @@ module.exports = {
             "Integrations/Notion/notion-agent-meeting-notes",
           ],
         },
+        {
+          type: "category",
+          label: "NVIDIA",
+          items: [
+            "Integrations/Nvidia/integrations-nvidia-ingest",
+          ],
+        },
       ],
     },
     {
@@ -134,22 +182,6 @@ module.exports = {
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-telemetry",
-      ],
-    },
-    {
-      type: "category",
-      label: "API reference",
-      items: [
-        {
-          type: "link",
-          label: "API documentation",
-          href: "/api",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-reference-api-examples",
-          label: "API examples",
-        },
       ],
     },
     {

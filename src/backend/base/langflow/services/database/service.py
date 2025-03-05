@@ -124,6 +124,15 @@ class DatabaseService(Service):
         # if the user specifies an empty dict, we allow it.
         kwargs = self._build_connection_kwargs()
 
+        poolclass_key = kwargs.get("poolclass")
+        if poolclass_key is not None:
+            pool_class = getattr(sa, poolclass_key, None)
+            if pool_class and isinstance(pool_class(), sa.pool.Pool):
+                logger.debug(f"Using poolclass: {poolclass_key}.")
+                kwargs["poolclass"] = pool_class
+            else:
+                logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
+
         return create_async_engine(
             self.database_url,
             connect_args=self._get_connect_args(),
@@ -136,16 +145,18 @@ class DatabaseService(Service):
         return self._create_engine()
 
     def _get_connect_args(self):
-        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
-            "sqlite"
-        ):
-            connect_args = {
+        settings = self.settings_service.settings
+
+        if settings.db_driver_connection_settings is not None:
+            return settings.db_driver_connection_settings
+
+        if settings.database_url and settings.database_url.startswith("sqlite"):
+            return {
                 "check_same_thread": False,
-                "timeout": self.settings_service.settings.db_connect_timeout,
+                "timeout": settings.db_connect_timeout,
             }
-        else:
-            connect_args = {}
-        return connect_args
+
+        return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
@@ -164,6 +175,8 @@ class DatabaseService(Service):
                             cursor.execute(pragma)
                         except OperationalError:
                             logger.exception(f"Failed to set PRAGMA {pragma}")
+                        except GeneratorExit:
+                            logger.error(f"Failed to set PRAGMA {pragma}")
                 finally:
                     cursor.close()
 

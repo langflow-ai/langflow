@@ -82,6 +82,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                             "new_collection_name",
                             "embedding_generation_provider",
                             "embedding_generation_model",
+                            "dimension",
                         ],
                         "template": {
                             "new_collection_name": StrInput(
@@ -330,7 +331,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         embedding_generation_model: str | None = None,
     ):
         # Create the data API client
-        client = DataAPIClient(token=token)
+        client = DataAPIClient(token=token, environment=environment)
 
         # Get the database object
         database = client.get_async_database(api_endpoint=api_endpoint, token=token)
@@ -554,6 +555,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
+        # Append a special case for Bring your own
+        vectorize_providers["Bring your own"] = [None, ["Bring your own"]]
+
         # If the collection is set, allow user to see embedding options
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "embedding_generation_provider"
@@ -567,7 +571,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Go over each possible provider and add metadata to configure in Astra DB Portal
         for provider in provider_options:
             # Skip Bring your own and Nvidia, automatically configured
-            if provider in ["Bring your own", "Nvidia"]:
+            if provider in {"Bring your own", "Nvidia"}:
                 build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
                     "embedding_generation_provider"
                 ]["options_metadata"].append({"icon": self.get_provider_icon(provider_name=provider.lower())})
@@ -597,7 +601,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If we retrieved options based on the token, show the dropdown
         build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
         build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k not in ["name"]} for col in collection_options
+            {k: v for k, v in col.items() if k != "name"} for col in collection_options
         ]
 
         # Reset the selected collection
@@ -616,7 +620,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # If we retrieved options based on the token, show the dropdown
         build_config["database_name"]["options"] = [db["name"] for db in database_options]
         build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
+            {k: v for k, v in db.items() if k != "name"} for db in database_options
         ]
 
         # Reset the selected database
@@ -663,12 +667,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 raise ValueError(msg) from e
 
             # Add the new database to the list of options
-            build_config["database_name"]["options"] = build_config["database_name"]["options"] + [
-                field_value["new_database_name"]
-            ]
-            build_config["database_name"]["options_metadata"] = build_config["database_name"]["options_metadata"] + [
-                {"status": "PENDING"}
-            ]
+            build_config["database_name"]["options"] += [field_value["new_database_name"]]
+            build_config["database_name"]["options_metadata"] += [{"status": "PENDING"}]
 
             return self.reset_collection_list(build_config)
 
@@ -714,13 +714,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             generation_provider = field_value["embedding_generation_provider"]
             provider = generation_provider if generation_provider != "Bring your own" else None
             generation_model = field_value["embedding_generation_model"]
-            model = generation_model if generation_model else None
+            model = generation_model if generation_model and generation_model != "Bring your own" else None
+
+            # Set the embedding choice
+            build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
+            build_config["embedding_model"]["advanced"] = bool(provider)
 
             # Add the new collection to the list of options
             icon = "NVIDIA" if provider == "Nvidia" else "vectorstores"
-            build_config["collection_name"]["options_metadata"] = build_config["collection_name"][
-                "options_metadata"
-            ] + [{"records": 0, "provider": provider, "icon": icon, "model": model}]
+            build_config["collection_name"]["options_metadata"] += [
+                {"records": 0, "provider": provider, "icon": icon, "model": model}
+            ]
 
             return build_config
 
@@ -740,7 +744,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             return self.reset_build_config(build_config)
 
         # If this is the first execution of the component, reset and build database list
-        if first_run or field_name in ["token", "environment"]:
+        if first_run or field_name in {"token", "environment"}:
             return self.reset_database_list(build_config)
 
         # Refresh the collection name options
@@ -782,11 +786,20 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 # Add the new collection to the list of options
                 build_config["collection_name"]["options"].append(field_value)
                 build_config["collection_name"]["options_metadata"].append(
-                    {"records": 0, "provider": None, "icon": "", "model": None}
+                    {
+                        "records": 0,
+                        "provider": None,
+                        "icon": "",
+                        "model": None,
+                    }
                 )
 
                 # Ensure that autodetect collection is set to False, since its a new collection
                 build_config["autodetect_collection"]["value"] = False
+
+            # If nothing is selected, can't detect provider - return
+            if not field_value:
+                return build_config
 
             # Find the position of the selected collection to align with metadata
             index_of_name = build_config["collection_name"]["options"].index(field_value)
