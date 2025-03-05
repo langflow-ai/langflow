@@ -224,19 +224,19 @@ class NvidiaCustomizerComponent(Component):
                         )
                         raise ValueError(error_msg)
                     continue
+                else:
+                    # For non-409 responses, raise for any HTTP error status
+                    response.raise_for_status()
 
-                # For non-409 responses, raise for any HTTP error status
-                response.raise_for_status()
+                    # Process a successful response
+                    result = response.json()
+                    formatted_result = json.dumps(result, indent=2)
+                    self.log(f"Received successful response: {formatted_result}")
 
-                # Process a successful response
-                result = response.json()
-                formatted_result = json.dumps(result, indent=2)
-                self.log(f"Received successful response: {formatted_result}")
-
-                result_dict = {**result}
-                id_value = result_dict["id"]
-                result_dict["url"] = f"{customizations_url}/{id_value}/status"
-                return result_dict
+                    result_dict = {**result}
+                    id_value = result_dict["id"]
+                    result_dict["url"] = f"{customizations_url}/{id_value}/status"
+                    return result_dict
 
             except httpx.TimeoutException as exc:
                 error_msg = f"Request to {customizations_url} timed out"
@@ -316,7 +316,7 @@ class NvidiaCustomizerComponent(Component):
             raise ValueError(error_msg) from e
 
     async def process_and_upload_dataset(self) -> str:
-        """Asynchronously processes and uploads the dataset for training(90%) and validation(10%)
+        """Asynchronously processes and uploads the dataset for training(90%) and validation(10%).
 
         If the total valid record count is less than 10, at least one record is added to validation.
         """
