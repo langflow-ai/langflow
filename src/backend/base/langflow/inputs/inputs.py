@@ -449,6 +449,17 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
+class ButtonInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a button input field.
+
+    This class represents a button input field and provides functionality for handling button values.
+    It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BUTTON.
+    """
+    
+    field_type: SerializableFieldTypes = FieldTypes.BUTTON
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a multiselect input field.
@@ -523,6 +534,7 @@ InputTypes: TypeAlias = (
     | DictInput
     | DropdownInput
     | MultiselectInput
+    | ButtonInput
     | FileInput
     | FloatInput
     | HandleInput

@@ -1,7 +1,5 @@
-import { APIClassType, InputFieldType } from "@/types/api";
 import Dropdown from "../../../dropdownComponent";
 import { DropDownComponentType, InputProps } from "../../types";
-import ButtonComponent from "../buttonComponent";
 
 export default function DropdownComponent({
   id,
@@ -23,7 +21,6 @@ export default function DropdownComponent({
   };
 
   return (
-    // <ButtonComponent />
     <Dropdown
       disabled={disabled}
       editNode={editNode}
