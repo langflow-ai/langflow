@@ -107,14 +107,11 @@ export const useHandleWebsocketMessage = (
     case "error":
       if (data.code === "api_key_missing") {
         setShowApiKeyModal(true);
+        return;
       }
-      if (
-        data.error.message === "Cancellation failed: no active response found"
-      ) {
-        interruptPlayback();
-      } else {
-        setStatus("Error: " + data.error);
-      }
+      data.error.message === "Cancellation failed: no active response found"
+        ? interruptPlayback()
+        : setStatus("Error: " + data.error);
       break;
   }
 };

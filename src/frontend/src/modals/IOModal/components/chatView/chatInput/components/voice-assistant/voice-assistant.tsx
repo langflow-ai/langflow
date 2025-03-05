@@ -171,6 +171,8 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     };
   }, []);
 
+  console.log(showApiKeyModal);
+
   return (
     <div className="">
       <div className="relative flex items-center gap-2">
