@@ -812,7 +812,7 @@ class Vertex:
         self.build_params()
 
     def _is_chat_input(self) -> bool:
-        return False
+        return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
     def build_inactive(self) -> None:
         # Just set the results to None
