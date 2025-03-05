@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import HandleInput
-from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput, BoolInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
 
 
 class MacrocosmosComponent(LCModelComponent):
@@ -20,8 +20,7 @@ class MacrocosmosComponent(LCModelComponent):
             name="macrocosmos_url",
             display_name="Macrocosmos Base Url",
             advanced=True,
-            info="The base URL of the Macrocosmos API. "
-            "Defaults to https://sn1.api.macrocosmos.ai/v1/chat/completions "
+            info="The base URL of the Macrocosmos API. Defaults to https://sn1.api.macrocosmos.ai/v1/chat/completions ",
         ),
         DropdownInput(
             name="model_name",
@@ -34,7 +33,7 @@ class MacrocosmosComponent(LCModelComponent):
             name="inference_mode",
             display_name="Inference Mode",
             advanced=True,
-            options = ["Base-Inference", "Chain-of-Thought", "Reasoning-Fast", "Mixture-of-Agents"],
+            options=["Base-Inference", "Chain-of-Thought", "Reasoning-Fast", "Mixture-of-Agents"],
             value="Base-Inference",
         ),
         SecretStrInput(
@@ -54,7 +53,7 @@ class MacrocosmosComponent(LCModelComponent):
         IntInput(name="top_k", display_name="Top-K", advanced=True, value=50),
         FloatInput(name="top_p", display_name="Top-P", advanced=True, value=0.95),
         FloatInput(name="temperature", display_name="Temperature", advanced=True, value=0.7),
-        BoolInput(name= "do_sample", display_name="Do Sample", advanced=True, value=True),
+        BoolInput(name="do_sample", display_name="Do Sample", advanced=True, value=True),
         HandleInput(
             name="output_parser",
             display_name="Output Parser",
@@ -84,6 +83,6 @@ class MacrocosmosComponent(LCModelComponent):
             base_url=macrocosmos_url,
             api_key=str(api_key),
             inference_mode=inference_mode,
-            extra_body = sample_params,
+            extra_body=sample_params,
             seed=seed,
         )
