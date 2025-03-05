@@ -20,6 +20,7 @@ export const useHandleWebsocketMessage = (
   addDataToFlowPool: (data: any, nodeId: string) => void,
   updateEdgesRunningByNodes: (nodeIds: string[], isRunning: boolean) => void,
   updateBuildStatus: (nodeIds: string[], status: BuildStatus) => void,
+  hasOpenAIAPIKey: boolean,
 ) => {
   const data = JSON.parse(event.data);
   switch (data.type) {
@@ -106,7 +107,9 @@ export const useHandleWebsocketMessage = (
 
     case "error":
       if (data.code === "api_key_missing") {
-        setShowApiKeyModal(true);
+        if (!hasOpenAIAPIKey) {
+          setShowApiKeyModal(true);
+        }
         setStatus("Error: " + "API key is missing");
         return;
       }

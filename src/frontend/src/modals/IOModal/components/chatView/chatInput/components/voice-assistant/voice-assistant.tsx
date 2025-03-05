@@ -130,6 +130,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       addDataToFlowPool,
       updateEdgesRunningByNodes,
       updateBuildStatus,
+      hasOpenAIAPIKey,
     );
   };
 
