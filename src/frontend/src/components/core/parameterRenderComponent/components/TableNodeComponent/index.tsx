@@ -4,7 +4,7 @@ import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
 import { DataTypeDefinition, SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { InputProps, TableComponentType } from "../../types";
@@ -133,9 +133,9 @@ export default function TableNodeComponent({
   }
 
   function handleSave() {
-    handleOnNewValue({ 
+    handleOnNewValue({
       value: tempValue,
-      real_time_refresh: true 
+      real_time_refresh: true,
     });
     setIsModalOpen(false);
   }
