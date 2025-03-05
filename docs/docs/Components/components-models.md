@@ -440,6 +440,31 @@ For more information, see [Perplexity documentation](https://perplexity.ai/).
 |--------|---------------|-----------------------------------------------------|
 | model  | LanguageModel | An instance of ChatPerplexity configured with the specified parameters. |
 
+## Macrocosmos
+
+This component generates text using Macrocosmos' Apex, powered by Bittensor.
+
+For more information, see [Apex Documentation](https://app.macrocosmos.ai).
+
+#### Inputs
+
+| Name                 | Type          | Description                                                                 |
+|----------------------|--------------|-----------------------------------------------------------------------------|
+| macrocosmos_url      | String        | Base URL path for API requests. Default: `"https://sn1.api.macrocosmos.ai/v1/chat/completions"`. |
+| macrocosmos_api_key  | SecretString  | Your Macrocosmos API Key.                                                  |
+| model_name          | String        | The name of the Apex model to use.                                    |
+| max_new_tokens      | Integer       | The maximum number of tokens to generate. Range: `[1, 4096]`.              |
+| seed               | Integer       | Controls reproducibility of the job.                                       |
+| temperature        | Float         | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.7`.    |
+| top_k               | Integer      | The number of highest probability vocabulary tokens to keep for top-k-filtering.   |
+| top_p               | Float        | The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling. Default: 0.95. |
+| inference_mode     | String        | Determines the type of inference to perform. Options: `[Base-Inference, Chain-of-Thought, Reasoning-Fast, Mixture-of-Agents]`. |
+
+#### Outputs
+
+| Name  | Type          | Description                                                      |
+|-------|---------------|------------------------------------------------------------------|
+| model | LanguageModel | An instance of an Apex model configured with the specified parameters. |
 
 ## Qianfan
 

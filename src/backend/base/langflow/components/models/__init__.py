@@ -9,6 +9,7 @@ from .google_generative_ai import GoogleGenerativeAIComponent
 from .groq import GroqModel
 from .huggingface import HuggingFaceEndpointsComponent
 from .lmstudiomodel import LMStudioModelComponent
+from .macrocosmos import MacrocosmosComponent
 from .maritalk import MaritalkModelComponent
 from .mistral import MistralAIModelComponent
 from .novita import NovitaModelComponent
@@ -34,6 +35,7 @@ __all__ = [
     "GroqModel",
     "HuggingFaceEndpointsComponent",
     "LMStudioModelComponent",
+    "MacrocosmosComponent",
     "MaritalkModelComponent",
     "MistralAIModelComponent",
     "NVIDIAModelComponent",
