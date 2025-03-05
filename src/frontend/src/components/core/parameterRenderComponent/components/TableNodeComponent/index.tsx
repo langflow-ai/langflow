@@ -4,7 +4,7 @@ import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
 import { DataTypeDefinition, SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { InputProps, TableComponentType } from "../../types";
@@ -68,6 +68,7 @@ export default function TableNodeComponent({
   const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
+
   // Add useEffect to sync with incoming value changes
   useEffect(() => {
     setTempValue(cloneDeep(value));
@@ -132,7 +133,10 @@ export default function TableNodeComponent({
   }
 
   function handleSave() {
-    handleOnNewValue({ value: tempValue });
+    handleOnNewValue({ 
+      value: tempValue,
+      real_time_refresh: true 
+    });
     setIsModalOpen(false);
   }
 
@@ -146,8 +150,7 @@ export default function TableNodeComponent({
       const isCustomEdit =
         column.formatter &&
         ((column.formatter === "text" && column.edit_mode === "modal") ||
-          column.formatter === "json" ||
-          column.formatter === "boolean");
+          column.formatter === "json");
       return {
         field: column.name,
         onUpdate: updateComponent,
