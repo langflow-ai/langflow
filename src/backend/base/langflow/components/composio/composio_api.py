@@ -2,7 +2,6 @@
 from collections.abc import Sequence
 from typing import Any
 
-from langflow.inputs.inputs import ButtonInput
 import requests
 
 # Third-party imports
@@ -15,6 +14,7 @@ from loguru import logger
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import ButtonInput
 from langflow.io import Output
 
 
@@ -53,7 +53,7 @@ class ComposioAPIComponent(LCToolComponent):
             options=[],
             value="",
             info="The app name to use. Please refresh after selecting app name",
-            show=False, # TODO: Remove this
+            show=False,  # TODO: Remove this
             refresh_button=True,
             required=True,
         ),
