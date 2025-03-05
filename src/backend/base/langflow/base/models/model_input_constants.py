@@ -274,7 +274,7 @@ except ImportError:
 try:
     deepseek_inputs, deepseek_fields = _get_deepseek_inputs_and_fields()
 
-    MODEL_PROVIDERS_DICT["DeepSeek"] = {
+    MODEL_PROVIDERS_DICT["Deepseek"] = {
         "fields": deepseek_fields,
         "inputs": deepseek_inputs,
         "prefix": "",
