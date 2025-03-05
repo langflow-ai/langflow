@@ -23,7 +23,7 @@ class TaskCreatorComponent(Component):
             tool_mode=True,
         ),
         MultilineInput(
-            name="description",
+            name="task_description",
             display_name="Description",
             info="Task description.",
             tool_mode=True,
@@ -83,7 +83,7 @@ class TaskCreatorComponent(Component):
 
         task_data = TaskCreate(
             title=self.title,
-            description=self.description,
+            description=self.task_description,
             attachments=[],  # Default empty list
             author_id=UUID(self.author_id),
             assignee_id=UUID(self.assignee_id),
