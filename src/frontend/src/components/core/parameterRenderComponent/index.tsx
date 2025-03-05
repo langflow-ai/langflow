@@ -206,7 +206,11 @@ export function ParameterRenderComponent({
           />
         );
       case "button":
-        return <ButtonComponent />;
+        return (
+          <ButtonComponent
+            type={templateData?.name as "tool_name" | "actions"}
+          />
+        );
       default:
         return <EmptyParameterComponent {...baseInputProps} />;
     }
