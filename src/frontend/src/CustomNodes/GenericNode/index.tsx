@@ -494,7 +494,7 @@ function GenericNode({
           data-testid={`${data.id}-main-node`}
           className={cn(
             "grid truncate text-wrap p-4 leading-5",
-            showNode && "border-b",
+            showNode ? "border-b" : "relative",
             hasDescription && "gap-3",
           )}
         >
@@ -511,7 +511,9 @@ function GenericNode({
               data-testid="generic-node-title-arrangement"
             >
               {renderNodeIcon()}
-              <div className="generic-node-tooltip-div">{renderNodeName()}</div>
+              <div className="generic-node-tooltip-div truncate">
+                {renderNodeName()}
+              </div>
             </div>
             <div data-testid={`${showNode ? "show" : "hide"}-node-content`}>
               {!showNode && (
