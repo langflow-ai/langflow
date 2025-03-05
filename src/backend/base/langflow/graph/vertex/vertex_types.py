@@ -456,7 +456,7 @@ class InterfaceVertex(ComponentVertex):
             pass
 
     def _is_chat_input(self):
-        return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
+        return self.display_name.replace(" ", "") == InterfaceComponentTypes.ChatInput and self.is_input
 
 
 class StateVertex(ComponentVertex):
