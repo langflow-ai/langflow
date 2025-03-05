@@ -13,6 +13,7 @@ from .google_search_api import GoogleSearchAPIComponent
 from .google_search_api_core import GoogleSearchAPICore
 from .google_serper_api import GoogleSerperAPIComponent
 from .google_serper_api_core import GoogleSerperAPICore
+from .http_request_tool import HttpRequestTool
 from .mcp_stdio import MCPStdio
 from .python_code_structured_tool import PythonCodeStructuredTool
 from .python_repl import PythonREPLToolComponent
@@ -51,6 +52,7 @@ __all__ = [
     "GoogleSearchAPICore",
     "GoogleSerperAPIComponent",
     "GoogleSerperAPICore",
+    "HttpRequestTool",
     "MCPStdio",
     "PythonCodeStructuredTool",
     "PythonREPLComponent",
