@@ -25,9 +25,12 @@ starter-projects:
   - "src/backend/base/langflow/components/**"
   - "src/backend/base/langflow/services/**"
   - "src/backend/base/langflow/custom/**"
+  - "src/backend/base/langflow/api/v1/chat.py"
   - "src/frontend/src/pages/MainPage/**"
   - "src/frontend/src/utils/reactflowUtils.ts"
   - "src/frontend/tests/extended/features/**"
+  - "src/backend/base/langflow/custom/**"
+  - "src/backend/base/langflow/graph/**"
 
 components:
   - "src/frontend/src/components/**"
@@ -38,13 +41,18 @@ components:
   - "src/frontend/src/CustomNodes/**"
   - "src/frontend/src/style/**"
   - "src/frontend/src/utils/styleUtils.ts"
-  - "src/backend/base/langflow/components/**"
   - "src/frontend/tests/core/features/**"
   - "src/frontend/tests/core/integrations/**"
   - "src/frontend/tests/core/regression/**"
   - "src/frontend/tests/extended/integrations/**"
   - "src/frontend/tests/extended/features/**"
   - "src/frontend/tests/extended/regression/**"
+  - "src/backend/base/langflow/custom/**"
+  - "src/backend/base/langflow/schema/**"
+  - "src/backend/base/langflow/graph/**"
+  - "src/backend/base/langflow/utils/**"
+  - "src/backend/base/langflow/custom/**"
+  - "src/backend/base/langflow/components/**"
 
 workspace:
   - "src/backend/base/langflow/inputs/**"

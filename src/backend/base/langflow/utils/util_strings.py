@@ -1,6 +1,6 @@
 from sqlalchemy.engine import make_url
 
-from langflow.utils import constants
+from langflow.serialization import constants
 
 
 def truncate_long_strings(data, max_length=None):

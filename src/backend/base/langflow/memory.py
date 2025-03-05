@@ -144,7 +144,9 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 await session.refresh(msg)
                 updated_messages.append(msg)
             else:
-                logger.warning(f"Message with id {message.id} not found")
+                error_message = f"Message with id {message.id} not found"
+                logger.warning(error_message)
+                raise ValueError(error_message)
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
@@ -252,10 +254,18 @@ async def astore_message(
         return []
 
     if not message.session_id or not message.sender or not message.sender_name:
-        msg = "All of session_id, sender, and sender_name must be provided."
+        msg = (
+            f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"
+            f" Sender: {message.sender}, Sender Name: {message.sender_name}"
+        )
         raise ValueError(msg)
     if hasattr(message, "id") and message.id:
-        return await aupdate_messages([message])
+        # if message has an id and exist in the database, update it
+        # if not raise an error and add the message to the database
+        try:
+            return await aupdate_messages([message])
+        except ValueError as e:
+            logger.error(e)
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
     return await aadd_messages([message], flow_id=flow_id)

@@ -138,3 +138,4 @@ def test_get_text_with_none_data():
     schema = Data(data=data, text_key="text", default_value="default")
     result = schema.get_text()
     assert result == "default"
+    assert schema.data == {}

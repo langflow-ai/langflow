@@ -33,19 +33,23 @@ For more information on this component, see the [tool calling agent documentatio
 
 ### Inputs
 
-| Name                 | Type     | Description                                                                                     |
-|----------------------|----------|-------------------------------------------------------------------------------------------------|
-| agent_llm            | Dropdown | The provider of the language model that the agent will use to generate responses.               |
-| system_prompt        | String   | Initial instructions and context provided to guide the agent's behavior.                        |
-| tools                | List     | List of tools available for the agent to use.                                                   |
-| input_value          | String   | The input task or question for the agent to process.                                            |
-| add_current_date_tool| Boolean  | If true, adds a tool to the agent that returns the current date.                                |
+| Name | Type | Description |
+|------|------|-------------|
+| agent_llm | Dropdown | The provider of the language model that the agent will use to generate responses. Options include OpenAI and other providers, or Custom. |
+| system_prompt | String | System Prompt: Initial instructions and context provided to guide the agent's behavior. |
+| tools | List | List of tools available for the agent to use. |
+| input_value | String | The input task or question for the agent to process. |
+| add_current_date_tool | Boolean | If true, adds a tool to the agent that returns the current date. |
+| memory | Memory | Optional memory configuration for maintaining conversation history. |
+| max_iterations | Integer | Maximum number of iterations the agent can perform. |
+| handle_parsing_errors | Boolean | Whether to handle parsing errors during agent execution. |
+| verbose | Boolean | Enables verbose output for detailed logging. |
 
 ### Outputs
 
-| Name     | Type    | Description                                     |
-|----------|---------|-------------------------------------------------|
-| response | Message | The agent's response to the given input task.   |
+| Name | Type | Description |
+|------|------|-------------|
+| response | Message | The agent's response to the given input task. |
 
 ## CSV Agent
 

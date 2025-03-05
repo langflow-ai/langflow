@@ -23,7 +23,7 @@ from pydantic_core import PydanticSerializationError
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router
+from langflow.api import health_check_router, log_router, router, router_v2
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -34,7 +34,7 @@ from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_settings_service, get_telemetry_service
+from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 # Ignore Pydantic deprecation warnings from Langchain
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
+_tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
 
@@ -127,6 +128,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
             await load_flows_from_directory()
+            queue_service = get_queue_service()
+            if not queue_service.is_started():  # Start if not already started
+                queue_service.start()
             yield
 
         except Exception as exc:
@@ -193,9 +197,12 @@ def create_app():
             body = await request.body()
 
             boundary_start = f"--{boundary}".encode()
+            # The multipart/form-data spec doesn't require a newline after the boundary, however many clients do
+            # implement it that way
             boundary_end = f"--{boundary}--\r\n".encode()
+            boundary_end_no_newline = f"--{boundary}--".encode()
 
-            if not body.startswith(boundary_start) or not body.endswith(boundary_end):
+            if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
                 return JSONResponse(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     content={"detail": "Invalid multipart formatting"},
@@ -230,7 +237,13 @@ def create_app():
 
         start_http_server(settings.prometheus_port)
 
+    if settings.mcp_server_enabled:
+        from langflow.api.v1 import mcp_router
+
+        router.include_router(mcp_router)
+
     app.include_router(router)
+    app.include_router(router_v2)
     app.include_router(health_check_router)
     app.include_router(log_router)
 

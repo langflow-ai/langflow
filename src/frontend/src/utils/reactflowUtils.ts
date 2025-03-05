@@ -2,9 +2,11 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
+import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import {
   Connection,
   Edge,
+  getOutgoers,
   Node,
   OnSelectionChangeParams,
   ReactFlowJsonObject,
@@ -18,8 +20,8 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  SUCCESS_BUILD,
   specialCharsRegex,
+  SUCCESS_BUILD,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
 import {
@@ -53,7 +55,9 @@ export function checkChatInput(nodes: Node[]) {
 }
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
-  let newEdges = cloneDeep(edges);
+  let newEdges: EdgeType[] = cloneDeep(
+    edges.map((edge) => ({ ...edge, selected: false, animated: false })),
+  );
   edges.forEach((edge) => {
     // check if the source and target node still exists
     const sourceNode = nodes.find((node) => node.id === edge.source);
@@ -68,14 +72,39 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
-      const id: targetHandleType = {
-        type: targetNode.data.node!.template[field]?.type,
-        fieldName: field,
-        id: targetNode.data.id,
-        inputTypes: targetNode.data.node!.template[field]?.input_types,
-      };
-      if (targetNode.data.node!.template[field]?.proxy) {
-        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      let id: targetHandleType | sourceHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
+      if (
+        !field &&
+        targetHandleObject.name &&
+        targetNode.type === "genericNode"
+      ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
+        id = {
+          dataType: dataType ?? "",
+          name: targetHandleObject.name,
+          id: targetNode.data.id,
+          output_types: outputTypes,
+        };
+      } else {
+        id = {
+          type: templateFieldType,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: inputTypes,
+        };
+        if (hasProxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
+        }
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -106,7 +135,33 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
         }
       }
     }
+
+    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
   });
+  return newEdges;
+}
+
+export function filterHiddenFieldsEdges(
+  edge: EdgeType,
+  newEdges: EdgeType[],
+  targetNode: AllNodeType,
+) {
+  if (targetNode) {
+    const nodeInputType = edge.data?.targetHandle?.inputTypes;
+    const nodeTemplates = targetNode.data.node!.template;
+
+    Object.keys(nodeTemplates).forEach((key) => {
+      if (!nodeTemplates[key]?.input_types) return;
+      if (
+        nodeTemplates[key]?.input_types?.some((type) =>
+          nodeInputType?.includes(type),
+        ) &&
+        !nodeTemplates[key].show
+      ) {
+        newEdges = newEdges.filter((e) => e.id !== edge.id);
+      }
+    });
+  }
   return newEdges;
 }
 
@@ -132,7 +187,9 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
         displayName: targetNode.data.node!.display_name,
         field:
           targetNode.data.node!.template[targetHandleObject.fieldName]
-            ?.display_name ?? targetHandleObject.fieldName,
+            ?.display_name ??
+          targetHandleObject.fieldName ??
+          targetHandleObject.name,
       },
     };
   }
@@ -161,14 +218,39 @@ export function detectBrokenEdgesEdges(nodes: AllNodeType[], edges: Edge[]) {
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
-      const id: targetHandleType = {
-        type: targetNode.data.node!.template[field]?.type,
-        fieldName: field,
-        id: targetNode.data.id,
-        inputTypes: targetNode.data.node!.template[field]?.input_types,
-      };
-      if (targetNode.data.node!.template[field]?.proxy) {
-        id.proxy = targetNode.data.node!.template[field]?.proxy;
+      let id: sourceHandleType | targetHandleType;
+
+      const templateFieldType = targetNode.data.node!.template[field]?.type;
+      const inputTypes = targetNode.data.node!.template[field]?.input_types;
+      const hasProxy = targetNode.data.node!.template[field]?.proxy;
+
+      if (
+        !field &&
+        targetHandleObject.name &&
+        targetNode.type === "genericNode"
+      ) {
+        const dataType = targetNode.data.type;
+        const outputTypes =
+          targetNode.data.node!.outputs?.find(
+            (output) => output.name === targetHandleObject.name,
+          )?.types ?? [];
+
+        id = {
+          dataType: dataType ?? "",
+          name: targetHandleObject.name,
+          id: targetNode.data.id,
+          output_types: outputTypes,
+        };
+      } else {
+        id = {
+          type: templateFieldType,
+          fieldName: field,
+          id: targetNode.data.id,
+          inputTypes: inputTypes,
+        };
+        if (hasProxy) {
+          id.proxy = targetNode.data.node!.template[field]?.proxy;
+        }
       }
       if (scapedJSONStringfy(id) !== targetHandle) {
         newEdges = newEdges.filter((e) => e.id !== edge.id);
@@ -219,7 +301,7 @@ export function isValidConnection(
   { source, target, sourceHandle, targetHandle }: Connection,
   nodes: AllNodeType[],
   edges: EdgeType[],
-) {
+): boolean {
   if (source === target) {
     return false;
   }
@@ -229,6 +311,13 @@ export function isValidConnection(
     targetHandleObject.inputTypes?.some(
       (n) => n === sourceHandleObject.dataType,
     ) ||
+    (targetHandleObject.output_types &&
+      (targetHandleObject.output_types?.some(
+        (n) => n === sourceHandleObject.dataType,
+      ) ||
+        sourceHandleObject.output_types.some((t) =>
+          targetHandleObject.output_types?.some((n) => n === t),
+        ))) ||
     sourceHandleObject.output_types.some(
       (t) =>
         targetHandleObject.inputTypes?.some((n) => n === t) ||
@@ -241,9 +330,15 @@ export function isValidConnection(
         return true;
       }
     } else if (
-      (!targetNode.template[targetHandleObject.fieldName].list &&
+      targetHandleObject.output_types &&
+      !edges.find((e) => e.targetHandle === targetHandle)
+    ) {
+      return true;
+    } else if (
+      !targetHandleObject.output_types &&
+      ((!targetNode.template[targetHandleObject.fieldName].list &&
         !edges.find((e) => e.targetHandle === targetHandle)) ||
-      targetNode.template[targetHandleObject.fieldName].list
+        targetNode.template[targetHandleObject.fieldName].list)
     ) {
       return true;
     }
@@ -485,7 +580,64 @@ Array<{ id: string; errors: Array<string> }> {
     id: n.id,
     errors: validateNode(n, edges),
   }));
+
   return nodeMap.filter((n) => n.errors?.length);
+}
+
+export function validateEdge(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): Array<string> {
+  const targetHandleObject: targetHandleType = scapeJSONParse(e.targetHandle!);
+
+  const loop = hasLoop(e, nodes, edges);
+  if (targetHandleObject.output_types && !loop) {
+    return [INCOMPLETE_LOOP_ERROR_ALERT];
+  }
+  return [];
+}
+
+function hasLoop(
+  e: EdgeType,
+  nodes: AllNodeType[],
+  edges: EdgeType[],
+): boolean {
+  const source = e.source;
+  const target = e.target;
+
+  // Check if this connection would create a cycle
+  const targetNode = nodes.find((n) => n.id === target);
+
+  const hasCycle = (
+    node,
+    visited = new Set(),
+    firstEdge: EdgeType | null = null,
+  ): boolean => {
+    if (visited.has(node.id)) return false;
+
+    visited.add(node.id);
+
+    for (const outgoer of getOutgoers(node, nodes, edges)) {
+      const edge = edges.find(
+        (e) => e.source === node.id && e.target === outgoer.id,
+      );
+      if (outgoer.id === source) {
+        const sourceHandleObject = scapeJSONParse(
+          firstEdge?.sourceHandle ?? edge?.sourceHandle ?? "",
+        );
+        const sourceHandleParsed = scapedJSONStringfy(sourceHandleObject);
+        if (sourceHandleParsed === e.targetHandle) {
+          return true;
+        }
+      }
+      if (hasCycle(outgoer, visited, firstEdge || edge)) return true;
+    }
+    return false;
+  };
+
+  if (targetNode?.id === source) return false;
+  return hasCycle(targetNode);
 }
 
 export function updateEdges(edges: EdgeType[]) {
@@ -1555,34 +1707,73 @@ export function extractFieldsFromComponenents(data: APIObjectType) {
   });
   return fields;
 }
+/**
+ * Recursively sorts all object keys and arrays in a JSON structure
+ * @param obj - The object to sort keys and arrays for
+ * @returns A new object with sorted keys and arrays
+ */
+function sortJsonStructure<T>(obj: T): T {
+  // Handle null case
+  if (obj === null) {
+    return obj;
+  }
 
+  // Handle arrays - sort array elements if they are objects
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sortJsonStructure(item)) as unknown as T;
+  }
+
+  // Only process actual objects
+  if (typeof obj !== "object") {
+    return obj;
+  }
+
+  // Create a new object with sorted keys
+  return Object.keys(obj)
+    .sort()
+    .reduce((result, key) => {
+      // Recursively sort nested objects and arrays
+      result[key] = sortJsonStructure(obj[key]);
+      return result;
+    }, {} as any);
+}
+
+/**
+ * Downloads the flow as a JSON file with sorted keys and arrays
+ * @param flow - The flow to download
+ * @param flowName - The name to use for the flow
+ * @param flowDescription - Optional description for the flow
+ */
 export function downloadFlow(
   flow: FlowType,
   flowName: string,
   flowDescription?: string,
 ) {
-  let clonedFlow = cloneDeep(flow);
-  removeFileNameFromComponents(clonedFlow);
-  // create a data URI with the current flow data
-  const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
-    JSON.stringify(
-      {
-        ...clonedFlow,
-        name: flowName,
-        description: flowDescription,
-      },
-      null,
-      2,
-    ),
-  )}`;
+  try {
+    const clonedFlow = cloneDeep(flow);
 
-  // create a link element and set its properties
-  const link = document.createElement("a");
-  link.href = jsonString;
-  link.download = `${flowName && flowName != "" ? flowName : flow.name}.json`;
+    removeFileNameFromComponents(clonedFlow);
 
-  // simulate a click on the link element to trigger the download
-  link.click();
+    const flowData = {
+      ...clonedFlow,
+      name: flowName,
+      description: flowDescription,
+    };
+
+    console.log(flowData);
+
+    const sortedData = sortJsonStructure(flowData);
+    const sortedJsonString = JSON.stringify(sortedData, null, 2);
+
+    const dataUri = `data:text/json;chatset=utf-8,${encodeURIComponent(sortedJsonString)}`;
+    const downloadLink = document.createElement("a");
+    downloadLink.href = dataUri;
+    downloadLink.download = `${flowName || flow.name}.json`;
+
+    downloadLink.click();
+  } catch (error) {
+    console.error("Error downloading flow:", error);
+  }
 }
 
 export function getRandomElement<T>(array: T[]): T {
@@ -1608,6 +1799,7 @@ export const createNewFlow = (
     is_component: flow?.is_component ?? false,
     folder_id: folderId,
     endpoint_name: flow?.endpoint_name ?? undefined,
+    tags: flow?.tags ?? [],
   };
 };
 

@@ -12,6 +12,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
+        "hidden": False,
     },
     {
         "name": "description",
@@ -21,6 +22,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.POPOVER,
+        "hidden": False,
     },
     {
         "name": "tags",
@@ -31,19 +33,7 @@ TOOL_TABLE_SCHEMA = [
         "sortable": False,
         "filterable": False,
         "edit_mode": EditMode.INLINE,
-    },
-    {
-        "name": "commands",
-        "display_name": "Commands",
-        "type": "str",
-        "description": (
-            "Add commands to the tool. These commands will be used to run the tool. Start all commands with a `/`. "
-            "You can add multiple commands separated by a comma.\n"
-            "Example: `/command1`, `/command2`, `/command3`"
-        ),
-        "sortable": False,
-        "filterable": False,
-        "edit_mode": EditMode.INLINE,
+        "hidden": True,
     },
 ]
 

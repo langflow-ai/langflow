@@ -1,5 +1,7 @@
 import { CustomLink } from "@/customization/components/custom-link";
 import { useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import { SingleAlertComponentType } from "../../../../types/alerts";
 
@@ -28,10 +30,35 @@ export default function SingleAlert({
         </h3>
         {dropItem.list ? (
           <div className="mt-2 text-sm text-error-foreground">
-            <ul className="list-disc space-y-1 pl-5">
+            <ul className="list-disc space-y-1 pl-5 align-top">
               {dropItem.list.map((item, idx) => (
                 <li className="word-break-break-word" key={idx}>
-                  {item}
+                  <Markdown
+                    linkTarget="_blank"
+                    remarkPlugins={[remarkGfm]}
+                    className="align-text-top"
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a
+                          href={props.href}
+                          target="_blank"
+                          className="underline"
+                          rel="noopener noreferrer"
+                        >
+                          {props.children}
+                        </a>
+                      ),
+                      p({ node, ...props }) {
+                        return (
+                          <span className="inline-block w-fit max-w-full align-text-top">
+                            {props.children}
+                          </span>
+                        );
+                      },
+                    }}
+                  >
+                    {Array.isArray(item) ? item.join("\n") : item}
+                  </Markdown>
                 </li>
               ))}
             </ul>

@@ -10,20 +10,28 @@ export default function DropdownComponent({
   combobox,
   options,
   name,
+  dialogInputs,
+  optionsMetaData,
+  ...baseInputProps
 }: InputProps<string, DropDownComponentType>) {
   const onChange = (value: any, dbValue?: boolean, skipSnapshot?: boolean) => {
     handleOnNewValue({ value, load_from_db: dbValue }, { skipSnapshot });
   };
+
   return (
     <Dropdown
       disabled={disabled}
       editNode={editNode}
       options={options}
+      optionsMetaData={optionsMetaData}
       onSelect={onChange}
       combobox={combobox}
       value={value || ""}
       id={`dropdown_${id}`}
       name={name}
+      dialogInputs={dialogInputs}
+      handleOnNewValue={handleOnNewValue} // TODO: Remove this
+      {...baseInputProps}
     />
   );
 }

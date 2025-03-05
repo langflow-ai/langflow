@@ -88,7 +88,12 @@ class LocalStorageService(StorageService):
             msg = f"Flow {flow_id} directory does not exist."
             raise FileNotFoundError(msg)
 
-        files = [file.name async for file in folder_path.iterdir() if await file.is_file()]
+        files = [
+            file.name
+            async for file in await anyio.to_thread.run_sync(folder_path.iterdir)
+            if await anyio.Path(file).is_file()
+        ]
+
         logger.info(f"Listed {len(files)} files in flow {flow_id}.")
         return files
 
@@ -108,3 +113,15 @@ class LocalStorageService(StorageService):
     async def teardown(self) -> None:
         """Perform any cleanup operations when the service is being torn down."""
         # No specific teardown actions required for local
+
+    async def get_file_size(self, flow_id: str, file_name: str) -> None:
+        """Get the size of a file in the local storage."""
+        # Get the file size from the file path
+        file_path = self.data_dir / flow_id / file_name
+        if not await file_path.exists():
+            logger.warning(f"File {file_name} not found in flow {flow_id}.")
+            msg = f"File {file_name} not found in flow {flow_id}"
+            raise FileNotFoundError(msg)
+
+        file_size_stat = await file_path.stat()
+        return file_size_stat.st_size

@@ -169,6 +169,24 @@ class ComponentToolkit:
         self.component = component
         self.metadata = metadata
 
+    def _should_skip_output(self, output: Output) -> bool:
+        """Determines if an output should be skipped when creating tools.
+
+        Args:
+            output (Output): The output to check.
+
+        Returns:
+            bool: True if the output should be skipped, False otherwise.
+
+        The output will be skipped if:
+        - tool_mode is False (output is not meant to be used as a tool)
+        - output name matches TOOL_OUTPUT_NAME
+        - output types contain any of the tool types in TOOL_TYPES_SET
+        """
+        return not output.tool_mode or (
+            output.name == TOOL_OUTPUT_NAME or any(tool_type in output.types for tool_type in TOOL_TYPES_SET)
+        )
+
     def get_tools(
         self,
         tool_name: str | None = None,
@@ -178,7 +196,7 @@ class ComponentToolkit:
     ) -> list[BaseTool]:
         tools = []
         for output in self.component.outputs:
-            if output.name == TOOL_OUTPUT_NAME or any(tool_type in output.types for tool_type in TOOL_TYPES_SET):
+            if self._should_skip_output(output):
                 continue
 
             if not output.method:
@@ -220,7 +238,8 @@ class ComponentToolkit:
                 args_schema = create_input_schema(tool_mode_inputs)
             else:
                 args_schema = create_input_schema(self.component.inputs)
-            name = f"{self.component.name}.{output.method}"
+
+            name = f"{self.component.name or self.component.__class__.__name__ or ''}.{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
             event_manager = self.component._event_manager
             if asyncio.iscoroutinefunction(output_method):

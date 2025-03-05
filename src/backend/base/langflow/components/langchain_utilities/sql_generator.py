@@ -51,7 +51,7 @@ class SQLGeneratorComponent(LCChainComponent):
         ),
     ]
 
-    outputs = [Output(display_name="Text", name="text", method="invoke_chain")]
+    outputs = [Output(display_name="Message", name="text", method="invoke_chain")]
 
     def invoke_chain(self) -> Message:
         prompt_template = PromptTemplate.from_template(template=self.prompt) if self.prompt else None

@@ -91,18 +91,18 @@ test(
     await page.getByTestId("inputlist_str_texts_2").last().fill("not cool..");
     //---------------------------------- PARSE DATA
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector('[data-testid="processingParse Data"]', {
+    await page.getByTestId("sidebar-search-input").fill("data to message");
+    await page.waitForSelector('[data-testid="processingData to Message"]', {
       timeout: 500,
     });
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 100 },
       });
     await zoomOut(page, 1);
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
@@ -255,7 +255,7 @@ test(
       .nth(2)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(0)
       .click();
     //quebrando aqui
@@ -264,7 +264,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-parsedata-shownode-text-right")
+      .getByTestId("handle-parsedata-shownode-message-right")
       .nth(2)
       .click();
     await page
@@ -288,7 +288,7 @@ test(
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-text-right")
+      .getByTestId("handle-openaimodel-shownode-message-right")
       .nth(0)
       .click();
     await page

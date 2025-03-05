@@ -25,8 +25,8 @@ class NVIDIAModelComponent(LCModelComponent):
             display_name="Model Name",
             advanced=False,
             options=[],
-            real_time_refresh=True,
             refresh_button=True,
+            combobox=True,
         ),
         MessageTextInput(
             name="base_url",
@@ -43,7 +43,7 @@ class NVIDIAModelComponent(LCModelComponent):
                 "Select if you want to use models that can work with tools. If yes, only those models will be shown."
             ),
             advanced=False,
-            value=True,
+            value=False,
             real_time_refresh=True,
         ),
         SecretStrInput(
@@ -78,7 +78,7 @@ class NVIDIAModelComponent(LCModelComponent):
         return [model.id for model in build_model.available_models]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 ids = self.get_models(self.tool_model_enabled)
                 build_config["model_name"]["options"] = ids

@@ -117,7 +117,7 @@ test(
     //
 
     const elementsTextOutputRight = await page
-      .locator('[data-testid="handle-textoutput-shownode-text-right"]')
+      .locator('[data-testid="handle-textoutput-shownode-message-right"]')
       .all();
 
     for (const element of elementsTextOutputRight) {

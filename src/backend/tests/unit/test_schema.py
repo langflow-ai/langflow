@@ -133,11 +133,13 @@ class TestOutput:
     def test_output_to_dict(self):
         output_obj = Output(name="test_output")
         assert output_obj.to_dict() == {
+            "allows_loop": False,
             "types": [],
             "name": "test_output",
             "display_name": "test_output",
             "cache": True,
             "value": "__UNDEFINED__",
+            "tool_mode": True,
         }
 
     def test_output_validate_display_name(self):

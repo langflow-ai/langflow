@@ -11,6 +11,7 @@ from .huggingface import HuggingFaceEndpointsComponent
 from .lmstudiomodel import LMStudioModelComponent
 from .maritalk import MaritalkModelComponent
 from .mistral import MistralAIModelComponent
+from .novita import NovitaModelComponent
 from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
 from .openai import OpenAIModelComponent
@@ -18,6 +19,7 @@ from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
+from .xai import XAIModelComponent
 
 __all__ = [
     "AIMLModelComponent",
@@ -35,9 +37,11 @@ __all__ = [
     "MaritalkModelComponent",
     "MistralAIModelComponent",
     "NVIDIAModelComponent",
+    "NovitaModelComponent",
     "OpenAIModelComponent",
     "OpenRouterComponent",
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
     "SambaNovaComponent",
+    "XAIModelComponent",
 ]

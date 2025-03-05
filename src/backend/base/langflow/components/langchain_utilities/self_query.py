@@ -20,7 +20,7 @@ class SelfQueryRetrieverComponent(Component):
             name="query",
             display_name="Query",
             info="Query to be passed as input.",
-            input_types=["Message", "Text"],
+            input_types=["Message"],
         ),
         HandleInput(
             name="vectorstore",

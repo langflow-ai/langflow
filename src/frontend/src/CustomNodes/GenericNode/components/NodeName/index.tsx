@@ -13,6 +13,9 @@ export default function NodeName({
   validationStatus,
   isOutdated,
   beta,
+  editNameDescription,
+  toggleEditNameDescription,
+  setHasChangedNodeDescription,
 }: {
   display_name?: string;
   selected?: boolean;
@@ -21,70 +24,83 @@ export default function NodeName({
   validationStatus: VertexBuildTypeAPI | null;
   isOutdated: boolean;
   beta: boolean;
+  editNameDescription: boolean;
+  toggleEditNameDescription: () => void;
+  setHasChangedNodeDescription: (hasChanged: boolean) => void;
 }) {
-  const [inputName, setInputName] = useState(false);
   const [nodeName, setNodeName] = useState<string>(display_name ?? "");
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = useFlowStore((state) => state.setNode);
+
   useEffect(() => {
-    if (!selected) {
-      setInputName(false);
+    if (selected && editNameDescription) {
+      takeSnapshot();
     }
-  }, [selected]);
+  }, [editNameDescription]);
 
   useEffect(() => {
     setNodeName(display_name ?? "");
   }, [display_name]);
 
-  return inputName ? (
+  const handleBlur = () => {
+    if (nodeName?.trim() !== "") {
+      setNodeName(nodeName);
+      setNode(nodeId, (old) => ({
+        ...old,
+        data: {
+          ...old.data,
+          node: {
+            ...old.data.node,
+            display_name: nodeName,
+          },
+        },
+      }));
+    } else {
+      setNodeName(display_name ?? "");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleBlur();
+      toggleEditNameDescription();
+    }
+    if (e.key === "Escape") {
+      setNodeName(display_name ?? "");
+      toggleEditNameDescription();
+    }
+  };
+
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNodeName(e.target.value);
+    setHasChangedNodeDescription(true);
+  };
+
+  return editNameDescription ? (
     <div className="m-[1px] w-full">
       <Input
-        onBlur={() => {
-          setInputName(false);
-          if (nodeName?.trim() !== "") {
-            setNodeName(nodeName);
-            setNode(nodeId, (old) => ({
-              ...old,
-              data: {
-                ...old.data,
-                node: {
-                  ...old.data.node,
-                  display_name: nodeName,
-                },
-              },
-            }));
-          } else {
-            setNodeName(display_name ?? "");
-          }
-        }}
+        onBlur={handleBlur}
         value={nodeName}
         autoFocus
-        onChange={(e) => setNodeName(e.target.value)}
+        onChange={onChange}
         data-testid={`input-title-${display_name}`}
+        onKeyDown={handleKeyDown}
+        className="py-1"
       />
     </div>
   ) : (
     <div className="group flex w-full items-center gap-1">
       <div
-        onDoubleClick={(event) => {
-          if (!showNode) {
-            return;
-          }
-          setInputName(true);
-          takeSnapshot();
-          event.stopPropagation();
-          event.preventDefault();
-        }}
         data-testid={"title-" + display_name}
         className={cn(
           "nodoubleclick w-full truncate font-medium text-primary",
           showNode ? "cursor-text" : "cursor-default",
         )}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex cursor-grab items-center gap-2">
           <span
             className={cn(
-              "max-w-44 truncate text-[14px]",
+              "max-w-44 cursor-grab truncate text-[14px]",
               validationStatus?.data?.duration && "max-w-36",
               beta && "max-w-36",
               validationStatus?.data?.duration && beta && "max-w-20",

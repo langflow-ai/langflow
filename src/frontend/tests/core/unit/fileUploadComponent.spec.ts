@@ -51,9 +51,9 @@ test(
     await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
+    await page.getByTestId("sidebar-search-input").fill("data to message");
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 300, y: 400 },
@@ -94,40 +94,14 @@ test(
     // Release the mouse
     await page.mouse.up();
 
-    // Click and hold on the first element
-
-    const parseDataOutputElement = await page
-      .getByTestId("handle-parsedata-shownode-text-right")
-      .all();
-
-    for (const element of parseDataOutputElement) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await page.getByTitle("fit view").click();
-
-    await visibleElementHandle.hover();
-    await page.mouse.down();
-
-    // Move to the second element
-    const chatOutputElement = await page
+    await page
+      .getByTestId("handle-parsedata-shownode-message-right")
+      .first()
+      .click();
+    await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
-      .all();
-
-    for (const element of chatOutputElement) {
-      if (await element.isVisible()) {
-        visibleElementHandle = element;
-        break;
-      }
-    }
-
-    await visibleElementHandle.hover();
-
-    // Release the mouse
-    await page.mouse.up();
+      .first()
+      .click();
 
     await page.getByText("Playground", { exact: true }).last().click();
 
@@ -135,7 +109,7 @@ test(
       timeout: 30000,
     });
 
-    await page.getByText("Run Flow", { exact: true }).click();
+    await page.getByText("Run Flow", { exact: true }).last().click();
 
     await expect(page.getByText("this is a test file")).toBeVisible({
       timeout: 3000,
