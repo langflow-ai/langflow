@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
-from sqlmodel import col, select
+from sqlmodel import select
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
@@ -191,9 +191,7 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         ids_to_delete = [row[0] for row in result]
 
         # Build the delete statement using the IDs obtained from the previous step
-        delete_stmt = delete(TransactionTable).where(
-            TransactionTable.id.in_(ids_to_delete)
-        )
+        delete_stmt = delete(TransactionTable).where(TransactionTable.id.in_(ids_to_delete))
 
         await session.exec(delete_stmt)
         await session.commit()
@@ -215,7 +213,6 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         session: The database session to use for the deletion
     """
     try:
-        
         # Create a subquery to select the IDs of vertex builds that need to be deleted
         subquery = (
             select(VertexBuildTable.id)
@@ -228,9 +225,7 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         ids_to_delete = [row[0] for row in result]
 
         # Build the delete statement using the IDs obtained from the previous step
-        delete_stmt = delete(VertexBuildTable).where(
-            VertexBuildTable.id.in_(ids_to_delete)
-        )
+        delete_stmt = delete(VertexBuildTable).where(VertexBuildTable.id.in_(ids_to_delete))
 
         await session.exec(delete_stmt)
         await session.commit()
