@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, override
 
 from loguru import logger
 
-from langflow.base.tools.constants import TOOLS_METADATA_INPUT_NAME
 from langflow.custom import Component
 from langflow.custom.custom_component.component import _get_component_toolkit
 from langflow.field_typing import Tool
