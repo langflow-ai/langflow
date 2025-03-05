@@ -8,11 +8,22 @@ export const useStartConversation = (
   stopRecording: () => void,
 ) => {
   try {
-    const url = `ws://${targetUrl}/api/v1/voice/ws/${flowId}`;
+    // const url = `ws://${targetUrl}/api/v1/voice/ws/${flowId}`;
+    const url = `ws://${window.location.hostname}:7860/api/v1/voice/ws/flow_as_tool/${flowId}`;
+
     wsRef.current = new WebSocket(url);
 
     wsRef.current.onopen = () => {
       setStatus("Connected");
+      if (wsRef.current) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "elevenlabs.config",
+            enabled: true,
+            voice_id: "NOpBlnGInO9m6vDvFkFC",
+          }),
+        );
+      }
       startRecording();
     };
 
