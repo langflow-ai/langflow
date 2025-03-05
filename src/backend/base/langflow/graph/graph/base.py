@@ -337,7 +337,7 @@ class Graph:
 
     async def async_start(
         self,
-        inputs: list[dict] | None = None,
+        inputs: InputValueRequest | dict | None = None,
         max_iterations: int | None = None,
         event_manager: EventManager | None = None,
     ):
@@ -346,16 +346,11 @@ class Graph:
             raise ValueError(msg)
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
-        for _input in inputs or []:
-            for key, value in _input.items():
-                vertex = self.get_vertex(key)
-                vertex.set_input_value(key, value)
         # I want to keep a counter of how many tyimes result.vertex.id
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
-
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager)
+            result = await self.astep(inputs=inputs, event_manager=event_manager)
             yield result
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
@@ -1308,7 +1303,7 @@ class Graph:
 
     async def astep(
         self,
-        inputs: InputValueRequest | None = None,
+        inputs: InputValueRequest | dict | None = None,
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
@@ -1321,10 +1316,12 @@ class Graph:
             return Finish()
         vertex_id = self.get_next_in_queue()
         chat_service = get_chat_service()
+        if inputs and not isinstance(inputs, dict) and hasattr(inputs, "model_dump"):
+            inputs = inputs.model_dump()
         vertex_build_result = await self.build_vertex(
             vertex_id=vertex_id,
             user_id=user_id,
-            inputs_dict=inputs.model_dump() if inputs else {},
+            inputs_dict=inputs,
             files=files,
             get_cache=chat_service.get_cache,
             set_cache=chat_service.set_cache,
