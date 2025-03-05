@@ -235,7 +235,6 @@ class NvidiaCustomizerComponent(Component):
                 result_dict = {**result}
                 id_value = result_dict["id"]
                 result_dict["url"] = f"{customizations_url}/{id_value}/status"
-                return result_dict
 
             except httpx.TimeoutException as exc:
                 error_msg = f"Request to {customizations_url} timed out"
@@ -268,6 +267,8 @@ class NvidiaCustomizerComponent(Component):
                 error_msg = f"An unexpected error occurred on URL {customizations_url}: {exception_str}"
                 self.log(error_msg)
                 raise ValueError(error_msg) from exc
+            else:
+                return result_dict
 
         # If the loop completes without a successful call, raise an error.
         error_msg = "Failed to customize the model after 10 attempts due to repeated 409 conflicts."
