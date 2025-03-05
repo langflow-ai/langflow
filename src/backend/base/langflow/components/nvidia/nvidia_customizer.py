@@ -3,10 +3,10 @@ import json
 import logging
 from datetime import datetime, timezone
 from io import BytesIO
-from huggingface_hub import HfApi
 
 import httpx
 import pandas as pd
+from huggingface_hub import HfApi
 
 from langflow.custom import Component
 from langflow.io import (
@@ -139,9 +139,12 @@ class NvidiaCustomizerComponent(Component):
                     if selected_model_name:
                         # Find the selected model in the response
                         selected_model = next(
-                            (model for model in models_data.get("data", []) if
-                             model["base_model"] == selected_model_name),
-                            None
+                            (
+                                model
+                                for model in models_data.get("data", [])
+                                if model["base_model"] == selected_model_name
+                            ),
+                            None,
                         )
 
                         if selected_model:
@@ -187,10 +190,7 @@ class NvidiaCustomizerComponent(Component):
             # Build the data payload
             data = {
                 "config": self.model_name,
-                "dataset": {
-                    "name": dataset_name,
-                    "namespace": tenant
-                },
+                "dataset": {"name": dataset_name, "namespace": tenant},
                 "description": self.description,
                 "hyperparameters": {
                     "training_type": self.training_type,
@@ -207,9 +207,7 @@ class NvidiaCustomizerComponent(Component):
                 data["hyperparameters"]["lora"] = {"adapter_dim": 16}
             try:
                 formatted_data = json.dumps(data, indent=2)
-                self.log(
-                    f"Attempt {attempt}: Sending customization request with data: {formatted_data}"
-                )
+                self.log(f"Attempt {attempt}: Sending customization request with data: {formatted_data}")
 
                 async with httpx.AsyncClient(timeout=5.0) as client:
                     response = await client.post(customizations_url, headers=self.headers, json=data)
@@ -304,7 +302,7 @@ class NvidiaCustomizerComponent(Component):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{url}/{namespace}")
                 self.log(f"returned data {response}")
-                http_status_code_non_found =404
+                http_status_code_non_found = 404
                 if response.status_code == http_status_code_non_found:
                     create_payload = {"namespace": namespace}
                     create_response = await client.post(url, json=create_payload)
@@ -339,7 +337,7 @@ class NvidiaCustomizerComponent(Component):
             chunk_size = 100000  # Ensure chunk_size is an integer
             self.log(f"repo_id : {repo_id}")
             if not repo_id:
-                err_msg ="repo_id must be provided."
+                err_msg = "repo_id must be provided."
                 raise ValueError(err_msg)
 
             tasks = []
@@ -365,9 +363,9 @@ class NvidiaCustomizerComponent(Component):
 
             total_records = len(valid_records)
             min_records_process = 2
-            min_records_validation=10
+            min_records_validation = 10
             if total_records < min_records_process:
-                error_msg =f"Not enough records for processing. Record count : {total_records}"
+                error_msg = f"Not enough records for processing. Record count : {total_records}"
                 raise ValueError(error_msg)
 
             # =====================================================
@@ -447,7 +445,7 @@ class NvidiaCustomizerComponent(Component):
                 "description": description,
                 "files_url": file_url,
                 "format": "jsonl",
-                "project": user_dataset_name
+                "project": user_dataset_name,
             }
 
             async with httpx.AsyncClient() as client:
@@ -489,7 +487,7 @@ class NvidiaCustomizerComponent(Component):
                     path_in_repo=file_name_training,
                     repo_id=repo_id,
                     repo_type="dataset",
-                    commit_message= commit_message
+                    commit_message=commit_message,
                 )
             finally:
                 training_file_obj.close()
