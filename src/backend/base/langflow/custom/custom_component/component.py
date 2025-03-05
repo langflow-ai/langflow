@@ -369,6 +369,8 @@ class Component(CustomComponent):
         Raises:
             ValueError: If the output with the specified name is not found.
         """
+        if TOOL_OUTPUT_NAME not in self._outputs_map:
+            self._outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
         if name in self._outputs_map:
             return self._outputs_map[name]
         msg = f"Output {name} not found in {self.__class__.__name__}"
@@ -953,7 +955,10 @@ class Component(CustomComponent):
         return output.name in self._vertex.edges_source_names
 
     def _get_outputs_to_process(self):
-        return (output for output in self._outputs_map.values() if self._should_process_output(output))
+        outputs_map = self._outputs_map.copy()
+        if TOOL_OUTPUT_NAME not in outputs_map:
+            outputs_map[TOOL_OUTPUT_NAME] = self._build_tool_output()
+        return (output for output in outputs_map.values() if self._should_process_output(output))
 
     async def _get_output_result(self, output):
         if output.cache and output.value != UNDEFINED:
