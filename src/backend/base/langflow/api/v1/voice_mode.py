@@ -363,8 +363,8 @@ async def flow_as_tool_websocket(
 
             # Create the synchronous generator from the sync queue.
             sync_gen = sync_text_chunker(sync_q, timeout=0.3)
-            eleven_client = await get_or_create_elevenlabs_client()
-            if eleven_client is None:
+            elevenlabs_client = await get_or_create_elevenlabs_client()
+            if elevenlabs_client is None:
                 return
             # Capture the current event loop to schedule send operations.
             main_loop = asyncio.get_running_loop()
@@ -376,7 +376,7 @@ async def flow_as_tool_websocket(
 
                 async def run_tts():
                     try:
-                        audio_stream = eleven_client.generate(
+                        audio_stream = elevenlabs_client.generate(
                             voice=elevenlabs_voice,
                             output_format="pcm_24000",
                             text=sync_gen,  # synchronous generator expected by ElevenLabs
@@ -458,6 +458,10 @@ async def flow_as_tool_websocket(
                     data = await openai_ws.recv()
                     event = json.loads(data)
                     event_type = event.get("type")
+
+                    # forward all openai events to the client
+                    await client_websocket.send_text(data)
+
                     if event_type == "response.text.delta":
                         delta = event.get("delta", "")
                         await text_delta_queue.put(delta)
@@ -467,14 +471,6 @@ async def flow_as_tool_websocket(
                         await text_delta_queue.put(None)
                         text_delta_task = None
                         print(f"\n      bot response: {event.get('text')}")
-                    elif event_type == "response.audio_transcript.done":
-                        text = event.get("transcript")
-                        print(f"\n      bot transcript: {text}")
-                        if use_elevenlabs:
-                            elevenlabs_client = await get_or_create_elevenlabs_client()
-                            if elevenlabs_client is None:
-                                return
-                            await elevenlabs_generate_and_send_audio(elevenlabs_client, text)
                     elif event_type == "response.output_item.added":
                         print("Bot speaking = True")
                         bot_speaking_flag[0] = True
