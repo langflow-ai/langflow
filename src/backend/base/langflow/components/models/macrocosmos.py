@@ -2,7 +2,6 @@ from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
 from langflow.base.models.model import LCModelComponent
-from langflow.base.models.sambanova_constants import SAMBANOVA_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import HandleInput
 from langflow.io import DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput, BoolInput
@@ -12,8 +11,8 @@ class MacrocosmosComponent(LCModelComponent):
     display_name = "Macrocosmos"
     description = "Generate text using Macrocosmos' Apex, powered by Bittensor."
     documentation = "https://app.macrocosmos.ai"
-    icon = "SambaNova"
-    name = "SambaNovaModel"
+    icon = "Macrocosmos"
+    name = "MacrocosmosModel"
 
     inputs = [
         *LCModelComponent._base_inputs,
