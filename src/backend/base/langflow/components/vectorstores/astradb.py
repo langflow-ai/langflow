@@ -819,8 +819,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "02_embedding_generation_provider"
                 ]["helper_text"] = (
                     "To create collections with more embedding provider options, go to "
-                    "<a class=\"underline\" target=\"_blank\" rel=\"noopener noreferrer\" "
-                    f"href=\"https://astra.datastax.com/org/{org_id}/settings/manageIntegrations\">"
+                    '<a class="underline" target="_blank" rel="noopener noreferrer" '
+                    f'href="https://astra.datastax.com/org/{org_id}/settings/manageIntegrations">'
                     "your database in Astra DB</a>."
                 )
 
