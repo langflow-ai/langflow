@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import json
 import os
 import traceback
 import types
@@ -814,6 +815,13 @@ class Vertex:
     def _is_chat_input(self) -> bool:
         return self.vertex_type == InterfaceComponentTypes.ChatInput and self.is_input
 
+    def _is_trigger(self) -> bool:
+        if not self.custom_component:
+            return False
+        if not hasattr(self.custom_component, "is_trigger"):
+            return False
+        return bool(self.custom_component.is_trigger)
+
     def build_inactive(self) -> None:
         # Just set the results to None
         self.built = True
@@ -825,6 +833,7 @@ class Vertex:
         user_id=None,
         inputs: dict[str, Any] | None = None,
         files: list[str] | None = None,
+        attachments: list[str] | None = None,
         requester: Vertex | None = None,
         event_manager: EventManager | None = None,
         **kwargs,
@@ -860,6 +869,12 @@ class Vertex:
                     chat_input.update({"files": files})
 
                 self.update_raw_params(chat_input, overwrite=True)
+            if attachments and self._is_trigger():
+                # attachments is a list of json strings, we need to turn it into a valid json string
+                # and then parse it into a dict
+                attachments = [json.loads(attachment) for attachment in attachments]
+                # we need to turn the attachments into a string
+                self.update_raw_params({"trigger_content": json.dumps(attachments)}, overwrite=True)
 
             # Run steps
             for step in self.steps:

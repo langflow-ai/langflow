@@ -340,6 +340,7 @@ class Graph:
         inputs: InputValueRequest | dict | None = None,
         max_iterations: int | None = None,
         event_manager: EventManager | None = None,
+        attachments: list[dict] | None = None,
     ):
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
@@ -350,7 +351,7 @@ class Graph:
         # has been yielded
         yielded_counts: dict[str, int] = defaultdict(int)
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(inputs=inputs, event_manager=event_manager)
+            result = await self.astep(inputs=inputs, event_manager=event_manager, attachments=attachments)
             yield result
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
@@ -1307,6 +1308,7 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
+        attachments: list[dict] | None = None,
     ):
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
@@ -1326,6 +1328,7 @@ class Graph:
             get_cache=chat_service.get_cache,
             set_cache=chat_service.set_cache,
             event_manager=event_manager,
+            attachments=attachments,
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
@@ -1388,6 +1391,7 @@ class Graph:
         user_id: str | None = None,
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
+        attachments: list[str] | None = None,
     ) -> VertexBuildResult:
         """Builds a vertex in the graph.
 
@@ -1400,6 +1404,7 @@ class Graph:
             user_id (Optional[str]): Optional user ID. Defaults to None.
             fallback_to_env_vars (bool): Whether to fallback to environment variables. Defaults to False.
             event_manager (Optional[EventManager]): Optional event manager. Defaults to None.
+            attachments (Optional[List[str]]): Optional list of attachments. Defaults to None.
 
         Returns:
             Tuple: A tuple containing the next runnable vertices, top level vertices, result dictionary,
@@ -1451,6 +1456,7 @@ class Graph:
                     fallback_to_env_vars=fallback_to_env_vars,
                     files=files,
                     event_manager=event_manager,
+                    attachments=attachments,
                 )
                 if set_cache is not None:
                     vertex_dict = {
