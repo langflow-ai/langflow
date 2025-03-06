@@ -6,8 +6,35 @@
         "className": "",
         "data": {
           "sourceHandle": {
+            "dataType": "ScrapeGraphSearchApi",
+            "id": "ScrapeGraphSearchApi-4qF2k",
+            "name": "component_as_tool",
+            "output_types": [
+              "Tool"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "tools",
+            "id": "Agent-CBAEF",
+            "inputTypes": [
+              "Tool"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "reactflow__edge-ScrapeGraphSearchApi-4qF2k{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-4qF2kœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-CBAEF{œfieldNameœ:œtoolsœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "source": "ScrapeGraphSearchApi-4qF2k",
+        "sourceHandle": "{œdataTypeœ: œScrapeGraphSearchApiœ, œidœ: œScrapeGraphSearchApi-4qF2kœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-CBAEF",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-fifot",
+            "id": "ChatInput-8hLIp",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,19 +42,18 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-5rqMu",
+            "id": "Agent-CBAEF",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-fifot{œdataTypeœ:œChatInputœ,œidœ:œChatInput-fifotœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-5rqMu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-5rqMuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "ChatInput-fifot",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-fifotœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-5rqMu",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-5rqMuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-8hLIp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8hLIpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-CBAEF{œfieldNameœ:œinput_valueœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-8hLIp",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8hLIpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-CBAEF",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +61,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-5rqMu",
+            "id": "Agent-CBAEF",
             "name": "response",
             "output_types": [
               "Message"
@@ -43,60 +69,243 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-mXpv2",
+            "id": "ChatOutput-9EKQJ",
             "inputTypes": [
               "Data",
               "DataFrame",
               "Message"
             ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-Agent-5rqMu{œdataTypeœ:œAgentœ,œidœ:œAgent-5rqMuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-mXpv2{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mXpv2œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-5rqMu",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-5rqMuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-mXpv2",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-mXpv2œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "ComposioAPI",
-            "id": "ComposioAPI-Z0Iiy",
-            "name": "tools",
-            "output_types": [
-              "Tool"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-5rqMu",
-            "inputTypes": [
-              "Tool"
-            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ComposioAPI-Z0Iiy{œdataTypeœ:œComposioAPIœ,œidœ:œComposioAPI-Z0Iiyœ,œnameœ:œtoolsœ,œoutput_typesœ:[œToolœ]}-Agent-5rqMu{œfieldNameœ:œtoolsœ,œidœ:œAgent-5rqMuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ComposioAPI-Z0Iiy",
-        "sourceHandle": "{œdataTypeœ: œComposioAPIœ, œidœ: œComposioAPI-Z0Iiyœ, œnameœ: œtoolsœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-5rqMu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-5rqMuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Agent-CBAEF{œdataTypeœ:œAgentœ,œidœ:œAgent-CBAEFœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9EKQJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9EKQJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "source": "Agent-CBAEF",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-CBAEFœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-9EKQJ",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-9EKQJœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "Agent-5rqMu",
+          "id": "ScrapeGraphSearchApi-4qF2k",
+          "node": {
+            "base_classes": [
+              "Data"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
+            "display_name": "ScrapeGraphSearchApi",
+            "documentation": "https://docs.scrapegraphai.com/introduction",
+            "edited": false,
+            "field_order": [
+              "api_key",
+              "user_prompt"
+            ],
+            "frozen": false,
+            "icon": "ScrapeGraph",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "ScrapeGraph API Key",
+                "dynamic": false,
+                "info": "The API key to use ScrapeGraph API.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.custom import Component\nfrom langflow.io import (\n    MessageTextInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass ScrapeGraphSearchApi(Component):\n    display_name: str = \"ScrapeGraphSearchApi\"\n    description: str = \"\"\"ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper\"\"\"\n    name = \"ScrapeGraphSearchApi\"\n\n    documentation: str = \"https://docs.scrapegraphai.com/introduction\"\n    icon = \"ScrapeGraph\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"ScrapeGraph API Key\",\n            required=True,\n            password=True,\n            info=\"The API key to use ScrapeGraph API.\",\n        ),\n        MessageTextInput(\n            name=\"user_prompt\",\n            display_name=\"Search Prompt\",\n            tool_mode=True,\n            info=\"The search prompt to use.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"search\"),\n    ]\n\n    def search(self) -> list[Data]:\n        try:\n            from scrapegraph_py import Client\n            from scrapegraph_py.logger import sgai_logger\n        except ImportError as e:\n            msg = \"Could not import scrapegraph-py package. Please install it with `pip install scrapegraph-py`.\"\n            raise ImportError(msg) from e\n\n        # Set logging level\n        sgai_logger.set_logging(level=\"INFO\")\n\n        # Initialize the client with API key\n        sgai_client = Client(api_key=self.api_key)\n\n        try:\n            # SearchScraper request\n            response = sgai_client.searchscraper(\n                user_prompt=self.user_prompt,\n            )\n\n            # Close the client\n            sgai_client.close()\n\n            return Data(data=response)\n        except Exception:\n            sgai_client.close()\n            raise\n"
+              },
+              "tools_metadata": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "name",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "description",
+                      "sortable": false,
+                      "type": "text"
+                    },
+                    {
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": true,
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "text"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "search(api_key: Message) - ScrapeGraph Search API.\n    Given a search prompt, it will return search results using ScrapeGraph's search functionality.\n    More info at https://docs.scrapegraphai.com/services/searchscraper",
+                    "name": "ScrapeGraphSearchApi-search",
+                    "tags": [
+                      "ScrapeGraphSearchApi-search"
+                    ]
+                  }
+                ]
+              },
+              "user_prompt": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Search Prompt",
+                "dynamic": false,
+                "info": "The search prompt to use.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "user_prompt",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": true
+          },
+          "showNode": true,
+          "type": "ScrapeGraphSearchApi"
+        },
+        "dragging": false,
+        "id": "ScrapeGraphSearchApi-4qF2k",
+        "measured": {
+          "height": 497,
+          "width": 320
+        },
+        "position": {
+          "x": 42.512465889820305,
+          "y": 172.783808513074
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "Agent-CBAEF",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -133,9 +342,8 @@
             ],
             "frozen": false,
             "icon": "bot",
-            "key": "Agent",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -155,7 +363,6 @@
               }
             ],
             "pinned": false,
-            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -241,7 +448,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -249,7 +456,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -453,7 +660,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o"
+                "value": "gpt-4o-mini"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -742,27 +949,26 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-5rqMu",
+        "id": "Agent-CBAEF",
         "measured": {
           "height": 624,
           "width": 320
         },
         "position": {
-          "x": 246.2965482704007,
-          "y": 49.54798016575572
+          "x": 422.19675050009755,
+          "y": 174.69884952068273
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-fifot",
+          "id": "ChatInput-8hLIp",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "inputs",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -782,9 +988,8 @@
             ],
             "frozen": false,
             "icon": "MessagesSquare",
-            "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.2.0",
+            "lf_version": "1.1.5",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -804,7 +1009,6 @@
               }
             ],
             "pinned": false,
-            "score": 0.0020353564437605998,
             "template": {
               "_type": "Component",
               "background_color": {
@@ -1053,27 +1257,26 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-fifot",
+        "id": "ChatInput-8hLIp",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": -74.59464648081578,
-          "y": 605.4102099043162
+          "x": 47.525451402968315,
+          "y": 675.7967517472522
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-mXpv2",
+          "id": "ChatOutput-9EKQJ",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
-            "category": "outputs",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -1089,11 +1292,11 @@
               "data_template",
               "background_color",
               "chat_icon",
-              "text_color"
+              "text_color",
+              "clean_data"
             ],
             "frozen": false,
             "icon": "MessagesSquare",
-            "key": "ChatOutput",
             "legacy": false,
             "lf_version": "1.1.5",
             "metadata": {},
@@ -1115,7 +1318,6 @@
               }
             ],
             "pinned": false,
-            "score": 0.003169567463043492,
             "template": {
               "_type": "Component",
               "background_color": {
@@ -1224,7 +1426,7 @@
                 "value": "{text}"
               },
               "input_value": {
-                "_input_type": "MessageInput",
+                "_input_type": "HandleInput",
                 "advanced": false,
                 "display_name": "Text",
                 "dynamic": false,
@@ -1236,16 +1438,13 @@
                 ],
                 "list": false,
                 "list_add_label": "Add More",
-                "load_from_db": false,
                 "name": "input_value",
                 "placeholder": "",
                 "required": true,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "type": "str",
+                "type": "other",
                 "value": ""
               },
               "sender": {
@@ -1365,23 +1564,23 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-mXpv2",
+        "id": "ChatOutput-9EKQJ",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 641.2349415828351,
-          "y": 617.3336058447763
+          "x": 809.444027447054,
+          "y": 739.9352693570207
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "note-Oh8JB",
+          "id": "note-d88zH",
           "node": {
-            "description": "# Gmail Agent\nUsing this flow you can send emails, create drafts, fetch emails and more\n\n## Instructions\n\n1. Get Composio API Key\n   - Visit https://app.composio.dev\n   - Enter the key in the \"Composio API Key\" field\n\n2. Authenticate Gmail Account\n   - Select Gmail App from the dropdown menu in the App Names field\n   - Click the refresh button next to the App Name\n   - Follow the Gmail authentication link\n   - After authenticating, click refresh again\n   - Verify that authentication status shows as successful\n\n3. Select Actions\n   - Default actions (pre-selected):\n     - GMAIL_SEND_EMAIL: Send emails directly\n     - GMAIL_CREATE_EMAIL_DRAFT: Create draft emails\n   - Select additional actions based on your needs\n\n4. Configure OpenAI\n   - Enter your OpenAI API key in the Agent OpenAI API key field\n\n5. Run Agent\n   Example prompts:\n   - \"Send an email to johndoe@gmail.com wishing them Happy birthday!\"\n   - \"Create a draft email about project updates\"",
+            "description": "## 🚀 ScrapeGraphAI Template 🔍\n\nThis template connects the **Search Point** endpoint from [ScrapeGraphAI](https://scrapegraphai.com) to an **Agent** component.\n\n## Prerequisites\n\n* [OpenAI API key](https://platform.openai.com/docs/overview)\n* [ScrapeGraphAI API key](https://dashboard.scrapegraphai.com)\n\n## Quickstart\n\n1. Add your **ScrapeGraphAI API key**  to the **ScrapeGraphSearchApi** component.\n\n2. Add your **OpenAI API key** to the **Agent** component.\n\n3. Open the **Playground** and ask your Agent a question. The Agent uses ScrapeGraph as a tool to answer you.",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1389,436 +1588,94 @@
           "type": "note"
         },
         "dragging": false,
-        "height": 842,
-        "id": "note-Oh8JB",
+        "height": 584,
+        "id": "note-d88zH",
         "measured": {
-          "height": 842,
-          "width": 395
+          "height": 584,
+          "width": 346
         },
         "position": {
-          "x": -699.0352178208514,
-          "y": -87.30330362954265
+          "x": -322.8560821408546,
+          "y": 163.07379721011972
         },
         "resizing": false,
         "selected": false,
         "type": "noteNode",
-        "width": 394
+        "width": 345
       },
       {
         "data": {
-          "description": "Use Composio toolset to run actions with your agent",
-          "display_name": "Composio Tools",
-          "id": "ComposioAPI-Z0Iiy",
+          "id": "note-K97PH",
           "node": {
-            "base_classes": [
-              "Tool"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Use Composio toolset to run actions with your agent",
-            "display_name": "Composio Tools",
-            "documentation": "https://docs.composio.dev",
-            "edited": false,
-            "field_order": [
-              "entity_id",
-              "api_key",
-              "app_names",
-              "app_credentials",
-              "username",
-              "auth_link",
-              "auth_status",
-              "action_names"
-            ],
-            "frozen": false,
-            "icon": "Composio",
-            "legacy": false,
-            "lf_version": "1.2.0",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Tools",
-                "hidden": null,
-                "method": "build_tool",
-                "name": "tools",
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
+            "description": "### 💡 Add your OpenAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
             "template": {
-              "_type": "Component",
-              "action_names": {
-                "_input_type": "MultiselectInput",
-                "advanced": false,
-                "combobox": false,
-                "display_name": "Actions to use",
-                "dynamic": true,
-                "info": "The actions to pass to agent to execute",
-                "list": true,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "action_names",
-                "options": [
-                  "GMAIL_GET_PEOPLE",
-                  "GMAIL_FETCH_EMAILS",
-                  "GMAIL_FETCH_MESSAGE_BY_THREAD_ID",
-                  "GMAIL_SEARCH_PEOPLE",
-                  "GMAIL_SEND_EMAIL",
-                  "GMAIL_CREATE_EMAIL_DRAFT",
-                  "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
-                  "GMAIL_CREATE_LABEL",
-                  "GMAIL_GET_ATTACHMENT",
-                  "GMAIL_FIND_EMAIL_ID",
-                  "GMAIL_REMOVE_LABEL",
-                  "GMAIL_GET_PROFILE",
-                  "GMAIL_ADD_LABEL_TO_EMAIL",
-                  "GMAIL_GET_CONTACTS",
-                  "GMAIL_REPLY_TO_THREAD",
-                  "GMAIL_LIST_LABELS",
-                  "GMAIL_FETCH_LAST_THREE_MESSAGES",
-                  "GMAIL_LIST_THREADS",
-                  "GMAIL_FETCH_EMAILS_WITH_LABEL",
-                  "GMAIL_MODIFY_THREAD_LABELS"
-                ],
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": [
-                  "GMAIL_GET_PEOPLE"
-                ]
-              },
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "Composio API Key",
-                "dynamic": false,
-                "info": "Refer to https://docs.composio.dev/faq/api_key/api_key",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": true,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": "COMPOSIO_API_KEY"
-              },
-              "app_credentials": {
-                "_input_type": "SecretStrInput",
-                "advanced": true,
-                "display_name": "App Credentials",
-                "dynamic": true,
-                "info": "Credentials for app authentication (API Key, Password, etc)",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
-                "name": "app_credentials",
-                "password": true,
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "app_names": {
-                "_input_type": "DropdownInput",
-                "advanced": false,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "App Name",
-                "dynamic": false,
-                "info": "The app name to use. Please refresh after selecting app name",
-                "load_from_db": false,
-                "name": "app_names",
-                "options": [
-                  "ACCELO",
-                  "AIRTABLE",
-                  "AMAZON",
-                  "APALEO",
-                  "ASANA",
-                  "ATLASSIAN",
-                  "ATTIO",
-                  "AUTH0",
-                  "BATTLENET",
-                  "BITBUCKET",
-                  "BLACKBAUD",
-                  "BLACKBOARD",
-                  "BOLDSIGN",
-                  "BORNEO",
-                  "BOX",
-                  "BRAINTREE",
-                  "BREX",
-                  "BREX_STAGING",
-                  "BRIGHTPEARL",
-                  "CALENDLY",
-                  "CANVA",
-                  "CANVAS",
-                  "CHATWORK",
-                  "CLICKUP",
-                  "CONFLUENCE",
-                  "CONTENTFUL",
-                  "D2LBRIGHTSPACE",
-                  "DEEL",
-                  "DISCORD",
-                  "DISCORDBOT",
-                  "DOCUSIGN",
-                  "DROPBOX",
-                  "DROPBOX_SIGN",
-                  "DYNAMICS365",
-                  "EPIC_GAMES",
-                  "EVENTBRITE",
-                  "EXIST",
-                  "FACEBOOK",
-                  "FIGMA",
-                  "FITBIT",
-                  "FRESHBOOKS",
-                  "FRONT",
-                  "GITHUB",
-                  "GMAIL",
-                  "GMAIL_BETA",
-                  "GO_TO_WEBINAR",
-                  "GOOGLE_ANALYTICS",
-                  "GOOGLE_DRIVE_BETA",
-                  "GOOGLE_MAPS",
-                  "GOOGLECALENDAR",
-                  "GOOGLEDOCS",
-                  "GOOGLEDRIVE",
-                  "GOOGLEMEET",
-                  "GOOGLEPHOTOS",
-                  "GOOGLESHEETS",
-                  "GOOGLETASKS",
-                  "GORGIAS",
-                  "GUMROAD",
-                  "HARVEST",
-                  "HIGHLEVEL",
-                  "HUBSPOT",
-                  "ICIMS_TALENT_CLOUD",
-                  "INTERCOM",
-                  "JIRA",
-                  "KEAP",
-                  "KLAVIYO",
-                  "LASTPASS",
-                  "LEVER",
-                  "LEVER_SANDBOX",
-                  "LINEAR",
-                  "LINKEDIN",
-                  "LINKHUT",
-                  "MAILCHIMP",
-                  "MICROSOFT_TEAMS",
-                  "MICROSOFT_TENANT",
-                  "MIRO",
-                  "MONDAY",
-                  "MURAL",
-                  "NETSUITE",
-                  "NOTION",
-                  "ONE_DRIVE",
-                  "OUTLOOK",
-                  "PAGERDUTY",
-                  "PIPEDRIVE",
-                  "PRODUCTBOARD",
-                  "REDDIT",
-                  "RING_CENTRAL",
-                  "RIPPLING",
-                  "SAGE",
-                  "SALESFORCE",
-                  "SEISMIC",
-                  "SERVICEM8",
-                  "SHARE_POINT",
-                  "SHOPIFY",
-                  "SLACK",
-                  "SLACKBOT",
-                  "SMARTRECRUITERS",
-                  "SPOTIFY",
-                  "SQUARE",
-                  "STACK_EXCHANGE",
-                  "SURVEY_MONKEY",
-                  "TIMELY",
-                  "TODOIST",
-                  "TONEDEN",
-                  "TRELLO",
-                  "TWITCH",
-                  "TWITTER",
-                  "TWITTER_MEDIA",
-                  "WAKATIME",
-                  "WAVE_ACCOUNTING",
-                  "WEBEX",
-                  "WIZ",
-                  "WRIKE",
-                  "XERO",
-                  "YANDEX",
-                  "YNAB",
-                  "YOUTUBE",
-                  "ZENDESK",
-                  "ZOHO",
-                  "ZOHO_BIGIN",
-                  "ZOHO_BOOKS",
-                  "ZOHO_DESK",
-                  "ZOHO_INVENTORY",
-                  "ZOHO_INVOICE",
-                  "ZOHO_MAIL",
-                  "ZOOM"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "refresh_button": true,
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "GMAIL"
-              },
-              "auth_link": {
-                "_input_type": "LinkInput",
-                "advanced": true,
-                "display_name": "Authentication Link",
-                "dynamic": true,
-                "info": "Click to authenticate with OAuth2",
-                "load_from_db": false,
-                "name": "auth_link",
-                "placeholder": "Click to authenticate",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "type": "link",
-                "value": ""
-              },
-              "auth_status": {
-                "_input_type": "StrInput",
-                "advanced": false,
-                "display_name": "Auth Status",
-                "dynamic": true,
-                "info": "Current authentication status",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "auth_status",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "✅"
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "# Standard library imports\nfrom collections.abc import Sequence\nfrom typing import Any\n\nimport requests\n\n# Third-party imports\nfrom composio.client.collections import AppAuthScheme\nfrom composio.client.exceptions import NoItemsFound\nfrom composio_langchain import Action, ComposioToolSet\nfrom langchain_core.tools import Tool\nfrom loguru import logger\n\n# Local imports\nfrom langflow.base.langchain_utilities.model import LCToolComponent\nfrom langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput\nfrom langflow.io import Output\n\n\nclass ComposioAPIComponent(LCToolComponent):\n    display_name: str = \"Composio Tools\"\n    description: str = \"Use Composio toolset to run actions with your agent\"\n    name = \"ComposioAPI\"\n    icon = \"Composio\"\n    documentation: str = \"https://docs.composio.dev\"\n\n    inputs = [\n        # Basic configuration inputs\n        MessageTextInput(name=\"entity_id\", display_name=\"Entity ID\", value=\"default\", advanced=True),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Composio API Key\",\n            required=True,\n            info=\"Refer to https://docs.composio.dev/faq/api_key/api_key\",\n            real_time_refresh=True,\n        ),\n        DropdownInput(\n            name=\"app_names\",\n            display_name=\"App Name\",\n            options=[],\n            value=\"\",\n            info=\"The app name to use. Please refresh after selecting app name\",\n            refresh_button=True,\n            required=True,\n        ),\n        # Authentication-related inputs (initially hidden)\n        SecretStrInput(\n            name=\"app_credentials\",\n            display_name=\"App Credentials\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Credentials for app authentication (API Key, Password, etc)\",\n            load_from_db=False,\n        ),\n        MessageTextInput(\n            name=\"username\",\n            display_name=\"Username\",\n            required=False,\n            dynamic=True,\n            show=False,\n            info=\"Username for Basic authentication\",\n        ),\n        LinkInput(\n            name=\"auth_link\",\n            display_name=\"Authentication Link\",\n            value=\"\",\n            info=\"Click to authenticate with OAuth2\",\n            dynamic=True,\n            show=False,\n            placeholder=\"Click to authenticate\",\n        ),\n        StrInput(\n            name=\"auth_status\",\n            display_name=\"Auth Status\",\n            value=\"Not Connected\",\n            info=\"Current authentication status\",\n            dynamic=True,\n            show=False,\n        ),\n        MultiselectInput(\n            name=\"action_names\",\n            display_name=\"Actions to use\",\n            required=True,\n            options=[],\n            value=[],\n            info=\"The actions to pass to agent to execute\",\n            dynamic=True,\n            show=False,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"tools\", display_name=\"Tools\", method=\"build_tool\"),\n    ]\n\n    def _check_for_authorization(self, app: str) -> str:\n        \"\"\"Checks if the app is authorized.\n\n        Args:\n            app (str): The app name to check authorization for.\n\n        Returns:\n            str: The authorization status or URL.\n        \"\"\"\n        toolset = self._build_wrapper()\n        entity = toolset.client.get_entity(id=self.entity_id)\n        try:\n            # Check if user is already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # Get auth scheme for the app\n            auth_scheme = self._get_auth_scheme(app)\n            return self._handle_auth_by_scheme(entity, app, auth_scheme)\n        except Exception:  # noqa: BLE001\n            logger.exception(\"Authorization error\")\n            return \"Error checking authorization\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _get_auth_scheme(self, app_name: str) -> AppAuthScheme:\n        \"\"\"Get the primary auth scheme for an app.\n\n        Args:\n            app_name (str): The name of the app to get auth scheme for.\n\n        Returns:\n            AppAuthScheme: The auth scheme details.\n        \"\"\"\n        toolset = self._build_wrapper()\n        try:\n            return toolset.get_auth_scheme_for_app(app=app_name.lower())\n        except Exception:  # noqa: BLE001\n            logger.exception(f\"Error getting auth scheme for {app_name}\")\n            return None\n\n    def _get_oauth_apps(self, api_key: str) -> list[str]:\n        \"\"\"Fetch OAuth-enabled apps from Composio API.\n\n        Args:\n            api_key (str): The Composio API key.\n\n        Returns:\n            list[str]: A list containing OAuth-enabled app names.\n        \"\"\"\n        oauth_apps = []\n        try:\n            url = \"https://backend.composio.dev/api/v1/apps\"\n            headers = {\"x-api-key\": api_key}\n            params = {\n                \"includeLocal\": \"true\",\n                \"additionalFields\": \"auth_schemes\",\n                \"sortBy\": \"alphabet\",\n            }\n\n            response = requests.get(url, headers=headers, params=params, timeout=20)\n            data = response.json()\n\n            for item in data.get(\"items\", []):\n                for auth_scheme in item.get(\"auth_schemes\", []):\n                    if auth_scheme.get(\"mode\") in {\"OAUTH1\", \"OAUTH2\"}:\n                        oauth_apps.append(item[\"key\"].upper())\n                        break\n        except requests.RequestException as e:\n            logger.error(f\"Error fetching OAuth apps: {e}\")\n            return []\n        else:\n            return oauth_apps\n\n    def _handle_auth_by_scheme(self, entity: Any, app: str, auth_scheme: AppAuthScheme) -> str:\n        \"\"\"Handle authentication based on the auth scheme.\n\n        Args:\n            entity (Any): The entity instance.\n            app (str): The app name.\n            auth_scheme (AppAuthScheme): The auth scheme details.\n\n        Returns:\n            str: The authentication status or URL.\n        \"\"\"\n        auth_mode = auth_scheme.auth_mode\n\n        try:\n            # First check if already connected\n            entity.get_connection(app=app)\n        except NoItemsFound:\n            # If not connected, handle new connection based on auth mode\n            if auth_mode == \"API_KEY\":\n                if hasattr(self, \"app_credentials\") and self.app_credentials:\n                    try:\n                        entity.initiate_connection(\n                            app_name=app,\n                            auth_mode=\"API_KEY\",\n                            auth_config={\"api_key\": self.app_credentials},\n                            use_composio_auth=False,\n                            force_new_integration=True,\n                        )\n                    except Exception as e:  # noqa: BLE001\n                        logger.error(f\"Error connecting with API Key: {e}\")\n                        return \"Invalid API Key\"\n                    else:\n                        return f\"{app} CONNECTED\"\n                return \"Enter API Key\"\n\n            if (\n                auth_mode == \"BASIC\"\n                and hasattr(self, \"username\")\n                and hasattr(self, \"app_credentials\")\n                and self.username\n                and self.app_credentials\n            ):\n                try:\n                    entity.initiate_connection(\n                        app_name=app,\n                        auth_mode=\"BASIC\",\n                        auth_config={\"username\": self.username, \"password\": self.app_credentials},\n                        use_composio_auth=False,\n                        force_new_integration=True,\n                    )\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error connecting with Basic Auth: {e}\")\n                    return \"Invalid credentials\"\n                else:\n                    return f\"{app} CONNECTED\"\n            elif auth_mode == \"BASIC\":\n                return \"Enter Username and Password\"\n\n            if auth_mode == \"OAUTH2\":\n                try:\n                    return self._initiate_default_connection(entity, app)\n                except Exception as e:  # noqa: BLE001\n                    logger.error(f\"Error initiating OAuth2: {e}\")\n                    return \"OAuth2 initialization failed\"\n\n            return \"Unsupported auth mode\"\n        except Exception as e:  # noqa: BLE001\n            logger.error(f\"Error checking connection status: {e}\")\n            return f\"Error: {e!s}\"\n        else:\n            return f\"{app} CONNECTED\"\n\n    def _initiate_default_connection(self, entity: Any, app: str) -> str:\n        connection = entity.initiate_connection(app_name=app, use_composio_auth=True, force_new_integration=True)\n        return connection.redirectUrl\n\n    def _get_connected_app_names_for_entity(self) -> list[str]:\n        toolset = self._build_wrapper()\n        connections = toolset.client.get_entity(id=self.entity_id).get_connections()\n        return list({connection.appUniqueId for connection in connections})\n\n    def _get_normalized_app_name(self) -> str:\n        \"\"\"Get app name without connection status suffix.\n\n        Returns:\n            str: Normalized app name.\n        \"\"\"\n        return self.app_names.replace(\" ✅\", \"\").replace(\"_connected\", \"\")\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:  # noqa: ARG002\n        # Update the available apps options from the API\n        if hasattr(self, \"api_key\") and self.api_key != \"\":\n            toolset = self._build_wrapper()\n            build_config[\"app_names\"][\"options\"] = self._get_oauth_apps(api_key=self.api_key)\n\n        # First, ensure all dynamic fields are hidden by default\n        dynamic_fields = [\"app_credentials\", \"username\", \"auth_link\", \"auth_status\", \"action_names\"]\n        for field in dynamic_fields:\n            if field in build_config:\n                if build_config[field][\"value\"] is None or build_config[field][\"value\"] == \"\":\n                    build_config[field][\"show\"] = False\n                    build_config[field][\"advanced\"] = True\n                    build_config[field][\"load_from_db\"] = False\n                else:\n                    build_config[field][\"show\"] = True\n                    build_config[field][\"advanced\"] = False\n\n        if field_name == \"app_names\" and (not hasattr(self, \"app_names\") or not self.app_names):\n            build_config[\"auth_status\"][\"show\"] = True\n            build_config[\"auth_status\"][\"value\"] = \"Please select an app first\"\n            return build_config\n\n        if field_name == \"app_names\" and hasattr(self, \"api_key\") and self.api_key != \"\":\n            # app_name = self._get_normalized_app_name()\n            app_name = self.app_names\n            try:\n                toolset = self._build_wrapper()\n                entity = toolset.client.get_entity(id=self.entity_id)\n\n                # Always show auth_status when app is selected\n                build_config[\"auth_status\"][\"show\"] = True\n                build_config[\"auth_status\"][\"advanced\"] = False\n\n                try:\n                    # Check if already connected\n                    entity.get_connection(app=app_name)\n                    build_config[\"auth_status\"][\"value\"] = \"✅\"\n                    build_config[\"auth_link\"][\"show\"] = False\n                    # Show action selection for connected apps\n                    build_config[\"action_names\"][\"show\"] = True\n                    build_config[\"action_names\"][\"advanced\"] = False\n\n                except NoItemsFound:\n                    # Get auth scheme and show relevant fields\n                    auth_scheme = self._get_auth_scheme(app_name)\n                    auth_mode = auth_scheme.auth_mode\n                    logger.info(f\"Auth mode for {app_name}: {auth_mode}\")\n\n                    if auth_mode == \"API_KEY\":\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"API Key\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter API Key\"\n\n                    elif auth_mode == \"BASIC\":\n                        build_config[\"username\"][\"show\"] = True\n                        build_config[\"username\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"show\"] = True\n                        build_config[\"app_credentials\"][\"advanced\"] = False\n                        build_config[\"app_credentials\"][\"display_name\"] = \"Password\"\n                        build_config[\"auth_status\"][\"value\"] = \"Enter Username and Password\"\n\n                    elif auth_mode == \"OAUTH2\":\n                        build_config[\"auth_link\"][\"show\"] = True\n                        build_config[\"auth_link\"][\"advanced\"] = False\n                        auth_url = self._initiate_default_connection(entity, app_name)\n                        build_config[\"auth_link\"][\"value\"] = auth_url\n                        build_config[\"auth_status\"][\"value\"] = \"Click link to authenticate\"\n\n                    else:\n                        build_config[\"auth_status\"][\"value\"] = \"Unsupported auth mode\"\n\n                # Update action names if connected\n                if build_config[\"auth_status\"][\"value\"] == \"✅\":\n                    all_action_names = [str(action).replace(\"Action.\", \"\") for action in Action.all()]\n                    app_action_names = [\n                        action_name\n                        for action_name in all_action_names\n                        if action_name.lower().startswith(app_name.lower() + \"_\")\n                    ]\n                    if build_config[\"action_names\"][\"options\"] != app_action_names:\n                        build_config[\"action_names\"][\"options\"] = app_action_names\n                        build_config[\"action_names\"][\"value\"] = [app_action_names[0]] if app_action_names else [\"\"]\n\n            except Exception as e:  # noqa: BLE001\n                logger.error(f\"Error checking auth status: {e}, app: {app_name}\")\n                build_config[\"auth_status\"][\"value\"] = f\"Error: {e!s}\"\n\n        return build_config\n\n    def build_tool(self) -> Sequence[Tool]:\n        \"\"\"Build Composio tools based on selected actions.\n\n        Returns:\n            Sequence[Tool]: List of configured Composio tools.\n        \"\"\"\n        composio_toolset = self._build_wrapper()\n        return composio_toolset.get_tools(actions=self.action_names)\n\n    def _build_wrapper(self) -> ComposioToolSet:\n        \"\"\"Build the Composio toolset wrapper.\n\n        Returns:\n            ComposioToolSet: The initialized toolset.\n\n        Raises:\n            ValueError: If the API key is not found or invalid.\n        \"\"\"\n        try:\n            if not self.api_key:\n                msg = \"Composio API Key is required\"\n                raise ValueError(msg)\n            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)\n        except ValueError as e:\n            logger.error(f\"Error building Composio wrapper: {e}\")\n            msg = \"Please provide a valid Composio API Key in the component settings\"\n            raise ValueError(msg) from e\n"
-              },
-              "entity_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Entity ID",
-                "dynamic": false,
-                "info": "",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "entity_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "default"
-              },
-              "username": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Username",
-                "dynamic": true,
-                "info": "Username for Basic authentication",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "username",
-                "placeholder": "",
-                "required": false,
-                "show": false,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
+              "backgroundColor": "transparent"
+            }
           },
-          "showNode": true,
-          "type": "ComposioAPI"
+          "type": "note"
         },
         "dragging": false,
-        "id": "ComposioAPI-Z0Iiy",
+        "id": "note-K97PH",
         "measured": {
-          "height": 497,
-          "width": 320
+          "height": 324,
+          "width": 324
         },
         "position": {
-          "x": -137.53986902236176,
-          "y": 20.325147658297382
+          "x": 417.976712381606,
+          "y": 122.2833671724412
         },
         "selected": false,
-        "type": "genericNode"
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "note-Q9gWp",
+          "node": {
+            "description": "### 💡 Add your ScrapeGraphAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 324,
+        "id": "note-Q9gWp",
+        "measured": {
+          "height": 324,
+          "width": 389
+        },
+        "position": {
+          "x": 8.432436918410303,
+          "y": 130.15072721938364
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 390
       }
     ],
     "viewport": {
-      "x": 568.8302643946312,
-      "y": 91.93195183355544,
-      "zoom": 0.7104297128050097
+      "x": 386.73940143606825,
+      "y": 27.399081408903214,
+      "zoom": 0.9940070432926703
     }
   },
-  "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
+  "description": "Search the web for information.",
   "endpoint_name": null,
-  "id": "0473161e-ca7e-413c-9113-e98a142313ed",
+  "gradient": "3",
+  "icon": "search",
+  "id": "99aa93b0-8c09-4608-b6ca-b7edc07c5cc3",
   "is_component": false,
-  "name": "Gmail Agent",
+  "last_tested_version": "1.1.5",
+  "name": "Search agent",
   "tags": [
-    "agents"
+    "web-scraping",
+    "agents",
+    "assistants"
   ]
 }
