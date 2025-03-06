@@ -1,7 +1,8 @@
 import { AuthContext } from "@/contexts/authContext";
 import { useGetBuildsMutation } from "@/controllers/API/queries/_builds/use-get-builds-polling-mutation";
 import SecretKeyModalButton from "@/customization/components/custom-secret-key-modal-button";
-import { useContext, useEffect, useState } from "react";
+import useFlowStore from "@/stores/flowStore";
+import { useContext, useEffect, useRef, useState } from "react";
 import { InputProps, TextAreaComponentType } from "../../types";
 import CopyFieldAreaComponent from "../copyFieldAreaComponent";
 import TextAreaComponent from "../textAreaComponent";
@@ -17,6 +18,7 @@ export default function WebhookFieldComponent({
   const { userData } = useContext(AuthContext);
   const [userId, setUserId] = useState("");
   const { mutate: getBuildsMutation } = useGetBuildsMutation();
+  const hasInitialized = useRef(false);
 
   const isBackendUrl = nodeInformationMetadata?.variableName === "endpoint";
   const isCurlWebhook = nodeInformationMetadata?.variableName === "curl";
@@ -24,7 +26,8 @@ export default function WebhookFieldComponent({
   const showGenerateToken = isBackendUrl && !editNode && !isAuth;
 
   useEffect(() => {
-    if (!editNode && isBackendUrl) {
+    if (!editNode && isBackendUrl && !hasInitialized.current) {
+      hasInitialized.current = true;
       getBuildsMutation({
         flowId: nodeInformationMetadata?.flowId!,
       });

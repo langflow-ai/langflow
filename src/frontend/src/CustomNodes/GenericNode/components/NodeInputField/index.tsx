@@ -73,7 +73,6 @@ export default function NodeInputField({
       flowId: currentFlow?.id ?? "",
       nodeType: data?.type?.toLowerCase() ?? "",
       flowName: currentFlow?.name ?? "",
-      endpointName: currentFlow?.endpoint_name ?? "",
       isAuth,
       variableName: name,
     };

@@ -1,5 +1,6 @@
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import { useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
@@ -54,7 +55,6 @@ export default function CopyFieldAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-  nodeInformationMetadata,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -62,13 +62,16 @@ export default function CopyFieldAreaComponent({
 
   const isValueToReplace = value === BACKEND_URL;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const endpointName = currentFlow?.endpoint_name ?? "";
 
   const valueToRender = useMemo(() => {
     if (isValueToReplace) {
-      return isValueToReplace ? URL_WEBHOOK : value;
+      const urlWebhook = `${URL_WEBHOOK}${endpointName}`;
+      return isValueToReplace ? urlWebhook : value;
     }
     return value;
-  }, [value]);
+  }, [value, endpointName]);
 
   const getInputClassName = () => {
     return cn(

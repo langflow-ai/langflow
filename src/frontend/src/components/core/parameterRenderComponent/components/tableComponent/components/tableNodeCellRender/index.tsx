@@ -47,7 +47,6 @@ export default function TableNodeCellRender({
       flowId: currentFlow?.id ?? "",
       nodeType: node?.data?.type?.toLowerCase() ?? "",
       flowName: currentFlow?.name ?? "",
-      endpointName: currentFlow?.endpoint_name ?? "",
       isAuth,
       variableName: parameterId,
     };
