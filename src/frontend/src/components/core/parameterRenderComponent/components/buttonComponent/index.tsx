@@ -53,8 +53,8 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
           {!isAuthenticated && (
             <Button
               size="icon"
-              variant="outline"
-              className="h-9 w-10 border-accent-amber-foreground"
+              variant="warning"
+              className="h-9 w-10 rounded-md border border-accent-amber-foreground"
               onClick={() => setOpen(true)}
             >
               <ForwardedIconComponent
