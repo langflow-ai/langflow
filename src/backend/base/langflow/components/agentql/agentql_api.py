@@ -98,7 +98,6 @@ class AgentQL(Component):
             msg = "Please provide either an AgentQL Query or a natural language prompt, not both."
             self.status = msg
             raise ValueError(msg)
-        else:
 
         try:
             response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
