@@ -25,12 +25,14 @@ import HomePage from "./pages/MainPage/pages/homePage";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
+import PaymentPage from "./pages/SettingsPage/pages/PaymentPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import StoreApiKeyPage from "./pages/SettingsPage/pages/StoreApiKeyPage";
 import StorePage from "./pages/StorePage";
 import ViewPage from "./pages/ViewPage";
+import StripePaymentPage from "./pages/SettingsPage/pages/PaymentPage";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const LoginAdminPage = lazy(() => import("./pages/AdminPage/LoginPage"));
@@ -103,6 +105,7 @@ const router = createBrowserRouter(
                     path="global-variables"
                     element={<GlobalVariablesPage />}
                   />
+                  <Route path="payment" element={<StripePaymentPage />} />
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
                     path="general/:scrollId?"

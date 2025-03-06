@@ -38,8 +38,8 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
-      title: "Subscription",
-      href: "/settings/subscription",
+      title: "Payment",
+      href: "/settings/payment",
       icon: (
         <ForwardedIconComponent
           name="Store"
