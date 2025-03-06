@@ -10,7 +10,7 @@ import { useDarkStore } from "@/stores/darkStore";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import { TableOptionsTypeAPI } from "@/types/api";
 import { cn } from "@/utils/utils";
-import { ColDef } from "ag-grid-community";
+import { CellEditRequestEvent, ColDef } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, AgGridReactProps } from "ag-grid-react";
@@ -38,6 +38,7 @@ export interface TableComponentProps extends AgGridReactProps {
   onDuplicate?: () => void;
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
+  onCellEditRequest?: (event: CellEditRequestEvent) => void;
 }
 
 const TableComponent = forwardRef<
@@ -243,6 +244,7 @@ const TableComponent = forwardRef<
           }}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
+          onCellEditRequest={props.onCellEditRequest}
           onStateUpdated={(e) => {
             if (e.sources.some((source) => source.includes("column"))) {
               localStorage.setItem(
