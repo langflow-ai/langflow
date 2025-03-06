@@ -62,10 +62,10 @@ In this example, the **Google Drive loader** component loads a text file hosted 
 3. In the **Credentials File** field of the Google OAuth Token component, enter the path to your **Credentials File**, the JSON file containing the Client ID credentials you downloaded from Google in the previous steps.
 4. In the **Scopes** field of the Google Oauth Token component, enter the scope required to access your resources. For example, to allow your Langflow application to access a user's Google Drive, the scope is `https://www.googleapis.com/auth/drive`. For more information, see the [Google documentation](https://developers.google.com/identity/protocols/oauth2/scopes).
 The example flow includes a **Parse data** component to convert the `data` output of the Google OAuth Token component to the `text` input of the JSON Cleaner component.
-5. To allow the Langflow component to access the file in Google Drive, copy the Google Drive File ID from the document's URL.
+5. To allow the Langflow component to access the document in Google Drive, copy the Google Drive `documentID` from the document's URL.
 :::info
 The `documentID` is located between `/d/` and `/edit` in a Google Drive document's URL.
-For example, in the URL `https://drive.google.com/file/d/1a2b3c4D5E6F7gHI8J9klmnopQ/edit`, the File ID is `1a2b3c4D5E6F7gHI8J9klmnopQ`.
+For example, in the URL `https://drive.google.com/file/d/1a2b3c4D5E6F7gHI8J9klmnopQ/edit`, the `documentID` is `1a2b3c4D5E6F7gHI8J9klmnopQ`.
 :::
 6. In the Google Drive loader component, in the **Document ID** field, paste the document URL.
 7. To view the translated document, open the **Playground**.
