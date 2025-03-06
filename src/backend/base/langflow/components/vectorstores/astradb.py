@@ -115,8 +115,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="dimension",
                                 display_name="Dimensions (Required only for `Bring your own`)",
                                 info="Dimensions of the embeddings to generate.",
-                                required=False,
-                                value=1024,
+                                value=None,
                             ),
                         },
                     },
@@ -595,7 +594,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]["options"] = [
             "Bring your own",
             "Nvidia",
-            *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],
+            # *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],
         ]
 
         # For all not Bring your own or Nvidia providers, add metadata saying configure in Astra DB Portal
@@ -607,11 +606,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for provider in provider_options:
             # Add the icon for the provider
             my_metadata = {"icon": self.get_provider_icon(provider_name=provider)}
-
-            # Skip Bring your own and Nvidia, automatically configured
-            if provider not in {"Bring your own", "Nvidia"}:
-                # Add metadata to configure in Astra DB Portal
-                my_metadata[" "] = "Configure in Astra DB Portal"
 
             # Add the metadata to the options metadata
             build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
@@ -627,6 +621,19 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "03_embedding_generation_model"
         ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
+
+        # If the provider is "Bring your own", show the dimension field, otherwise disable it
+        # TODO: Update to handle all cases
+
+        # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+            "04_dimension"
+        ]["value"] = 1024 if embedding_provider == "Nvidia" else None
+
+        # If the provider is not Bring your own, disable the dimension field
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+            "04_dimension"
+        ]["disabled"] = embedding_provider == "Nvidia"
 
         return build_config
 
