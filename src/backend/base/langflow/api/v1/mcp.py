@@ -25,7 +25,6 @@ from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
 from langflow.services.deps import (
     get_db_service,
-    get_queue_service,
     get_session,
     get_settings_service,
     get_storage_service,

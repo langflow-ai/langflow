@@ -32,7 +32,6 @@ from langflow.utils.voice_utils import (
     resample_24k_to_16k,
 )
 
-
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
 SILENCE_THRESHOLD = 0.1
@@ -496,7 +495,7 @@ async def flow_as_tool_websocket(
                                     background_tasks,
                                     current_user,
                                     session,
-                                    conversation_id
+                                    conversation_id,
                                 )
                             )
                             function_call = None
@@ -580,4 +579,3 @@ async def flow_as_tool_websocket(
             forward_to_openai(),
             forward_to_client(),
         )
-
