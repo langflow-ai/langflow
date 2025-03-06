@@ -595,7 +595,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]["options"] = [
             "Bring your own",
             "Nvidia",
-            # *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],  # TODO: Restore
+            *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],
         ]
 
         # For all not Bring your own or Nvidia providers, add metadata saying configure in Astra DB Portal
@@ -607,6 +607,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for provider in provider_options:
             # Add the icon for the provider
             my_metadata = {"icon": self.get_provider_icon(provider_name=provider)}
+
+            # Skip Bring your own and Nvidia, automatically configured
+            if provider not in {"Bring your own", "Nvidia"}:
+                # Add metadata to configure in Astra DB Portal
+                my_metadata[" "] = "Configure in Astra DB Portal"
 
             # Add the metadata to the options metadata
             build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
