@@ -7,10 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
 import { CustomProductSelector } from "@/customization/components/custom-product-selector";
-import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_NEW_LOGO,
-} from "@/customization/feature-flags";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import { useResetDismissUpdateAll } from "@/hooks/use-reset-dismiss-update-all";
@@ -67,10 +64,8 @@ export default function AppHeader(): JSX.Element {
         >
           {ENABLE_DATASTAX_LANGFLOW ? (
             <DataStaxLogo className="fill-black dark:fill-[white]" />
-          ) : ENABLE_NEW_LOGO ? (
-            <LangflowLogo className="h-5 w-6" />
           ) : (
-            <span className="fill-black text-2xl dark:fill-white">⛓️</span>
+            <LangflowLogo className="h-5 w-6" />
           )}
         </Button>
         {ENABLE_DATASTAX_LANGFLOW && (
