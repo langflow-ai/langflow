@@ -38,6 +38,8 @@ class TaskBase(SQLModel):
     @field_validator("status")
     @classmethod
     def validate_status(cls, v):
+        if not v:
+            return "pending"
         valid_statuses = ["pending", "processing", "completed", "failed"]
         if v not in valid_statuses:
             msg = f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
