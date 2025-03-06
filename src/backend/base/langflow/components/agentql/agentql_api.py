@@ -94,7 +94,7 @@ class AgentQL(Component):
             msg = "Please provide either an AgentQL Query or a natural language prompt."
             self.status = msg
             raise ValueError(msg)
-        elif self.prompt and self.query:
+        if self.prompt and self.query:
             msg = "Please provide either an AgentQL Query or a natural language prompt, not both."
             self.status = msg
             raise ValueError(msg)
