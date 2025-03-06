@@ -46,7 +46,7 @@ SESSION_INSTRUCTIONS = (
     "When appropriate, call the execute_flow function to assist with the user's question "
     "as the input parameter and use that to craft your responses. "
     "Always tell the user before you call a function to assist with their question. "
-    "And let them know what it does."
+    "Once the function responds make sure to update the user with the required information."
 )
 
 use_elevenlabs = False
@@ -175,7 +175,8 @@ async def handle_function_call(
         await openai_ws.send(json.dumps(function_output))
         await openai_ws.send(json.dumps({"type": "response.create"}))
     except Exception as e:
-        logger.error(f"Error executing flow: {e!s}")
+        trace = traceback.format_exc()
+        logger.error(f"Error executing flow: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
