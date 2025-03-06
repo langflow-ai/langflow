@@ -573,6 +573,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]
 
     def reset_provider_options(self, build_config: dict):
+        # TODO: We need to get CONFIGURED providers
         # Get the list of vectorize providers
         vectorize_providers = self.get_vectorize_providers(
             token=self.token,
@@ -580,17 +581,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
-        # Append a special case for Bring your own
-        vectorize_providers["Bring your own"] = [None, ["Bring your own"]]
+        # Take only Nvidia for now and append a bring your own special case
+        vectorize_providers = {k: v for k, v in vectorize_providers.items() if k == "Nvidia"}
+        vectorize_providers["Bring your own"] = [None, []]
 
         # If the collection is set, allow user to see embedding options
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "02_embedding_generation_provider"
-        ]["options"] = [
-            "Bring your own",
-            "Nvidia",
-            *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],
-        ]
+        ]["options"] = list(vectorize_providers)
 
         # For all not Bring your own or Nvidia providers, add metadata saying configure in Astra DB Portal
         provider_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
@@ -601,11 +599,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for provider in provider_options:
             # Add the icon for the provider
             my_metadata = {"icon": self.get_provider_icon(provider_name=provider)}
-
-            # Skip Bring your own and Nvidia, automatically configured
-            if provider not in {"Bring your own", "Nvidia"}:
-                # Add metadata to configure in Astra DB Portal
-                my_metadata[" "] = "Configure in Astra DB Portal"
 
             # Add the metadata to the options metadata
             build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
