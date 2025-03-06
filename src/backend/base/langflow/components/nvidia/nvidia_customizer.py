@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class NvidiaCustomizerComponent(Component):
     display_name = "NVIDIA Customizer"
-    description = "Train models"
+    description = "LLM fine-tuning using NeMo customizer microservice"
     icon = "NVIDIA"
     name = "NVIDIANeMoCustomizer"
     beta = True
@@ -35,20 +35,20 @@ class NvidiaCustomizerComponent(Component):
     inputs = [
         StrInput(
             name="base_url",
-            display_name="NVIDIA NeMo Customizer Base URL",
-            info="The base URL of the NVIDIA NeMo Customizer API.",
+            display_name="Customizer Base URL",
+            info="The base URL of the NVIDIA Customizer API.",
             advanced=True,
         ),
         StrInput(
             name="datastore_base_url",
-            display_name="NVIDIA NeMo Datastore Base URL",
-            info="The nemo datastore base URL of the NVIDIA NeMo Datastore API.",
+            display_name="Datastore Base URL",
+            info="The nemo datastore base URL of the NVIDIA Datastore API.",
             advanced=True,
         ),
         StrInput(
             name="entity_store_base_url",
-            display_name="NVIDIA NeMo EntityStore Base URL",
-            info="The nemo datastore base URL of the NVIDIA NeMo EntityStore API.",
+            display_name="EntityStore Base URL",
+            info="The nemo datastore base URL of the NVIDIA EntityStore API.",
             advanced=True,
         ),
         StrInput(
@@ -61,8 +61,8 @@ class NvidiaCustomizerComponent(Component):
         StrInput(
             name="dataset",
             display_name="Dataset",
-            info="Enter the dataset ID or name used to train the model",
-            value="test-data",
+            info="Enter the dataset name used for training the model",
+            value="dataset-name",
         ),
         DataInput(
             name="training_data",
@@ -87,7 +87,9 @@ class NvidiaCustomizerComponent(Component):
             info="Select the fine tuning type to use",
         ),
         IntInput(
-            name="epochs", display_name="Epochs", info="Number of times to cycle through the training data", value=5
+            name="epochs", display_name="Epochs",
+            info="Number of times to cycle through the training data. default : `5`",
+            value=5
         ),
         IntInput(
             name="batch_size",
@@ -111,7 +113,7 @@ class NvidiaCustomizerComponent(Component):
         """Updates the component's configuration based on the selected option or refresh button."""
         models_url = f"{self.base_url}/v1/customization/configs"
         try:
-            if field_name == "model_name":
+            if field_name == "model_name" and self.base_url != "":
                 self.log(f"Refreshing model names from endpoint {models_url}, value: {field_value}")
 
                 # Use a synchronous HTTP client
@@ -126,7 +128,7 @@ class NvidiaCustomizerComponent(Component):
 
                 self.log("Updated model_name dropdown options.")
 
-            if field_name == "training_type":
+            if field_name == "training_type" and self.base_url != "":
                 # Use a synchronous HTTP client
                 with httpx.Client(timeout=5.0) as client:
                     response = client.get(models_url, headers=self.headers)
@@ -173,11 +175,30 @@ class NvidiaCustomizerComponent(Component):
         attempt = 1
         dataset_name = self.dataset
 
+        if not dataset_name:
+            error_msg = "Provide dataset name to process"
+            raise ValueError(error_msg)
+
+        tenant = self.tenant_id
+        if not self.tenant_id:
+            error_msg = "Provide tenant id to process"
+            raise ValueError(error_msg)
+
+        if not (self.base_url and self.datastore_base_url and self.entity_store_base_url):
+            error_msg = "Provide customizer, data store and entity store url to process"
+            raise ValueError(error_msg)
+
+        if not self.model_name:
+            error_msg = "Refresh and select the base model name to be fine tuned"
+            raise ValueError(error_msg)
+
+        if not (self.training_type and self.fine_tuning_type):
+            error_msg = "Refresh and select the training type and fine tuning type"
+            raise ValueError(error_msg)
+
         # Process and upload the dataset if training_data is provided
         if self.training_data is not None:
-            await self.process_and_upload_dataset()
-
-        tenant = self.tenant_id if self.tenant_id else "tenant"
+            await self.process_dataset()
         short_model_name = self.model_name.split("/")[-1]
         customizations_url = f"{self.base_url}/v1/customization/jobs"
         max_attempt_allowed = 10
@@ -187,11 +208,12 @@ class NvidiaCustomizerComponent(Component):
             # Build the output_model string with the current attempt number
             output_model = f"{tenant}/{short_model_name}@{dataset_name}-{attempt}"
 
+            description = f"Fine tuning base model {self.model_name} using dataset {dataset_name}"
             # Build the data payload
             data = {
                 "config": self.model_name,
                 "dataset": {"name": dataset_name, "namespace": tenant},
-                "description": self.description,
+                "description": description,
                 "hyperparameters": {
                     "training_type": self.training_type,
                     "finetuning_type": self.fine_tuning_type,
@@ -275,12 +297,6 @@ class NvidiaCustomizerComponent(Component):
         self.log(error_msg)
         raise ValueError(error_msg)
 
-    def get_dataset_name(self, user_dataset_name=None):
-        # Generate a default dataset name using the current date and time
-        default_name = f"dataset-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-        # Use the user-provided name if available, otherwise the default
-        return user_dataset_name if user_dataset_name else default_name
-
     async def get_repo_id(self, tenant_id: str, user_dataset_name: str) -> str:
         """Fetches the repo id by checking if a dataset with the constructed name exists.
 
@@ -293,20 +309,22 @@ class NvidiaCustomizerComponent(Component):
         Returns:
             str: The dataset ID if found or created, or None if an error occurs.
         """
-        dataset_name = self.get_dataset_name(user_dataset_name)
-        namespace = tenant_id if tenant_id else "tenant"
+        dataset_name = user_dataset_name
+        namespace = tenant_id
 
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
 
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{url}/{namespace}")
-                self.log(f"returned data {response}")
+                self.log(f"Datastore namespace response json:  {response}")
                 http_status_code_non_found = 404
                 if response.status_code == http_status_code_non_found:
                     create_payload = {"namespace": namespace}
                     create_response = await client.post(url, json=create_payload)
                     create_response.raise_for_status()
+                else:
+                    response.raise_for_status()
 
                 return f"{namespace}/{dataset_name}"
         except httpx.HTTPStatusError as e:
@@ -315,7 +333,7 @@ class NvidiaCustomizerComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from e
 
-    async def process_and_upload_dataset(self) -> str:
+    async def process_dataset(self) -> str:
         """Asynchronously processes and uploads the dataset for training(90%) and validation(10%).
 
         If the total valid record count is less than 10, at least one record is added to validation.
@@ -323,6 +341,7 @@ class NvidiaCustomizerComponent(Component):
         try:
             # Inputs and repo setup
             user_dataset_name = getattr(self, "dataset", None)
+
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
             repo_id = await self.get_repo_id(self.tenant_id, user_dataset_name)
             repo_type = "dataset"
@@ -336,12 +355,8 @@ class NvidiaCustomizerComponent(Component):
         try:
             chunk_size = 100000  # Ensure chunk_size is an integer
             self.log(f"repo_id : {repo_id}")
-            if not repo_id:
-                err_msg = "repo_id must be provided."
-                raise ValueError(err_msg)
 
             tasks = []
-            file_name_appender = user_dataset_name if user_dataset_name else "dataset"
 
             # =====================================================
             # STEP 1: Build a list of valid records from training_data
@@ -391,7 +406,7 @@ class NvidiaCustomizerComponent(Component):
                     task = self.upload_chunk(
                         chunk_df,
                         self.chunk_number,
-                        file_name_appender,
+                        user_dataset_name,
                         repo_id,
                         hf_api,
                         is_validation,
@@ -406,7 +421,7 @@ class NvidiaCustomizerComponent(Component):
                 task = self.upload_chunk(
                     chunk_df,
                     self.chunk_number,
-                    file_name_appender,
+                    user_dataset_name,
                     repo_id,
                     hf_api,
                     is_validation,
@@ -424,7 +439,7 @@ class NvidiaCustomizerComponent(Component):
                 validation_df = pd.DataFrame(validation_records)
                 # Note: You will need to implement upload_validation to handle the
                 # upload of the full validation DataFrame.
-                await self.upload_chunk(validation_df, 1, file_name_appender, repo_id, hf_api, is_validation)
+                await self.upload_chunk(validation_df, 1, user_dataset_name, repo_id, hf_api, is_validation)
 
         except Exception as exc:
             exception_str = str(exc)
@@ -453,10 +468,10 @@ class NvidiaCustomizerComponent(Component):
 
             success_status_code = 200
             if response.status_code == success_status_code:
-                logger.info("Chunk %s uploaded successfully!", self.chunk_number)
+                logger.info("Dataset uploaded successfully in %s chunks", self.chunk_number)
             else:
-                logger.warning("Failed to upload chunk %s. Status code: %s", self.chunk_number, response.status_code)
-                logger.warning(response.text)
+                logger.warning("Failed to upload files. Status code: %s", self.chunk_number, response.status_code)
+                response.raise_for_status()
 
             logger.info("All data has been processed and uploaded successfully.")
         except Exception as exc:
