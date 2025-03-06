@@ -13,7 +13,7 @@ from langflow.components.models.openai import OpenAIModelComponent
 from langflow.components.outputs.chat import ChatOutput
 from langflow.components.processing.parse_data import ParseDataComponent
 from langflow.components.triggers.gmail_inbox_trigger import GmailInboxTriggerComponent
-from langflow.components.triggers.local_file_watcher import LocalFileWatcherTrigger
+from langflow.components.triggers.local_file_watcher import LocalFileWatcherTrigger, LocalFileWatcherTriggerComponent
 from langflow.components.triggers.schedule_trigger import ScheduleTrigger, ScheduleTriggerComponent
 from langflow.graph import Graph
 from langflow.schema.data import Data
@@ -60,6 +60,72 @@ async def schedule_mock_data() -> dict[str, Any]:
 
 
 @pytest.fixture
+async def local_file_mock_data() -> dict[str, Any]:
+    """Return mock data for testing LocalFileWatcher trigger."""
+    # Use a temporary file path instead of hardcoded /tmp path
+    temp_dir = tempfile.gettempdir()
+    test_file_path = str(Path(temp_dir) / "langflow_test_file.txt")
+
+    return {
+        "file_path": test_file_path,
+        "file_modified_at": datetime.now(timezone.utc).isoformat(),
+        "content_preview": "Sample content from the file",
+        "file_size_bytes": 1024,
+    }
+
+
+@pytest.fixture
+async def local_file_trigger_graph(local_file_mock_data: dict[str, Any]) -> Graph:
+    """Create a graph with a LocalFileWatcher trigger component."""
+    # Create a LocalFileWatcher trigger component with testing mode enabled
+    local_file_trigger = LocalFileWatcherTriggerComponent(
+        file_path=local_file_mock_data["file_path"], poll_interval=60, threshold_minutes=5
+    )
+
+    # Data to Message component to parse the file data
+    data_to_message = ParseDataComponent()
+    data_to_message.set(
+        data=local_file_trigger.get_trigger_info,
+        template="File was updated: {file_path}\nModified at: {file_modified_at}",
+    )
+
+    # OpenAI component to process the file data
+    openai = OpenAIModelComponent()
+    openai.set(input_value=data_to_message.parse_data, model_name="gpt-3.5-turbo")
+
+    # Chat output to display the result
+    chat_output = ChatOutput()
+    chat_output.set(input_value=openai.text_response)
+
+    # Create the graph
+    graph = Graph(start=local_file_trigger, end=chat_output)
+    graph.session_id = str(uuid4())
+
+    return graph
+
+
+@pytest.fixture
+async def local_file_trigger_flow(local_file_trigger_graph: Graph, client, logged_in_headers):
+    """Create a flow with a LocalFileWatcher trigger component."""
+    # Create a flow with the graph
+    graph_dict = local_file_trigger_graph.dump(name="Local File Watcher Trigger Flow")
+
+    # Convert the graph_dict to a regular dict to ensure proper serialization
+    flow = FlowCreate(**graph_dict)
+    # Use model_dump() to get a serializable dictionary and handle datetime objects
+    flow_dict = flow.model_dump()
+
+    # Convert to JSON and back to ensure all datetime objects are properly serialized
+    flow_json = json.dumps(flow_dict, cls=DateTimeEncoder)
+    flow_dict = json.loads(flow_json)
+
+    response = await client.post("/api/v1/flows/", json=flow_dict, headers=logged_in_headers)
+    assert response.status_code == 201, f"Failed to create flow: {response.text}"
+    yield response.json()
+    await client.delete(f"api/v1/flows/{response.json()['id']}", headers=logged_in_headers)
+
+
+@pytest.fixture
 async def gmail_trigger_graph(gmail_mock_data: dict[str, Any]) -> Graph:
     """Create a graph with a Gmail trigger component in testing mode."""
     # Create a Gmail trigger component with testing mode enabled
@@ -75,7 +141,7 @@ async def gmail_trigger_graph(gmail_mock_data: dict[str, Any]) -> Graph:
     # Data to Message component to parse the email data
     data_to_message = ParseDataComponent()
     data_to_message.set(
-        data=gmail_trigger.output_value, template="Email from: {from}\nSubject: {subject}\nBody: {body}"
+        data=gmail_trigger.get_trigger_info, template="Email from: {from}\nSubject: {subject}\nBody: {body}"
     )
 
     # OpenAI component to process the email
@@ -109,7 +175,7 @@ async def schedule_trigger_graph(schedule_mock_data: dict[str, Any]) -> Graph:
     # Data to Message component to format the trigger data
     data_to_message = ParseDataComponent()
     data_to_message.set(
-        data=schedule_trigger.output_value,
+        data=schedule_trigger.get_trigger_info,
         template="Scheduled task triggered at: {scheduled_time}\nCron: {cron_expression}",
     )
 
@@ -701,109 +767,6 @@ async def test_end_to_end_gmail_trigger_execution(gmail_trigger_flow: dict[str, 
         trigger_service._check_events = original_check_events
 
 
-@pytest.fixture
-async def local_file_mock_data() -> dict[str, Any]:
-    """Return mock data for testing LocalFileWatcher trigger."""
-    # Use a temporary file path instead of hardcoded /tmp path
-    temp_dir = tempfile.gettempdir()
-    test_file_path = str(Path(temp_dir) / "langflow_test_file.txt")
-
-    return {
-        "file_path": test_file_path,
-        "file_modified_at": datetime.now(timezone.utc).isoformat(),
-        "content_preview": "Sample content from the file",
-        "file_size_bytes": 1024,
-    }
-
-
-@pytest.fixture
-async def local_file_trigger_graph(local_file_mock_data: dict[str, Any]) -> Graph:
-    """Create a graph with a LocalFileWatcher trigger component."""
-    # Get the file path from the mock data
-    file_path = local_file_mock_data["file_path"]
-
-    # Create a graph with a LocalFileWatcher trigger
-    graph_data = {
-        "nodes": [
-            {
-                "id": "1",
-                "data": {
-                    "type": "LocalFileWatcherTriggerComponent",
-                    "node": {
-                        "template": {
-                            "file_path": {
-                                "type": "str",
-                                "required": True,
-                                "value": file_path,
-                            },
-                            "poll_interval": {
-                                "type": "int",
-                                "required": False,
-                                "value": 60,
-                            },
-                            "threshold_minutes": {
-                                "type": "int",
-                                "required": False,
-                                "value": 5,
-                            },
-                            "mock_data": {
-                                "type": "dict",
-                                "required": False,
-                                "value": json.dumps(local_file_mock_data, cls=DateTimeEncoder),
-                            },
-                            "is_testing": {
-                                "type": "bool",
-                                "required": False,
-                                "value": True,
-                            },
-                        }
-                    },
-                },
-                "position": {"x": 0, "y": 0},
-            },
-            {
-                "id": "2",
-                "data": {
-                    "type": "PromptComponent",
-                    "node": {
-                        "template": {
-                            "prompt": {
-                                "type": "str",
-                                "required": True,
-                                "value": "File was updated: {{trigger_data}}",
-                            }
-                        }
-                    },
-                },
-                "position": {"x": 200, "y": 0},
-            },
-        ],
-        "edges": [
-            {
-                "source": "1",
-                "sourceHandle": "output_value",
-                "target": "2",
-                "targetHandle": "trigger_data",
-            }
-        ],
-    }
-    return Graph(**graph_data)
-
-
-@pytest.fixture
-async def local_file_trigger_flow(local_file_trigger_graph: Graph, client, logged_in_headers):
-    """Create a flow with a LocalFileWatcher trigger component."""
-    # Create a flow with the graph
-    flow_data = {
-        "name": "Test LocalFileWatcher Trigger Flow",
-        "description": "A flow that is triggered when a file is updated",
-        "data": local_file_trigger_graph.dict(),
-    }
-    response = await client.post("/api/v1/flows/", json=flow_data, headers=logged_in_headers)
-    assert response.status_code == 201
-    return response.json()
-
-
 @pytest.mark.asyncio
 async def test_creating_flow_with_local_file_trigger_creates_subscription(
     local_file_trigger_flow: dict[str, Any], local_file_mock_data: dict[str, Any]
@@ -858,9 +821,7 @@ async def test_end_to_end_local_file_trigger_execution(
     subscription = subscriptions[0]
 
     # Get the trigger service
-    from langflow.services.triggers.service import TriggerService
-
-    trigger_service = TriggerService()
+    trigger_service = get_trigger_service()
 
     # Store the original check_events method
     original_check_events = trigger_service._check_events
