@@ -19,9 +19,13 @@ import {
 } from "../HeaderMenu";
 import { ProfileIcon } from "../ProfileIcon";
 import ThemeButtons from "../ThemeButtons";
+import CustomFeatureFlagMenuItems from "@/customization/components/custom-feature-flag-menu-items";
+import CustomFeatureFlagDialog from "@/customization/components/custom-feature-flag-dialog";
 
 export const AccountMenu = () => {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isCustomFeatureFlagsOpen, setIsCustomFeatureFlagsOpen] =
+    useState(false);
   const { customParam: id } = useParams();
   const version = useDarkStore((state) => state.version);
   const navigate = useCustomNavigate();
@@ -99,14 +103,19 @@ export const AccountMenu = () => {
               </>
             )}
             {ENABLE_DATASTAX_LANGFLOW ? (
-              <HeaderMenuItemButton onClick={() => setIsFeedbackOpen(true)}>
-                <span
-                  data-testid="menu_feedback_button"
-                  id="menu_feedback_button"
-                >
-                  Feedback
-                </span>
-              </HeaderMenuItemButton>
+              <>
+                <HeaderMenuItemButton onClick={() => setIsFeedbackOpen(true)}>
+                  <span
+                    data-testid="menu_feedback_button"
+                    id="menu_feedback_button"
+                  >
+                    Feedback
+                  </span>
+                </HeaderMenuItemButton>
+                <CustomFeatureFlagMenuItems
+                  onClick={() => setIsCustomFeatureFlagsOpen(true)}
+                />
+              </>
             ) : (
               <HeaderMenuItemLink newPage href="https://docs.langflow.org">
                 <span data-testid="menu_docs_button" id="menu_docs_button">
@@ -167,6 +176,10 @@ export const AccountMenu = () => {
       <CustomFeedbackDialog
         isOpen={isFeedbackOpen}
         setIsOpen={setIsFeedbackOpen}
+      />
+      <CustomFeatureFlagDialog
+        isOpen={isCustomFeatureFlagsOpen}
+        setIsOpen={setIsCustomFeatureFlagsOpen}
       />
     </>
   );
