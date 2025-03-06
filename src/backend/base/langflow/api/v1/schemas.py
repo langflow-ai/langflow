@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
 from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
@@ -78,7 +78,9 @@ class RunResponse(BaseModel):
         try:
             jsonable_encoder(serialized)
         except Exception as exc:
-            import pdb; pdb.set_trace()
+            import pdb
+
+            pdb.set_trace()
             print(exc)
         return serialized
 

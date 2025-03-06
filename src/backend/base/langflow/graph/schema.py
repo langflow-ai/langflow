@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_serializer, model_validator
-from fastapi.encoders import jsonable_encoder
 
 from langflow.schema.schema import OutputValue, StreamURL
 from langflow.serialization import serialize
@@ -29,9 +28,7 @@ class ResultData(BaseModel):
         else:
             result = serialize(value)
 
-
         return result
-
 
     @model_validator(mode="before")
     @classmethod

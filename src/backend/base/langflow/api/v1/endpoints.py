@@ -383,7 +383,7 @@ async def simplified_run_flow(
             jsonable_encoder(obj)
             return True
         except Exception as exc:
-            print(f"Erro ao serializar: {repr(exc)}")
+            print(f"Erro ao serializar: {exc!r}")
             return False
 
     for o1 in result.outputs:
@@ -392,10 +392,11 @@ async def simplified_run_flow(
                 if not test(value):
                     print(f"Erro ao serializar: {key}")
 
-    print('-----')
-    import pdb; pdb.set_trace()
-    print('-----')
+    print("-----")
+    import pdb
 
+    pdb.set_trace()
+    print("-----")
 
     return result
 
