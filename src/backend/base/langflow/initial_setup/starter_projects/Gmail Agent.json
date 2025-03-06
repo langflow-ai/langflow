@@ -438,11 +438,11 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
+                  "gpt-3.5-turbo"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -1814,10 +1814,10 @@
     }
   },
   "description": "Interact with Gmail to send emails, create drafts, and fetch messages",
-  "name": "Gmail Agent",
   "endpoint_name": null,
   "id": "0473161e-ca7e-413c-9113-e98a142313ed",
   "is_component": false,
+  "name": "Gmail Agent",
   "tags": [
     "agents"
   ]
