@@ -1,73 +1,40 @@
 #!/usr/bin/env python3
+# Run this script with the command `python3 scripts/get_package_versions.py`
+#  to generate the supported-software.md file in the docs/docs/Support directory.
+# It extracts the package versions from the uv.lock file and categorizes them.
 
 from pathlib import Path
 from collections import defaultdict
 import re
 from datetime import datetime
 
-def parse_toml(file_path):
-    """Parse TOML file using basic string operations."""
+def parse_uv_lock(file_path):
+    """Parse uv.lock file using basic string operations."""
     with open(file_path, 'r') as f:
         content = f.read()
-    
-    # Extract version from project section
-    version_match = re.search(r'version\s*=\s*"([^"]+)"', content)
-    project_version = version_match.group(1) if version_match else "unknown"
     
     # Extract Python version requirement
     python_version_match = re.search(r'requires-python\s*=\s*"([^"]+)"', content)
     python_version = python_version_match.group(1) if python_version_match else "unknown"
     
-    # Extract dependencies
-    dependencies_start = content.find('dependencies = [')
-    dependencies_end = content.find(']', dependencies_start)
-    if dependencies_start != -1 and dependencies_end != -1:
-        dependencies_content = content[dependencies_start:dependencies_end]
-        dependencies = []
-        for line in dependencies_content.split('\n'):
-            if '=' in line and '"' in line:
-                dep = line.strip().strip(',').strip('"')
-                if dep:
-                    dependencies.append(dep)
-    else:
-        dependencies = []
+    # Extract package versions
+    packages = []
+    package_blocks = re.finditer(r'\[\[package\]\]\s*name\s*=\s*"([^"]+)"\s*version\s*=\s*"([^"]+)"', content)
+    for match in package_blocks:
+        packages.append((match.group(1), match.group(2)))
     
-    # Extract optional dependencies from project.optional-dependencies section
-    optional_deps = {}
-    optional_section_start = content.find('[project.optional-dependencies]')
-    if optional_section_start != -1:
-        optional_section = content[optional_section_start:content.find('\n[', optional_section_start + 1)]
-        sections = re.finditer(r'(\w+)\s*=\s*\[(.*?)\]', optional_section, re.DOTALL)
-        for section in sections:
-            env = section.group(1)
-            deps = []
-            for line in section.group(2).split('\n'):
-                if '"' in line:
-                    dep = line.strip().strip(',').strip('"')
-                    if dep:
-                        deps.append(dep)
-            if deps:  # Only add sections that have dependencies
-                optional_deps[env] = deps
+    # Extract langflow version
+    langflow_version = "unknown"
+    for name, version in packages:
+        if name == "langflow":
+            langflow_version = version
+            break
     
     return {
-        "project_version": project_version,
         "python_version": python_version,
-        "dependencies": dependencies,
-        "optional_dependencies": optional_deps
+        "langflow_version": langflow_version,
+        "packages": packages
     }
-
-def parse_version_info(version_spec):
-    """Parse version specification into a more readable format."""
-    # Remove any whitespace
-    version_spec = version_spec.strip()
-    
-    # Handle simple version numbers
-    if version_spec.startswith('"') or version_spec.startswith("'"):
-        return version_spec.strip("'").strip('"')
-    
-    # Handle version ranges
-    version_spec = version_spec.replace(">=", "≥").replace("<=", "≤").replace("~=", "≈")
-    return version_spec
 
 def categorize_package(package_name):
     """Categorize packages based on their names."""
@@ -88,34 +55,27 @@ def categorize_package(package_name):
             return category
     return "Other"
 
-def get_package_versions(pyproject_path):
-    """Extract and categorize package versions from pyproject.toml."""
-    toml_data = parse_toml(pyproject_path)
+def get_package_versions(uv_lock_path):
+    """Extract and categorize package versions from uv.lock."""
+    lock_data = parse_uv_lock(uv_lock_path)
     
-    # Categorize main dependencies
+    # Categorize dependencies
     categorized_deps = defaultdict(list)
-    for dep in toml_data["dependencies"]:
-        # Skip if it's a conditional dependency (like platform-specific)
-        if ';' in dep:
-            continue
-            
-        # Split package name and version spec
-        if ">=" in dep or "<=" in dep or "==" in dep or "~=" in dep:
-            package_name = re.split(r'>=|<=|==|~=', dep)[0]
-            version_spec = dep[len(package_name):]
-        else:
-            package_name = dep
-            version_spec = "any"
-        
+    for package_name, version in lock_data["packages"]:
         category = categorize_package(package_name)
-        categorized_deps[category].append((package_name, parse_version_info(version_spec)))
+        categorized_deps[category].append((package_name, version))
     
     return {
-        "langflow_version": toml_data["project_version"],
-        "python_version": toml_data["python_version"],
-        "dependencies": dict(categorized_deps),
-        "optional_dependencies": toml_data["optional_dependencies"]
+        "langflow_version": lock_data["langflow_version"],
+        "python_version": lock_data["python_version"],
+        "dependencies": dict(categorized_deps)
     }
+
+def sanitize_version(version_str):
+    """Process version string for markdown output."""
+    if not version_str or version_str == "any":
+        return "any"
+    return version_str
 
 def generate_markdown(versions_info):
     """Generate markdown content from version information."""
@@ -130,79 +90,42 @@ def generate_markdown(versions_info):
         "",
         "Support covers only the following software versions for Langflow.",
         "",
-        f"Last updated: {current_date}",
+        "Last updated: " + current_date,
         "",
         "## Core Information",
-        f"- **Langflow Version**: {versions_info['langflow_version']}",
-        f"- **Python Version Required**: {versions_info['python_version']}",
-        "\n## Main Dependencies",
+        "- **Langflow Version**: `" + versions_info['langflow_version'] + "`",
+        "- **Python Version Required**: `" + sanitize_version(versions_info['python_version']) + "`",
+        "\n## Dependencies",
     ]
     
-    # Add main dependencies by category
+    # Add dependencies by category
     for category in sorted(versions_info['dependencies'].keys()):
         packages = versions_info['dependencies'][category]
         if packages:  # Only show categories with packages
             md_content.extend([
-                f"\n### {category}",
+                "\n### " + category,
                 "| Package | Version |",
                 "| ------- | ------- |"
             ])
             for package, version in sorted(packages):
-                md_content.append(f"| {package} | {version} |")
-    
-    # Add optional dependencies
-    if versions_info['optional_dependencies']:
-        md_content.append("\n## Optional Dependencies")
-        
-        # Define the order of optional dependency sections
-        optional_order = ['deploy', 'local', 'couchbase', 'cassio', 'postgresql']
-        
-        # First add the ordered sections
-        for env in optional_order:
-            if env in versions_info['optional_dependencies']:
-                packages = versions_info['optional_dependencies'][env]
-                if packages:  # Only show environments with packages
-                    md_content.extend([
-                        f"\n### {env}",
-                        "| Package | Version |",
-                        "| ------- | ------- |"
-                    ])
-                    for package in packages:
-                        if ">=" in package or "<=" in package or "==" in package or "~=" in package:
-                            package_name = re.split(r'>=|<=|==|~=', package)[0]
-                            version_spec = package[len(package_name):]
-                            md_content.append(f"| {package_name} | {parse_version_info(version_spec)} |")
-                        else:
-                            md_content.append(f"| {package} | any |")
-        
-        # Then add any remaining sections that aren't in the predefined order
-        for env in sorted(set(versions_info['optional_dependencies'].keys()) - set(optional_order)):
-            packages = versions_info['optional_dependencies'][env]
-            if packages and not any(p.startswith(('src/', 'tests', '*/', 'io"', 'ALL', 'RUF', 'C90', 'pydantic')) for p in packages):
-                md_content.extend([
-                    f"\n### {env}",
-                    "| Package | Version |",
-                    "| ------- | ------- |"
-                ])
-                for package in packages:
-                    if ">=" in package or "<=" in package or "==" in package or "~=" in package:
-                        package_name = re.split(r'>=|<=|==|~=', package)[0]
-                        version_spec = package[len(package_name):]
-                        md_content.append(f"| {package_name} | {parse_version_info(version_spec)} |")
-                    else:
-                        md_content.append(f"| {package} | any |")
+                # Skip packages with invalid version formats
+                if '[' in package or '[' in version:
+                    continue
+                clean_version = sanitize_version(version)
+                # Add backticks around version numbers
+                md_content.append("| " + package + " | `" + clean_version + "` |")
     
     return "\n".join(md_content)
 
 def main():
-    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    uv_lock_path = Path(__file__).parent.parent / "uv.lock"
     output_path = Path(__file__).parent.parent / "docs/docs/Support/supported-software.md"
     
-    if not pyproject_path.exists():
-        print(f"Error: Could not find pyproject.toml at {pyproject_path}")
+    if not uv_lock_path.exists():
+        print(f"Error: Could not find uv.lock at {uv_lock_path}")
         return
     
-    versions_info = get_package_versions(pyproject_path)
+    versions_info = get_package_versions(uv_lock_path)
     markdown_content = generate_markdown(versions_info)
     
     # Ensure the directory exists
