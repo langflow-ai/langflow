@@ -470,7 +470,7 @@ class NvidiaCustomizerComponent(Component):
             if response.status_code == success_status_code:
                 logger.info("Dataset uploaded successfully in %s chunks", self.chunk_number)
             else:
-                logger.warning("Failed to upload files. Status code: %s", self.chunk_number, response.status_code)
+                logger.warning("Failed to upload files. Status code: %s", response.status_code)
                 response.raise_for_status()
 
             logger.info("All data has been processed and uploaded successfully.")
