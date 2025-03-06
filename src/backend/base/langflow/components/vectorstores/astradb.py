@@ -93,10 +93,10 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                             ),
                             "02_embedding_generation_provider": DropdownInput(
                                 name="embedding_generation_provider",
-                                display_name="Embedding generation method", 
+                                display_name="Embedding generation method",
                                 info="Provider to use for generating embeddings.",
                                 real_time_refresh=True,
-                                helper_text="To create collections with more embedding provider options, go to <a class=\"underline\" href=\"https://astra.datastax.com/\" target=\" _blank\" rel=\"noopener noreferrer\">your database in Astra DB</a>", # TODO: Add db-link
+                                helper_text='To create collections with more embedding provider options, go to <a class="underline" href="https://astra.datastax.com/" target=" _blank" rel="noopener noreferrer">your database in Astra DB</a>',  # TODO: Add db-link
                                 required=True,
                                 options=[],
                             ),
