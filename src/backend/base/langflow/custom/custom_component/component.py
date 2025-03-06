@@ -9,6 +9,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
 
+from langflow.schema.dataframe import DataFrame
 import nanoid
 import yaml
 from langchain_core.tools import StructuredTool
@@ -1086,7 +1087,7 @@ class Component(CustomComponent):
         """Extract the first tag from each tool's metadata."""
         return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
 
-    def _update_tools_with_metadata(self, tools: list[Tool], metadata: list[dict]) -> list[Tool]:
+    def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
         """Update tools with provided metadata."""
         component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
