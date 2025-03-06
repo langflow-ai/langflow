@@ -96,6 +96,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 display_name="Embedding generation method",
                                 info="Provider to use for generating embeddings.",
                                 real_time_refresh=True,
+                                helper_text="To create collections with more embedding provider options, go to <a href="db-link">your database in Astra DB</a>", # Add correct link
                                 required=True,
                                 options=[],
                             ),
