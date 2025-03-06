@@ -67,21 +67,19 @@ class RunResponse(BaseModel):
         # Serialize all the outputs if they are base models
         serialized = {"session_id": self.session_id, "outputs": []}
         if self.outputs:
-            serialized_outputs = []
-            for output in self.outputs:
-                if isinstance(output, BaseModel) and not isinstance(output, RunOutputs):
-                    serialized_outputs.append(output.model_dump(exclude_none=True))
-                else:
-                    serialized_outputs.append(output)
-            serialized["outputs"] = serialized_outputs
+            try:
+                serialized["outputs"] = [
+                    output.model_dump(exclude_none=True)
+                    if isinstance(output, BaseModel) and not isinstance(output, RunOutputs)
+                    else output
+                    for output in self.outputs
+                ]
+                jsonable_encoder(serialized)
+            except Exception as exc:
+                import pdb
 
-        try:
-            jsonable_encoder(serialized)
-        except Exception as exc:
-            import pdb
-
-            pdb.set_trace()
-            print(exc)
+                pdb.set_trace()
+                print(exc)
         return serialized
 
 
