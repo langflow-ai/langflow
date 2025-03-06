@@ -125,7 +125,7 @@ const TableComponent = forwardRef<
     const [columnStateChange, setColumnStateChange] = useState(false);
     // Only use visible columns for the store reference
     const storeReference = props.columnDefs
-      .filter(col => !col.hide)
+      .filter((col) => !col.hide)
       .map((e) => e.headerName)
       .join("_");
 
@@ -236,10 +236,10 @@ const TableComponent = forwardRef<
             suppressColumnsToolPanel: true, // Don't show hidden columns in tool panel
           }}
           animateRows={false}
-          gridOptions={{ 
-            colResizeDefault: "shift", 
+          gridOptions={{
+            colResizeDefault: "shift",
             suppressColumnVirtualisation: false, // Enable column virtualization for better performance
-            ...props.gridOptions 
+            ...props.gridOptions,
           }}
           onColumnResized={onColumnResized}
           columnDefs={colDef}
