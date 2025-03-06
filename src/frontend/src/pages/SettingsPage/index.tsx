@@ -38,7 +38,17 @@ export default function SettingsPage(): JSX.Element {
 
   sidebarNavItems.push(
     {
-      title: "Global Variables",
+      title: "Subscription",
+      href: "/settings/subscription",
+      icon: (
+        <ForwardedIconComponent
+          name="Store"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
+      title: "Variables",
       href: "/settings/global-variables",
       icon: (
         <ForwardedIconComponent
@@ -73,21 +83,11 @@ export default function SettingsPage(): JSX.Element {
   if (!ENABLE_DATASTAX_LANGFLOW) {
     const langflowItems = [
       {
-        title: "Langflow API Keys",
+        title: "API Keys",
         href: "/settings/api-keys",
         icon: (
           <ForwardedIconComponent
             name="Key"
-            className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
-          />
-        ),
-      },
-      {
-        title: "Langflow Store",
-        href: "/settings/store",
-        icon: (
-          <ForwardedIconComponent
-            name="Store"
             className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
           />
         ),
