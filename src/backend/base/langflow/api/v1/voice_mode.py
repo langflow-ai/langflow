@@ -20,7 +20,7 @@ from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.chat import build_flow
+from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.logging import logger
 from langflow.services.auth.utils import get_current_user_by_jwt
@@ -34,15 +34,17 @@ from langflow.utils.voice_utils import (
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
-SILENCE_THRESHOLD = 0.5
-PREFIX_PADDING_MS = 300
-SILENCE_DURATION_MS = 500
+SILENCE_THRESHOLD = 0.1
+PREFIX_PADDING_MS = 100
+SILENCE_DURATION_MS = 100
 SESSION_INSTRUCTIONS = (
     "Converse with the user to assist with their question. "
     "When appropriate, call the execute_flow function to assist with the user's question "
     "as the input parameter and use that to craft your responses. "
-    "Always tell the user before you call a function to assist with their question. "
-    "And let them know what it does."
+    "Always let the user know before you call a function that you will be doing so. "
+    "Once the function responds make sure to update the user with the required information."
+    "If the execute_flow function failed to get a response for a certain query, but the user asks again, run it again"
+    "When encountering URLs, use them in tools, access, and process their content as needed, but do not read the URLs themselves aloud."
 )
 
 use_elevenlabs = False
@@ -52,11 +54,6 @@ elevenlabs_client = None
 elevenlabs_key = None
 
 barge_in_enabled = False
-
-
-async def safe_build_flow(*args, **kwargs):
-    # Offload the potentially blocking build_flow call
-    return await asyncio.to_thread(build_flow, *args, **kwargs)
 
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
@@ -130,19 +127,20 @@ async def handle_function_call(
     background_tasks: BackgroundTasks,
     current_user: CurrentActiveUser,
     session: DbSession,
+    conversation_id: str,
 ):
     try:
-        conversation_id = str(uuid4())
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
         )
-        response = await build_flow(
+        response = await build_flow_and_stream(
             flow_id=UUID(flow_id),
             inputs=input_request,
             background_tasks=background_tasks,
             current_user=current_user,
         )
+
         result = ""
         async for line in response.body_iterator:
             if not line:
@@ -170,7 +168,8 @@ async def handle_function_call(
         await openai_ws.send(json.dumps(function_output))
         await openai_ws.send(json.dumps({"type": "response.create"}))
     except Exception as e:
-        logger.error(f"Error executing flow: {e!s}")
+        trace = traceback.format_exc()
+        logger.error(f"Error executing flow: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -363,8 +362,8 @@ async def flow_as_tool_websocket(
 
             # Create the synchronous generator from the sync queue.
             sync_gen = sync_text_chunker(sync_q, timeout=0.3)
-            eleven_client = await get_or_create_elevenlabs_client(current_user.id, session)
-            if eleven_client is None:
+            elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
+            if elevenlabs_client is None:
                 return
             # Capture the current event loop to schedule send operations.
             main_loop = asyncio.get_running_loop()
@@ -376,7 +375,7 @@ async def flow_as_tool_websocket(
 
                 async def run_tts():
                     try:
-                        audio_stream = eleven_client.generate(
+                        audio_stream = elevenlabs_client.generate(
                             voice=elevenlabs_voice,
                             output_format="pcm_24000",
                             text=sync_gen,  # synchronous generator expected by ElevenLabs
@@ -414,8 +413,9 @@ async def flow_as_tool_websocket(
                         if not base64_data:
                             continue
                         await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
-                        await vad_queue.put(base64_data)
-                    if msg.get("type") == "elevenlabs.config":
+                        if barge_in_enabled:
+                            await vad_queue.put(base64_data)
+                    elif msg.get("type") == "elevenlabs.config":
                         logger.info(f"elevenlabs.config {msg}")
                         use_elevenlabs = msg["enabled"]
                         elevenlabs_voice = msg["voice_id"]
@@ -453,11 +453,16 @@ async def flow_as_tool_websocket(
             nonlocal bot_speaking_flag, text_delta_queue, text_delta_task
             function_call = None
             function_call_args = ""
+            conversation_id = str(uuid4())
             try:
                 while True:
                     data = await openai_ws.recv()
                     event = json.loads(data)
                     event_type = event.get("type")
+
+                    # forward all openai events to the client
+                    await client_websocket.send_text(data)
+
                     if event_type == "response.text.delta":
                         delta = event.get("delta", "")
                         await text_delta_queue.put(delta)
@@ -499,6 +504,7 @@ async def flow_as_tool_websocket(
                                     background_tasks,
                                     current_user,
                                     session,
+                                    conversation_id,
                                 )
                             )
                             function_call = None
@@ -552,123 +558,6 @@ async def flow_as_tool_websocket(
             forward_to_openai(),
             forward_to_client(),
         )
-
-
-@router.websocket("/ws/{flow_id}")
-async def flow_audio_websocket(
-    client_websocket: WebSocket,
-    flow_id: str,
-    background_tasks: BackgroundTasks,
-    session: DbSession,
-):
-    """WebSocket endpoint for streaming events to flow components."""
-    current_user = await get_current_user_by_jwt(client_websocket.cookies.get("access_token_lf"), session)
-    await client_websocket.accept()
-    websocket_session_id = str(uuid4())
-    try:
-        stmt = select(Flow).where(Flow.id == UUID(flow_id))
-        result = await session.exec(stmt)
-        flow = result.scalar_one_or_none()
-        if not flow:
-            error_message = f"Flow with id {flow_id} not found"
-            raise ValueError(error_message)
-        chat_input_id = None
-        for node in flow.data.get("nodes", []):
-            if node.get("data", {}).get("type") == "ChatInput":
-                chat_input_id = node.get("id")
-                logger.debug(f"Found ChatInput component with ID: {chat_input_id}")
-                break
-        if not chat_input_id:
-            await client_websocket.close(code=4004, reason="No ChatInput component found in flow")
-            return
-        event_queue = asyncio.Queue()
-
-        async def process_events():
-            last_result_time = datetime.now()
-            while True:
-                try:
-                    event = await event_queue.get()
-                    if event is None:
-                        break
-                    input_request = InputValueRequest(
-                        input_value=json.dumps(event),
-                        components=[chat_input_id],
-                        type="any",
-                        session=websocket_session_id,
-                    )
-                    try:
-                        response = await safe_build_flow(
-                            flow_id=UUID(flow_id),
-                            inputs=input_request,
-                            background_tasks=background_tasks,
-                            current_user=current_user,
-                        )
-                        result = ""
-                        async for line in response.body_iterator:
-                            if not line:
-                                continue
-                            event_data = json.loads(line)
-                            if event_data.get("event") == "end_vertex":
-                                text_part = (
-                                    event_data.get("data", {})
-                                    .get("build_data", "")
-                                    .get("data", {})
-                                    .get("results", {})
-                                    .get("message", {})
-                                    .get("transcript", {})
-                                    .get("raw", {})
-                                    .get("text", "")
-                                )
-                                result += text_part
-                        print(f"result {result}")
-                        current_time = datetime.now()
-                        duration = (current_time - last_result_time).total_seconds()
-                        print(f"Time since last result: {duration:.2f}s")
-                        print(f"queue length {event_queue.qsize()}")
-                        last_result_time = current_time
-                    except Exception as e:
-                        logger.error(f"Error processing event through flow: {e!s}")
-                        try:
-                            await client_websocket.send_json(
-                                {"type": "error", "message": f"Flow processing error: {e!s}"}
-                            )
-                        except WebSocketDisconnect:
-                            break
-                except Exception as e:
-                    logger.error(f"Error input request: {e!s}")
-                finally:
-                    event_queue.task_done()
-
-        process_task = asyncio.create_task(process_events())
-        try:
-            while True:
-                message = await client_websocket.receive_json()
-                event_type = message.get("type")
-                if event_type == "end_stream":
-                    logger.debug("Client requested end of stream")
-                    break
-                logger.trace(f"Received event type: {event_type}")
-                await event_queue.put(message)
-        except WebSocketDisconnect:
-            logger.debug("Client disconnected")
-        except Exception as e:
-            logger.error(f"Error receiving message: {e!s}")
-            try:
-                await client_websocket.send_json({"type": "error", "message": str(e)})
-            except WebSocketDisconnect:
-                pass
-    except Exception as e:
-        logger.error(f"WebSocket error: {e!s}")
-        logger.error(traceback.format_exc())
-    finally:
-        if "process_task" in locals():
-            await event_queue.put(None)
-            await process_task
-        try:
-            await client_websocket.close()
-        except:
-            pass
-        logger.debug(f"WebSocket connection closed for flow {flow_id}")
 
 
 @router.get("/elevenlabs/voice_ids")
@@ -727,4 +616,3 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
             elevenlabs_client = ElevenLabs(api_key=elevenlabs_key)
     
     return elevenlabs_client
-
