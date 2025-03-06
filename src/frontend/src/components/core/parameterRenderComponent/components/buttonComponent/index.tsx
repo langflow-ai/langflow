@@ -14,8 +14,8 @@ type ButtonComponentProps = {
 
 const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
   const [open, setOpen] = useState(false);
-
-  const actionData = [
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const initialActionData = [
     {
       name: "Accept a repository invitation",
       id: 1,
@@ -29,6 +29,8 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
       id: 3,
     },
   ];
+
+  const [actionData, setActionData] = useState(initialActionData);
 
   return (
     <>
@@ -48,13 +50,19 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
               />
             </div>
           </Button>
-          <Button
-            size="icon"
-            className="h-9 w-10 bg-yellow-600 hover:bg-yellow-800"
-            onClick={() => setOpen(true)}
-          >
-            <ForwardedIconComponent name="lock" className="h-5 w-5" />
-          </Button>
+          {!isAuthenticated && (
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-9 w-10"
+              onClick={() => setOpen(true)}
+            >
+              <ForwardedIconComponent
+                name="unplug"
+                className="text-amber h-5 w-5"
+              />
+            </Button>
+          )}
         </div>
       ) : (
         <div className="flex w-full flex-col gap-2">
@@ -71,7 +79,11 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
             </Button>
           </div>
           <div className="flex w-full flex-col">
-            <ReactSortable list={actionData} className="flex w-full flex-col">
+            <ReactSortable
+              list={actionData}
+              setList={setActionData}
+              className="flex w-full flex-col"
+            >
               {actionData.map((data, index) => (
                 <li
                   key={data?.id}
