@@ -1,22 +1,23 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from loguru import logger
 from sqlmodel import select
 
 from langflow.services.base import Service
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.subscription.model import Subscription
 from langflow.services.database.models.task.model import TaskCreate
+from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from langflow.base.triggers.model import BaseTriggerComponent
-    from langflow.services.database.models.flow.model import Flow
     from langflow.services.task_orchestration.service import TaskOrchestrationService
     from langflow.services.triggers.base_trigger import BaseTrigger
 
@@ -57,13 +58,13 @@ class TriggerService(Service):
         while True:
             try:
                 await self.check_and_trigger_events()
-                await asyncio.sleep(60)  # Check every minute
+                await asyncio.sleep(10)  # Check every minute
             except asyncio.CancelledError:
                 logger.info("Trigger worker cancelled")
                 break
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Error in trigger worker: {e}")
-                await asyncio.sleep(60)  # Wait before retrying
+                await asyncio.sleep(10)  # Wait before retrying
 
     async def create_subscriptions_for_flow(self, flow: Flow, session: AsyncSession) -> None:
         """Create subscriptions based on triggers found in the flow.
@@ -133,9 +134,10 @@ class TriggerService(Service):
 
         async with session_scope() as session:
             try:
-                # Get all subscriptions
-                result = await session.exec(select(Subscription))
-                subscriptions = result.scalars().all()
+                # Get all subscriptions that point to existing flows
+                query = select(Subscription).join(Flow, Flow.id == Subscription.flow_id)
+                result = await session.exec(query)
+                subscriptions = result.all()
 
                 for subscription in subscriptions:
                     try:
@@ -150,7 +152,8 @@ class TriggerService(Service):
 
                         # Create tasks for each event
                         for event in events:
-                            await self._process_event(event)
+                            event["subscription_id"] = subscription.id
+                            await self._process_event(event, subscription)
 
                         # Update the subscription in the database
                         session.add(subscription)
@@ -162,35 +165,33 @@ class TriggerService(Service):
                 await session.rollback()
                 logger.error(f"Error checking for events: {e}")
 
-    async def _process_event(self, event: dict[str, Any]) -> None:
+    async def _process_event(self, event: dict[str, Any], subscription: Subscription | None = None) -> None:
         """Process a single event.
 
         Args:
             event: The event to process
+            subscription: The subscription to process the event for
         """
         try:
-            subscription_id = event.get("subscription_id")
-            if not subscription_id:
-                logger.warning("Event has no subscription_id, skipping")
-                return
-
-            # Use the session_scope context manager instead of direct get_session call
-            from uuid import UUID
-
-            from sqlalchemy.future import select
-
-            from langflow.services.deps import session_scope
-
-            async with session_scope() as session:
-                result = await session.exec(select(Subscription).where(Subscription.id == UUID(subscription_id)))
-                subscription = result.scalars().first()
-
-                if not subscription:
-                    logger.warning(f"Subscription {subscription_id} not found, skipping event")
+            if not subscription:
+                subscription_id = event.get("subscription_id")
+                if not subscription_id:
+                    logger.warning("Event has no subscription_id, skipping")
                     return
 
-                # Create a task for the flow
-                await self._create_task_from_event(subscription.flow_id, event)
+                # Use the session_scope context manager instead of direct get_session call
+                async with session_scope() as session:
+                    if isinstance(subscription_id, str):
+                        subscription_id = UUID(subscription_id)
+                    result = await session.exec(select(Subscription).where(Subscription.id == subscription_id))
+                    subscription = result.first()
+
+                    if not subscription:
+                        logger.warning(f"Subscription {subscription_id} not found, skipping event")
+                        return
+
+            # Create a task for the flow
+            await self._create_task_from_event(subscription.flow_id, event)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Error processing event: {e}")
 
@@ -204,12 +205,19 @@ class TriggerService(Service):
             The trigger class or None if not found
         """
         # Import all trigger components
-        from langflow.components.triggers import gmail_inbox_trigger, schedule_trigger
+        from langflow.components.triggers import (
+            gmail_inbox_trigger,
+            local_file_watcher,
+            schedule_trigger,
+            task_category_status_trigger,
+        )
 
         # Map of event types to trigger classes
         event_type_map = {
             "gmail_message_received": gmail_inbox_trigger.GmailTrigger,
             "schedule_triggered": schedule_trigger.ScheduleTrigger,
+            "local_file_updated": local_file_watcher.LocalFileWatcherTrigger,
+            "task_category_status_updated": task_category_status_trigger.TaskCategoryStatusTrigger,
         }
 
         return event_type_map.get(subscription.event_type)
@@ -233,6 +241,7 @@ class TriggerService(Service):
                 author_id=flow_id,  # Using flow_id as author_id
                 assignee_id=flow_id,  # Using flow_id as assignee_id
                 category="trigger",  # Using "trigger" as the category
+                attachments=[json.dumps(event, default=str)],
             )
 
             await self.task_orchestration_service.create_task(task_create)
@@ -351,7 +360,7 @@ class TriggerService(Service):
                     # Get the trigger instance
                     trigger = component_instance.get_trigger_instance()
                     triggers.append(trigger)
-                    logger.debug(f"Found trigger in flow: {node_type}")
+                    logger.debug(f"Found trigger in flow: {node_id}")
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Error creating trigger from node {node.get('id', '')}: {e}")
                 import traceback
