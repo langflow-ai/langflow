@@ -41,9 +41,10 @@ SESSION_INSTRUCTIONS = (
     "Converse with the user to assist with their question. "
     "When appropriate, call the execute_flow function to assist with the user's question "
     "as the input parameter and use that to craft your responses. "
-    "Always tell the user before you call a function to assist with their question. "
+    "Always let the user know before you call a function that you will be doing so. "
     "Once the function responds make sure to update the user with the required information."
     "If the execute_flow function failed to get a response for a certain query, but the user asks again, run it again"
+    "When encountering URLs, use them in tools, access, and process their content as needed, but do not read the URLs themselves aloud."
 )
 
 use_elevenlabs = False
