@@ -9,7 +9,6 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
 
-from langflow.schema.dataframe import DataFrame
 import nanoid
 import yaml
 from langchain_core.tools import StructuredTool
@@ -31,6 +30,7 @@ from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
