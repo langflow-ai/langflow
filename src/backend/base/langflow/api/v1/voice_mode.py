@@ -2,24 +2,21 @@ import asyncio
 import base64
 import json
 import os
-import uuid
 
 # For sync queue and thread
 import queue
 import threading
 import traceback
+import uuid
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from langflow.memory import aadd_messagetables
-from langflow.schema.properties import Properties
-from langflow.services.database.models.message.model import MessageTable
 import numpy as np
 import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs.client import ElevenLabs
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Security
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
@@ -27,15 +24,17 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.logging import logger
-from langflow.services.auth.utils import get_current_user_by_jwt, api_key_security, api_key_query, api_key_header
+from langflow.memory import aadd_messagetables
+from langflow.schema.properties import Properties
+from langflow.services.auth.utils import api_key_header, api_key_query, api_key_security, get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_variable_service, session_scope
 from langflow.utils.voice_utils import (
     BYTES_PER_24K_FRAME,
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
-from fastapi import Security
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -232,13 +231,8 @@ async def flow_as_tool_websocket(
     else:
         current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
         if current_user is None:
-
             await client_websocket.send_json(
-                {
-                    "type": "error",
-                    "code": "langflow_auth",
-                    "message": "You must pass a valid Langflow token or cookie."
-                }
+                {"type": "error", "code": "langflow_auth", "message": "You must pass a valid Langflow token or cookie."}
             )
 
     variable_service = get_variable_service()
@@ -462,11 +456,11 @@ async def flow_as_tool_websocket(
                             },
                         }
                         await openai_ws.send(json.dumps(session_update))
-                        #response = {
+                        # response = {
                         #    "type": "session.update",
                         #    "session":
-                        #}
-                        #await openai_ws.send(json.dumps(response))
+                        # }
+                        # await openai_ws.send(json.dumps(response))
                     else:
                         await openai_ws.send(message_text)
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
@@ -595,17 +589,19 @@ async def get_elevenlabs_voice_ids(
         elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
         if elevenlabs_client is None:
             return {"error": "ElevenLabs API key not found or invalid"}
-        
+
         voices_response = elevenlabs_client.voices.get_all()
         voices = voices_response.voices
-        
+
         voice_list = []
         for voice in voices:
-            voice_list.append({
-                "voice_id": voice.voice_id,
-                "name": voice.name,
-            })
-        
+            voice_list.append(
+                {
+                    "voice_id": voice.voice_id,
+                    "name": voice.name,
+                }
+            )
+
         return voice_list
     except Exception as e:
         logger.error(f"Error fetching ElevenLabs voices: {e}")
@@ -615,7 +611,7 @@ async def get_elevenlabs_voice_ids(
 async def get_or_create_elevenlabs_client(user_id=None, session=None):
     """Get or create an ElevenLabs client with the API key."""
     global elevenlabs_key, elevenlabs_client
-    
+
     if elevenlabs_client is None:
         if elevenlabs_key is None and user_id and session:
             variable_service = get_variable_service()
@@ -635,7 +631,7 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
                 logger.error(f"Exception getting ElevenLabs API key: {e}")
                 print(traceback.format_exc())
                 return None
-        
+
         if elevenlabs_key:
             elevenlabs_client = ElevenLabs(api_key=elevenlabs_key)
     
