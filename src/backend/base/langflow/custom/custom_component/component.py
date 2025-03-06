@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
 
 import nanoid
-import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
@@ -1067,7 +1066,6 @@ class Component(CustomComponent):
         tools = await self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-
             return self._update_tools_with_metadata(tools, self.tools_metadata)
         return tools
 
@@ -1083,7 +1081,6 @@ class Component(CustomComponent):
         component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
 
-
     def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
         """Extract the first tag from each tool's metadata."""
         return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
@@ -1093,14 +1090,12 @@ class Component(CustomComponent):
         component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
-
-
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
         return old_tags != new_tags
 
     async def _build_tools_metadata_input(self):
         tools = await self.to_toolkit()
-            # Always use the latest tool data
+        # Always use the latest tool data
         tool_data = [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
