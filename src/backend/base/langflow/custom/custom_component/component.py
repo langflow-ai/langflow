@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
 
 import nanoid
+import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
@@ -1098,7 +1099,13 @@ class Component(CustomComponent):
 
     async def _handle_existing_tools_metadata(self, tools: list[Tool], new_tools_metadata: list[dict]) -> list[Tool]:
         """Handle tools metadata when TOOLS_METADATA_INPUT_NAME exists."""
-        old_tools_metadata = self.tools_metadata
+        # check if the tools_metadata is a list of dicts if not if it is a  use get_tools_metadata_dictionary
+        old_tools_metadata = (
+            self.tools_metadata.to_dict(orient="records")
+            if isinstance(self.tools_metadata, pd.DataFrame)
+            else self.tools_metadata
+        )
+
         if not old_tools_metadata:
             self.tools_metadata = new_tools_metadata
             return self._update_tools_with_metadata(tools, new_tools_metadata)
