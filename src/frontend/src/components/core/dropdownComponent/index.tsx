@@ -66,7 +66,8 @@ export default function Dropdown({
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { nodeClass, nodeId, handleNodeClass, tooltip } = baseInputProps;
+  const { nodeClass, nodeId, handleNodeClass, tooltip, helperText } =
+    baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
@@ -161,58 +162,65 @@ export default function Dropdown({
   );
 
   const renderTriggerButton = () => (
-    <ShadTooltip content={!value ? (tooltip as string) : ""}>
-      <PopoverTrigger asChild>
-        <Button
-          disabled={
-            disabled ||
-            (Object.keys(validOptions).length === 0 &&
-              !combobox &&
-              !dialogInputs?.fields?.data?.node?.template)
-          }
-          variant="primary"
-          size="xs"
-          role="combobox"
-          ref={refButton}
-          aria-expanded={open}
-          data-testid={id}
-          className={cn(
-            editNode
-              ? "dropdown-component-outline input-edit-node"
-              : "dropdown-component-false-outline py-2",
-            "w-full justify-between font-normal",
-          )}
-        >
-          <span
-            className="flex items-center gap-2 truncate"
-            data-testid={`value-dropdown-${id}`}
-          >
-            {optionsMetaData?.[
-              filteredOptions.findIndex((option) => option === value)
-            ]?.icon && (
-              <ForwardedIconComponent
-                name={
-                  optionsMetaData?.[
-                    filteredOptions.findIndex((option) => option === value)
-                  ]?.icon
-                }
-                className="h-4 w-4"
-              />
-            )}
-            {value && filteredOptions.includes(value) ? value : placeholderName}{" "}
-          </span>
-          <ForwardedIconComponent
-            name="ChevronsUpDown"
+    <div className="flex w-full flex-col gap-2">
+      <ShadTooltip content={!value ? (tooltip as string) : ""}>
+        <PopoverTrigger asChild>
+          <Button
+            disabled={
+              disabled ||
+              (Object.keys(validOptions).length === 0 &&
+                !combobox &&
+                !dialogInputs?.fields?.data?.node?.template)
+            }
+            variant="primary"
+            size="xs"
+            role="combobox"
+            ref={refButton}
+            aria-expanded={open}
+            data-testid={id}
             className={cn(
-              "ml-2 h-4 w-4 shrink-0 text-foreground",
-              disabled
-                ? "hover:text-placeholder-foreground"
-                : "hover:text-foreground",
+              editNode
+                ? "dropdown-component-outline input-edit-node"
+                : "dropdown-component-false-outline py-2",
+              "w-full justify-between font-normal",
             )}
-          />
-        </Button>
-      </PopoverTrigger>
-    </ShadTooltip>
+          >
+            <span
+              className="flex items-center gap-2 truncate"
+              data-testid={`value-dropdown-${id}`}
+            >
+              {optionsMetaData?.[
+                filteredOptions.findIndex((option) => option === value)
+              ]?.icon && (
+                <ForwardedIconComponent
+                  name={
+                    optionsMetaData?.[
+                      filteredOptions.findIndex((option) => option === value)
+                    ]?.icon
+                  }
+                  className="h-4 w-4"
+                />
+              )}
+              {value && filteredOptions.includes(value)
+                ? value
+                : placeholderName}{" "}
+            </span>
+            <ForwardedIconComponent
+              name="ChevronsUpDown"
+              className={cn(
+                "ml-2 h-4 w-4 shrink-0 text-foreground",
+                disabled
+                  ? "hover:text-placeholder-foreground"
+                  : "hover:text-foreground",
+              )}
+            />
+          </Button>
+        </PopoverTrigger>
+      </ShadTooltip>
+      {helperText && (
+        <span className="text-xs text-muted-foreground">{helperText}</span>
+      )}
+    </div>
   );
 
   const renderSearchInput = () => (

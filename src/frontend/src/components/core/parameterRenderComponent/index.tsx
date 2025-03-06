@@ -65,6 +65,7 @@ export function ParameterRenderComponent({
       nodeClass,
       handleNodeClass,
       readonly: templateData.readonly,
+      helperText: templateData?.helper_text,
       placeholder,
       isToolMode,
       nodeId,

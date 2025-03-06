@@ -14,6 +14,7 @@ export type BaseInputProps<valueType = any> = {
   handleNodeClass?: (value: any, code?: string, type?: string) => void;
   readonly?: boolean;
   placeholder?: string;
+  helperText?: string;
   isToolMode?: boolean;
   tooltip?: string;
   metadata?: any;
