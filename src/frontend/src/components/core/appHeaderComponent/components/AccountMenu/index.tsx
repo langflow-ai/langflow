@@ -1,4 +1,6 @@
 import { useLogout } from "@/controllers/API/queries/auth";
+import CustomFeatureFlagDialog from "@/customization/components/custom-feature-flag-dialog";
+import CustomFeatureFlagMenuItems from "@/customization/components/custom-feature-flag-menu-items";
 import { CustomFeedbackDialog } from "@/customization/components/custom-feedback-dialog";
 import { CustomHeaderMenuItemsTitle } from "@/customization/components/custom-header-menu-items-title";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
@@ -19,8 +21,6 @@ import {
 } from "../HeaderMenu";
 import { ProfileIcon } from "../ProfileIcon";
 import ThemeButtons from "../ThemeButtons";
-import CustomFeatureFlagMenuItems from "@/customization/components/custom-feature-flag-menu-items";
-import CustomFeatureFlagDialog from "@/customization/components/custom-feature-flag-dialog";
 
 export const AccountMenu = () => {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
