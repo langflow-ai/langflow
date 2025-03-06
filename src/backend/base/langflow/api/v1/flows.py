@@ -14,6 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlalchemy import paginate
+from loguru import logger
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -25,7 +26,7 @@ from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.settings.service import SettingsService
 
 # build router
@@ -120,8 +121,13 @@ async def create_flow(
     flow: FlowCreate,
     current_user: CurrentActiveUser,
 ):
+    """Create a new flow."""
     try:
-        db_flow = await _new_flow(session=session, flow=flow, user_id=current_user.id)
+        db_flow = await _new_flow(
+            session=session,
+            flow=flow,
+            user_id=current_user.id,
+        )
         await session.commit()
         await session.refresh(db_flow)
     except Exception as e:
@@ -139,6 +145,14 @@ async def create_flow(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    try:
+        # Create subscriptions for any triggers in the flow
+        trigger_service = get_trigger_service()
+        await trigger_service.create_subscriptions_for_flow(db_flow, session)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error creating subscriptions for flow: {e}")
+
     return db_flow
 
 
@@ -296,6 +310,12 @@ async def update_flow(
         await session.commit()
         await session.refresh(db_flow)
 
+        try:
+            trigger_service = get_trigger_service()
+            await trigger_service.update_subscriptions_for_flow(db_flow, session)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error updating subscriptions for flow: {e}")
+
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -333,6 +353,14 @@ async def delete_flow(
         raise HTTPException(status_code=404, detail="Flow not found")
     await cascade_delete_flow(session, flow.id)
     await session.commit()
+
+    # Delete subscriptions for the flow
+    try:
+        trigger_service = get_trigger_service()
+        await trigger_service._delete_subscriptions_for_flow(flow_id, session)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error deleting subscriptions for flow: {e}")
+
     return {"message": "Flow deleted successfully"}
 
 
