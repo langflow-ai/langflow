@@ -623,14 +623,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
 
         # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "04_dimension"
-        ]["value"] = 1024 if embedding_provider != "Bring your own" else None  # TODO: Support other providers
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
+            "value"
+        ] = 1024 if embedding_provider != "Bring your own" else None  # TODO: Support other providers
 
         # If the provider is not Bring your own, disable the dimension field
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "04_dimension"
-        ]["disabled"] = embedding_provider != "Bring your own"
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
+            "disabled"
+        ] = embedding_provider != "Bring your own"
 
     def reset_collection_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
