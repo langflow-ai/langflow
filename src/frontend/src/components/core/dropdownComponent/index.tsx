@@ -7,7 +7,13 @@ import { getStatusColor } from "@/utils/stringManipulation";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  ChangeEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { DropDownComponent } from "../../../types/components";
 import {
   cn,
@@ -32,6 +38,10 @@ import {
   PopoverTrigger,
 } from "../../ui/popover";
 import { BaseInputProps } from "../parameterRenderComponent/types";
+
+const convertStringToHTML = (htmlString: string) => {
+  return <span dangerouslySetInnerHTML={{ __html: htmlString }} />;
+};
 
 export default function Dropdown({
   disabled,
@@ -217,8 +227,11 @@ export default function Dropdown({
           </Button>
         </PopoverTrigger>
       </ShadTooltip>
+
       {helperText && (
-        <span className="text-xs text-muted-foreground">{helperText}</span>
+        <span className="text-xs text-muted-foreground">
+          {convertStringToHTML(helperText)}
+        </span>
       )}
     </div>
   );

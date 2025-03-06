@@ -70,7 +70,7 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
     input_types: list[str] | None = None
     """List of input types for the handle when the field has more than one type. Default is an empty list."""
 
-    helper_text: str | None = ""
+    helper_text: str | None = None
     """Adds a helper text to the field. Defaults to an empty string."""
 
     dynamic: bool = False
