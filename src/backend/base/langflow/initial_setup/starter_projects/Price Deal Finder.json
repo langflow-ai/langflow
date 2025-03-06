@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-6fb13",
+            "id": "AgentQL-R0YLG",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7MSQT",
+            "id": "Agent-7PMCu",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-6fb13{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-6fb13œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7MSQT{œfieldNameœ:œtoolsœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-R0YLG{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-R0YLGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-6fb13",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-6fb13œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-R0YLG",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-R0YLGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-7PMCu",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-141bi",
+            "id": "TavilySearchComponent-K4joL",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7MSQT",
+            "id": "Agent-7PMCu",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-141bi{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-141biœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7MSQT{œfieldNameœ:œtoolsœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-K4joL{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-K4joLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-141bi",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-141biœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-K4joL",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-K4joLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-7PMCu",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-X0wLK",
+            "id": "ChatInput-M0lPa",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-7MSQT",
+            "id": "Agent-7PMCu",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-X0wLK{œdataTypeœ:œChatInputœ,œidœ:œChatInput-X0wLKœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7MSQT{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7MSQTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-M0lPa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-M0lPaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7PMCu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-X0wLK",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-X0wLKœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-7MSQT",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7MSQTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-M0lPa",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-M0lPaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-7PMCu",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-7MSQT",
+            "id": "Agent-7PMCu",
             "name": "response",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-QZLoV",
+            "id": "ChatOutput-LyZb7",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,18 +108,18 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-7MSQT{œdataTypeœ:œAgentœ,œidœ:œAgent-7MSQTœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-QZLoV{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-QZLoVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-7PMCu{œdataTypeœ:œAgentœ,œidœ:œAgent-7PMCuœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-LyZb7{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-LyZb7œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-7MSQT",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-7MSQTœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-QZLoV",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-QZLoVœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-7PMCu",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-7PMCuœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-LyZb7",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-LyZb7œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-X0wLK",
+          "id": "ChatInput-M0lPa",
           "node": {
             "base_classes": [
               "Message"
@@ -147,7 +147,7 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -416,7 +416,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-X0wLK",
+        "id": "ChatInput-M0lPa",
         "measured": {
           "height": 66,
           "width": 192
@@ -430,7 +430,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-QZLoV",
+          "id": "ChatOutput-LyZb7",
           "node": {
             "base_classes": [
               "Message"
@@ -458,7 +458,7 @@
             "icon": "MessagesSquare",
             "key": "ChatOutput",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -561,7 +561,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n                return (\n                    data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n                    .applymap(lambda x: (str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x))\n                    .to_markdown(index=False)\n                )\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n\n                # Replace pipe characters to avoid markdown table issues\n                processed_data = data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n\n                processed_data = processed_data.map(\n                    lambda x: str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x\n                )\n\n                return processed_data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
               },
               "data_template": {
                 "_input_type": "MessageTextInput",
@@ -728,7 +728,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-QZLoV",
+        "id": "ChatOutput-LyZb7",
         "measured": {
           "height": 66,
           "width": 192
@@ -742,7 +742,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-141bi",
+          "id": "TavilySearchComponent-K4joL",
           "node": {
             "base_classes": [
               "Data",
@@ -768,6 +768,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -800,7 +801,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -808,7 +809,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "TAVILY_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1074,9 +1075,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-141bi",
+        "id": "TavilySearchComponent-K4joL",
         "measured": {
-          "height": 435,
+          "height": 437,
           "width": 320
         },
         "position": {
@@ -1088,13 +1089,14 @@
       },
       {
         "data": {
-          "id": "AgentQL-6fb13",
+          "description": "Uses AgentQL API to extract structured data from a given URL.",
+          "display_name": "AgentQL Query Data",
+          "id": "AgentQL-R0YLG",
           "node": {
             "base_classes": [
               "Data"
             ],
             "beta": false,
-            "category": "agentql",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Uses AgentQL API to extract structured data from a given URL.",
@@ -1110,9 +1112,7 @@
             ],
             "frozen": false,
             "icon": "AgentQL",
-            "key": "AgentQL",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1134,7 +1134,6 @@
               }
             ],
             "pinned": false,
-            "score": 7.517768383416648e-6,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -1154,7 +1153,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "AGENTQL_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1172,7 +1171,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"AgentQL Query Data\"\n    description = \"Uses AgentQL API to extract structured data from a given URL.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"AgentQL API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key. Get one at https://dev.agentql.com.\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The public URL of the webpage to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=True,\n            info=\"The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"params\": self.params,\n        }\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"AgentQL Query Data\"\n    description = \"Uses AgentQL API to extract structured data from a given URL.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"AgentQL API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key. Get one at https://dev.agentql.com.\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The public URL of the webpage to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=True,\n            info=\"The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"params\": self.params,\n        }\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
               },
               "params": {
                 "_input_type": "DictInput",
@@ -1274,37 +1273,43 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
                       "edit_mode": "popover",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
                       "edit_mode": "inline",
                       "filterable": false,
                       "formatter": "text",
+                      "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     }
                   ]
                 },
@@ -1354,9 +1359,9 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-6fb13",
+        "id": "AgentQL-R0YLG",
         "measured": {
-          "height": 497,
+          "height": 499,
           "width": 320
         },
         "position": {
@@ -1368,7 +1373,7 @@
       },
       {
         "data": {
-          "id": "Agent-7MSQT",
+          "id": "Agent-7PMCu",
           "node": {
             "base_classes": [
               "Message"
@@ -1411,7 +1416,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
-            "lf_version": "1.1.4.post1",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1525,7 +1530,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "OPENAI_API_KEY"
+                "value": ""
               },
               "code": {
                 "advanced": true,
@@ -1714,11 +1719,11 @@
                 "options": [
                   "gpt-4o-mini",
                   "gpt-4o",
+                  "gpt-4.5-preview",
                   "gpt-4-turbo",
                   "gpt-4-turbo-preview",
                   "gpt-4",
-                  "gpt-3.5-turbo",
-                  "gpt-3.5-turbo-0125"
+                  "gpt-3.5-turbo"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -2018,9 +2023,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-7MSQT",
+        "id": "Agent-7PMCu",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -2032,7 +2037,7 @@
       },
       {
         "data": {
-          "id": "note-atyJV",
+          "id": "note-1ajq3",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2044,7 +2049,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-atyJV",
+        "id": "note-1ajq3",
         "measured": {
           "height": 324,
           "width": 324
@@ -2058,7 +2063,7 @@
       },
       {
         "data": {
-          "id": "note-jHwfH",
+          "id": "note-9nOJ2",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -2071,7 +2076,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-jHwfH",
+        "id": "note-9nOJ2",
         "measured": {
           "height": 346,
           "width": 324
@@ -2085,7 +2090,7 @@
       },
       {
         "data": {
-          "id": "note-5TPRO",
+          "id": "note-JxjIs",
           "node": {
             "description": "# Price Deal Finder \n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
@@ -2096,7 +2101,7 @@
         },
         "dragging": false,
         "height": 674,
-        "id": "note-5TPRO",
+        "id": "note-JxjIs",
         "measured": {
           "height": 674,
           "width": 467
@@ -2112,7 +2117,7 @@
       },
       {
         "data": {
-          "id": "note-eqJwa",
+          "id": "note-VxmZ9",
           "node": {
             "description": "### 💡 Add your Tavily AI Search key here",
             "display_name": "",
@@ -2125,7 +2130,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-eqJwa",
+        "id": "note-VxmZ9",
         "measured": {
           "height": 324,
           "width": 344
@@ -2141,16 +2146,17 @@
       }
     ],
     "viewport": {
-      "x": 443.6808096885552,
-      "y": 80.83479654841267,
-      "zoom": 0.7762365447780835
+      "x": 636.4185821740807,
+      "y": 225.96076866418508,
+      "zoom": 1.0499010256781385
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
-  "id": "ab091b94-13c1-42af-9f9b-3689e99fb0bf",
+  "icon": "DollarSign",
+  "id": "675468b8-08ab-44b0-aef1-87d76a75570a",
   "is_component": false,
-  "last_tested_version": "1.1.5",
+  "last_tested_version": "1.2.0",
   "name": "Price Deal Finder",
   "tags": [
     "web-scraping",
