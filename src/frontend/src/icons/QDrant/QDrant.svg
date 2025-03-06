@@ -6,7 +6,7 @@
       <stop stop-color="#C91540" stop-opacity="0" offset="1"/>
     </linearGradient>
   </defs>
-  <g clip-rule="evenodd" fill-rule="evenodd" transform="matrix(1, 0, 0, 1, 168.420441, 120.02298)">
+  <g clip-rule="evenodd" fillRule="evenodd" transform="matrix(1, 0, 0, 1, 168.420441, 120.02298)">
     <path d="m103.79 140.09-3.0389-83.784-5.5036-22.089 36.735 3.8889v101.35l-22.44 12.951z" fill="#24386c"/>
     <path d="m131.98 38.1-22.44 12.96-46.308-10.158-54.203 22.069-9.0306-24.871 32.99-19.05 33-19.05 32.991 19.05z" fill="#7589be"/>
     <path d="m0 38.1 22.44 12.96 13.008 38.686 43.921 35.142-13.378 27.512-33-19.051-32.991-19.05v-76.2" fill="#b2bfe8"/>

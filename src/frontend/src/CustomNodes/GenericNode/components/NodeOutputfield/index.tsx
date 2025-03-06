@@ -382,11 +382,11 @@ function NodeOutputField({
             styleClasses="z-40"
           >
             <div className="flex items-center gap-2">
-              <OutputModal
-                disabled={!displayOutputPreview || unknownOutput}
-                nodeId={flowPoolId}
-                outputName={internalOutputName}
-              >
+                <OutputModal
+                  disabled={!displayOutputPreview || unknownOutput}
+                  nodeId={flowPoolId}
+                  outputName={internalOutputName!} // Sử dụng dấu ! để báo với TypeScript rằng giá trị không undefined
+                >
                 <InspectButton
                   disabled={!displayOutputPreview || unknownOutput}
                   displayOutputPreview={displayOutputPreview}

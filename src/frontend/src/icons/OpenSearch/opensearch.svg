@@ -2,7 +2,7 @@
      shape-rendering="geometricPrecision"
      text-rendering="geometricPrecision"
      image-rendering="optimizeQuality"
-     fill-rule="evenodd"
+     fillRule="evenodd"
      clip-rule="evenodd"
      viewBox="0 0 384 384">
   <defs>

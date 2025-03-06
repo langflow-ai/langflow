@@ -11,7 +11,13 @@ export function DefaultEdge({
   targetHandleId,
   targetX,
   targetY,
-  ...props
+  animated,
+  selectable,
+  deletable,
+  sourcePosition,
+  targetPosition,
+  pathOptions,
+  ...validDOMProps
 }: EdgeProps) {
   const getNode = useFlowStore((state) => state.getNode);
 
@@ -60,7 +66,7 @@ export function DefaultEdge({
     <BaseEdge
       path={targetHandleObject.output_types ? edgePathLoop : edgePath}
       strokeDasharray={targetHandleObject.output_types ? "5 5" : "0"}
-      {...props}
+      {...validDOMProps}
     />
   );
 }

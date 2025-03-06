@@ -3,7 +3,7 @@
 <svg version="1.0" id="katman_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 viewBox="0 0 841.89 595.28" style="enable-background:new 0 0 841.89 595.28;" xml:space="preserve">
 <style type="text/css">
-	.st0{fill-rule:evenodd;clip-rule:evenodd;fill:#505AA5;}
+	.st0{fillRule:evenodd;clip-rule:evenodd;fill:#505AA5;}
 </style>
 <path class="st0" d="M349.6,124.45c48.94-54.99,129.98-71.12,196.61-39.38c88.52,42.17,120.82,149.6,72.62,232.48L510.41,503.76
 	c-6.06,10.41-16.03,18-27.72,21.11c-11.69,3.11-24.15,1.49-34.64-4.51l131.26-225.49c34.97-60.15,11.58-138.11-52.6-168.8
