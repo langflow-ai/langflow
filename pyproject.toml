@@ -115,8 +115,8 @@ dependencies = [
     "apify-client>=1.8.1",
     "pylint>=3.3.4",
     "ruff>=0.9.7",
+    "psycopg2-binary>=2.9.10",
     "psycopg-binary>=3.2.5",
-    "psycopg>=3.2.4",
 ]
 
 [dependency-groups]
