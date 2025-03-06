@@ -34,7 +34,13 @@ from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_event_bus_service, get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_event_bus_service,
+    get_queue_service,
+    get_settings_service,
+    get_telemetry_service,
+    get_trigger_service,
+)
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -132,6 +138,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
+
+            # Start the trigger service worker
+
+            trigger_service = get_trigger_service()
+            await trigger_service.start()
+            logger.info("Trigger service worker started")
+
             yield
 
         except Exception as exc:
@@ -142,6 +155,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Clean shutdown
             logger.info("Cleaning up resources...")
             await get_event_bus_service().disconnect()
+
+            # Stop the trigger service worker
+            trigger_service = get_trigger_service()
+            await trigger_service.stop()
+            logger.info("Trigger service worker stopped")
+
             await teardown_services()
             await logger.complete()
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
