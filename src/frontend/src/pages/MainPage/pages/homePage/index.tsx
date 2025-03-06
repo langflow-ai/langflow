@@ -19,7 +19,7 @@ import EmptyFolder from "../emptyFolder";
 const HomePage = ({ type }) => {
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
-    return savedView === "grid" || savedView === "list" ? savedView : "list";
+    return savedView === "grid" || savedView === "list" ? savedView : "grid";
   });
   const [newProjectModal, setNewProjectModal] = useState(false);
   const { folderId } = useParams();
@@ -27,7 +27,8 @@ const HomePage = ({ type }) => {
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
   const handleFileDrop = useFileDrop("flows");
-  const [flowType, setFlowType] = useState<"flows" | "components">(type);
+  // Change the type to always be "flows" regardless of what was passed in
+  const [flowType, setFlowType] = useState<"flows" | "marketplace">("flows");
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
   const folderName =
@@ -40,8 +41,9 @@ const HomePage = ({ type }) => {
     id: folderId ?? myCollectionId!,
     page: pageIndex,
     size: pageSize,
-    is_component: flowType === "components",
-    is_flow: flowType === "flows",
+    // Always use is_flow=true, since we're only showing flows
+    is_component: false,
+    is_flow: true,
     search,
   });
 
@@ -89,7 +91,6 @@ const HomePage = ({ type }) => {
         <div className="flex h-full w-full flex-col xl:container">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
 
-          {/* mt-10 to mt-8 for Datastax LF */}
           <div className="flex flex-1 flex-col justify-start px-5 pt-10">
             <div className="flex h-full flex-col justify-start">
               <HeaderComponent
@@ -132,7 +133,7 @@ const HomePage = ({ type }) => {
                         ))}
                       </div>
                     )
-                  ) : flowType === "flows" ? (
+                  ) : (
                     <div className="pt-2 text-center text-sm text-secondary-foreground">
                       No flows in this folder.{" "}
                       <a
@@ -140,19 +141,6 @@ const HomePage = ({ type }) => {
                         className="cursor-pointer underline"
                       >
                         Create a new flow
-                      </a>
-                      , or browse the store.
-                    </div>
-                  ) : (
-                    <div className="pt-2 text-center text-sm text-secondary-foreground">
-                      No saved or custom components. Learn more about{" "}
-                      <a
-                        href="https://docs.langflow.org/components-custom-components"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline"
-                      >
-                        creating custom components
                       </a>
                       , or browse the store.
                     </div>
@@ -171,7 +159,7 @@ const HomePage = ({ type }) => {
                 totalRowsCount={data.pagination.total}
                 paginate={handlePageChange}
                 pages={data.pagination.pages}
-                isComponent={flowType === "components"}
+                isComponent={false} // Always false since we're only showing flows
               />
             </div>
           )}
