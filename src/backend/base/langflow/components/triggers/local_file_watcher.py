@@ -37,7 +37,13 @@ class LocalFileWatcherTrigger(BaseTrigger):
         The state stores the last checked time.
         """
         now = datetime.now(timezone.utc)
-        state = {"last_checked": now.isoformat(), "file_modified_at": None}
+        state = {
+            "last_checked": now.isoformat(),
+            "file_modified_at": None,
+            "file_path": self.file_path,
+            "poll_interval": self.poll_interval,
+            "threshold_minutes": self.threshold_minutes,
+        }
         return json.dumps(state)
 
     @classmethod
@@ -51,6 +57,11 @@ class LocalFileWatcherTrigger(BaseTrigger):
         try:
             state = json.loads(subscription.state)
             last_checked_str = state.get("last_checked")
+            if "file_path" not in state:
+                msg = "File path not found in state"
+                raise ValueError(msg)
+
+            file_path = state["file_path"]
             if last_checked_str:
                 last_checked = datetime.fromisoformat(last_checked_str)
             else:
@@ -60,24 +71,21 @@ class LocalFileWatcherTrigger(BaseTrigger):
 
             # Get file's last modified time using anyio.Path for async operations
             try:
-                path = anyio.Path(subscription.trigger.file_path)
+                path = anyio.Path(file_path)
                 stat = await path.stat()
                 file_modified_at = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
             except (FileNotFoundError, OSError) as e:
                 logger.error(f"Error getting file modification time: {e}")
                 file_modified_at = None
-
-            # Check if file was modified since last check and within threshold
-            if (
-                file_modified_at
-                and file_modified_at > last_checked
-                and now - file_modified_at <= timedelta(minutes=subscription.trigger.threshold_minutes)
-            ):
+            # Check if the file was modified since the last check without applying a time threshold.
+            if file_modified_at and file_modified_at > last_checked:
+                content = await anyio.Path(file_path).read_text()
                 events.append(
                     {
                         "trigger_data": {
-                            "file_path": subscription.trigger.file_path,
+                            "file_path": file_path,
                             "file_modified_at": file_modified_at.isoformat(),
+                            "content": content,
                         }
                     }
                 )
@@ -138,13 +146,10 @@ class LocalFileWatcherTriggerComponent(BaseTriggerComponent):
         }
 
         # If testing mode is enabled and mock data is provided, include it
-        if hasattr(self, "is_testing") and self.is_testing and hasattr(self, "mock_data") and self.mock_data:
+        if hasattr(self, "trigger_content") and self.trigger_content:
             trigger_info.update(
                 {
-                    "trigger_data": self.mock_data,
-                    "file_path": self.mock_data.get("file_path", self.file_path),
-                    "poll_interval": self.mock_data.get("poll_interval", self.poll_interval),
-                    "threshold_minutes": self.mock_data.get("threshold_minutes", getattr(self, "threshold_minutes", 5)),
+                    "trigger_data": self.trigger_content,
                 }
             )
 

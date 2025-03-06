@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 
 from croniter import croniter
 from loguru import logger
@@ -11,9 +11,6 @@ from langflow.base.triggers import BaseTriggerComponent
 from langflow.io import MessageTextInput
 from langflow.schema.data import Data
 from langflow.services.triggers.base_trigger import BaseTrigger
-
-if TYPE_CHECKING:
-    from langflow.services.database.models.subscription.model import Subscription
 
 
 class ScheduleTrigger(BaseTrigger):
@@ -53,7 +50,7 @@ class ScheduleTrigger(BaseTrigger):
         )
 
     @classmethod
-    async def check_events(cls, subscription: Subscription) -> list[dict[str, Any]]:
+    async def check_events(cls, subscription) -> list[dict[str, Any]]:
         """Check if the schedule should trigger based on the cron expression."""
         events = []
         try:
@@ -61,14 +58,22 @@ class ScheduleTrigger(BaseTrigger):
             last_checked_str = state.get("last_checked")
             cron_expression = state.get("cron_expression")
 
-            # Parse last_checked to a datetime
-            last_checked = datetime.fromisoformat(last_checked_str) if last_checked_str else datetime.now(timezone.utc)
+            # Parse last_checked to a datetime and ensure it's timezone-aware
+            if last_checked_str:
+                last_checked = datetime.fromisoformat(last_checked_str)
+                if last_checked.tzinfo is None:
+                    last_checked = last_checked.replace(tzinfo=timezone.utc)
+            else:
+                last_checked = datetime.now(timezone.utc)
 
             now = datetime.now(timezone.utc)
 
             # Check if we need to trigger based on the cron expression
             cron = croniter(cron_expression, last_checked)
             next_execution = cron.get_next(datetime)
+            # Ensure next_execution is timezone-aware; assume UTC if not
+            if next_execution.tzinfo is None:
+                next_execution = next_execution.replace(tzinfo=timezone.utc)
 
             # If the next execution time is before now, we need to trigger
             if next_execution <= now:

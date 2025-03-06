@@ -4,7 +4,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 from langflow.custom import Component
-from langflow.inputs import BoolInput, DataInput
+from langflow.inputs.inputs import MessageTextInput
 from langflow.io import Output
 
 if TYPE_CHECKING:
@@ -19,24 +19,20 @@ class BaseTriggerComponent(Component):
     Each trigger component should subclass this and implement the required methods.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.is_trigger = True
+
     # Base inputs that all trigger components will have
     _base_inputs = [
-        DataInput(
-            name="mock_data",
-            display_name="Mock Data",
+        MessageTextInput(
+            name="trigger_content",
+            display_name="Trigger Content",
             info=(
-                "Mock trigger data for testing purposes. "
-                "When provided, this data will be included in the trigger output."
+                "Trigger content for testing purposes. When provided, this data will be included in the trigger output."
             ),
             advanced=True,
             required=False,
-        ),
-        BoolInput(
-            name="is_testing",
-            display_name="Testing Mode",
-            info="Enable testing mode. When enabled, the trigger will output the mock data.",
-            advanced=True,
-            value=False,
         ),
     ]
 
@@ -74,7 +70,7 @@ class BaseTriggerComponent(Component):
         This method should return a Data object with information about the trigger,
         including its type, configuration, and other relevant details.
 
-        If mock_data is provided and is_testing is True, the trigger info will
+        If trigger_content is provided and is_testing is True, the trigger info will
         include the mock data.
 
         Returns:

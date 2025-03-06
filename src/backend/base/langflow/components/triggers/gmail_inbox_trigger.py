@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 
 from loguru import logger
 
@@ -10,9 +10,6 @@ from langflow.base.triggers import BaseTriggerComponent
 from langflow.io import IntInput, MessageTextInput
 from langflow.schema.data import Data
 from langflow.services.triggers.base_trigger import BaseTrigger
-
-if TYPE_CHECKING:
-    from langflow.services.database.models.subscription.model import Subscription
 
 
 class GmailTrigger(BaseTrigger):
@@ -47,7 +44,7 @@ class GmailTrigger(BaseTrigger):
         )
 
     @classmethod
-    async def check_events(cls, subscription: Subscription) -> list[dict[str, Any]]:
+    async def check_events(cls, subscription) -> list[dict[str, Any]]:
         """Check for new emails in the Gmail inbox."""
         # This would normally query the Gmail API, but for now, we'll return an empty list
         # In a real implementation, this would check for new emails since the last check
