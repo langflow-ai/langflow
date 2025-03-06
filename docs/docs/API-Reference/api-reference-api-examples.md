@@ -223,9 +223,9 @@ Parameters can be passed to the `/run` endpoint in three ways:
 **Headers**
 | Header | Info | Example |
 |--------|------|---------|
-| Content-Type | Required. Specifies JSON format | "application/json" |
-| accept | Required. Specifies response format | "application/json" |
-| x-api-key | Optional. Required only if authentication is enabled | "sk-..." |
+| Content-Type | Required. Specifies the JSON format. | "application/json" |
+| accept | Required. Specifies the response format. | "application/json" |
+| x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
 
 **Parameters**
 | Parameter | Type | Info |
@@ -474,9 +474,9 @@ curl -X GET \
 **Headers**
 | Header | Info | Example |
 |--------|------|---------|
-| Content-Type | Required. Specifies JSON format | "application/json" |
-| accept | Required. Specifies response format | "application/json" |
-| x-api-key | Optional. Required only if authentication is enabled | "sk-..." |
+| Content-Type | Required. Specifies the JSON format. | "application/json" |
+| accept | Required. Specifies the response format. | "application/json" |
+| x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
 
 The `/build/{flow_id}/flow` endpoint accepts the following parameters in its request body:
 
@@ -486,8 +486,8 @@ The `/build/{flow_id}/flow` endpoint accepts the following parameters in its req
 | inputs | object | Optional. Input values for flow components. |
 | data | object | Optional. Flow data to override stored configuration. |
 | files | array[string] | Optional. List of file paths to us. |
-| stop_component_id | string | Optional. ID of component where execution should stop. |
-| start_component_id | string | Optional. ID of component where execution should start. |
+| stop_component_id | string | Optional. ID of the component where the execution should stop. |
+| start_component_id | string | Optional. ID of the component where the execution should start. |
 | log_builds | boolean | Optional. Control build logging. Default: `true`. |
 
 
