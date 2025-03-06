@@ -216,6 +216,22 @@ def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
         yield buffer + " "
 
 
+@router.websocket("/ws/flow_as_tool/{flow_id}")
+async def flow_as_tool_websocket_no_session(
+        client_websocket: WebSocket,
+        flow_id: str,
+        background_tasks: BackgroundTasks,
+        session: DbSession,
+):
+    session_id = str(uuid4())
+    await flow_as_tool_websocket(
+        client_websocket=client_websocket,
+        flow_id=flow_id,
+        background_tasks=background_tasks,
+        session=session,
+        session_id=session_id
+    )
+
 @router.websocket("/ws/flow_as_tool/{flow_id}/{session_id}")
 async def flow_as_tool_websocket(
     client_websocket: WebSocket,
