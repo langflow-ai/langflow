@@ -204,7 +204,7 @@ ignore = [
 module-root = "langflow"
 tests-root = "../tests/unit"
 test-framework = "pytest"
-ignore-paths = ["src/backend/base/langflow/components/"]
+ignore-paths = ["langflow/components/"]
 formatter-cmds = ["ruff check --exit-zero --fix $file", "ruff format $file"]
 #disable plugins that might interfere with runtime measurement
 pytest-cmd = "pytest -p no:profiling -p no:sugar -p no:xdist -p no:cov -p no:split"
