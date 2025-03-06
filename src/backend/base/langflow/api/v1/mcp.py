@@ -241,7 +241,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                 progress_task = asyncio.create_task(send_progress_updates())
 
                 try:
-                    response = await build_flow(
+                    response = await build_flow_and_stream(
                         flow_id=UUID(name),
                         inputs=input_request,
                         background_tasks=background_tasks,

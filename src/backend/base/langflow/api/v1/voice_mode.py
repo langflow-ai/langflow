@@ -20,21 +20,18 @@ from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.chat import build_flow, get_build_events, get_queue_service
+from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.logging import logger
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import (
-    get_queue_service,
-    get_variable_service,
-    session_scope,
-)
+from langflow.services.deps import get_variable_service, session_scope
 from langflow.utils.voice_utils import (
     BYTES_PER_24K_FRAME,
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
+
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -56,11 +53,6 @@ elevenlabs_client = None
 elevenlabs_key = None
 
 barge_in_enabled = False
-
-
-async def safe_build_flow(*args, **kwargs):
-    # Offload the potentially blocking build_flow call
-    return await asyncio.to_thread(build_flow, *args, **kwargs)
 
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
@@ -141,13 +133,13 @@ async def handle_function_call(
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
         )
-        response = await build_flow(
+        build_response = await build_flow_and_stream(
             flow_id=UUID(flow_id),
             inputs=input_request,
             background_tasks=background_tasks,
             current_user=current_user,
-            queue_service=get_queue_service(),
         )
+
         result = ""
         async for line in response.body_iterator:
             if not line:

@@ -486,3 +486,14 @@ async def build_vertex_stream(
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Error building Component") from exc
+
+async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user, queue_service):
+    queue_service =  get_queue_service()
+    build_response = await build_flow(
+        flow_id=UUID(flow_id),
+        inputs=input_request,
+        background_tasks=background_tasks,
+        current_user=current_user,
+    )
+    build_response["job_id"]
+    return get_build_events(job_id, queue_service)
