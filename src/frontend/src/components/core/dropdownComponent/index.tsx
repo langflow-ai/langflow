@@ -3,7 +3,10 @@ import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-t
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
-import { getStatusColor } from "@/utils/stringManipulation";
+import {
+  convertStringToHTML,
+  getStatusColor,
+} from "@/utils/stringManipulation";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { cloneDeep } from "lodash";
@@ -66,7 +69,8 @@ export default function Dropdown({
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
     children || editNode ? PopoverContent : PopoverContentWithoutPortal;
-  const { nodeClass, nodeId, handleNodeClass, tooltip } = baseInputProps;
+  const { nodeClass, nodeId, handleNodeClass, tooltip, helperText } =
+    baseInputProps;
 
   // API and store hooks
   const postTemplateValue = usePostTemplateValue({
@@ -161,7 +165,7 @@ export default function Dropdown({
   );
 
   const renderTriggerButton = () => (
-    <ShadTooltip content={!value ? (tooltip as string) : ""}>
+    <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
         <Button
           disabled={
@@ -212,7 +216,12 @@ export default function Dropdown({
           />
         </Button>
       </PopoverTrigger>
-    </ShadTooltip>
+      {helperText && (
+        <span className="pt-2 text-xs text-muted-foreground">
+          {convertStringToHTML(helperText)}
+        </span>
+      )}
+    </div>
   );
 
   const renderSearchInput = () => (
