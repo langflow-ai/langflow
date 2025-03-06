@@ -368,6 +368,13 @@ async def flow_as_tool_websocket(
                 shared_state["event_count"] = 0
             shared_state["event_count"] += 1
 
+        def send_event(websocket, event, loop, direction) -> None:
+            asyncio.run_coroutine_threadsafe(
+                websocket.send_json(event),
+                loop,
+            ).result()
+            log_event(event["type"], direction)
+
         # --- Spawn a text delta queue and task for TTS ---
         text_delta_queue = asyncio.Queue()
         text_delta_task = None  # Will hold our background task.
@@ -414,10 +421,11 @@ async def flow_as_tool_websocket(
                         for chunk in audio_stream:
                             base64_audio = base64.b64encode(chunk).decode("utf-8")
                             # Schedule sending the audio chunk in the main event loop.
-                            asyncio.run_coroutine_threadsafe(
-                                client_websocket.send_json({"type": "response.audio.delta", "delta": base64_audio}),
-                                main_loop,
-                            ).result()
+                            event = {"type": "response.audio.delta", "delta": base64_audio}
+                            send_event(client_websocket, event, main_loop, "↓")
+
+                        event = {"type": "response.done"}
+                        send_event(client_websocket, event, main_loop, "↓")
                     except Exception as e:
                         print(e)
                         print(traceback.format_exc())
@@ -494,8 +502,9 @@ async def flow_as_tool_websocket(
                     event = json.loads(data)
                     event_type = event.get("type")
 
-                    # forward all openai events to the client
-                    await client_websocket.send_text(data)
+                    # forward all openai events except response.done if using elevenlabs to the client
+                    if not (event_type == "response.done" and use_elevenlabs):
+                        await client_websocket.send_text(data)
 
                     if event_type == "response.text.delta":
                         if use_elevenlabs:
