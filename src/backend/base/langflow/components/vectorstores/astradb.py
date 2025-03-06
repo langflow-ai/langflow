@@ -95,7 +95,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="embedding_generation_provider",
                                 display_name="Embedding generation method",
                                 info="Provider to use for generating embeddings.",
-                                helper_text='To create collections with more embedding provider options, go to <a class="underline" href="https://astra.datastax.com/" target=" _blank" rel="noopener noreferrer">your database in Astra DB</a>',  # TODO: Add db-link
+                                helper_text=(
+                                    'To create collections with more embedding provider options, go to '
+                                    '<a class="underline" href="https://astra.datastax.com/" target=" _blank" '
+                                    'rel="noopener noreferrer">your database in Astra DB</a>'
+                                ),
                                 real_time_refresh=True,
                                 required=True,
                                 options=[],
@@ -414,6 +418,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "api_endpoint": api_endpoint,
                     "collections": num_collections,
                     "status": db.status if db.status != "ACTIVE" else None,
+                    "org_id": db.org_id,
                 }
             except Exception:  # noqa: BLE001, S110
                 pass
@@ -508,6 +513,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                     "icon": "data",
+                    "org_id": info["org_id"],
                 }
                 for name, info in self.get_database_list().items()
             ]
@@ -806,6 +812,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 # Find the position of the selected database to align with metadata
                 index_of_name = build_config["database_name"]["options"].index(field_value)
+                org_id = build_config["database_name"]["options_metadata"][index_of_name]["org_id"]
+
+                # Set the helper text field of the embedding provider
+                build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+                    "02_embedding_generation_provider"
+                ]["helper_text"] = (
+                    "To create collections with more embedding provider options, go to "
+                    "<a href='https://astra.datastax.com/org/"
+                    f"{org_id}/settings/manageIntegrations'>"
+                    " your database in Astra DB</a>"
+                )
 
                 # Initializing database condition
                 pending = build_config["database_name"]["options_metadata"][index_of_name]["status"] == "PENDING"
