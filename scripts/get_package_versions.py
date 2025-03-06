@@ -71,12 +71,6 @@ def get_package_versions(uv_lock_path):
         "dependencies": dict(categorized_deps)
     }
 
-def sanitize_version(version_str):
-    """Process version string for markdown output."""
-    if not version_str or version_str == "any":
-        return "any"
-    return version_str
-
 def generate_markdown(versions_info):
     """Generate markdown content from version information."""
     current_date = datetime.now().strftime("%Y-%m-%d")
@@ -94,7 +88,7 @@ def generate_markdown(versions_info):
         "",
         "## Core Information",
         "- **Langflow Version**: `" + versions_info['langflow_version'] + "`",
-        "- **Python Version Required**: `" + sanitize_version(versions_info['python_version']) + "`",
+        "- **Python Version Required**: `" + versions_info['python_version'] + "`",
         "\n## Dependencies",
     ]
     
@@ -108,12 +102,7 @@ def generate_markdown(versions_info):
                 "| ------- | ------- |"
             ])
             for package, version in sorted(packages):
-                # Skip packages with invalid version formats
-                if '[' in package or '[' in version:
-                    continue
-                clean_version = sanitize_version(version)
-                # Add backticks around version numbers
-                md_content.append("| " + package + " | `" + clean_version + "` |")
+                md_content.append("| " + package + " | `" + version + "` |")
     
     return "\n".join(md_content)
 
