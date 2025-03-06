@@ -54,13 +54,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
           timeout_minutes: 12
           max_attempts: 2
-          command: make unit_tests async=false args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }}"
+          command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5"
       - name: Minimize uv cache
         run: uv cache prune --ci
   integration-tests:
@@ -78,7 +78,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync
       - name: Run integration tests
         run: make integration_tests_no_api_keys
       - name: Minimize uv cache
