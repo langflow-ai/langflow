@@ -1,3 +1,4 @@
+import uuid
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
@@ -393,7 +394,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for db in db_list:
             try:
                 # Get the API endpoint for the database
-                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string}.datastax.com"
+                api_endpoint = f"https://{db.info.id}-{db.info.region}.apps.astra{env_string!s}.datastax.com"
 
                 # Get the number of collections
                 try:
@@ -414,6 +415,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "api_endpoint": api_endpoint,
                     "collections": num_collections,
                     "status": db.status if db.status != "ACTIVE" else None,
+                    "org_id": db.info.org_id,
                 }
             except Exception:  # noqa: BLE001, S110
                 pass
@@ -508,6 +510,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                     "icon": "data",
+                    "org_id": info["org_id"],
                 }
                 for name, info in self.get_database_list().items()
             ]
@@ -799,6 +802,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 # Find the position of the selected database to align with metadata
                 index_of_name = build_config["database_name"]["options"].index(field_value)
+                org_id = build_config["database_name"]["options_metadata"][index_of_name]["org_id"]
+
+                # Set the helper text field of the embedding provider
+                build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+                    "02_embedding_generation_provider"
+                ]["helper_text"] = (
+                    "To create collections with more embedding provider options, go to "
+                    "<a href='https://astra.datastax.com/org/"
+                    f"{org_id}/settings/manageIntegrations'>"
+                    " your database in Astra DB</a>"
+                )
 
                 # Initializing database condition
                 pending = build_config["database_name"]["options_metadata"][index_of_name]["status"] == "PENDING"
