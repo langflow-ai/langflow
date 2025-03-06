@@ -87,9 +87,10 @@ class NvidiaCustomizerComponent(Component):
             info="Select the fine tuning type to use",
         ),
         IntInput(
-            name="epochs", display_name="Epochs",
+            name="epochs",
+            display_name="Epochs",
             info="Number of times to cycle through the training data. default : `5`",
-            value=5
+            value=5,
         ),
         IntInput(
             name="batch_size",
