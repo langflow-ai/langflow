@@ -72,7 +72,7 @@ class TaskOrchestrationService(Service):
         logger.info("Task orchestration service stopped")
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
-        """Create a new task and publish a TaskCreated event.
+        """Create a new task, publish a TaskCreated event, and automatically start processing the task.
 
         Args:
             task_create: Task creation data
@@ -95,10 +95,16 @@ class TaskOrchestrationService(Service):
         # Publish TaskCreated event
         await self.event_bus_service.publish("TaskCreated", task_read.model_dump())
 
+        # Automatically start processing the task
+        await self.start_task_processing(task_id)
+
         return task_read
 
     async def start_task_processing(self, task_id: UUID) -> None:
-        """Start processing a task.
+        """Start processing a task and publish a TaskProcessingStarted event.
+
+        This method schedules the task for processing by creating a background task.
+        The actual processing begins asynchronously in the _process_task method.
 
         Args:
             task_id: Task identifier
@@ -106,6 +112,11 @@ class TaskOrchestrationService(Service):
         if task_id not in self._tasks:
             msg = f"Task with id {task_id} not found"
             raise ValueError(msg)
+
+        # Publish TaskProcessingStarted event
+        task_data = self._tasks[task_id]
+        task_read = TaskRead.model_validate(task_data)
+        await self.event_bus_service.publish("TaskProcessingStarted", task_read.model_dump())
 
         # Create a background task for processing
         processing_task = asyncio.create_task(self._process_task(task_id))
@@ -204,10 +215,11 @@ class TaskOrchestrationService(Service):
         """Process a task asynchronously using the graph processor.
 
         This implementation processes the task by:
-        1. Building and preparing the graph
-        2. Creating an output state model to track output states
-        3. Running the graph asynchronously
-        4. Collecting results and output states
+        1. Updating the task status to "processing" (which publishes a TaskUpdated event)
+        2. Building and preparing the graph
+        3. Creating an output state model to track output states
+        4. Running the graph asynchronously
+        5. Collecting results and output states
 
         Args:
             task_id: Task identifier
@@ -235,6 +247,7 @@ class TaskOrchestrationService(Service):
 Task Title: {task_data.get("title")}
 Task Description: {task_data.get("description")}
 Task Author: {task_data.get("author_id")}
+Task Attachments: {task_data.get("attachments")}
 Your ID: {task_data.get("assignee_id")}
 
 Please process this task according to the description and provide a complete response.
@@ -293,7 +306,9 @@ Focus on addressing all requirements in the task description."""
                 # Process the graph
                 logger.info(f"Starting graph execution for task {task_id}")
                 results = []
-                async for result in graph.async_start(inputs=input_value_request):
+                async for result in graph.async_start(
+                    inputs=input_value_request, attachments=task_data.get("attachments")
+                ):
                     if hasattr(result, "vertex") and result.vertex.is_output:
                         # Get the output state for this vertex
                         vertex_state = getattr(output_state_model, result.vertex.id, None)
