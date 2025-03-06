@@ -1,4 +1,3 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useLogout } from "@/controllers/API/queries/auth";
 import { CustomFeedbackDialog } from "@/customization/components/custom-feedback-dialog";
 import { CustomHeaderMenuItemsTitle } from "@/customization/components/custom-header-menu-items-title";

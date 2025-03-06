@@ -1,6 +1,5 @@
 import ForwardedIconComponent from "../../../../../components/common/genericIconComponent";
 import RenderIcons from "../../../../../components/common/renderIconComponent";
-import { IS_MAC } from "../../../../../constants/constants";
 import { toolbarSelectItemProps } from "../../../../../types/components";
 
 export default function ToolbarSelectItem({
