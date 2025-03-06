@@ -7,6 +7,8 @@ import httpx
 from huggingface_hub import HfApi
 
 from langflow.custom import Component
+from langflow.field_typing.range_spec import RangeSpec
+
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -16,6 +18,7 @@ from langflow.io import (
     MultiselectInput,
     Output,
     SecretStrInput,
+    SliderInput,
     StrInput,
 )
 from langflow.schema import Data
@@ -39,25 +42,25 @@ class NvidiaEvaluatorComponent(Component):
     inputs = [
         StrInput(
             name="evaluator_base_url",
-            display_name="NVIDIA NeMo Evaluator Base URL",
+            display_name="Evaluator Base URL",
             info="The base URL of the NVIDIA NeMo Evaluator API.",
             advanced=True,
         ),
         StrInput(
             name="entity_service_base_url",
-            display_name="NVIDIA entity service URL",
+            display_name="Entity service URL",
             info="The base URL of the NVIDIA Entity service to obtain models that can be evaluated.",
             advanced=True,
         ),
         StrInput(
             name="nemo_model_base_url",
-            display_name="NVIDIA NeMo Model URL",
+            display_name="Base model inference URL",
             info="The base URL of the NVIDIA NIM API to obtain models that can be evaluated.",
             advanced=True,
         ),
         StrInput(
             name="datastore_base_url",
-            display_name="NVIDIA NeMo Datastore Base URL",
+            display_name="Datastore Base URL",
             info="The nemo datastore base URL of the NVIDIA NeMo Datastore API.",
             advanced=True,
         ),
@@ -70,15 +73,15 @@ class NvidiaEvaluatorComponent(Component):
         ),
         DropdownInput(
             name="000_llm_name",
-            display_name="LLM Name",
+            display_name="Model to be evaluated",
             info="Select the model for evaluation",
             options=[],  # Dynamically populated
             refresh_button=True,
         ),
         StrInput(
             name="001_tag",
-            display_name="Tag",
-            info="Any user-provided value. Generated results will be stored in the NeMo Data Store under this name.",
+            display_name="Tag name",
+            info="Any user-provided value. Generated results are stored in the NeMo Data Store with this name.",
             value="default",
             required=True,
         ),
@@ -86,7 +89,7 @@ class NvidiaEvaluatorComponent(Component):
             name="002_evaluation_type",
             display_name="Evaluation Type",
             info="Select the type of evaluation",
-            options=["LM Evaluation Harness", "Custom Evaluation"],
+            options=["LM Evaluation Harness", "Similarity Metrics"],
             value="LM Evaluation Harness",
             real_time_refresh=True,  # Ensure dropdown triggers update on change
         ),
@@ -101,7 +104,7 @@ class NvidiaEvaluatorComponent(Component):
         SecretStrInput(
             name="100_huggingface_token",
             display_name="HuggingFace Token",
-            info="Token for accessing HuggingFace models if required.",
+            info="Token for accessing HuggingFace to fet the evaluation dataset.",
         ),
         StrInput(
             name="110_task_name",
@@ -157,9 +160,10 @@ class NvidiaEvaluatorComponent(Component):
             info="The top_k value to be used during generation sampling.",
             value=1,
         ),
-        FloatInput(
+        SliderInput(
             name="153_temperature",
             display_name="Temperature",
+            range_spec=RangeSpec(min=0.0, max=1.0, step=0.01),
             value=0.1,
             info="The temperature to be used during generation sampling (0.0 to 2.0).",
         ),
@@ -171,7 +175,7 @@ class NvidiaEvaluatorComponent(Component):
         ),
     ]
 
-    # Inputs for Custom Evaluation
+    # Inputs for Similarity Metrics
     custom_evaluation_inputs = [
         IntInput(
             name="350_num_of_samples",
@@ -219,7 +223,6 @@ class NvidiaEvaluatorComponent(Component):
             name="dataset",
             display_name="Dataset",
             info="Enter the dataset ID or name used to train the model",
-            value="testing",
         ),
         DataInput(
             name="evaluation_data",
@@ -276,10 +279,10 @@ class NvidiaEvaluatorComponent(Component):
             build_config.setdefault("_dynamic_fields", []).append(input_name)
 
     def add_evaluation_inputs(self, build_config, saved_values, evaluation_type):
-        """Adds inputs based on the evaluation type (LM Evaluation or Custom Evaluation)."""
+        """Adds inputs based on the evaluation type (LM Evaluation or Similarity Metrics)."""
         if evaluation_type == "LM Evaluation Harness":
             self.add_inputs_with_saved_values(build_config, self.lm_evaluation_inputs, saved_values)
-        elif evaluation_type == "Custom Evaluation":
+        elif evaluation_type == "Similarity Metrics":
             self.add_inputs_with_saved_values(build_config, self.custom_evaluation_inputs, saved_values)
 
     def update_build_config(self, build_config, field_value, field_name=None):
@@ -320,10 +323,26 @@ class NvidiaEvaluatorComponent(Component):
     async def evaluate(self) -> dict:
         evaluation_type = getattr(self, "002_evaluation_type", "LM Evaluation Harness")
 
+        if not self.tenant_id:
+            error_msg = "Provide tenant id to process"
+            raise ValueError(error_msg)
+
+        model_name = getattr(self, "000_llm_name", "")
+        if not model_name:
+            error_msg = "Refresh and select the model name to be evaluated"
+            raise ValueError(error_msg)
+
+        if not (self.evaluator_base_url
+                and self.entity_service_base_url
+                and self.datastore_base_url
+                and self.nemo_model_base_url):
+            error_msg = "Provide evaluator, data store, entity store and nim inference url to process"
+            raise ValueError(error_msg)
+
         # Generate the request data based on evaluation type
         if evaluation_type == "LM Evaluation Harness":
             data = await self._generate_lm_evaluation_body()
-        elif evaluation_type == "Custom Evaluation":
+        elif evaluation_type == "Similarity Metrics":
             data = await self._generate_custom_evaluation_body()
         else:
             error_msg = f"Unsupported evaluation type: {evaluation_type}"
@@ -435,11 +454,15 @@ class NvidiaEvaluatorComponent(Component):
             raise ValueError(error_msg) from exc
 
     async def _generate_custom_evaluation_body(self) -> dict:
-        repo_id = await self.process_and_upload_dataset()
+        if not self.dataset:
+            error_msg = "Provide dataset name to process"
+            raise ValueError(error_msg)
+
+        repo_id = await self.process_eval_dataset()
         input_file = f"nds:{repo_id}/input.json"
         # Handle run_inference as a boolean
         run_inference = getattr(self, "310_run_inference", "True").lower() == "true"
-        namespace = self.tenant_id if self.tenant_id else "tenant"
+        namespace = self.tenant_id
         # Set output_file based on run_inference
         output_file = None
         if not run_inference:  # Only set output_file if run_inference is False
@@ -513,7 +536,7 @@ class NvidiaEvaluatorComponent(Component):
                 request_body = {
                     "type": "model",
                     "namespace": namespace,
-                    "model": {"cached_outputs": {"files_url": "nds:my-dataset/answers.jsonl"}},
+                    "model": {"cached_outputs": {"files_url": output_file}},
                 }
             else:
                 request_body = {
@@ -556,7 +579,7 @@ class NvidiaEvaluatorComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
-    async def process_and_upload_dataset(self) -> str:
+    async def process_eval_dataset(self) -> str:
         """Asynchronously processes and uploads the dataset to the API in chunks.
 
         Returns the upload status.
@@ -665,8 +688,8 @@ class NvidiaEvaluatorComponent(Component):
         Returns:
             str: The dataset ID if found or created, or None if an error occurs.
         """
-        dataset_name = self.get_dataset_name(user_dataset_name)
-        namespace = tenant_id if tenant_id else "tenant"
+        dataset_name = user_dataset_name
+        namespace = tenant_id
 
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
 
@@ -687,9 +710,3 @@ class NvidiaEvaluatorComponent(Component):
             error_msg = f"Error processing namespace: {exception_str}"
             self.log(error_msg)
             raise ValueError(error_msg) from e
-
-    def get_dataset_name(self, user_dataset_name=None):
-        # Generate a default dataset name using the current date and time
-        default_name = f"dataset-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-        # Use the user-provided name if available, otherwise the default
-        return user_dataset_name if user_dataset_name else default_name

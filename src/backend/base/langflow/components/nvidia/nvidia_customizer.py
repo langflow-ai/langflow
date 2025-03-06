@@ -62,7 +62,6 @@ class NvidiaCustomizerComponent(Component):
             name="dataset",
             display_name="Dataset",
             info="Enter the dataset name used for training the model",
-            value="dataset-name",
         ),
         DataInput(
             name="training_data",
