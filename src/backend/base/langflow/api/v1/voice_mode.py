@@ -20,7 +20,7 @@ from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow.api.utils import CurrentActiveUser, DbSession
-from langflow.api.v1.chat import build_flow
+from langflow.api.v1.chat import build_flow, get_build_events, get_queue_service
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.logging import logger
 from langflow.services.auth.utils import get_current_user_by_jwt
@@ -585,3 +585,4 @@ async def flow_as_tool_websocket(
             forward_to_openai(),
             forward_to_client(),
         )
+
