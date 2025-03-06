@@ -1066,12 +1066,11 @@ class Component(CustomComponent):
         """
         # Get tools from subclass implementation
         tools = await self._get_tools()
-        new_tools_metadata = self._create_tools_metadata(tools)
 
-        if not hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            return self._update_tools_with_metadata(tools, new_tools_metadata)
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
 
-        return await self._handle_existing_tools_metadata(tools, new_tools_metadata)
+            return self._update_tools_with_metadata(tools, self.tools_metadata)
+        return tools
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
@@ -1085,9 +1084,6 @@ class Component(CustomComponent):
         component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
 
-    def _create_tools_metadata(self, tools: list[Tool]) -> list[dict]:
-        """Create metadata dictionary for each tool."""
-        return [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
 
     def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
         """Extract the first tag from each tool's metadata."""
@@ -1098,34 +1094,24 @@ class Component(CustomComponent):
         component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
         return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
 
-    async def _handle_existing_tools_metadata(self, tools: list[Tool], new_tools_metadata: list[dict]) -> list[Tool]:
-        """Handle tools metadata when TOOLS_METADATA_INPUT_NAME exists."""
-        # check if the tools_metadata is a list of dicts if not if it is a  use get_tools_metadata_dictionary
-        old_tools_metadata = (
-            self.tools_metadata.to_dict(orient="records")
-            if isinstance(self.tools_metadata, pd.DataFrame)
-            else self.tools_metadata
-        )
 
-        if not old_tools_metadata:
-            self.tools_metadata = new_tools_metadata
-            return self._update_tools_with_metadata(tools, new_tools_metadata)
 
-        # Compare tags to determine if update is needed
-        old_tags = self._extract_tools_tags(old_tools_metadata)
-        new_tags = self._extract_tools_tags(new_tools_metadata)
-
-        if old_tags != new_tags:
-            self.tools_metadata = new_tools_metadata
-            return self._update_tools_with_metadata(tools, new_tools_metadata)
-
-        return self._update_tools_with_metadata(tools, old_tools_metadata)
+    def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
+        return old_tags != new_tags
 
     async def _build_tools_metadata_input(self):
         tools = await self.to_toolkit()
-        # Always use the latest tool data
+            # Always use the latest tool data
         tool_data = [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
-        self.tools_metadata = tool_data
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            old_tags = self._extract_tools_tags(self.tools_metadata)
+            new_tags = self._extract_tools_tags(tool_data)
+            if self.check_for_tool_tag_change(old_tags, new_tags):
+                self.tools_metadata = tool_data
+            else:
+                tool_data = self.tools_metadata
+        else:
+            self.tools_metadata = tool_data
         try:
             from langflow.io import TableInput
         except ImportError as e:
