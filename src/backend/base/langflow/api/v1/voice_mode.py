@@ -530,6 +530,14 @@ async def flow_as_tool_websocket(
                     elif event_type == "response.audio.delta":
                         # Audio deltas from OpenAI are not forwarded if ElevenLabs is used.
                         audio_delta = event.get("delta", "")
+                    elif event_type == "conversation.item.input_audio_transcription.completed":
+                        try:
+                            message_text = event.get("transcript", "")
+                            if message_text and message_text.strip():
+                                await add_message_to_db(message_text, session, flow_id, session_id, "User", "User")
+                        except Exception as e:
+                            logger.error(f"Error saving message to database: {e}")
+                            logger.error(traceback.format_exc())
                     elif event_type == "error":
                         print(event)
                     else:
@@ -538,17 +546,7 @@ async def flow_as_tool_websocket(
                     if event_type == "response.text.done":
                         try:
                             message_text = event.get("text", "")
-                            message = MessageTable(
-                                text=message_text, 
-                                sender="Machine", 
-                                sender_name="AI", 
-                                session_id=session_id,
-                                files=[],  
-                                flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
-                                properties=Properties().model_dump(),  
-                                content_blocks=[] 
-                            )
-                            await aadd_messagetables([message], session)
+                            await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
                         except Exception as e:
                             logger.error(f"Error saving message to database: {e}")
                             logger.error(traceback.format_exc())
@@ -642,3 +640,17 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
             elevenlabs_client = ElevenLabs(api_key=elevenlabs_key)
     
     return elevenlabs_client
+
+
+async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
+    message = MessageTable(
+        text=message, 
+        sender=sender, 
+        sender_name=sender_name, 
+        session_id=session_id,
+        files=[],  
+        flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
+        properties=Properties().model_dump(),  
+        content_blocks=[] 
+    )
+    await aadd_messagetables([message], session)
