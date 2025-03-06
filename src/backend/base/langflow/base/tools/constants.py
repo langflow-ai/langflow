@@ -35,6 +35,14 @@ TOOL_TABLE_SCHEMA = [
         "edit_mode": EditMode.INLINE,
         "hidden": True,
     },
+    {
+        "name": "status",
+        "display_name": "Status",
+        "type": "boolean",
+        "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+        "default": "False",
+        "edit_mode": EditMode.INLINE,
+    },
 ]
 
 TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."
