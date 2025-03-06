@@ -414,8 +414,9 @@ async def flow_as_tool_websocket(
                         if not base64_data:
                             continue
                         await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
-                        await vad_queue.put(base64_data)
-                    if msg.get("type") == "elevenlabs.config":
+                        if barge_in_enabled:
+                            await vad_queue.put(base64_data)
+                    elif msg.get("type") == "elevenlabs.config":
                         logger.info(f"elevenlabs.config {msg}")
                         use_elevenlabs = msg["enabled"]
                         elevenlabs_voice = msg["voice_id"]
