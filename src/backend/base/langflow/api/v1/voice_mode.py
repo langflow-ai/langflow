@@ -634,19 +634,19 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
 
         if elevenlabs_key:
             elevenlabs_client = ElevenLabs(api_key=elevenlabs_key)
-    
+
     return elevenlabs_client
 
 
 async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
     message = MessageTable(
-        text=message, 
-        sender=sender, 
-        sender_name=sender_name, 
+        text=message,
+        sender=sender,
+        sender_name=sender_name,
         session_id=session_id,
-        files=[],  
+        files=[],
         flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
-        properties=Properties().model_dump(),  
-        content_blocks=[] 
+        properties=Properties().model_dump(),
+        content_blocks=[],
     )
     await aadd_messagetables([message], session)
