@@ -48,11 +48,13 @@ export default function AlertDropdown({
     >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
-        ref={notificationRef}
         data-testid="notification-dropdown-content"
         className="noflow nowheel nopan nodelete nodrag z-10 flex h-[500px] w-[500px] flex-col"
       >
-        <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
+        <div
+          ref={notificationRef}
+          className="text-md flex flex-row justify-between pl-3 font-medium text-foreground"
+        >
           Notifications
           <div className="flex gap-3 pr-3">
             <button
