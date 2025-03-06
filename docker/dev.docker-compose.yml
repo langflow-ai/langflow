@@ -18,6 +18,8 @@ services:
       - LANGFLOW_SUPERUSER=langflow
       - LANGFLOW_SUPERUSER_PASSWORD=langflow
       - LANGFLOW_CONFIG_DIR=/var/lib/langflow
+      - COLUMNS=200
+      - FORCE_COLOR=1
     env_file:
       - ../.env
     volumes:

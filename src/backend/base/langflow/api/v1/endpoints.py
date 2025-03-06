@@ -378,6 +378,25 @@ async def simplified_run_flow(
         )
         raise APIException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, exception=exc, flow=flow) from exc
 
+    def test(obj):
+        try:
+            jsonable_encoder(obj)
+            return True
+        except Exception as exc:
+            print(f"Erro ao serializar: {repr(exc)}")
+            return False
+
+    for o1 in result.outputs:
+        for o in o1.outputs:
+            for key, value in vars(o).items():
+                if not test(value):
+                    print(f"Erro ao serializar: {key}")
+
+    print('-----')
+    import pdb; pdb.set_trace()
+    print('-----')
+
+
     return result
 
 

@@ -10,6 +10,9 @@ RUN apt-get update \
     curl \
     npm \
     git \
+    libpq-dev \
+    python3-dev \
+    postgresql-client \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
