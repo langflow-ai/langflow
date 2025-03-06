@@ -68,7 +68,7 @@ export default function TableNodeComponent({
   const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
-   // Add useEffect to sync with incoming value changes
+  // Add useEffect to sync with incoming value changes
   useEffect(() => {
     setTempValue(cloneDeep(value));
   }, [value]);
