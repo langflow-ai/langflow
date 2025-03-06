@@ -12,7 +12,7 @@ export default function getWidgetCode({
 }: GetCodeType): string {
   return `<script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js"></script>
 
-  <langflow-chat
+  <broxi-chat
     window_title="${flowName}"
     flow_id="${flowId}"
     host_url="${window.location.protocol}//${window.location.host}"${
@@ -22,5 +22,5 @@ export default function getWidgetCode({
         : ""
     }
 
-  ></langflow-chat>`;
+  ></broxi-chat>`;
 }

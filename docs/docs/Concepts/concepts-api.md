@@ -88,12 +88,12 @@ To embed the chat widget into any HTML page, insert the code snippet. inside a 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js""></script>
 
-  <langflow-chat
+  <broxi-chat
     window_title="Basic Prompting"
     flow_id="801abb1e-19b9-4278-9632-179b6d84f126"
     host_url="http://localhost:7860"
 
-  ></langflow-chat>
+  ></broxi-chat>
 ```
 
 ### Embed the chat widget with React
@@ -110,7 +110,7 @@ Declare your Web Component and encapsulate it in a React component.
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      "langflow-chat": any;
+      "broxi-chat": any;
     }
   }
 }
@@ -118,12 +118,12 @@ declare global {
 export default function ChatWidget({ className }) {
   return (
     <div className={className}>
-      <langflow-chat
+      <broxi-chat
         chat_inputs='{"your_key":"value"}'
         chat_input_field="your_chat_key"
         flow_id="your_flow_id"
         host_url="langflow_url"
-      ></langflow-chat>
+      ></broxi-chat>
     </div>
   );
 }
@@ -141,7 +141,7 @@ To use the chat widget in Angular, first add this `<script>` tag into the Angu
 
 When you use a custom web component in an Angular template, the Angular compiler might show a warning when it doesn't recognize the custom elements by default. To suppress this warning, add `CUSTOM_ELEMENTS_SCHEMA` to the module's `@NgModule.schemas`.
 
-- Open the module file (it typically ends with _.module.ts_) where you'd add the `langflow-chat` web component.
+- Open the module file (it typically ends with _.module.ts_) where you'd add the `broxi-chat` web component.
 - Import `CUSTOM_ELEMENTS_SCHEMA` at the top of the file:
 
 `import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';`
@@ -163,15 +163,15 @@ When you use a custom web component in an Angular template, the Angular compiler
 export class YourModule { }
 ```
 
-In your Angular project, find the component belonging to the module where `CUSTOM_ELEMENTS_SCHEMA` was added. Inside the template, add the `langflow-chat` tag to include the Chat Widget in your component's view:
+In your Angular project, find the component belonging to the module where `CUSTOM_ELEMENTS_SCHEMA` was added. Inside the template, add the `broxi-chat` tag to include the Chat Widget in your component's view:
 
 ```javascript
-<langflow-chat  chat_inputs='{"your_key":"value"}'  chat_input_field="your_chat_key"  flow_id="your_flow_id"  host_url="langflow_url"></langflow-chat>
+<broxi-chat  chat_inputs='{"your_key":"value"}'  chat_input_field="your_chat_key"  flow_id="your_flow_id"  host_url="langflow_url"></broxi-chat>
 ```
 
 :::tip
 
-`CUSTOM_ELEMENTS_SCHEMA` is a built-in schema that allows Angular to recognize custom elements. Adding `CUSTOM_ELEMENTS_SCHEMA` tells Angular to allow custom elements in your templates, and it will suppress the warning related to unknown elements like `langflow-chat`. Notice that you can only use the Chat Widget in components that are part of the module where you added `CUSTOM_ELEMENTS_SCHEMA`.
+`CUSTOM_ELEMENTS_SCHEMA` is a built-in schema that allows Angular to recognize custom elements. Adding `CUSTOM_ELEMENTS_SCHEMA` tells Angular to allow custom elements in your templates, and it will suppress the warning related to unknown elements like `broxi-chat`. Notice that you can only use the Chat Widget in components that are part of the module where you added `CUSTOM_ELEMENTS_SCHEMA`.
 
 :::
 

@@ -1066,22 +1066,22 @@
   .chat-alert-box {
     @apply flex-max-width h-full flex-col items-center justify-center text-center align-middle;
   }
-  .langflow-chat-span {
+  .broxi-chat-span {
     @apply text-lg text-foreground;
   }
   .card-filter {
     @apply bg-background bg-fixed opacity-20;
   }
-  .langflow-chat-desc {
+  .broxi-chat-desc {
     @apply w-2/4 rounded-md border border-border bg-muted px-6 py-8;
   }
-  .langflow-chat-desc-span {
+  .broxi-chat-desc-span {
     @apply text-base text-muted-foreground;
   }
-  .langflow-chat-input-div {
+  .broxi-chat-input-div {
     @apply flex-max-width flex-col items-center justify-between px-8 pb-3;
   }
-  .langflow-chat-input {
+  .broxi-chat-input {
     @apply relative w-full rounded-md shadow-sm;
   }
 
