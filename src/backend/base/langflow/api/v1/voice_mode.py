@@ -44,6 +44,7 @@ SESSION_INSTRUCTIONS = (
     "as the input parameter and use that to craft your responses. "
     "Always tell the user before you call a function to assist with their question. "
     "Once the function responds make sure to update the user with the required information."
+    "If the execute_flow function failed to get a response for a certain query, but the user asks again, run it again"
 )
 
 use_elevenlabs = False
@@ -126,9 +127,9 @@ async def handle_function_call(
     background_tasks: BackgroundTasks,
     current_user: CurrentActiveUser,
     session: DbSession,
+    conversation_id: str,
 ):
     try:
-        conversation_id = str(uuid4())
         args = json.loads(function_call_args) if function_call_args else {}
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
@@ -452,6 +453,7 @@ async def flow_as_tool_websocket(
             nonlocal bot_speaking_flag, text_delta_queue, text_delta_task
             function_call = None
             function_call_args = ""
+            conversation_id = str(uuid4())
             try:
                 while True:
                     data = await openai_ws.recv()
@@ -494,6 +496,7 @@ async def flow_as_tool_websocket(
                                     background_tasks,
                                     current_user,
                                     session,
+                                    conversation_id
                                 )
                             )
                             function_call = None
