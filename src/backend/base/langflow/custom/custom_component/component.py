@@ -1082,8 +1082,8 @@ class Component(CustomComponent):
         return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
 
     def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
-        """Extract the first tag from each tool's metadata."""
-        return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
+        """Extract the first tag from each tool's metadata if tags exist."""
+        return [tool_tags[0] for tool in tools_metadata if (tool_tags := tool["tags"])]
 
     def _update_tools_with_metadata(self, tools: list[Tool], metadata: list[dict]) -> list[Tool]:
         """Update tools with provided metadata."""
