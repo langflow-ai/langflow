@@ -18,7 +18,7 @@ from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 from starlette.background import BackgroundTasks
 
-from langflow.api.v1.chat import build_flow
+from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
@@ -246,8 +246,6 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                         inputs=input_request,
                         background_tasks=background_tasks,
                         current_user=current_user,
-                        session=async_session,
-                        queue_service=get_queue_service(),
                     )
 
                     async for line in response.body_iterator:
