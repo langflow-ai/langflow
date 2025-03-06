@@ -25,16 +25,16 @@ from langflow.api.v1.schemas import InputValueRequest
 from langflow.logging import logger
 from langflow.services.auth.utils import get_current_user_by_jwt
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.deps import get_variable_service, session_scope
+from langflow.services.deps import (
+    get_queue_service,
+    get_variable_service,
+    session_scope,
+)
 from langflow.utils.voice_utils import (
     BYTES_PER_24K_FRAME,
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
-from langflow.services.deps import (
-    get_queue_service,
-)
-
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -585,4 +585,3 @@ async def flow_as_tool_websocket(
             forward_to_openai(),
             forward_to_client(),
         )
-
