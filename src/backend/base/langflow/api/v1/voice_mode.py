@@ -133,7 +133,7 @@ async def handle_function_call(
         input_request = InputValueRequest(
             input_value=args.get("input"), components=[], type="chat", session=conversation_id
         )
-        build_response = await build_flow_and_stream(
+        response = await build_flow_and_stream(
             flow_id=UUID(flow_id),
             inputs=input_request,
             background_tasks=background_tasks,
