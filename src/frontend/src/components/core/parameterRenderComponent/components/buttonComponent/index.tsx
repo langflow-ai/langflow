@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
 import { useEffect, useRef, useState } from "react";
-import Sortable from "sortablejs";
+import { ReactSortable } from "react-sortablejs";
 
 type ButtonComponentProps = {
   tooltip?: string;
@@ -14,15 +14,6 @@ type ButtonComponentProps = {
 
 const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
   const [open, setOpen] = useState(false);
-  const sortableRef = useRef(null);
-
-  useEffect(() => {
-    if (sortableRef?.current) {
-      new Sortable(sortableRef.current, {
-        animation: 200,
-      });
-    }
-  }, []);
 
   const actionData = [
     {
@@ -80,7 +71,7 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
             </Button>
           </div>
           <div className="flex w-full flex-col">
-            <ul className="flex w-full flex-col" ref={sortableRef}>
+            <ReactSortable list={actionData} className="flex w-full flex-col">
               {actionData.map((data, index) => (
                 <li
                   key={data?.id}
@@ -92,7 +83,7 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
                   />
 
                   <div className="flex w-full items-center gap-x-2">
-                    <div className="h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-center text-white">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-400 text-center text-white">
                       {index + 1}
                     </div>
 
@@ -113,7 +104,7 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
                   </Button>
                 </li>
               ))}
-            </ul>
+            </ReactSortable>
           </div>
         </div>
       )}
