@@ -23,7 +23,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.logging import logger
-from langflow.services.auth.utils import get_current_user_by_jwt
+from langflow.services.auth.utils import get_current_user_by_jwt, api_key_security, api_key_query, api_key_header
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_variable_service, session_scope
 from langflow.utils.voice_utils import (
@@ -31,6 +31,7 @@ from langflow.utils.voice_utils import (
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
+from fastapi import Security
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -41,7 +42,7 @@ SESSION_INSTRUCTIONS = (
     "Converse with the user to assist with their question. "
     "When appropriate, call the execute_flow function to assist with the user's question "
     "as the input parameter and use that to craft your responses. "
-    "Always let the user know before you call a function that you will be doing so. "
+    "*Always* let the user know before you call a function that you will be doing so. "
     "Once the function responds make sure to update the user with the required information."
     "If the execute_flow function failed to get a response for a certain query, but the user asks again, run it again"
     "When encountering URLs, use them in tools, access, and process their content as needed, but do not read the URLs themselves aloud."
@@ -220,8 +221,20 @@ async def flow_as_tool_websocket(
     session: DbSession,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
-    current_user = await get_current_user_by_jwt(client_websocket.cookies.get("access_token_lf"), session)
-    await client_websocket.accept()
+    token = client_websocket.cookies.get("access_token_lf")
+    if token:
+        current_user = await get_current_user_by_jwt(token, session)
+    else:
+        current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
+        if current_user is None:
+
+            await client_websocket.send_json(
+                {
+                    "type": "error",
+                    "code": "langflow_auth",
+                    "message": "You must pass a valid Langflow token or cookie."
+                }
+            )
 
     variable_service = get_variable_service()
     try:
@@ -402,6 +415,7 @@ async def flow_as_tool_websocket(
         async def forward_to_openai() -> None:
             global use_elevenlabs, elevenlabs_voice
             try:
+                await client_websocket.accept()
                 while True:
                     message_text = await client_websocket.receive_text()
                     msg = json.loads(message_text)
@@ -419,13 +433,13 @@ async def flow_as_tool_websocket(
                         logger.info(f"elevenlabs.config {msg}")
                         use_elevenlabs = msg["enabled"]
                         elevenlabs_voice = msg["voice_id"]
-                        modalities = ["text", "audio"]
+                        modalities = ["audio", "text"]
                         if use_elevenlabs:
                             modalities = ["text"]
                         session_update = {
                             "type": "session.update",
                             "session": {
-                                "modalities": ["text"],
+                                "modalities": modalities,
                                 "instructions": SESSION_INSTRUCTIONS,
                                 "voice": "echo",
                                 "temperature": 0.8,
@@ -443,6 +457,11 @@ async def flow_as_tool_websocket(
                             },
                         }
                         await openai_ws.send(json.dumps(session_update))
+                        #response = {
+                        #    "type": "session.update",
+                        #    "session":
+                        #}
+                        #await openai_ws.send(json.dumps(response))
                     else:
                         await openai_ws.send(message_text)
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
@@ -464,22 +483,16 @@ async def flow_as_tool_websocket(
                     await client_websocket.send_text(data)
 
                     if event_type == "response.text.delta":
-                        delta = event.get("delta", "")
-                        await text_delta_queue.put(delta)
-                        if text_delta_task is None:
-                            text_delta_task = asyncio.create_task(process_text_deltas(text_delta_queue))
-                    elif event_type == "response.text.done":
-                        await text_delta_queue.put(None)
-                        text_delta_task = None
-                        print(f"\n      bot response: {event.get('text')}")
-                    elif event_type == "response.audio_transcript.done":
-                        text = event.get("transcript")
-                        print(f"\n      bot transcript: {text}")
                         if use_elevenlabs:
-                            elevenlabs_client = await get_or_create_elevenlabs_client(current_user.id, session)
-                            if elevenlabs_client is None:
-                                return
-                            await elevenlabs_generate_and_send_audio(elevenlabs_client, text)
+                            delta = event.get("delta", "")
+                            await text_delta_queue.put(delta)
+                            if text_delta_task is None:
+                                text_delta_task = asyncio.create_task(process_text_deltas(text_delta_queue))
+                    elif event_type == "response.text.done":
+                        if use_elevenlabs:
+                            await text_delta_queue.put(None)
+                            text_delta_task = None
+                            print(f"\n      bot response: {event.get('text')}")
                     elif event_type == "response.output_item.added":
                         print("Bot speaking = True")
                         bot_speaking_flag[0] = True
@@ -519,15 +532,6 @@ async def flow_as_tool_websocket(
                     log_event(event_type, "↓")
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
                 print(f"Websocket exception: {e}")
-
-        async def elevenlabs_generate_and_send_audio(elevenlabs_client, text):
-            loop = asyncio.get_running_loop()
-            try:
-                # Offload the blocking TTS generation to a background thread.
-                await asyncio.to_thread(_blocking_tts, elevenlabs_client, text, client_websocket, loop)
-            except Exception as e:
-                print(e)
-                print(traceback.format_exc())
 
         def _blocking_tts(elevenlabs_client, text, client_websocket, loop):
             try:
