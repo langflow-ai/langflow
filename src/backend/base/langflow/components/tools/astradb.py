@@ -7,6 +7,7 @@ from langchain_core.tools import StructuredTool, Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import BoolInput, DictInput, HandleInput, IntInput, SecretStrInput, StrInput, TableInput
+from langflow.logging import logger
 from langflow.schema import Data
 from langflow.schema.table import EditMode
 
@@ -67,7 +68,7 @@ class AstraDBToolComponent(LCToolComponent):
         ),
         TableInput(
             name="tools_params_v2",
-            display_name="Tools Params",
+            display_name="Tools Parameters",
             info="Define the structure for the tool parameters. Describe the parameters "
             "in a way the LLM can understand how to use them.",
             required=False,
@@ -178,10 +179,10 @@ class AstraDBToolComponent(LCToolComponent):
 
     def create_args_schema(self) -> dict[str, BaseModel]:
         """DEPRECATED: This method is deprecated. Please use create_args_schema_v2 instead.
-        It is keep only for backward compatibility.
 
+        It is keep only for backward compatibility.
         """
-        self.log.warning("This is the old way to define the tool parameters. Please use the new way.")
+        logger.warning("This is the old way to define the tool parameters. Please use the new way.")
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
         for key in self.tool_params:
@@ -200,7 +201,7 @@ class AstraDBToolComponent(LCToolComponent):
         return {"ToolInput": model}
 
     def create_args_schema_v2(self) -> dict[str, BaseModel]:
-        """Create the tool input schema using the new tool parameters configuration"""
+        """Create the tool input schema using the new tool parameters configuration."""
         args: dict[str, tuple[Any, Field] | list[str]] = {}
 
         for tool_param in self.tools_params_v2:
@@ -237,7 +238,7 @@ class AstraDBToolComponent(LCToolComponent):
 
         return tool
 
-    def projection_args(self, input_str: str) -> dict:
+    def projection_args(self, input_str: str) -> dict | None:
         """Build the projection arguments for the AstraDB query."""
         elements = input_str.split(",")
         result = {}
@@ -302,7 +303,7 @@ class AstraDBToolComponent(LCToolComponent):
             else:
                 if self.embedding is None:
                     msg = "Embedding model is not set. Please set the embedding model or use Astra DB Vectorize."
-                    self.log.error(msg)
+                    logger.error(msg)
                     raise ValueError(msg)
                 embedding_query = self.embedding.embed_query(args["search_query"])
                 sort["$vector"] = embedding_query
