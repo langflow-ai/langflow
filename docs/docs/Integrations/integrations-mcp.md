@@ -9,7 +9,7 @@ Langflow integrates with the Model Context Protocol (MCP). This allows you to us
 
 * Access all of your flows as tools from Claude Desktop
 * Use MCP components as tools that connect to MCP servers outside of Langflow
-* Connect Langflow to Astra D
+* Connect Langflow to Astra DB
 
 This guide will show you how to use Langflow as an MCP server with Claude Desktop as the client.
 
@@ -61,18 +61,21 @@ Use the Astra DB MCP server to connect to Astra DB from Langflow.
 
 ### Prerequisites
 
-* Astra DB application token
-* Astra DB API endpoint
+* [An OpenAI API key](https://platform.openai.com/)
+* [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html)
+* Astra DB API endpoint and application token
 
 ### Add an Astra DB MCP server to Cursor
 
 1. Add your **Astra DB application token** and **API endpoint** to Langflow as environment variables.
-2. Click **Tools**, and drag an **MCP stdio** component to the canvas.
-3. In the **MCP stdio** component, in the **MCP command** field, add the following code to the **MCP stdio** component.
-
+2. Create a [](/starter-projects-simple-agent) project.
+3. Remove the **URL** tool and replace it with an **MCP stdio** component.
+The flow should look like this:
+![MCP stdio component](/img/mcp-stdio-component.png)
+4. In the **MCP stdio** component, in the **MCP command** field, add the following code to the **MCP stdio** component.
 `npx -y @datastax/astra-db-mcp`
-
-4. 
+5. Open the **Playground**.
+Since your Langflow is now connected to Astra DB through the MCP protocol, you can use it to create, read, update, and delete data from Astra DB.
 
 
 
