@@ -12,6 +12,7 @@ export const useStartRecording = async (
   workletCode: string,
   processorRef: MutableRefObject<AudioWorkletNode | null>,
   setStatus: (status: string) => void,
+  handleGetMessagesMutation: () => void,
 ) => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -26,7 +27,20 @@ export const useStartRecording = async (
     const workletUrl = URL.createObjectURL(blob);
 
     try {
-      await audioContextRef.current.audioWorklet.addModule(workletUrl);
+      try {
+        await audioContextRef.current.audioWorklet.addModule(workletUrl);
+      } catch (err) {
+        // Check if the error is because the processor is already registered
+        if (
+          err instanceof DOMException &&
+          err.message.includes("already been loaded")
+        ) {
+          console.log("AudioWorklet module already loaded, continuing...");
+        } else {
+          throw err;
+        }
+      }
+
       processorRef.current = new AudioWorkletNode(
         audioContextRef.current,
         "stream_processor",
@@ -53,6 +67,7 @@ export const useStartRecording = async (
         } else if (event.data.type === "done") {
           if (audioQueueRef.current.length > 0) {
             playNextAudioChunk();
+            handleGetMessagesMutation();
           } else {
             isPlayingRef.current = false;
           }
@@ -62,7 +77,7 @@ export const useStartRecording = async (
       setIsRecording(true);
     } catch (err) {
       console.error("AudioWorklet failed to load:", err);
-      throw err;
+      setStatus("Error initializing audio: " + (err as Error).message);
     } finally {
       URL.revokeObjectURL(workletUrl);
     }

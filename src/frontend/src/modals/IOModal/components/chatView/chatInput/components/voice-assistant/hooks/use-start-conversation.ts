@@ -7,10 +7,11 @@ export const useStartConversation = (
   startRecording: () => void,
   handleWebSocketMessage: (event: MessageEvent) => void,
   stopRecording: () => void,
+  sessionId: string,
 ) => {
   try {
     // const url = `ws://${targetUrl}/api/v1/voice/ws/${flowId}`;
-    const url = `ws://${window.location.hostname}:7860/api/v1/voice/ws/flow_as_tool/${flowId}`;
+    const url = `ws://${window.location.hostname}:7860/api/v1/voice/ws/flow_as_tool/${flowId}/${sessionId}`;
     const audioSettings = JSON.parse(
       getLocalStorage("lf_audio_settings_playground") || "{}",
     );

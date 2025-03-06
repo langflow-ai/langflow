@@ -77,5 +77,15 @@ export const workletCode = `
       return true;
     }
   }
-  registerProcessor('stream_processor', StreamProcessor);
+  
+  try {
+    registerProcessor('stream_processor', StreamProcessor);
+  } catch (e) {
+    // Check for registration error without relying on DOMException
+    if (e && e.message && e.message.includes('is already registered')) {
+      // Processor already registered, ignore the error
+    } else {
+      throw e;
+    }
+  }
 `;

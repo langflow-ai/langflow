@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+import uuid
 
 # For sync queue and thread
 import queue
@@ -10,6 +11,9 @@ import traceback
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from langflow.memory import aadd_messagetables
+from langflow.schema.properties import Properties
+from langflow.services.database.models.message.model import MessageTable
 import numpy as np
 import webrtcvad
 import websockets
@@ -213,12 +217,13 @@ def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
         yield buffer + " "
 
 
-@router.websocket("/ws/flow_as_tool/{flow_id}")
+@router.websocket("/ws/flow_as_tool/{flow_id}/{session_id}")
 async def flow_as_tool_websocket(
     client_websocket: WebSocket,
     flow_id: str,
     background_tasks: BackgroundTasks,
     session: DbSession,
+    session_id: str,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
     token = client_websocket.cookies.get("access_token_lf")
@@ -530,6 +535,23 @@ async def flow_as_tool_websocket(
                     else:
                         await client_websocket.send_text(data)
                     log_event(event_type, "↓")
+                    if event_type == "response.text.done":
+                        try:
+                            message_text = event.get("text", "")
+                            message = MessageTable(
+                                text=message_text, 
+                                sender="Machine", 
+                                sender_name="AI", 
+                                session_id=session_id,
+                                files=[],  
+                                flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
+                                properties=Properties().model_dump(),  
+                                content_blocks=[] 
+                            )
+                            await aadd_messagetables([message], session)
+                        except Exception as e:
+                            logger.error(f"Error saving message to database: {e}")
+                            logger.error(traceback.format_exc())
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
                 print(f"Websocket exception: {e}")
 

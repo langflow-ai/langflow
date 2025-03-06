@@ -1,10 +1,12 @@
 import { SAVE_API_KEY_ALERT } from "@/constants/constants";
+import { useGetMessagesMutation } from "@/controllers/API/queries/messages/use-get-messages-mutation";
 import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
 import { PROXY_TARGET } from "@/customization/config-constants";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ApiKeyPopUp from "./components/api-key-popup";
@@ -59,12 +61,15 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
   );
   const createVariable = usePostGlobalVariables();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const currentSessionId = useUtilityStore((state) => state.currentSessionId);
 
   const hasOpenAIAPIKey = useMemo(() => {
     return (
       variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
     );
   }, [variables]);
+
+  const getMessagesMutation = useGetMessagesMutation();
 
   const initializeAudio = async () => {
     useInitializeAudio(audioContextRef, setStatus, startConversation);
@@ -83,6 +88,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       workletCode,
       processorRef,
       setStatus,
+      handleGetMessagesMutation,
     );
   };
 
@@ -132,11 +138,19 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
       startRecording,
       handleWebSocketMessage,
       stopRecording,
+      currentSessionId,
     );
   };
 
   const interruptPlayback = () => {
     useInterruptPlayback(audioQueueRef, isPlayingRef, processorRef);
+  };
+
+  const handleGetMessagesMutation = () => {
+    getMessagesMutation.mutate({
+      mode: "union",
+      id: currentSessionId,
+    });
   };
 
   const toggleRecording = () => {
