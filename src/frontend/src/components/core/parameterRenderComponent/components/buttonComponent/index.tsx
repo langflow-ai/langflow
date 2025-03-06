@@ -54,12 +54,12 @@ const ButtonComponent = ({ tooltip = "", type }: ButtonComponentProps) => {
             <Button
               size="icon"
               variant="outline"
-              className="h-9 w-10"
+              className="h-9 w-10 border-accent-amber-foreground"
               onClick={() => setOpen(true)}
             >
               <ForwardedIconComponent
                 name="unplug"
-                className="text-amber h-5 w-5"
+                className="h-5 w-5 text-accent-amber-foreground"
               />
             </Button>
           )}
