@@ -65,7 +65,7 @@ Use the Astra DB MCP server to connect to Astra DB from Langflow.
 * [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html)
 * Astra DB API endpoint and application token
 
-### Add an Astra DB MCP server to Cursor
+### Add an Astra DB MCP server to Langflow
 
 1. Add your **Astra DB application token** and **API endpoint** to Langflow as environment variables.
 2. Create a [](/starter-projects-simple-agent) project.
@@ -77,6 +77,7 @@ The flow should look like this:
 5. Open the **Playground**.
 Since your Langflow is now connected to Astra DB through the MCP protocol, you can use it to create, read, update, and delete data from Astra DB.
 
+## Connect an Astra DB MCP server to Cursor
 
 
 
