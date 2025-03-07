@@ -59,6 +59,23 @@ elevenlabs_key = None
 
 barge_in_enabled = False
 
+openai_realtime_session = {
+    "modalities": ["text", "audio"],
+    "instructions": SESSION_INSTRUCTIONS,
+    "voice": "echo",
+    "temperature": 0.8,
+    "input_audio_format": "pcm16",
+    "output_audio_format": "pcm16",
+    "turn_detection": {
+        "type": "server_vad",
+        "threshold": SILENCE_THRESHOLD,
+        "prefix_padding_ms": PREFIX_PADDING_MS,
+        "silence_duration_ms": SILENCE_DURATION_MS,
+    },
+    "input_audio_transcription": {"model": "whisper-1"},
+    "tools": [],
+    "tool_choice": "auto",
+}
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
@@ -242,6 +259,7 @@ async def flow_as_tool_websocket(
     session_id: str,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
+    global openai_realtime_session
     try:
         await client_websocket.accept()
         token = client_websocket.cookies.get("access_token_lf")
@@ -304,25 +322,10 @@ async def flow_as_tool_websocket(
         }
 
         async with websockets.connect(url, extra_headers=headers) as openai_ws:
+            openai_realtime_session["tools"] = [flow_tool]
             session_update = {
                 "type": "session.update",
-                "session": {
-                    "modalities": ["text", "audio"],
-                    "instructions": SESSION_INSTRUCTIONS,
-                    "voice": "echo",
-                    "temperature": 0.8,
-                    "input_audio_format": "pcm16",
-                    "output_audio_format": "pcm16",
-                    "turn_detection": {
-                        "type": "server_vad",
-                        "threshold": SILENCE_THRESHOLD,
-                        "prefix_padding_ms": PREFIX_PADDING_MS,
-                        "silence_duration_ms": SILENCE_DURATION_MS,
-                    },
-                    "input_audio_transcription": {"model": "whisper-1"},
-                    "tools": [flow_tool],
-                    "tool_choice": "auto",
-                },
+                "session": openai_realtime_session
             }
             await openai_ws.send(json.dumps(session_update))
 
@@ -367,20 +370,23 @@ async def flow_as_tool_websocket(
 
             shared_state = {"last_event_type": None, "event_count": 0}
 
-            def log_event(event_type: str, direction: str) -> None:
+            def log_event(event, direction: str) -> None:
+                event_type = event["type"]
                 if event_type != shared_state["last_event_type"]:
                     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     print(f"\n  {timestamp} --  {direction} {event_type} ", end="", flush=True)
                     shared_state["last_event_type"] = event_type
                     shared_state["event_count"] = 0
                 shared_state["event_count"] += 1
+                if event_type == "error":
+                    print(event)
 
             def send_event(websocket, event, loop, direction) -> None:
                 asyncio.run_coroutine_threadsafe(
                     websocket.send_json(event),
                     loop,
                 ).result()
-                log_event(event["type"], direction)
+                log_event(event, direction)
 
             # --- Spawn a text delta queue and task for TTS ---
             text_delta_queue = asyncio.Queue()
@@ -449,7 +455,7 @@ async def flow_as_tool_websocket(
                         message_text = await client_websocket.receive_text()
                         msg = json.loads(message_text)
                         event_type = msg.get("type")
-                        log_event(event_type, "↑")
+                        log_event(msg, "↑")
                         if msg.get("type") == "input_audio_buffer.append":
                             logger.trace(f"buffer_id {msg.get('buffer_id', '')}")
                             base64_data = msg.get("audio", "")
@@ -467,32 +473,13 @@ async def flow_as_tool_websocket(
                             modalities = ["audio", "text"]
                             if use_elevenlabs:
                                 modalities = ["text"]
+                            openai_realtime_session["modalities"] = modalities
+
                             session_update = {
                                 "type": "session.update",
-                                "session": {
-                                    "modalities": modalities,
-                                    "instructions": SESSION_INSTRUCTIONS,
-                                    "voice": "echo",
-                                    "temperature": 0.8,
-                                    "input_audio_format": "pcm16",
-                                    "output_audio_format": "pcm16",
-                                    "turn_detection": {
-                                        "type": "server_vad",
-                                        "threshold": SILENCE_THRESHOLD,
-                                        "prefix_padding_ms": PREFIX_PADDING_MS,
-                                        "silence_duration_ms": SILENCE_DURATION_MS,
-                                    },
-                                    "input_audio_transcription": {"model": "whisper-1"},
-                                    "tools": [flow_tool],
-                                    "tool_choice": "auto",
-                                },
+                                "session": openai_realtime_session
                             }
                             await openai_ws.send(json.dumps(session_update))
-                            # response = {
-                            #    "type": "session.update",
-                            #    "session":
-                            # }
-                            # await openai_ws.send(json.dumps(response))
                         else:
                             await openai_ws.send(message_text)
                 except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
@@ -577,7 +564,7 @@ async def flow_as_tool_websocket(
                             print(event)
                         else:
                             await client_websocket.send_text(data)
-                        log_event(event_type, "↓")
+                        log_event(event, "↓")
 
                 except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
                     print(f"Websocket exception: {e}")
