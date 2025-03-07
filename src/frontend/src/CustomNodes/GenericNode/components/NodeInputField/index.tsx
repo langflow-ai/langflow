@@ -1,12 +1,14 @@
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
+import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import {
   CustomParameterComponent,
   CustomParameterLabel,
   getCustomParameterTitle,
 } from "@/customization/components/custom-parameter";
+import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -44,6 +46,8 @@ export default function NodeInputField({
   const ref = useRef<HTMLDivElement>(null);
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
+  const isAuth = useAuthStore((state) => state.isAuthenticated);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const myData = useTypesStore((state) => state.data);
   const postTemplateValue = usePostTemplateValue({
     node: data.node!,
@@ -63,6 +67,16 @@ export default function NodeInputField({
     nodeId: data.id,
     name,
   });
+
+  const nodeInformationMetadata: NodeInfoType = useMemo(() => {
+    return {
+      flowId: currentFlow?.id ?? "",
+      nodeType: data?.type?.toLowerCase() ?? "",
+      flowName: currentFlow?.name ?? "",
+      isAuth,
+      variableName: name,
+    };
+  }, [data?.node?.id, isAuth, name]);
 
   useFetchDataOnMount(data.node!, handleNodeClass, name, postTemplateValue);
 
@@ -193,6 +207,7 @@ export default function NodeInputField({
                 : data.node?.template[name].placeholder
             }
             isToolMode={isToolMode}
+            nodeInformationMetadata={nodeInformationMetadata}
           />
         )}
       </div>
