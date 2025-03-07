@@ -1,41 +1,54 @@
+import tempfile
+import uuid
+
+from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.database.models import Flow
 
 
 async def test_create_flow(client: AsyncClient, logged_in_headers):
-    basic_case = {
-        "name": "string",
-        "description": "string",
-        "icon": "string",
-        "icon_bg_color": "#ff00ff",
-        "gradient": "string",
-        "data": {},
-        "is_component": False,
-        "webhook": False,
-        "endpoint_name": "string",
-        "tags": ["string"],
-        "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    }
-    response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
-    result = response.json()
+    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()!s}.json"
+    try:
+        basic_case = {
+            "name": "string",
+            "description": "string",
+            "icon": "string",
+            "icon_bg_color": "#ff00ff",
+            "gradient": "string",
+            "data": {},
+            "is_component": False,
+            "webhook": False,
+            "endpoint_name": "string",
+            "tags": ["string"],
+            "user_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "fs_path": str(flow_file),
+        }
+        response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+        result = response.json()
 
-    assert response.status_code == status.HTTP_201_CREATED
-    assert isinstance(result, dict), "The result must be a dictionary"
-    assert "data" in result, "The result must have a 'data' key"
-    assert "description" in result, "The result must have a 'description' key"
-    assert "endpoint_name" in result, "The result must have a 'endpoint_name' key"
-    assert "folder_id" in result, "The result must have a 'folder_id' key"
-    assert "gradient" in result, "The result must have a 'gradient' key"
-    assert "icon" in result, "The result must have a 'icon' key"
-    assert "icon_bg_color" in result, "The result must have a 'icon_bg_color' key"
-    assert "id" in result, "The result must have a 'id' key"
-    assert "is_component" in result, "The result must have a 'is_component' key"
-    assert "name" in result, "The result must have a 'name' key"
-    assert "tags" in result, "The result must have a 'tags' key"
-    assert "updated_at" in result, "The result must have a 'updated_at' key"
-    assert "user_id" in result, "The result must have a 'user_id' key"
-    assert "webhook" in result, "The result must have a 'webhook' key"
+        assert response.status_code == status.HTTP_201_CREATED
+        assert isinstance(result, dict), "The result must be a dictionary"
+        assert "data" in result, "The result must have a 'data' key"
+        assert "description" in result, "The result must have a 'description' key"
+        assert "endpoint_name" in result, "The result must have a 'endpoint_name' key"
+        assert "folder_id" in result, "The result must have a 'folder_id' key"
+        assert "gradient" in result, "The result must have a 'gradient' key"
+        assert "icon" in result, "The result must have a 'icon' key"
+        assert "icon_bg_color" in result, "The result must have a 'icon_bg_color' key"
+        assert "id" in result, "The result must have a 'id' key"
+        assert "is_component" in result, "The result must have a 'is_component' key"
+        assert "name" in result, "The result must have a 'name' key"
+        assert "tags" in result, "The result must have a 'tags' key"
+        assert "updated_at" in result, "The result must have a 'updated_at' key"
+        assert "user_id" in result, "The result must have a 'user_id' key"
+        assert "webhook" in result, "The result must have a 'webhook' key"
+
+        content = await flow_file.read_text()
+        Flow.model_validate_json(content)
+    finally:
+        await flow_file.unlink(missing_ok=True)
 
 
 async def test_read_flows(client: AsyncClient, logged_in_headers):
@@ -112,26 +125,35 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     response_ = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     id_ = response_.json()["id"]
 
+    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()!s}.json"
     basic_case["name"] = updated_name
-    response = await client.patch(f"api/v1/flows/{id_}", json=basic_case, headers=logged_in_headers)
-    result = response.json()
+    basic_case["fs_path"] = str(flow_file)
 
-    assert isinstance(result, dict), "The result must be a dictionary"
-    assert "data" in result, "The result must have a 'data' key"
-    assert "description" in result, "The result must have a 'description' key"
-    assert "endpoint_name" in result, "The result must have a 'endpoint_name' key"
-    assert "folder_id" in result, "The result must have a 'folder_id' key"
-    assert "gradient" in result, "The result must have a 'gradient' key"
-    assert "icon" in result, "The result must have a 'icon' key"
-    assert "icon_bg_color" in result, "The result must have a 'icon_bg_color' key"
-    assert "id" in result, "The result must have a 'id' key"
-    assert "is_component" in result, "The result must have a 'is_component' key"
-    assert "name" in result, "The result must have a 'name' key"
-    assert "tags" in result, "The result must have a 'tags' key"
-    assert "updated_at" in result, "The result must have a 'updated_at' key"
-    assert "user_id" in result, "The result must have a 'user_id' key"
-    assert "webhook" in result, "The result must have a 'webhook' key"
-    assert result["name"] == updated_name, "The name must be updated"
+    try:
+        response = await client.patch(f"api/v1/flows/{id_}", json=basic_case, headers=logged_in_headers)
+        result = response.json()
+
+        assert isinstance(result, dict), "The result must be a dictionary"
+        assert "data" in result, "The result must have a 'data' key"
+        assert "description" in result, "The result must have a 'description' key"
+        assert "endpoint_name" in result, "The result must have a 'endpoint_name' key"
+        assert "folder_id" in result, "The result must have a 'folder_id' key"
+        assert "gradient" in result, "The result must have a 'gradient' key"
+        assert "icon" in result, "The result must have a 'icon' key"
+        assert "icon_bg_color" in result, "The result must have a 'icon_bg_color' key"
+        assert "id" in result, "The result must have a 'id' key"
+        assert "is_component" in result, "The result must have a 'is_component' key"
+        assert "name" in result, "The result must have a 'name' key"
+        assert "tags" in result, "The result must have a 'tags' key"
+        assert "updated_at" in result, "The result must have a 'updated_at' key"
+        assert "user_id" in result, "The result must have a 'user_id' key"
+        assert "webhook" in result, "The result must have a 'webhook' key"
+        assert result["name"] == updated_name, "The name must be updated"
+
+        content = await flow_file.read_text()
+        Flow.model_validate_json(content)
+    finally:
+        await flow_file.unlink(missing_ok=True)
 
 
 async def test_create_flows(client: AsyncClient, logged_in_headers):
