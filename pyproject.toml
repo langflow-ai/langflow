@@ -114,6 +114,8 @@ dependencies = [
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
     "langchain-gridgain==1.0.1",
+    "pylint>=3.3.4",
+    "ruff>=0.9.7",
 ]
 
 [dependency-groups]
