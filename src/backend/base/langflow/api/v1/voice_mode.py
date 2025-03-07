@@ -77,6 +77,7 @@ openai_realtime_session = {
     "tool_choice": "auto",
 }
 
+
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
     async with session_scope() as session:
@@ -323,10 +324,7 @@ async def flow_as_tool_websocket(
 
         async with websockets.connect(url, extra_headers=headers) as openai_ws:
             openai_realtime_session["tools"] = [flow_tool]
-            session_update = {
-                "type": "session.update",
-                "session": openai_realtime_session
-            }
+            session_update = {"type": "session.update", "session": openai_realtime_session}
             await openai_ws.send(json.dumps(session_update))
 
             # Setup for VAD processing.
@@ -475,10 +473,7 @@ async def flow_as_tool_websocket(
                                 modalities = ["text"]
                             openai_realtime_session["modalities"] = modalities
 
-                            session_update = {
-                                "type": "session.update",
-                                "session": openai_realtime_session
-                            }
+                            session_update = {"type": "session.update", "session": openai_realtime_session}
                             await openai_ws.send(json.dumps(session_update))
                         else:
                             await openai_ws.send(message_text)
