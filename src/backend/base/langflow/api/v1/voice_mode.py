@@ -388,7 +388,7 @@ async def flow_as_tool_websocket(
 
             def pass_through(from_dict, to_dict, keys):
                 for key in keys:
-                    if from_dict[key]:
+                    if key in from_dict.keys():
                         to_dict[key] = from_dict[key]
 
             def merge(from_dict, to_dict, keys):
@@ -404,7 +404,7 @@ async def flow_as_tool_websocket(
 
             def warn_if_present(dict, keys):
                 for key in keys:
-                    if dict[key]:
+                    if key in dict.keys():
                         logger.warning(f"Removing key {key} from session.update.")
 
             def update_global_session(from_session):
