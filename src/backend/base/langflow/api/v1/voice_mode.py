@@ -218,10 +218,10 @@ def sync_text_chunker(sync_queue_obj: queue.Queue, timeout: float = 0.3):
 
 @router.websocket("/ws/flow_as_tool/{flow_id}")
 async def flow_as_tool_websocket_no_session(
-        client_websocket: WebSocket,
-        flow_id: str,
-        background_tasks: BackgroundTasks,
-        session: DbSession,
+    client_websocket: WebSocket,
+    flow_id: str,
+    background_tasks: BackgroundTasks,
+    session: DbSession,
 ):
     session_id = str(uuid4())
     await flow_as_tool_websocket(
@@ -229,8 +229,9 @@ async def flow_as_tool_websocket_no_session(
         flow_id=flow_id,
         background_tasks=background_tasks,
         session=session,
-        session_id=session_id
+        session_id=session_id,
     )
+
 
 @router.websocket("/ws/flow_as_tool/{flow_id}/{session_id}")
 async def flow_as_tool_websocket(
@@ -250,7 +251,11 @@ async def flow_as_tool_websocket(
             current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
             if current_user is None:
                 await client_websocket.send_json(
-                    {"type": "error", "code": "langflow_auth", "message": "You must pass a valid Langflow token or cookie."}
+                    {
+                        "type": "error",
+                        "code": "langflow_auth",
+                        "message": "You must pass a valid Langflow token or cookie.",
+                    }
                 )
 
         variable_service = get_variable_service()
@@ -450,7 +455,9 @@ async def flow_as_tool_websocket(
                             base64_data = msg.get("audio", "")
                             if not base64_data:
                                 continue
-                            await openai_ws.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64_data}))
+                            await openai_ws.send(
+                                json.dumps({"type": "input_audio_buffer.append", "audio": base64_data})
+                            )
                             if barge_in_enabled:
                                 await vad_queue.put(base64_data)
                         elif msg.get("type") == "elevenlabs.config":
@@ -604,7 +611,7 @@ async def flow_as_tool_websocket(
                 forward_to_openai(),
                 forward_to_client(),
             )
-    except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
+    except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
         # Catch disconnect exceptions from the client websocket.
         logger.info("Client websocket disconnected. Closing connections.")
     except Exception as e:
@@ -617,6 +624,7 @@ async def flow_as_tool_websocket(
         except Exception as e:
             logger.error(f"Error closing client websocket: {e}")
         logger.info("Client websocket cleanup complete.")
+
 
 @router.get("/elevenlabs/voice_ids")
 async def get_elevenlabs_voice_ids(
