@@ -507,8 +507,9 @@ async def flow_as_tool_websocket(
                         elif msg.get("type") == "session.update":
                             session = msg["session"]
                             update_global_session(session)
-                            msg["session"] = openai_realtime_session
-                            await openai_ws.send(msg)
+                            session_update = msg
+                            session_update["session"] = openai_realtime_session
+                            await openai_ws.send(json.dumps(session_update))
                             log_event(session_update, "↑")
                         else:
                             await openai_ws.send(message_text)
