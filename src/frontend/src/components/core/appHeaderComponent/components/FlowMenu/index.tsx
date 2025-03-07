@@ -282,7 +282,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
                 className={cn(
                   "h-6 w-full cursor-text font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
-                  "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
+                  "border-0 outline-hidden focus:border-0 focus:outline-hidden focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
                   isInvalidName && "text-status-red",
                 )}

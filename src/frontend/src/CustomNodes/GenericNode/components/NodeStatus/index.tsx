@@ -198,7 +198,7 @@ export default function NodeStatus({
 
   return showNode ? (
     <>
-      <div className="flex flex-shrink-0 items-center">
+      <div className="flex shrink-0 items-center">
         <div className="flex items-center gap-2 self-center">
           <ShadTooltip
             styleClasses={cn(

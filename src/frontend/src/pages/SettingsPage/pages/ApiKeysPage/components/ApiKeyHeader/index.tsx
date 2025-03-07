@@ -26,7 +26,7 @@ const ApiKeyHeaderComponent = ({
           </h2>
           <p className="text-sm text-muted-foreground">{API_PAGE_PARAGRAPH}</p>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <SecretKeyModal data={userId} onCloseModal={fetchApiKeys}>
             <Button data-testid="api-key-button-store" variant="primary">
               <ForwardedIconComponent name="Plus" className="w-4" />

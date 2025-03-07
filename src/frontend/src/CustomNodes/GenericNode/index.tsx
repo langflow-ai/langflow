@@ -459,7 +459,7 @@ function GenericNode({
         className={cn(
           borderColor,
           showNode ? "w-80" : `w-48`,
-          "generic-node-div group/node relative rounded-xl shadow-sm hover:shadow-md",
+          "generic-node-div group/node relative rounded-xl shadow-2xs hover:shadow-md",
           !hasOutputs && "pb-4",
         )}
       >

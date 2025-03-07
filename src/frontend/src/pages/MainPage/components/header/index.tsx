@@ -55,8 +55,8 @@ const HeaderComponent = ({
         className="flex items-center pb-8 text-xl font-semibold"
         data-testid="mainpage_title"
       >
-        <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-          <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
+        <div className="h-7 w-10 transition-all md:group-data-[open=true]/sidebar-wrapper:w-0 lg:hidden">
+          <div className="relative left-0 opacity-100 transition-all md:group-data-[open=true]/sidebar-wrapper:opacity-0">
             <SidebarTrigger>
               <ForwardedIconComponent
                 name="PanelLeftOpen"
@@ -138,7 +138,7 @@ const HeaderComponent = ({
             <ShadTooltip content="New Flow" side="bottom">
               <Button
                 variant="default"
-                className="!px-3 md:!px-4 md:!pl-3.5"
+                className="px-3! md:px-4! md:pl-3.5!"
                 onClick={() => setNewProjectModal(true)}
                 id="new-project-btn"
                 data-testid="new-project-btn"
