@@ -67,9 +67,9 @@ export const useStartRecording = async (
         } else if (event.data.type === "done") {
           if (audioQueueRef.current.length > 0) {
             playNextAudioChunk();
-            handleGetMessagesMutation();
           } else {
             isPlayingRef.current = false;
+            handleGetMessagesMutation();
           }
         }
       };

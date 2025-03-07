@@ -517,6 +517,14 @@ async def flow_as_tool_websocket(
                             await text_delta_queue.put(None)
                             text_delta_task = None
                             print(f"\n      bot response: {event.get('text')}")
+
+                            try:
+                                message_text = event.get("text", "")
+                                await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
+                            except Exception as e:
+                                logger.error(f"Error saving message to database: {e}")
+                                logger.error(traceback.format_exc())
+                                
                     elif event_type == "response.output_item.added":
                         print("Bot speaking = True")
                         bot_speaking_flag[0] = True
@@ -562,13 +570,7 @@ async def flow_as_tool_websocket(
                     else:
                         await client_websocket.send_text(data)
                     log_event(event_type, "↓")
-                    if event_type == "response.text.done":
-                        try:
-                            message_text = event.get("text", "")
-                            await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
-                        except Exception as e:
-                            logger.error(f"Error saving message to database: {e}")
-                            logger.error(traceback.format_exc())
+
             except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
                 print(f"Websocket exception: {e}")
 
