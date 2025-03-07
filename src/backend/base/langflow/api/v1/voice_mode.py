@@ -409,9 +409,15 @@ async def flow_as_tool_websocket(
 
             def update_global_session(from_session):
                 global openai_realtime_session
-                pass_through(from_session, openai_realtime_session, ["voice", "temperature", "turn_detection", "input_audio_transcription"])
+                pass_through(
+                    from_session,
+                    openai_realtime_session,
+                    ["voice", "temperature", "turn_detection", "input_audio_transcription"],
+                )
                 merge(from_session, openai_realtime_session, ["instructions"])
-                warn_if_present(from_session, ["modalities", "tools", "tool_choice", "input_audio_format", "output_audio_format"])
+                warn_if_present(
+                    from_session, ["modalities", "tools", "tool_choice", "input_audio_format", "output_audio_format"]
+                )
 
             # --- Spawn a text delta queue and task for TTS ---
             text_delta_queue = asyncio.Queue()
@@ -486,9 +492,7 @@ async def flow_as_tool_websocket(
                             if not base64_data:
                                 continue
                             event = {"type": "input_audio_buffer.append", "audio": base64_data}
-                            await openai_ws.send(
-                                json.dumps(event)
-                            )
+                            await openai_ws.send(json.dumps(event))
                             log_event(event, "↑")
                             if barge_in_enabled:
                                 await vad_queue.put(base64_data)
