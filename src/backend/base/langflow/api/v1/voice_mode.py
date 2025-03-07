@@ -386,6 +386,33 @@ async def flow_as_tool_websocket(
                 ).result()
                 log_event(event, direction)
 
+            def pass_through(from_dict, to_dict, keys):
+                for key in keys:
+                    if from_dict[key]:
+                        to_dict[key] = from_dict[key]
+
+            def merge(from_dict, to_dict, keys):
+                for key in keys:
+                    if key in from_dict and key in to_dict and isinstance(to_dict[key], str):
+                        new_value = from_dict[key]
+                        old_value = to_dict[key]
+
+                        if new_value and new_value not in old_value:
+                            to_dict[key] = f"{old_value}\n{new_value}"
+                    else:
+                        raise ValueError(f"Only string values are supported for merge. Issue with key: {key}")
+
+            def warn_if_present(dict, keys):
+                for key in keys:
+                    if dict[key]:
+                        logger.warning(f"Removing key {key} from session.update.")
+
+            def update_global_session(from_session):
+                global openai_realtime_session
+                pass_through(from_session, openai_realtime_session, ["voice", "temperature", "turn_detection", "input_audio_transcription"])
+                merge(from_session, openai_realtime_session, ["instructions"])
+                warn_if_present(from_session, ["modalities", "tools", "tool_choice", "input_audio_format", "output_audio_format"])
+
             # --- Spawn a text delta queue and task for TTS ---
             text_delta_queue = asyncio.Queue()
             text_delta_task = None  # Will hold our background task.
@@ -453,15 +480,16 @@ async def flow_as_tool_websocket(
                         message_text = await client_websocket.receive_text()
                         msg = json.loads(message_text)
                         event_type = msg.get("type")
-                        log_event(msg, "↑")
                         if msg.get("type") == "input_audio_buffer.append":
                             logger.trace(f"buffer_id {msg.get('buffer_id', '')}")
                             base64_data = msg.get("audio", "")
                             if not base64_data:
                                 continue
+                            event = {"type": "input_audio_buffer.append", "audio": base64_data}
                             await openai_ws.send(
-                                json.dumps({"type": "input_audio_buffer.append", "audio": base64_data})
+                                json.dumps(event)
                             )
+                            log_event(event, "↑")
                             if barge_in_enabled:
                                 await vad_queue.put(base64_data)
                         elif msg.get("type") == "langflow.elevenlabs.config":
@@ -475,8 +503,16 @@ async def flow_as_tool_websocket(
 
                             session_update = {"type": "session.update", "session": openai_realtime_session}
                             await openai_ws.send(json.dumps(session_update))
+                            log_event(session_update, "↑")
+                        elif msg.get("type") == "session.update":
+                            session = msg["session"]
+                            update_global_session(session)
+                            msg["session"] = openai_realtime_session
+                            await openai_ws.send(msg)
+                            log_event(session_update, "↑")
                         else:
                             await openai_ws.send(message_text)
+                            log_event(msg, "↑")
                 except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
                     pass
 
