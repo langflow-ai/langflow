@@ -39,6 +39,7 @@ const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 // const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
+const rootPath = process.env.LANGFLOW_ROOT_PATH || "";
 const router = createBrowserRouter(
   createRoutesFromElements([
     <Route
@@ -185,7 +186,7 @@ const router = createBrowserRouter(
       <Route path="*" element={<CustomNavigate replace to="/" />} />
     </Route>,
   ]),
-  { basename: BASENAME || undefined },
+  { basename: rootPath || BASENAME },
 );
 
 export default router;
