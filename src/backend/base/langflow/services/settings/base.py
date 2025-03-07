@@ -215,6 +215,8 @@ class Settings(BaseSettings):
     """The maximum number of vertex builds to keep in the database."""
     max_vertex_builds_per_vertex: int = 2
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
+    webhook_polling_interval: int = 5000
+    """The polling interval for the webhook in ms."""
 
     # MCP Server
     mcp_server_enabled: bool = True
@@ -224,6 +226,9 @@ class Settings(BaseSettings):
 
     event_delivery: Literal["polling", "streaming"] = "polling"
     """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
+    lazy_load_components: bool = False
+    """If set to True, Langflow will only partially load components at startup and fully load them on demand.
+    This significantly reduces startup time but may cause a slight delay when a component is first used."""
 
     @field_validator("dev")
     @classmethod

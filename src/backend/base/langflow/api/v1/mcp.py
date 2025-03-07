@@ -18,12 +18,17 @@ from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 from starlette.background import BackgroundTasks
 
-from langflow.api.v1.chat import build_flow
+from langflow.api.v1.chat import build_flow_and_stream
 from langflow.api.v1.schemas import InputValueRequest
 from langflow.helpers.flow import json_schema_from_flow
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import Flow, User
-from langflow.services.deps import get_db_service, get_session, get_settings_service, get_storage_service
+from langflow.services.deps import (
+    get_db_service,
+    get_session,
+    get_settings_service,
+    get_storage_service,
+)
 from langflow.services.storage.utils import build_content_type_from_extension
 
 logger = logging.getLogger(__name__)
@@ -44,6 +49,7 @@ if False:
 
     logger.debug("MCP module loaded - debug logging enabled")
 
+enable_progress_notifications = None
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -177,10 +183,11 @@ async def handle_list_tools():
 
 
 @server.call_tool()
-async def handle_call_tool(
-    name: str, arguments: dict, *, enable_progress_notifications: bool = Depends(get_enable_progress_notifications)
-) -> list[types.TextContent]:
+async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool execution requests."""
+    global enable_progress_notifications
+    if enable_progress_notifications is None:
+        enable_progress_notifications = get_settings_service().settings.mcp_server_enable_progress_notifications
     try:
         session = await anext(get_session())
         background_tasks = BackgroundTasks()
@@ -233,12 +240,11 @@ async def handle_call_tool(
                 progress_task = asyncio.create_task(send_progress_updates())
 
                 try:
-                    response = await build_flow(
+                    response = await build_flow_and_stream(
                         flow_id=UUID(name),
                         inputs=input_request,
                         background_tasks=background_tasks,
                         current_user=current_user,
-                        session=async_session,
                     )
 
                     async for line in response.body_iterator:
