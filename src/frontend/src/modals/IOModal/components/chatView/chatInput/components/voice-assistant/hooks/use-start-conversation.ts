@@ -23,7 +23,7 @@ export const useStartConversation = (
       if (wsRef.current) {
         wsRef.current.send(
           JSON.stringify({
-            type: "elevenlabs.config",
+            type: "langflow.elevenlabs.config",
             enabled: audioSettings.provider === "elevenlabs",
             voice_id: audioSettings.voice,
           }),

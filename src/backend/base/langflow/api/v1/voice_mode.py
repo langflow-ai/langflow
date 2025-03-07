@@ -460,8 +460,8 @@ async def flow_as_tool_websocket(
                             )
                             if barge_in_enabled:
                                 await vad_queue.put(base64_data)
-                        elif msg.get("type") == "elevenlabs.config":
-                            logger.info(f"elevenlabs.config {msg}")
+                        elif msg.get("type") == "langflow.elevenlabs.config":
+                            logger.info(f"langflow.elevenlabs.config {msg}")
                             use_elevenlabs = msg["enabled"]
                             elevenlabs_voice = msg["voice_id"]
                             modalities = ["audio", "text"]
@@ -563,7 +563,7 @@ async def flow_as_tool_websocket(
                                 function_call = None
                                 function_call_args = ""
                         elif event_type == "response.audio.delta":
-                            # Audio deltas from OpenAI are not forwarded if ElevenLabs is used.
+                            # there are no audio deltas from OpenAI if ElevenLabs is used (because modality = ["text"]).
                             audio_delta = event.get("delta", "")
                         elif event_type == "conversation.item.input_audio_transcription.completed":
                             try:
