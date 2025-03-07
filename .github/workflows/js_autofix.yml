@@ -6,7 +6,8 @@ on:
       - "src/frontend/**"
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 env:
   NODE_VERSION: "21"
