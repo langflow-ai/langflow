@@ -39,6 +39,7 @@ patch: ## bump the version in langflow and langflow-base
 	@poetry version patch
 	@echo 'Patching the version in langflow-base'
 	@cd src/backend/base && poetry version patch
+	@cd src/frontend && npm version patch
 	@make lock
 
 # check for required tools
