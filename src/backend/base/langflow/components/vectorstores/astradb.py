@@ -95,6 +95,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="embedding_generation_provider",
                                 display_name="Embedding generation method",
                                 info="Provider to use for generating embeddings.",
+                                helper_text=(
+                                    "To create collections with more embedding provider options, go to "
+                                    '<a class="underline" href="https://astra.datastax.com/" target=" _blank" '
+                                    'rel="noopener noreferrer">your database in Astra DB</a>'
+                                ),
                                 real_time_refresh=True,
                                 required=True,
                                 options=[],
@@ -110,8 +115,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="dimension",
                                 display_name="Dimensions (Required only for `Bring your own`)",
                                 info="Dimensions of the embeddings to generate.",
-                                required=False,
-                                value=1024,
+                                value=None,
                             ),
                         },
                     },
@@ -413,6 +417,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "api_endpoint": api_endpoint,
                     "collections": num_collections,
                     "status": db.status if db.status != "ACTIVE" else None,
+                    "org_id": db.org_id,
                 }
             except Exception:  # noqa: BLE001, S110
                 pass
@@ -507,6 +512,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
                     "icon": "data",
+                    "org_id": info["org_id"],
                 }
                 for name, info in self.get_database_list().items()
             ]
@@ -588,7 +594,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]["options"] = [
             "Bring your own",
             "Nvidia",
-            *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],
+            # *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],
         ]
 
         # For all not Bring your own or Nvidia providers, add metadata saying configure in Astra DB Portal
@@ -600,11 +606,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         for provider in provider_options:
             # Add the icon for the provider
             my_metadata = {"icon": self.get_provider_icon(provider_name=provider)}
-
-            # Skip Bring your own and Nvidia, automatically configured
-            if provider not in {"Bring your own", "Nvidia"}:
-                # Add metadata to configure in Astra DB Portal
-                my_metadata[" "] = "Configure in Astra DB Portal"
 
             # Add the metadata to the options metadata
             build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
@@ -621,7 +622,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "03_embedding_generation_model"
         ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
 
-        return build_config
+        # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
+            "value"
+        ] = 1024 if embedding_provider != "Bring your own" else None  # TODO: Support other providers
+
+        # If the provider is not Bring your own, disable the dimension field
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
+            "disabled"
+        ] = embedding_provider != "Bring your own"
 
     def reset_collection_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
@@ -805,6 +814,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             else:
                 # Find the position of the selected database to align with metadata
                 index_of_name = build_config["database_name"]["options"].index(field_value)
+                org_id = build_config["database_name"]["options_metadata"][index_of_name]["org_id"]
+
+                # Set the helper text field of the embedding provider
+                build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+                    "02_embedding_generation_provider"
+                ]["helper_text"] = (
+                    "To create collections with more embedding provider options, go to "
+                    '<a class="underline" target="_blank" rel="noopener noreferrer" '
+                    f'href="https://astra.datastax.com/org/{org_id}/settings/manageIntegrations">'
+                    "your database in Astra DB</a>."
+                )
 
                 # Initializing database condition
                 pending = build_config["database_name"]["options_metadata"][index_of_name]["status"] == "PENDING"

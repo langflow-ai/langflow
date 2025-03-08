@@ -147,13 +147,15 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
         <div className="flex flex-col gap-5 overflow-y-auto px-5">
           {Object.entries(dialogTemplate).map(([fieldKey, fieldValue]) => (
             <div key={fieldKey}>
-              <div>
+              <div className="flex items-center gap-2">
                 {getCustomParameterTitle({
                   title:
                     (fieldValue as { display_name: string })?.display_name ??
                     "",
                   nodeId,
                   isFlexView: false,
+                  required:
+                    (fieldValue as { required: boolean })?.required ?? false,
                 })}
               </div>
               <ParameterRenderComponent
