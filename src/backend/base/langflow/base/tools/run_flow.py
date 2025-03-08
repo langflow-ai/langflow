@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from typing_extensions import override
