@@ -271,6 +271,7 @@ frontendc: install_frontendc
 
 backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860) || true
+	uv sync --frozen --extra postgresql
 ifdef login
 	@echo "Running backend autologin is $(login)";
 	LANGFLOW_AUTO_LOGIN=$(login) uv run uvicorn \

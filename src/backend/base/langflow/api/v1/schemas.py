@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
 
 from langflow.graph.schema import RunOutputs
@@ -73,6 +74,14 @@ class RunResponse(BaseModel):
                 else:
                     serialized_outputs.append(output)
             serialized["outputs"] = serialized_outputs
+
+        try:
+            jsonable_encoder(serialized)
+        except Exception as exc:
+            import pdb
+
+            pdb.set_trace()
+            print(exc)
         return serialized
 
 
