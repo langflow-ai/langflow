@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType
 
 
@@ -1050,11 +1051,93 @@ class Component(CustomComponent):
         return Input(**kwargs)
 
     async def to_toolkit(self) -> list[Tool]:
-        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
-        tools = component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        """Convert component to a list of tools.
+
+        This is a template method that defines the skeleton of the toolkit creation
+        algorithm. Subclasses can override _get_tools() to provide custom tool
+        implementations while maintaining the metadata update functionality.
+
+        Returns:
+            list[Tool]: A list of tools with updated metadata. Each tool contains:
+                - name: The name of the tool
+                - description: A description of what the tool does
+                - tags: List of tags associated with the tool
+        """
+        # Get tools from subclass implementation
+        tools = await self._get_tools()
+
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
+            return self._update_tools_with_metadata(tools, self.tools_metadata)
         return tools
+
+    async def _get_tools(self) -> list[Tool]:
+        """Get the list of tools for this component.
+
+        This method can be overridden by subclasses to provide custom tool implementations.
+        The default implementation uses ComponentToolkit.
+
+        Returns:
+            list[Tool]: List of tools provided by this component
+        """
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+
+    def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
+        """Extract the first tag from each tool's metadata."""
+        return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
+
+    def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
+        """Update tools with provided metadata."""
+        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
+        return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
+
+    def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
+        return old_tags != new_tags
+
+    async def _build_tools_metadata_input(self):
+        tools = await self.to_toolkit()
+        # Always use the latest tool data
+        tool_data = [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
+        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            old_tags = self._extract_tools_tags(self.tools_metadata)
+            new_tags = self._extract_tools_tags(tool_data)
+            if self.check_for_tool_tag_change(old_tags, new_tags):
+                self.tools_metadata = tool_data
+            else:
+                tool_data = self.tools_metadata
+        else:
+            self.tools_metadata = tool_data
+        try:
+            from langflow.io import TableInput
+        except ImportError as e:
+            msg = "Failed to import TableInput from langflow.io"
+            raise ImportError(msg) from e
+
+        return TableInput(
+            name=TOOLS_METADATA_INPUT_NAME,
+            display_name="Edit tools",
+            real_time_refresh=True,
+            table_schema=TOOL_TABLE_SCHEMA,
+            value=tool_data,
+            table_icon="Hammer",
+            trigger_icon="Hammer",
+            trigger_text="",
+            table_options=TableOptions(
+                block_add=True,
+                block_delete=True,
+                block_edit=True,
+                block_sort=True,
+                block_filter=True,
+                block_hide=True,
+                block_select=True,
+                hide_options=True,
+                field_parsers={
+                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
+                    "commands": FieldParserType.COMMANDS,
+                },
+                description=TOOLS_METADATA_INFO,
+            ),
+        )
 
     def get_project_name(self):
         if hasattr(self, "_tracing_service") and self._tracing_service:
@@ -1266,45 +1349,6 @@ class Component(CustomComponent):
 
     def _build_tool_output(self) -> Output:
         return Output(name=TOOL_OUTPUT_NAME, display_name=TOOL_OUTPUT_DISPLAY_NAME, method="to_toolkit", types=["Tool"])
-
-    async def _build_tools_metadata_input(self):
-        tools = await self.to_toolkit()
-        tool_data = (
-            self.tools_metadata
-            if hasattr(self, TOOLS_METADATA_INPUT_NAME)
-            else [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
-        )
-        try:
-            from langflow.io import TableInput
-        except ImportError as e:
-            msg = "Failed to import TableInput from langflow.io"
-            raise ImportError(msg) from e
-
-        return TableInput(
-            name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Edit tools",
-            real_time_refresh=True,
-            table_schema=TOOL_TABLE_SCHEMA,
-            value=tool_data,
-            table_icon="Hammer",
-            trigger_icon="Hammer",
-            trigger_text="",
-            table_options=TableOptions(
-                block_add=True,
-                block_delete=True,
-                block_edit=True,
-                block_sort=True,
-                block_filter=True,
-                block_hide=True,
-                block_select=True,
-                hide_options=True,
-                field_parsers={
-                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
-                    "commands": FieldParserType.COMMANDS,
-                },
-                description=TOOLS_METADATA_INFO,
-            ),
-        )
 
     def get_input_display_name(self, input_name: str) -> str:
         """Get the display name of an input.

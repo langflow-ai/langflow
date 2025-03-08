@@ -38,3 +38,5 @@ TOOL_TABLE_SCHEMA = [
 ]
 
 TOOLS_METADATA_INFO = "Modify tool names and descriptions to help agents understand when to use each tool."
+
+TOOL_UPDATE_CONSTANTS = ["tool_mode", "tool_actions", TOOLS_METADATA_INPUT_NAME, "flow_name_selected"]
