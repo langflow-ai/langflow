@@ -1084,7 +1084,8 @@ class Component(CustomComponent):
 
     def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
         """Extract the first tag from each tool's metadata."""
-        return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
+        # Use a local variable to access the "tags" attribute directly
+        return [tags[0] for tool in tools_metadata if (tags := tool["tags"])]
 
     def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
         """Update tools with provided metadata."""
