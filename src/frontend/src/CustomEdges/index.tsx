@@ -56,11 +56,26 @@ export function DefaultEdge({
     targetY: targetYNew,
   });
 
+  const {
+    animated,
+    selectable,
+    deletable,
+    sourcePosition,
+    targetPosition,
+    pathOptions,
+    selected,
+    ...domSafeProps
+  } = props;
+
   return (
     <BaseEdge
       path={targetHandleObject.output_types ? edgePathLoop : edgePath}
       strokeDasharray={targetHandleObject.output_types ? "5 5" : "0"}
-      {...props}
+      {...domSafeProps}
+      data-animated={animated ? "true" : "false"}
+      data-selectable={selectable ? "true" : "false"}
+      data-deletable={deletable ? "true" : "false"}
+      data-selected={selected ? "true" : "false"}
     />
   );
 }
