@@ -14,6 +14,7 @@ from loguru import logger
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.inputs.inputs import ButtonInput
 from langflow.io import Output
 
 
@@ -34,12 +35,25 @@ class ComposioAPIComponent(LCToolComponent):
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
         ),
+        ButtonInput(
+            name="tool_name",
+            display_name="Tool Name",
+            value="",
+            info="The name of the tool to use",
+        ),
+        ButtonInput(
+            name="actions",
+            display_name="Actions",
+            value="",
+            info="The actions to use",
+        ),
         DropdownInput(
             name="app_names",
             display_name="App Name",
             options=[],
             value="",
             info="The app name to use. Please refresh after selecting app name",
+            show=False,  # TODO: Remove this
             refresh_button=True,
             required=True,
         ),

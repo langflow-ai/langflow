@@ -23,6 +23,7 @@ class FieldTypes(str, Enum):
     BOOLEAN = "bool"
     DICT = "dict"
     NESTED_DICT = "NestedDict"
+    BUTTON = "button"
     FILE = "file"
     PROMPT = "prompt"
     CODE = "code"
