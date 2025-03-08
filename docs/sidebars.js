@@ -196,5 +196,16 @@ module.exports = {
         },
       ],
     },
+    {
+      type: "category",
+      label: "Supported software",
+      items: [
+        {
+          type: "doc",
+          id: "Support/supported-software",
+          label: "Supported software",
+        },
+      ],
+    },
   ],
 };
