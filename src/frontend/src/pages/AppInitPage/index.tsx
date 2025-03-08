@@ -40,14 +40,6 @@ export function AppInitPage() {
     }
   }, [isFetched]);
 
-  useEffect(() => {
-    if (!dark) {
-      document.getElementById("body")!.classList.remove("dark");
-    } else {
-      document.getElementById("body")!.classList.add("dark");
-    }
-  }, [dark]);
-
   return (
     //need parent component with width and height
     <>

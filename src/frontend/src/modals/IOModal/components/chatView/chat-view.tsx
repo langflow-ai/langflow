@@ -4,6 +4,7 @@ import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -31,10 +32,15 @@ export default function ChatView({
   visibleSession,
   focusChat,
   closeChat,
+  playgroundPage,
 }: chatViewProps): JSX.Element {
   const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const clientId = useUtilityStore((state) => state.clientId);
+  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = playgroundPage
+    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
+    : realFlowId;
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
@@ -171,6 +177,7 @@ export default function ChatView({
                   key={`${chat.id}-${index}`}
                   updateChat={updateChat}
                   closeChat={closeChat}
+                  playgroundPage={playgroundPage}
                 />
               ))}
             </>
@@ -212,6 +219,7 @@ export default function ChatView({
       </div>
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
+          playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
           sendMessage={({ repeat, files }) => {
             sendMessage({ repeat, files });
