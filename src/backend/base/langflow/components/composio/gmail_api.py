@@ -30,19 +30,54 @@ class GmailAPIComponent(LCToolComponent):
     documentation: str = "https://docs.composio.dev"
 
     _actions_data: dict = {
-        "GMAIL_SEND_EMAIL": ["recipient_email", "subject", "body", "cc", "bcc", "is_html", "attachment"],
-        "GMAIL_FETCH_EMAILS": ["max_results", "query", "page_token", "label_ids", "include_spam_trash"],
-        "GMAIL_GET_PROFILE": [],
-        "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": ["message_id", "format"],
-        "GMAIL_CREATE_EMAIL_DRAFT": ["recipient_email", "subject", "body", "cc", "bcc", "is_html", "attachment"],
-        "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": ["thread_id", "page_token"],
-        "GMAIL_LIST_THREADS": ["max_results", "query", "page_token"],
-        "GMAIL_REPLY_TO_THREAD": ["thread_id", "message_body", "recipient_email", "cc", "bcc", "is_html"],
-        "GMAIL_LIST_LABELS": [],
-        "GMAIL_CREATE_LABEL": ["label_name", "label_list_visibility", "message_list_visibility"],
-        "GMAIL_GET_PEOPLE": ["resource_name", "person_fields"],
-        "GMAIL_REMOVE_LABEL": ["label_id"],
-        "GMAIL_GET_ATTACHMENT": ["message_id", "attachment_id", "file_name"],
+        "GMAIL_SEND_EMAIL": {
+            "display_name": "Send Email",
+            "actions": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+        },
+        "GMAIL_FETCH_EMAILS": {
+            "display_name": "Fetch Emails",
+            "actions": ["max_results", "query"],
+        },
+        "GMAIL_GET_PROFILE": {
+            "display_name": "Get User Profile",
+            "actions": [],
+        },
+        "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
+            "display_name": "Get Email by ID",
+            "actions": ["message_id"],
+        },
+        "GMAIL_CREATE_EMAIL_DRAFT": {
+            "display_name": "Create Draft Email",
+            "actions": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+        },
+        "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": {
+            "display_name": "Get Message By Thread ID",
+            "actions": ["thread_id"],
+        },
+        "GMAIL_LIST_THREADS": {
+            "display_name": "List Email Threads",
+            "actions": ["max_results", "query"],
+        },
+        "GMAIL_REPLY_TO_THREAD": {
+            "display_name": "Reply to Thread",
+            "actions": ["thread_id", "message_body", "recipient_email"],
+        },
+        "GMAIL_LIST_LABELS": {
+            "display_name": "List Email Labels",
+            "actions": [],
+        },
+        "GMAIL_CREATE_LABEL": {
+            "display_name": "Create Email Label",
+            "actions": ["label_name"],
+        },
+        "GMAIL_GET_PEOPLE": {
+            "display_name": "Get Contacts",
+            "actions": [],
+        },
+        "GMAIL_REMOVE_LABEL": {
+            "display_name": "Delete Email Label",
+            "actions": ["label_id"],
+        },
     }
 
     _bool_variables = {"is_html", "include_spam_trash"}
@@ -109,7 +144,11 @@ class GmailAPIComponent(LCToolComponent):
             required=True,
         ),
         MessageTextInput(
-            name="subject", display_name="Subject", info="Subject of the email", show=False, required=True
+            name="subject",
+            display_name="Subject",
+            info="Subject of the email",
+            show=False,
+            required=True,
         ),
         MessageTextInput(
             name="body",
@@ -125,7 +164,7 @@ class GmailAPIComponent(LCToolComponent):
             info="Maximum number of emails to be returned",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="message_id",
             display_name="Message ID",
             info="The ID of the specific email message",
@@ -133,39 +172,43 @@ class GmailAPIComponent(LCToolComponent):
             required=True,
         ),
         StrInput(
-            name="thread_id", display_name="Thread ID", info="The ID of the email thread", show=False, required=True
+            name="thread_id",
+            display_name="Thread ID",
+            info="The ID of the email thread",
+            show=False,
+            required=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="query",
             display_name="Query",
             info="Search query to filter emails (e.g., 'from:someone@email.com' or 'subject:hello')",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="message_body",
             display_name="Message Body",
             info="The body content of the message to be sent",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="label_name",
             display_name="Label Name",
             info="Name of the Gmail label to create, modify, or filter by",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="label_id",
             display_name="Label ID",
             info="The ID of the Gmail label",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="cc",
             display_name="CC",
             info="Email addresses to CC (Carbon Copy) in the email, separated by commas",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="bcc",
             display_name="BCC",
             info="Email addresses to BCC (Blid Carbon Copy) in the email, separated by commas",
@@ -178,13 +221,13 @@ class GmailAPIComponent(LCToolComponent):
             show=False,
             value=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="page_token",
             display_name="Page Token",
             info="Token for retrieving the next page of results",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="label_ids",
             display_name="Label Ids",
             info="Comma-separated list of label IDs to filter messages",
@@ -197,44 +240,44 @@ class GmailAPIComponent(LCToolComponent):
             show=False,
             value=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="format",
             display_name="Format",
             info="The format to return the message in. Possible values: minimal, full, raw, metadata",
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="label_list_visibility",
             display_name="Label List Visibility",
             info="The visibility of the label in the label list in the Gmail web interface. Possible values: 'labelShow' to show the label in the label list, 'labelShowIfUnread' to show the label if there are any unread messages with that label, 'labelHide' to not show the label in the label list",  # noqa: E501
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="message_list_visibility",
             display_name="Message List Visibility",
             info="The visibility of the label in the message list in the Gmail web interface. Possible values: 'show' to show the label in the message list, 'hide' to not show the label in the message list",  # noqa: E501
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="resource_name",
             display_name="Resource Name",
             info="The resource name of the person to provide information about. To get information about a google account, specify 'people/account_id'",  # noqa: E501
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="person_fields",
             display_name="Person fields",
             info="A field mask to restrict which fields on the person are returned. Multiple fields can be specified by separating them with commas.Valid values are: addresses, ageRanges, biographies, birthdays, calendarUrls, clientData, coverPhotos, email Addresses etc",  # noqa: E501
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="attachment_id",
             display_name="Attachment ID",
             info="Id of the attachment",
             show=False,
             required=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="file_name",
             display_name="File name",
             info="File name of the attachment file",
@@ -275,17 +318,31 @@ class GmailAPIComponent(LCToolComponent):
         toolset = self._build_wrapper()
 
         try:
-            enum_name = getattr(Action, self.action)
+            action_key = self.action
+            if action_key not in self._actions_data:
+                for key, data in self._actions_data.items():
+                    if data["display_name"] == action_key:
+                        action_key = key
+                        break
+
+            enum_name = getattr(Action, action_key)
             params = {}
-            if self.action in self._actions_data:
-                for field in self._actions_data[self.action]:
+            if action_key in self._actions_data:
+                for field in self._actions_data[action_key]["actions"]:
                     value = getattr(self, field)
 
+                    # Skip empty values
                     if value is None or value == "":
                         continue
 
+                    # Handle comma-separated fields that should be converted to lists
                     if field in ["cc", "bcc", "label_ids"] and value:
-                        value = [email.strip() for email in value.split(",")]
+                        value = [item.strip() for item in value.split(",")]
+
+                    # Handle boolean fields
+                    if field in self._bool_variables:
+                        value = bool(value)
+
                     params[field] = value
 
             result = toolset.execute_action(
@@ -296,13 +353,16 @@ class GmailAPIComponent(LCToolComponent):
             return Message(text=str(result))
         except Exception as e:
             logger.error(f"Error executing action: {e}")
-            msg = f"Failed to execute {self.action}: {e!s}"
+            display_name = self.action
+            if self.action in self._actions_data:
+                display_name = self._actions_data[self.action]["display_name"]
+            msg = f"Failed to execute {display_name}: {e!s}"
             raise ValueError(msg) from e
 
     def show_hide_fields(self, build_config: dict, field_value: Any):
         all_fields = set()
-        for fields in self._actions_data.values():
-            all_fields.update(fields)
+        for action_data in self._actions_data.values():
+            all_fields.update(action_data["actions"])
 
         for field in all_fields:
             build_config[field]["show"] = False
@@ -312,8 +372,15 @@ class GmailAPIComponent(LCToolComponent):
             else:
                 build_config[field]["value"] = ""
 
-        if field_value in self._actions_data:
-            for field in self._actions_data[field_value]:
+        action_key = field_value
+        if action_key not in self._actions_data:
+            for key, data in self._actions_data.items():
+                if data["display_name"] == action_key:
+                    action_key = key
+                    break
+
+        if action_key in self._actions_data:
+            for field in self._actions_data[action_key]["actions"]:
                 build_config[field]["show"] = True
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
@@ -325,13 +392,15 @@ class GmailAPIComponent(LCToolComponent):
                 build_config["action"]["show"] = False
                 build_config["actions"]["show"] = True
 
-                gmail_actions = list(self._actions_data.keys())
-                build_config["actions"]["options"] = gmail_actions
-                build_config["actions"]["value"] = [gmail_actions[0]]
+                gmail_display_names = [
+                    self._actions_data[action]["display_name"] for action in list(self._actions_data.keys())
+                ]
+                build_config["actions"]["options"] = gmail_display_names
+                build_config["actions"]["value"] = [gmail_display_names[0]]
 
                 all_fields = set()
-                for fields in self._actions_data.values():
-                    all_fields.update(fields)
+                for action_data in self._actions_data.values():
+                    all_fields.update(action_data["actions"])
                 for field in all_fields:
                     build_config[field]["show"] = False
 
@@ -343,7 +412,11 @@ class GmailAPIComponent(LCToolComponent):
             self.show_hide_fields(build_config, field_value)
 
         if hasattr(self, "api_key") and self.api_key != "":
-            build_config["action"]["options"] = list(self._actions_data.keys())
+            gmail_display_names = [
+                self._actions_data[action]["display_name"] for action in list(self._actions_data.keys())
+            ]
+            build_config["action"]["options"] = gmail_display_names
+
             try:
                 toolset = self._build_wrapper()
                 entity = toolset.client.get_entity(id=self.entity_id)
@@ -409,4 +482,12 @@ class GmailAPIComponent(LCToolComponent):
 
     async def to_toolkit(self) -> list[Tool]:
         toolset = self._build_wrapper()
-        return toolset.get_tools(actions=self.actions)
+
+        action_enums = []
+        for action_display_name in self.actions:
+            for action_key, data in self._actions_data.items():
+                if data["display_name"] == action_display_name:
+                    action_enums.append(getattr(Action, action_key))
+                    break
+
+        return toolset.get_tools(actions=action_enums)
