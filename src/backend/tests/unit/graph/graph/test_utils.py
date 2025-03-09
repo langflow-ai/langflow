@@ -74,7 +74,7 @@ def test_sort_up_to_vertex_n_is_start(graph):
     vertex_id = "N"
 
     result = utils.sort_up_to_vertex(graph, vertex_id, is_start=True)
-    # Result shoud be all the vertices
+    # Result should be all the vertices
     assert set(result) == set(graph.keys())
 
 

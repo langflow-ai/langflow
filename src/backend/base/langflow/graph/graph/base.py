@@ -2059,7 +2059,7 @@ class Graph:
         result: dict = {}
         for vertex in self.vertices:
             vertex_id = vertex.id
-            sucessors = [i.id for i in self.get_all_successors(vertex)]
+            successors = [i.id for i in self.get_all_successors(vertex)]
             predecessors = [i.id for i in self.get_predecessors(vertex)]
-            result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
+            result |= {vertex_id: {"successors": successors, "predecessors": predecessors}}
         return result

@@ -114,7 +114,7 @@ def pytest_configure(config):
     pytest.LOOP_TEST = data_path / "LoopTest.json"
     pytest.CODE_WITH_SYNTAX_ERROR = """
 def get_text():
-    retun "Hello World"
+    return "Hello World"
     """
 
     # validate that all the paths are correct and the files exist
