@@ -229,7 +229,7 @@ function BaseModal({
     className,
   );
 
-  //UPDATE COLORS AND STYLE CLASSSES
+  //UPDATE COLORS AND STYLE CLASSES
   return (
     <>
       {type === "modal" ? (

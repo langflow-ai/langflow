@@ -103,7 +103,7 @@ export default function IOFieldView({
               />
             );
 
-          case IOInputTypes.KEYPAIR:
+          case IOInputTypes.KEY PAIR:
             return (
               <IOKeyPairInput
                 value={node.data.node!.template["input_value"]?.value}

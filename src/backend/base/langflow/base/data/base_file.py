@@ -125,7 +125,7 @@ class BaseFileComponent(Component, ABC):
             display_name="Server File Path",
             info=(
                 f"Data object with a '{SERVER_FILE_PATH_FIELDNAME}' property pointing to server file"
-                " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
+                " or a Message object with a path to the file. Supersedes 'Path' but supports same file types."
             ),
             required=False,
             input_types=["Data", "Message"],

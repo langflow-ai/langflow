@@ -66,7 +66,7 @@ export const ErrorView = ({
                             {content.component && (
                               <>
                                 <span>
-                                  An error occured in the{" "}
+                                  An error occurred in the{" "}
                                   <span
                                     className={cn(
                                       closeChat ?? "cursor-pointer underline",

@@ -119,7 +119,7 @@ export default function ProfileSettingsPage(): JSX.Element {
                     Password{" "}
                   </Form.Label>
                   <InputComponent
-                    id="pasword"
+                    id="password"
                     onChange={(value) => {
                       handleInput({ target: { name: "password", value } });
                     }}
