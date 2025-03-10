@@ -62,7 +62,7 @@ class OpenAIModelComponent(LCModelComponent):
         SliderInput(
             name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)
         ),
-         SliderInput(
+        SliderInput(
             name="frequency_penalty",
             display_name="Frequency Penalty",
             value=0.0,
@@ -122,7 +122,7 @@ class OpenAIModelComponent(LCModelComponent):
             api_key=api_key,
             temperature=temperature if temperature is not None else 0.1,
             frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty,            
+            presence_penalty=presence_penalty,
             seed=seed,
             max_retries=max_retries,
             request_timeout=timeout,
