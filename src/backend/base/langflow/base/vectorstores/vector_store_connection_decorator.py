@@ -41,6 +41,6 @@ def vector_store_connection(cls):
     def as_vector_store(self) -> VectorStore:
         return self.build_vector_store()
 
-    cls.as_vector_store = as_vector_store
+    cls.as_vector_store = as_vector_store # Ensures that the method is added to the class
 
     return cls

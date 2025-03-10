@@ -3,8 +3,8 @@ from typing import Any
 
 from langchain_community.vectorstores import OpenSearchVectorSearch
 
-from langflow.base.vectorstores.graph_rag_decorator import vector_store_connection
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from langflow.io import (
     BoolInput,
     DropdownInput,
