@@ -111,7 +111,6 @@ test(
       "modelsGroq",
       "modelsHuggingFace",
       "modelsLM Studio",
-      "modelsMacrocosmos",
       "modelsMaritalk",
       "modelsMistralAI",
       "modelsNVIDIA",
