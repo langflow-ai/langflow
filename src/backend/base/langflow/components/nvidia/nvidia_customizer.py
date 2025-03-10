@@ -6,6 +6,7 @@ from io import BytesIO
 
 import httpx
 import pandas as pd
+import uuid
 from huggingface_hub import HfApi
 
 from langflow.custom import Component
@@ -59,9 +60,9 @@ class NvidiaCustomizerComponent(Component):
             value="tenant",
         ),
         StrInput(
-            name="dataset",
-            display_name="Dataset",
-            info="Enter the dataset name used for training the model",
+            name="fine_tuned_model_name",
+            display_name="Output model name",
+            info="Enter the name to reference the output fine tuned model, ex: `imdb-data@v1`",
         ),
         DataInput(
             name="training_data",
@@ -171,12 +172,10 @@ class NvidiaCustomizerComponent(Component):
         return build_config
 
     async def customize(self) -> dict:
-        # Start with attempt number 1
-        attempt = 1
-        dataset_name = self.dataset
+        fine_tuned_model_name = self.fine_tuned_model_name
 
-        if not dataset_name:
-            error_msg = "Provide dataset name to process"
+        if not fine_tuned_model_name:
+            error_msg = "Provide fine tuned output model name to process"
             raise ValueError(error_msg)
 
         tenant = self.tenant_id
@@ -197,119 +196,97 @@ class NvidiaCustomizerComponent(Component):
             raise ValueError(error_msg)
 
         # Process and upload the dataset if training_data is provided
-        if self.training_data is not None:
-            await self.process_dataset()
-        short_model_name = self.model_name.split("/")[-1]
+        if self.training_data is None:
+            error_msg = "Training data is empty, cannot customize the model"
+            raise ValueError(error_msg)
+
+        dataset_name = await self.process_dataset()
         customizations_url = f"{self.base_url}/v1/customization/jobs"
-        max_attempt_allowed = 10
         error_code_already_present = 409
-        # Try up to 10 attempts
-        while attempt <= max_attempt_allowed:
-            # Build the output_model string with the current attempt number
-            output_model = f"{tenant}/{short_model_name}@{dataset_name}-{attempt}"
+        output_model =  f"{tenant}/{fine_tuned_model_name}"
 
-            description = f"Fine tuning base model {self.model_name} using dataset {dataset_name}"
-            # Build the data payload
-            data = {
-                "config": self.model_name,
-                "dataset": {"name": dataset_name, "namespace": tenant},
-                "description": description,
-                "hyperparameters": {
-                    "training_type": self.training_type,
-                    "finetuning_type": self.fine_tuning_type,
-                    "epochs": int(self.epochs),
-                    "batch_size": int(self.batch_size),
-                    "learning_rate": float(self.learning_rate),
-                },
-                "output_model": output_model,
-            }
+        description = f"Fine tuning base model {self.model_name} using dataset {dataset_name}"
+        # Build the data payload
+        data = {
+            "config": self.model_name,
+            "dataset": {"name": dataset_name, "namespace": tenant},
+            "description": description,
+            "hyperparameters": {
+                "training_type": self.training_type,
+                "finetuning_type": self.fine_tuning_type,
+                "epochs": int(self.epochs),
+                "batch_size": int(self.batch_size),
+                "learning_rate": float(self.learning_rate),
+            },
+            "output_model": output_model,
+        }
 
-            # Add `adapter_dim` if fine tuning type is "lora"
-            if self.fine_tuning_type == "lora":
-                data["hyperparameters"]["lora"] = {"adapter_dim": 16}
-            try:
-                formatted_data = json.dumps(data, indent=2)
-                self.log(f"Attempt {attempt}: Sending customization request with data: {formatted_data}")
+        # Add `adapter_dim` if fine tuning type is "lora"
+        if self.fine_tuning_type == "lora":
+            data["hyperparameters"]["lora"] = {"adapter_dim": 16}
+        try:
+            formatted_data = json.dumps(data, indent=2)
+            self.log(f"Sending customization request with data: {formatted_data}")
 
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    response = await client.post(customizations_url, headers=self.headers, json=data)
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.post(customizations_url, headers=self.headers, json=data)
 
-                # If a conflict is returned, try again with an incremented attempt counter
-                if response.status_code == error_code_already_present:
-                    self.log(f"Received HTTP 409 Conflict on attempt {attempt}. Retrying with a new dataset name.")
-                    attempt += 1
-                    # If this was the 10th attempt, raise an error on the next iteration (attempt will be 11)
-                    if attempt > max_attempt_allowed:
-                        error_msg = (
-                            f"Received 409 conflict {error_code_already_present} times. "
-                            f"Please choose a different dataset name or delete the model."
-                        )
-                        raise ValueError(error_msg)
-                    continue
-                # For non-409 responses, raise for any HTTP error status
-                response.raise_for_status()
+            # For non-409 responses, raise for any HTTP error status
+            response.raise_for_status()
 
-                # Process a successful response
-                result = response.json()
-                formatted_result = json.dumps(result, indent=2)
-                self.log(f"Received successful response: {formatted_result}")
+            # Process a successful response
+            result = response.json()
+            formatted_result = json.dumps(result, indent=2)
+            self.log(f"Received successful response: {formatted_result}")
 
-                result_dict = {**result}
-                id_value = result_dict["id"]
-                result_dict["url"] = f"{customizations_url}/{id_value}/status"
+            result_dict = {**result}
+            id_value = result_dict["id"]
+            result_dict["url"] = f"{customizations_url}/{id_value}/status"
 
-            except httpx.TimeoutException as exc:
-                error_msg = f"Request to {customizations_url} timed out"
-                self.log(error_msg)
-                raise ValueError(error_msg) from exc
+        except httpx.TimeoutException as exc:
+            error_msg = f"Request to {customizations_url} timed out"
+            self.log(error_msg)
+            raise ValueError(error_msg) from exc
 
-            except httpx.HTTPStatusError as exc:
-                # Check if the error is due to a 409 Conflict
+        except httpx.HTTPStatusError as exc:
+            # Check if the error is due to a 409 Conflict
 
-                if exc.response.status_code == error_code_already_present:
-                    self.log(f"Received HTTP 409 Conflict on attempt {attempt}. Retrying with a new dataset name.")
-                    attempt += 1
-                    if attempt > max_attempt_allowed:
-                        error_msg = (
-                            f"There are already {max_attempt_allowed} version for the model with the dataset. "
-                            f"Please choose a different dataset name or delete the models."
-                        )
-                        raise ValueError(error_msg) from exc
-                else:
-                    status_code = exc.response.status_code
-                    response_content = exc.response.text
-                    error_msg = (
-                        f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
-                    )
-                    self.log(error_msg)
-                    raise ValueError(error_msg) from exc
-
-            except (httpx.RequestError, ValueError) as exc:
-                exception_str = str(exc)
-                error_msg = f"An unexpected error occurred on URL {customizations_url}: {exception_str}"
-                self.log(error_msg)
+            if exc.response.status_code == error_code_already_present:
+                self.log(f"Received HTTP 409. Conflict output model name. Retry with a different output model name")
+                error_msg = (
+                    f"There is already a fined tuned model with name {fine_tuned_model_name} "
+                    f"Please choose a different output model name to process."
+                )
                 raise ValueError(error_msg) from exc
             else:
-                return result_dict
+                status_code = exc.response.status_code
+                response_content = exc.response.text
+                error_msg = (
+                    f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
+                )
+                self.log(error_msg)
+                raise ValueError(error_msg) from exc
 
-        # If the loop completes without a successful call, raise an error.
-        error_msg = "Failed to customize the model after 10 attempts due to repeated 409 conflicts."
-        self.log(error_msg)
-        raise ValueError(error_msg)
+        except (httpx.RequestError, ValueError) as exc:
+            exception_str = str(exc)
+            error_msg = f"An unexpected error occurred on URL {customizations_url}: {exception_str}"
+            self.log(error_msg)
+            raise ValueError(error_msg) from exc
+        else:
+            return result_dict
 
-    async def get_repo_id(self, tenant_id: str, user_dataset_name: str) -> str:
+    async def get_repo_id(self, tenant_id: str, dataset_name: str) -> str:
         """Fetches the repo id by checking if a dataset with the constructed name exists.
 
         If the dataset does not exist, creates a new dataset and returns its ID.
 
         Args:
             tenant_id (str): The tenant ID.
-            user_dataset_name (str): The user-provided dataset name.
+            dataset_name (str): Generated dataset name.
 
         Returns:
             str: The dataset ID if found or created, or None if an error occurs.
         """
-        dataset_name = user_dataset_name
         namespace = tenant_id
 
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
@@ -340,10 +317,10 @@ class NvidiaCustomizerComponent(Component):
         """
         try:
             # Inputs and repo setup
-            user_dataset_name = getattr(self, "dataset", None)
+            dataset_name = str(uuid.uuid4())
 
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            repo_id = await self.get_repo_id(self.tenant_id, user_dataset_name)
+            repo_id = await self.get_repo_id(self.tenant_id, dataset_name)
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
         except Exception as exc:
@@ -406,7 +383,7 @@ class NvidiaCustomizerComponent(Component):
                     task = self.upload_chunk(
                         chunk_df,
                         self.chunk_number,
-                        user_dataset_name,
+                        dataset_name,
                         repo_id,
                         hf_api,
                         is_validation,
@@ -421,7 +398,7 @@ class NvidiaCustomizerComponent(Component):
                 task = self.upload_chunk(
                     chunk_df,
                     self.chunk_number,
-                    user_dataset_name,
+                    dataset_name,
                     repo_id,
                     hf_api,
                     is_validation,
@@ -439,7 +416,7 @@ class NvidiaCustomizerComponent(Component):
                 validation_df = pd.DataFrame(validation_records)
                 # Note: You will need to implement upload_validation to handle the
                 # upload of the full validation DataFrame.
-                await self.upload_chunk(validation_df, 1, user_dataset_name, repo_id, hf_api, is_validation)
+                await self.upload_chunk(validation_df, 1, dataset_name, repo_id, hf_api, is_validation)
 
         except Exception as exc:
             exception_str = str(exc)
@@ -452,15 +429,15 @@ class NvidiaCustomizerComponent(Component):
         # =====================================================
         try:
             file_url = f"hf://datasets/{repo_id}"
-            description = f"Dataset loaded using the input data {user_dataset_name}"
+            description = f"Dataset loaded using the input data {dataset_name}"
             entity_registry_url = f"{self.entity_store_base_url}/v1/datasets"
             create_payload = {
-                "name": user_dataset_name,
+                "name": dataset_name,
                 "namespace": self.tenant_id,
                 "description": description,
                 "files_url": file_url,
                 "format": "jsonl",
-                "project": user_dataset_name,
+                "project": dataset_name,
             }
 
             async with httpx.AsyncClient() as client:
@@ -480,7 +457,7 @@ class NvidiaCustomizerComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
-        return repo_id
+        return dataset_name
 
     async def upload_chunk(self, chunk_df, chunk_number, file_name_prefix, repo_id, hf_api, is_validation):
         """Asynchronously uploads a chunk of data to the REST API."""
