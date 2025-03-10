@@ -157,7 +157,7 @@ class NvidiaCustomizerComponent(Component):
                             self.log(f"Updated training_type dropdown options: {training_types}")
                             fine_tuning_type = selected_model.get("finetuning_types", [])
                             build_config["fine_tuning_type"]["options"] = fine_tuning_type
-                            self.log(f"Updated training_type dropdown options: {fine_tuning_type}")
+                            self.log(f"Updated fine_tuning_type dropdown options: {fine_tuning_type}")
 
         except httpx.HTTPStatusError as exc:
             error_msg = f"HTTP error {exc.response.status_code} on {models_url}"
