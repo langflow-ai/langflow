@@ -13,6 +13,7 @@ export const ProtectedRoute = ({ children }) => {
   const { mutate: mutateRefresh } = useRefreshAccessToken();
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAutoLoginEnv = IS_AUTO_LOGIN;
+  const testMockAutoLogin = sessionStorage.getItem("testMockAutoLogin");
 
   const shouldRedirect =
     !isAuthenticated &&
@@ -39,7 +40,7 @@ export const ProtectedRoute = ({ children }) => {
     }
   }, [isAuthenticated]);
 
-  if (shouldRedirect) {
+  if (shouldRedirect || testMockAutoLogin) {
     const currentPath = window.location.pathname;
     const isHomePath = currentPath === "/" || currentPath === "/flows";
     const isLoginPage = location.pathname.includes("login");
