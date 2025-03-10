@@ -19,6 +19,7 @@ export default function IntComponent({
   disabled,
   editNode = false,
   id = "",
+  readonly,
 }: InputProps<number, IntComponentType>): JSX.Element {
   const min = -Infinity;
   // Clear component state
@@ -60,7 +61,7 @@ export default function IntComponent({
   };
 
   const getDisabledClassName = () => {
-    return "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm placeholder:text-input";
+    return "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm text-input placeholder:text-input";
   };
 
   const handleNumberChange = (newValue) => {
@@ -91,15 +92,17 @@ export default function IntComponent({
         min={getMinValue()}
         max={getMaxValue()}
         onChange={handleNumberChange}
-        isDisabled={disabled}
+        isDisabled={disabled || readonly}
         value={value ?? ""}
       >
         <NumberInputField
-          className={disabled ? getDisabledClassName() : getInputClassName()}
+          className={
+            disabled || readonly ? getDisabledClassName() : getInputClassName()
+          }
           onChange={handleChangeInput}
           onKeyDown={(event) => handleKeyDown(event, value, "")}
           onInput={handleInputChange}
-          disabled={disabled}
+          disabled={disabled || readonly}
           placeholder={editNode ? "Integer number" : "Type an integer number"}
           data-testid={id}
           ref={inputRef}
