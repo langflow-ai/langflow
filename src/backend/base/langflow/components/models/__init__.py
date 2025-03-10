@@ -8,6 +8,7 @@ from .deepseek import DeepSeekModelComponent
 from .google_generative_ai import GoogleGenerativeAIComponent
 from .groq import GroqModel
 from .huggingface import HuggingFaceEndpointsComponent
+from .language_model import LanguageModelComponent
 from .lmstudiomodel import LMStudioModelComponent
 from .maritalk import MaritalkModelComponent
 from .mistral import MistralAIModelComponent
@@ -33,6 +34,7 @@ __all__ = [
     "GoogleGenerativeAIComponent",
     "GroqModel",
     "HuggingFaceEndpointsComponent",
+    "LanguageModelComponent",
     "LMStudioModelComponent",
     "MaritalkModelComponent",
     "MistralAIModelComponent",
