@@ -1,12 +1,12 @@
 import asyncio
 import json
 import logging
+import uuid
 from datetime import datetime, timezone
 from io import BytesIO
 
 import httpx
 import pandas as pd
-import uuid
 from huggingface_hub import HfApi
 
 from langflow.custom import Component
@@ -203,7 +203,7 @@ class NvidiaCustomizerComponent(Component):
         dataset_name = await self.process_dataset()
         customizations_url = f"{self.base_url}/v1/customization/jobs"
         error_code_already_present = 409
-        output_model =  f"{tenant}/{fine_tuned_model_name}"
+        output_model = f"{tenant}/{fine_tuned_model_name}"
 
         description = f"Fine tuning base model {self.model_name} using dataset {dataset_name}"
         # Build the data payload
@@ -252,20 +252,17 @@ class NvidiaCustomizerComponent(Component):
             # Check if the error is due to a 409 Conflict
 
             if exc.response.status_code == error_code_already_present:
-                self.log(f"Received HTTP 409. Conflict output model name. Retry with a different output model name")
+                self.log("Received HTTP 409. Conflict output model name. Retry with a different output model name")
                 error_msg = (
                     f"There is already a fined tuned model with name {fine_tuned_model_name} "
                     f"Please choose a different output model name to process."
                 )
                 raise ValueError(error_msg) from exc
-            else:
-                status_code = exc.response.status_code
-                response_content = exc.response.text
-                error_msg = (
-                    f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
-                )
-                self.log(error_msg)
-                raise ValueError(error_msg) from exc
+            status_code = exc.response.status_code
+            response_content = exc.response.text
+            error_msg = f"HTTP error {status_code} on URL: {customizations_url}. Response content: {response_content}"
+            self.log(error_msg)
+            raise ValueError(error_msg) from exc
 
         except (httpx.RequestError, ValueError) as exc:
             exception_str = str(exc)
