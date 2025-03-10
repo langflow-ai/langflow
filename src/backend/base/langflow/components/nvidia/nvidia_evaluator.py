@@ -1,8 +1,8 @@
 import io
 import json
 import logging
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime, timezone
 
 import httpx
 from huggingface_hub import HfApi
@@ -329,11 +329,7 @@ class NvidiaEvaluatorComponent(Component):
             error_msg = "Refresh and select the model name to be evaluated"
             raise ValueError(error_msg)
 
-        if not (
-            self.evaluator_base_url
-            and self.entity_service_base_url
-            and self.datastore_base_url
-        ):
+        if not (self.evaluator_base_url and self.entity_service_base_url and self.datastore_base_url):
             error_msg = "Provide evaluator, data store, entity store url to process"
             raise ValueError(error_msg)
 
