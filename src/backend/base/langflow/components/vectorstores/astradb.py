@@ -808,8 +808,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             provider = (
                 generation_provider.lower() if generation_provider and generation_provider != "Bring your own" else None
             )
-            generation_model = field_value["03_embedding_generation_model"]
-            model = generation_model if generation_model and generation_model != "Bring your own" else None
+            generation_model = field_value.get("03_embedding_generation_model", None)
 
             # Set the embedding choice
             build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
@@ -818,7 +817,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             # Add the new collection to the list of options
             icon = self.get_provider_icon(provider_name=generation_provider)
             build_config["collection_name"]["options_metadata"] += [
-                {"records": 0, "provider": provider, "icon": icon, "model": model}
+                {"records": 0, "provider": provider, "icon": icon, "model": generation_model}
             ]
 
             return build_config
