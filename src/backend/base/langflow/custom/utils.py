@@ -366,6 +366,8 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
 def add_new_types_to_output(output: Output):
     if "Data" in output.types and "JSON" not in output.types:
         output.types.append("JSON")
+    if "DataFrame" in output.types and "Table" not in output.types:
+        output.types.append("Table")
 
 
 def build_custom_component_template_from_inputs(
