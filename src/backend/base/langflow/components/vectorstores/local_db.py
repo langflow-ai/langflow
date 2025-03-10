@@ -8,7 +8,7 @@ from typing_extensions import override
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, StrInput, Output, MultilineInput
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, Output, StrInput
 from langflow.schema import Data
 
 
@@ -89,7 +89,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             display_name="Embedding",
             input_types=["Embeddings"],
             info="The embedding model to use for converting your data into vectors. Required for both storing and searching.",
-            show=False
+            show=False,
         ),
         BoolInput(
             name="allow_duplicates",
@@ -234,7 +234,7 @@ class LocalDBComponent(LCVectorStoreComponent):
 
         self._add_documents_to_vector_store(chroma)
         self.status = chroma_collection_to_data(chroma.get(limit=self.limit))
-        
+
         return chroma
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
