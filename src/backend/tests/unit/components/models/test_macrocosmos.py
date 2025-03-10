@@ -152,9 +152,9 @@ class TestMacrocosmosComponent(ComponentTestBaseWithoutClient):
             side_effect=BadRequestError(
                 message="Invalid API key",
                 response=MagicMock(),
-                body={"message": "Invalid API key"},
+                body={"detail": "Invalid API key"},
             ),
         )
         with pytest.raises(BadRequestError) as exc_info:
             component.build_model()
-        assert exc_info.value.body["message"] == "Invalid API key" 
+        assert exc_info.value.body["detail"] == "Invalid API key" 
