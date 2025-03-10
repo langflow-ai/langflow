@@ -729,15 +729,16 @@ async def add_message_to_db(message, session, flow_id, session_id, sender, sende
     )
     await aadd_messagetables([message], session)
 
+
 def extract_transcript(json_data):
     try:
         content_list = json_data.get("item", {}).get("content", [])
-        
+
         for content_item in content_list:
             if content_item.get("type") == "audio":
                 return content_item.get("transcript", "")
-        
-        return "" 
+
+        return ""
     except Exception as e:
         print(f"Error extracting transcript: {e}")
         return ""
