@@ -108,7 +108,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="embedding_generation_model",
                                 display_name="Embedding model",
                                 info="Model to use for generating embeddings.",
-                                required=True,
                                 options=[],
                             ),
                             "04_dimension": IntInput(
