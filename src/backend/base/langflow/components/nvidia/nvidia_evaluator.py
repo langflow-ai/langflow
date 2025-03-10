@@ -589,7 +589,8 @@ class NvidiaEvaluatorComponent(Component):
             # Inputs
             dataset_name = str(uuid.uuid4())
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            repo_id = await self.get_repo_id(self.tenant_id, dataset_name)
+            await self.create_namespace(self.tenant_id)
+            repo_id =  f"{self.tenant_id}/{dataset_name}"
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
             self.log(f"repo_id : {repo_id}")
@@ -677,17 +678,11 @@ class NvidiaEvaluatorComponent(Component):
 
         return repo_id
 
-    async def get_repo_id(self, tenant_id: str, dataset_name: str) -> str:
-        """Fetches the repo id by checking if a dataset with the constructed name exists.
-
-        If the dataset does not exist, creates a new dataset and returns its ID.
-
+    async def create_namespace(self, tenant_id: str):
+        """Checks and creates namespace in datastore.
         Args:
             tenant_id (str): The tenant ID.
-            dataset_name (str): The user-provided dataset name.
 
-        Returns:
-            str: The dataset ID if found or created, or None if an error occurs.
         """
         namespace = tenant_id
 
@@ -704,7 +699,6 @@ class NvidiaEvaluatorComponent(Component):
                     create_response = await client.post(url, json=create_payload)
                     create_response.raise_for_status()
 
-                return f"{namespace}/{dataset_name}"
         except httpx.HTTPStatusError as e:
             exception_str = str(e)
             error_msg = f"Error processing namespace: {exception_str}"
