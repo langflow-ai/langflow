@@ -8,7 +8,6 @@ from huggingface_hub import HfApi
 
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
-
 from langflow.io import (
     BoolInput,
     DataInput,
@@ -332,10 +331,12 @@ class NvidiaEvaluatorComponent(Component):
             error_msg = "Refresh and select the model name to be evaluated"
             raise ValueError(error_msg)
 
-        if not (self.evaluator_base_url
-                and self.entity_service_base_url
-                and self.datastore_base_url
-                and self.nemo_model_base_url):
+        if not (
+            self.evaluator_base_url
+            and self.entity_service_base_url
+            and self.datastore_base_url
+            and self.nemo_model_base_url
+        ):
             error_msg = "Provide evaluator, data store, entity store and nim inference url to process"
             raise ValueError(error_msg)
 
