@@ -73,7 +73,6 @@ class PineconeVectorStoreComponent(LCVectorStoreComponent):
             error_msg = "Error building Pinecone vector store"
             raise ValueError(error_msg) from e
         else:
-
             self.ingest_data = self._prepare_ingest_data()
 
             # Process documents if any

@@ -136,7 +136,6 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
 
     def _prepare_documents(self) -> list[Document]:
         """Prepares documents from the input data to add to the vector store."""
-
         self.ingest_data = self._prepare_ingest_data()
 
         documents = []

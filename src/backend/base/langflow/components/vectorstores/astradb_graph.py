@@ -226,7 +226,6 @@ class AstraDBGraphVectorStoreComponent(LCVectorStoreComponent):
         return vector_store
 
     def _add_documents_to_vector_store(self, vector_store) -> None:
-
         self.ingest_data = self._prepare_ingest_data()
 
         documents = []
