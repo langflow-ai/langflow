@@ -2,6 +2,8 @@ import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
+import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useEffect } from "react";
 import DeleteConfirmationModal from "../../../../../modals/deleteConfirmationModal";
@@ -100,43 +102,9 @@ export default function InputGlobalComponent({
       options={globalVariables?.map((variable) => variable.name) ?? []}
       optionsPlaceholder={"Global Variables"}
       optionsIcon="Globe"
-      optionsButton={
-        <GlobalVariableModal disabled={disabled}>
-          <CommandItem value="doNotFilter-addNewVariable">
-            <ForwardedIconComponent
-              name="Plus"
-              className={cn("mr-2 h-4 w-4 text-primary")}
-              aria-hidden="true"
-            />
-            <span>Add New Variable</span>
-          </CommandItem>
-        </GlobalVariableModal>
-      }
+      optionsButton={<GeneralGlobalVariableModal />}
       optionButton={(option) => (
-        <DeleteConfirmationModal
-          onConfirm={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            handleDelete(option);
-          }}
-          description={'variable "' + option + '"'}
-          asChild
-        >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-            }}
-            className="pr-1"
-          >
-            <ForwardedIconComponent
-              name="Trash2"
-              className={cn(
-                "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100",
-              )}
-              aria-hidden="true"
-            />
-          </button>
-        </DeleteConfirmationModal>
+        <GeneralDeleteConfirmationModal option={option} />
       )}
       selectedOption={
         load_from_db &&

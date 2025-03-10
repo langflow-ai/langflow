@@ -4,16 +4,16 @@ import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
-import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
-import useFlowStore from "../../../../stores/flowStore";
-import { ChatMessageType } from "../../../../types/chat";
-import { chatViewProps } from "../../../../types/components";
-import FlowRunningSqueleton from "../flow-running-squeleton";
-import ChatInput from "./chatInput/chat-input";
-import useDragAndDrop from "./chatInput/hooks/use-drag-and-drop";
-import { useFileHandler } from "./chatInput/hooks/use-file-handler";
-import ChatMessage from "./chatMessage/chat-message";
+import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import useFlowStore from "../../../../../stores/flowStore";
+import { ChatMessageType } from "../../../../../types/chat";
+import { chatViewProps } from "../../../../../types/components";
+import FlowRunningSqueleton from "../../flow-running-squeleton";
+import ChatInput from "../chatInput/chat-input";
+import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
+import { useFileHandler } from "../chatInput/hooks/use-file-handler";
+import ChatMessage from "../chatMessage/chat-message";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
