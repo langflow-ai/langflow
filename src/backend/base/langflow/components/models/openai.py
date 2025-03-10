@@ -62,6 +62,20 @@ class OpenAIModelComponent(LCModelComponent):
         SliderInput(
             name="temperature", display_name="Temperature", value=0.1, range_spec=RangeSpec(min=0, max=1, step=0.01)
         ),
+         SliderInput(
+            name="frequency_penalty",
+            display_name="Frequency Penalty",
+            value=0.0,
+            range_spec=RangeSpec(min=-2, max=2, step=0.01),
+            info="Penalizes repeated tokens based on existing frequency in text.",
+        ),
+        SliderInput(
+            name="presence_penalty",
+            display_name="Presence Penalty",
+            value=0.0,
+            range_spec=RangeSpec(min=-2, max=2, step=0.01),
+            info="Penalizes repeated tokens based on whether they appear at all.",
+        ),
         IntInput(
             name="seed",
             display_name="Seed",
@@ -88,6 +102,8 @@ class OpenAIModelComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         openai_api_key = self.api_key
         temperature = self.temperature
+        frequency_penalty = self.frequency_penalty
+        presence_penalty = self.presence_penalty
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
@@ -105,6 +121,8 @@ class OpenAIModelComponent(LCModelComponent):
             base_url=openai_api_base,
             api_key=api_key,
             temperature=temperature if temperature is not None else 0.1,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty,            
             seed=seed,
             max_retries=max_retries,
             request_timeout=timeout,
