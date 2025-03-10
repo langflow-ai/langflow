@@ -126,6 +126,9 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
             self.status = ""
             return
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         stored_documents_without_id = []
         if self.allow_duplicates:
             stored_data = []

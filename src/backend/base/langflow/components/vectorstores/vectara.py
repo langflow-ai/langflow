@@ -62,6 +62,9 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
             self.status = "No documents to add to Vectara"
             return
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
