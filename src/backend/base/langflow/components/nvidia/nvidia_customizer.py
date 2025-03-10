@@ -274,6 +274,7 @@ class NvidiaCustomizerComponent(Component):
 
     async def create_namespace(self, tenant_id: str):
         """Checks and creates namespace in datastore.
+
         Args:
             tenant_id (str): The tenant ID.
 
