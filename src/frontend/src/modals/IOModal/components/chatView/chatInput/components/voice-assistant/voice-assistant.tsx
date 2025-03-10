@@ -74,6 +74,14 @@ export function VoiceAssistant({
     );
   }, [variables]);
 
+  const openaiApiKey = useMemo(() => {
+    return variables?.find((variable) => variable === "OPENAI_API_KEY");
+  }, [variables]);
+
+  const elevenLabsApiKey = useMemo(() => {
+    return variables?.find((variable) => variable === "ELEVENLABS_API_KEY");
+  }, [variables]);
+
   const getMessagesMutation = useGetMessagesMutation();
 
   const initializeAudio = async () => {
@@ -291,9 +299,8 @@ export function VoiceAssistant({
           {showSettingsButton && (
             <AudioSettingsDialog
               open={showSettingsModal}
-              userOpenaiApiKey={variables?.find(
-                (variable) => variable === "OPENAI_API_KEY",
-              )}
+              userOpenaiApiKey={openaiApiKey}
+              userElevenLabsApiKey={elevenLabsApiKey}
             >
               <Button unstyled onClick={() => setShowSettingsModal(true)}>
                 <IconComponent

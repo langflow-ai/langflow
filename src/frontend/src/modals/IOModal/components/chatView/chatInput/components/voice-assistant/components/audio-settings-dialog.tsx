@@ -24,6 +24,8 @@ import { Separator } from "@/components/ui/separator";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetVoiceList } from "@/controllers/API/queries/voice/use-get-voice-list";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
+import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
@@ -34,6 +36,7 @@ interface SettingsVoiceModalProps {
   children?: React.ReactNode;
   open?: boolean;
   userOpenaiApiKey?: string;
+  userElevenLabsApiKey?: string;
 }
 
 const OPENAI_PROVIDER_LIST = [{ name: "OpenAI", value: "openai" }];
@@ -46,6 +49,7 @@ const SettingsVoiceModal = ({
   children,
   open: initialOpen = false,
   userOpenaiApiKey,
+  userElevenLabsApiKey,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [provider, setProvider] = useState<string>("openai");
@@ -54,6 +58,9 @@ const SettingsVoiceModal = ({
   const voices = useVoiceStore((state) => state.voices);
   const shouldFetchVoices = voices.length === 0;
   const [openaiApiKey, setOpenaiApiKey] = useState<string>(userOpenaiApiKey!);
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState<string>(
+    userElevenLabsApiKey!,
+  );
 
   const providersList = useVoiceStore((state) => state.providersList);
   const setProvidersList = useVoiceStore((state) => state.setProvidersList);
@@ -184,55 +191,22 @@ const SettingsVoiceModal = ({
                     options={globalVariables?.map((variable) => variable) ?? []}
                     optionsPlaceholder={"Global Variables"}
                     optionsIcon="Globe"
-                    optionsButton={
-                      <GlobalVariableModal disabled={false}>
-                        <CommandItem value="doNotFilter-addNewVariable">
-                          <ForwardedIconComponent
-                            name="Plus"
-                            className={cn("mr-2 h-4 w-4 text-primary")}
-                            aria-hidden="true"
-                          />
-                          <span>Add New Variable</span>
-                        </CommandItem>
-                      </GlobalVariableModal>
-                    }
+                    optionsButton={<GeneralGlobalVariableModal />}
                     optionButton={(option) => (
-                      <DeleteConfirmationModal
-                        onConfirm={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                        description={'variable "' + option + '"'}
-                        asChild
-                      >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
-                          className="pr-1"
-                        >
-                          <ForwardedIconComponent
-                            name="Trash2"
-                            className={cn(
-                              "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100",
-                            )}
-                            aria-hidden="true"
-                          />
-                        </button>
-                      </DeleteConfirmationModal>
+                      <GeneralDeleteConfirmationModal option={option} />
                     )}
                     value={openaiApiKey}
                     onChange={(value) => {
                       setOpenaiApiKey(value);
                     }}
                     selectedOption={openaiApiKey}
+                    setSelectedOption={setOpenaiApiKey}
                   />
                 </div>
 
                 <div className="grid w-full items-center gap-2">
                   <span className="flex items-center text-sm">
-                    Voice Provider
-                    <span className="ml-1 text-destructive">*</span>
+                    ElevenLabs API Key
                     <ShadTooltip content="The default provider is OpenAI.">
                       <div>
                         <IconComponent
@@ -244,39 +218,48 @@ const SettingsVoiceModal = ({
                     </ShadTooltip>
                   </span>
 
-                  <Select value={provider} onValueChange={handleProviderChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {providersList.map((provider) => (
-                          <SelectItem value={provider.value}>
-                            {provider.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  <InputComponent
+                    isObjectOption={false}
+                    password={false}
+                    nodeStyle
+                    popoverWidth="16rem"
+                    placeholder={getPlaceholder(
+                      false,
+                      "Enter your ElevenLabs API key",
+                    )}
+                    id="eleven-labs-api-key"
+                    options={globalVariables?.map((variable) => variable) ?? []}
+                    optionsPlaceholder={"Global Variables"}
+                    optionsIcon="Globe"
+                    optionsButton={<GeneralGlobalVariableModal />}
+                    optionButton={(option) => (
+                      <GeneralDeleteConfirmationModal option={option} />
+                    )}
+                    value={elevenLabsApiKey}
+                    onChange={(value) => {
+                      setElevenLabsApiKey(value);
+                    }}
+                    selectedOption={elevenLabsApiKey}
+                    setSelectedOption={setElevenLabsApiKey}
+                  />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center font-[13px]">
-                    Voices
-                    <span className="ml-1 text-destructive">*</span>
-                    <ShadTooltip content={"The default voice is alloy."}>
+                <div className="grid w-full items-center gap-2">
+                  <span className="flex w-full items-center text-sm">
+                    Voice
+                    <ShadTooltip content="The default provider is OpenAI.">
                       <div>
                         <IconComponent
                           name="Info"
-                          strokeWidth={ICON_STROKE_WIDTH}
-                          className="relative left-1 top-[1px] h-4 w-4 text-placeholder"
+                          strokeWidth={2}
+                          className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
                         />
                       </div>
                     </ShadTooltip>
                   </span>
 
                   <Select value={voice} onValueChange={setVoice}>
-                    <SelectTrigger className="w-[170px]">
+                    <SelectTrigger className="h-9 w-full">
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
