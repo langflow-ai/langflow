@@ -601,8 +601,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Add metadata for each provider option
         template[provider_field]["options_metadata"] = [
-            {"icon": self.get_provider_icon(provider_name=provider)}
-            for provider in template[provider_field]["options"]
+            {"icon": self.get_provider_icon(provider_name=provider)} for provider in template[provider_field]["options"]
         ]
 
         # Get selected embedding provider
@@ -611,41 +610,42 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Configure embedding model field
         model_field = "03_embedding_generation_model"
-        template[model_field].update({
-            "options": vectorize_providers.get(embedding_provider, [[], []])[1],
-            "placeholder": "Bring your own" if is_bring_your_own else None,
-            "read_only": is_bring_your_own,
-            "required": not is_bring_your_own
-        })
+        template[model_field].update(
+            {
+                "options": vectorize_providers.get(embedding_provider, [[], []])[1],
+                "placeholder": "Bring your own" if is_bring_your_own else None,
+                "read_only": is_bring_your_own,
+                "required": not is_bring_your_own,
+            }
+        )
 
         # Configure dimension field
         dimension_field = "04_dimension"
         dimension_value = 1024 if not is_bring_your_own else None
-        template[dimension_field].update({
-            "placeholder": dimension_value,
-            "value": dimension_value,
-            "read_only": not is_bring_your_own,
-            "required": is_bring_your_own
-        })
+        template[dimension_field].update(
+            {
+                "placeholder": dimension_value,
+                "value": dimension_value,
+                "read_only": not is_bring_your_own,
+                "required": is_bring_your_own,
+            }
+        )
 
         return build_config
 
     def reset_collection_list(self, build_config: dict) -> dict:
         """Reset collection list options based on provided configuration."""
         # Get collection options
-        collection_options = self._initialize_collection_options(
-            api_endpoint=build_config["api_endpoint"]["value"]
-        )
+        collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
 
         # Update collection configuration
         collection_config = build_config["collection_name"]
-        collection_config.update({
-            "options": [col["name"] for col in collection_options],
-            "options_metadata": [
-                {k: v for k, v in col.items() if k != "name"}
-                for col in collection_options
-            ]
-        })
+        collection_config.update(
+            {
+                "options": [col["name"] for col in collection_options],
+                "options_metadata": [{k: v for k, v in col.items() if k != "name"} for col in collection_options],
+            }
+        )
 
         # Reset selected collection if not in options
         if collection_config["value"] not in collection_config["options"]:
@@ -655,7 +655,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         collection_config["advanced"] = not build_config["database_name"]["value"]
 
         return build_config
-
 
     def reset_database_list(self, build_config: dict) -> dict:
         """Reset database list options and related configurations."""
@@ -669,13 +668,12 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Update database configuration
         database_config = build_config["database_name"]
-        database_config.update({
-            "options": [db["name"] for db in database_options],
-            "options_metadata": [
-                {k: v for k, v in db.items() if k != "name"}
-                for db in database_options
-            ]
-        })
+        database_config.update(
+            {
+                "options": [db["name"] for db in database_options],
+                "options_metadata": [{k: v for k, v in db.items() if k != "name"} for db in database_options],
+            }
+        )
 
         # Reset selections if value not in options
         if database_config["value"] not in database_config["options"]:
@@ -688,27 +686,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return build_config
 
-
     def reset_build_config(self, build_config: dict) -> dict:
         """Reset all build configuration options to default empty state."""
         # Reset database configuration
         database_config = build_config["database_name"]
-        database_config.update({
-            "options": [],
-            "options_metadata": [],
-            "value": "",
-            "advanced": True
-        })
+        database_config.update({"options": [], "options_metadata": [], "value": "", "advanced": True})
         build_config["api_endpoint"]["value"] = ""
 
         # Reset collection configuration
         collection_config = build_config["collection_name"]
-        collection_config.update({
-            "options": [],
-            "options_metadata": [],
-            "value": "",
-            "advanced": True
-        })
+        collection_config.update({"options": [], "options_metadata": [], "value": "", "advanced": True})
 
         return build_config
 
