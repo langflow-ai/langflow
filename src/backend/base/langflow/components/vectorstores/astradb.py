@@ -583,142 +583,132 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             for col in collection_list
         ]
 
-    def reset_provider_options(self, build_config: dict):
-        # Get the list of vectorize providers
+    def reset_provider_options(self, build_config: dict) -> dict:
+        """Reset provider options and related configurations in the build_config dictionary."""
+        # Extract template path for cleaner access
+        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+
+        # Get vectorize providers
         vectorize_providers = self.get_vectorize_providers(
             token=self.token,
             environment=self.environment,
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
-        # If the collection is set, allow user to see embedding options
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "02_embedding_generation_provider"
-        ]["options"] = [
-            "Bring your own",
-            "Nvidia",
-            # *[key for key in vectorize_providers if key not in ["Bring your own", "Nvidia"]],
+        # Set provider options
+        provider_field = "02_embedding_generation_provider"
+        template[provider_field]["options"] = ["Bring your own", "Nvidia"]
+
+        # Add metadata for each provider option
+        template[provider_field]["options_metadata"] = [
+            {"icon": self.get_provider_icon(provider_name=provider)}
+            for provider in template[provider_field]["options"]
         ]
 
-        # For all not Bring your own or Nvidia providers, add metadata saying configure in Astra DB Portal
-        provider_options = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "02_embedding_generation_provider"
-        ]["options"]
+        # Get selected embedding provider
+        embedding_provider = template[provider_field]["value"]
+        is_bring_your_own = embedding_provider == "Bring your own"
 
-        # Go over each possible provider and add metadata to configure in Astra DB Portal
-        for provider in provider_options:
-            # Add the icon for the provider
-            my_metadata = {"icon": self.get_provider_icon(provider_name=provider)}
+        # Configure embedding model field
+        model_field = "03_embedding_generation_model"
+        template[model_field].update({
+            "options": vectorize_providers.get(embedding_provider, [[], []])[1],
+            "placeholder": "Bring your own" if is_bring_your_own else None,
+            "read_only": is_bring_your_own,
+            "required": not is_bring_your_own
+        })
 
-            # Add the metadata to the options metadata
-            build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                "02_embedding_generation_provider"
-            ]["options_metadata"].append(my_metadata)
-
-        # And allow the user to see the models based on a selected provider
-        embedding_provider = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "02_embedding_generation_provider"
-        ]["value"]
-
-        # Set the options for the embedding model based on the provider
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "03_embedding_generation_model"
-        ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
-
-        # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "03_embedding_generation_model"
-        ]["placeholder"] = "Bring your own" if embedding_provider == "Bring your own" else None
-
-        # If the provider is not Bring your own, disable the dimension field
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "03_embedding_generation_model"
-        ]["disabled"] = embedding_provider == "Bring your own"
-
-        # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
-            "placeholder"
-        ] = 1024 if embedding_provider != "Bring your own" else None  # TODO: Support other providers
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
-            "value"
-        ] = 1024 if embedding_provider != "Bring your own" else None
-
-        # If the provider is not Bring your own, disable the dimension field
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
-            "disabled"
-        ] = embedding_provider != "Bring your own"
-
-        # If the provider is nvidia, set the model field to required
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-            "03_embedding_generation_model"
-        ]["required"] = embedding_provider != "Bring your own"
-
-        # If the provider is nvidia, set the dimension field to not required
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
-            "required"
-        ] = embedding_provider == "Bring your own"
+        # Configure dimension field
+        dimension_field = "04_dimension"
+        dimension_value = 1024 if not is_bring_your_own else None
+        template[dimension_field].update({
+            "placeholder": dimension_value,
+            "value": dimension_value,
+            "read_only": not is_bring_your_own,
+            "required": is_bring_your_own
+        })
 
         return build_config
 
-    def reset_collection_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
-        collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
+    def reset_collection_list(self, build_config: dict) -> dict:
+        """Reset collection list options based on provided configuration."""
+        # Get collection options
+        collection_options = self._initialize_collection_options(
+            api_endpoint=build_config["api_endpoint"]["value"]
+        )
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["collection_name"]["options"] = [col["name"] for col in collection_options]
-        build_config["collection_name"]["options_metadata"] = [
-            {k: v for k, v in col.items() if k != "name"} for col in collection_options
-        ]
+        # Update collection configuration
+        collection_config = build_config["collection_name"]
+        collection_config.update({
+            "options": [col["name"] for col in collection_options],
+            "options_metadata": [
+                {k: v for k, v in col.items() if k != "name"}
+                for col in collection_options
+            ]
+        })
 
-        # Reset the selected collection
-        if build_config["collection_name"]["value"] not in build_config["collection_name"]["options"]:
-            build_config["collection_name"]["value"] = ""
+        # Reset selected collection if not in options
+        if collection_config["value"] not in collection_config["options"]:
+            collection_config["value"] = ""
 
-        # If we have a database, collection name should not be advanced
-        build_config["collection_name"]["advanced"] = not build_config["database_name"]["value"]
+        # Set advanced status based on database selection
+        collection_config["advanced"] = not build_config["database_name"]["value"]
 
         return build_config
 
-    def reset_database_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
+
+    def reset_database_list(self, build_config: dict) -> dict:
+        """Reset database list options and related configurations."""
+        # Get database options
         database_options = self._initialize_database_options()
 
-        # Update the list of cloud providers
-        my_env = self.environment or "prod"
-        build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["02_cloud_provider"][
-            "options"
-        ] = list(self.map_cloud_providers()[my_env].keys())
+        # Update cloud provider options
+        env = self.environment or "prod"
+        template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template["02_cloud_provider"]["options"] = list(self.map_cloud_providers()[env].keys())
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["database_name"]["options"] = [db["name"] for db in database_options]
-        build_config["database_name"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k != "name"} for db in database_options
-        ]
+        # Update database configuration
+        database_config = build_config["database_name"]
+        database_config.update({
+            "options": [db["name"] for db in database_options],
+            "options_metadata": [
+                {k: v for k, v in db.items() if k != "name"}
+                for db in database_options
+            ]
+        })
 
-        # Reset the selected database
-        if build_config["database_name"]["value"] not in build_config["database_name"]["options"]:
-            build_config["database_name"]["value"] = ""
+        # Reset selections if value not in options
+        if database_config["value"] not in database_config["options"]:
+            database_config["value"] = ""
             build_config["api_endpoint"]["value"] = ""
             build_config["collection_name"]["advanced"] = True
 
-        # If we have a token, database name should not be advanced
-        build_config["database_name"]["advanced"] = not build_config["token"]["value"]
+        # Set advanced status based on token presence
+        database_config["advanced"] = not build_config["token"]["value"]
 
         return build_config
 
-    def reset_build_config(self, build_config: dict):
-        # Reset the list of databases we have based on the token provided
-        build_config["database_name"]["options"] = []
-        build_config["database_name"]["options_metadata"] = []
-        build_config["database_name"]["value"] = ""
-        build_config["database_name"]["advanced"] = True
+
+    def reset_build_config(self, build_config: dict) -> dict:
+        """Reset all build configuration options to default empty state."""
+        # Reset database configuration
+        database_config = build_config["database_name"]
+        database_config.update({
+            "options": [],
+            "options_metadata": [],
+            "value": "",
+            "advanced": True
+        })
         build_config["api_endpoint"]["value"] = ""
 
-        # Reset the list of collections and metadata associated
-        build_config["collection_name"]["options"] = []
-        build_config["collection_name"]["options_metadata"] = []
-        build_config["collection_name"]["value"] = ""
-        build_config["collection_name"]["advanced"] = True
+        # Reset collection configuration
+        collection_config = build_config["collection_name"]
+        collection_config.update({
+            "options": [],
+            "options_metadata": [],
+            "value": "",
+            "advanced": True
+        })
 
         return build_config
 
