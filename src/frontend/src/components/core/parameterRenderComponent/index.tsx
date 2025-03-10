@@ -5,6 +5,7 @@ import SliderComponent from "@/components/core/parameterRenderComponent/componen
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import ButtonComponent from "./components/buttonComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -205,6 +206,12 @@ export function ParameterRenderComponent({
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
             id={`slider_${id}`}
+          />
+        );
+      case "button":
+        return (
+          <ButtonComponent
+            type={templateData?.name as "tool_name" | "actions"}
           />
         );
       default:
