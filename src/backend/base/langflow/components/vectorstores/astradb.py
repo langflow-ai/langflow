@@ -632,7 +632,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         })
 
         # If this is a bring your own, set dimensions to 0
-        return build_config
+        return self.reset_dimension_field(build_config)
 
     def reset_dimension_field(self, build_config: dict) -> dict:
         """Reset dimension field options based on provided configuration."""
