@@ -172,7 +172,9 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                 disabled={
                   (fieldValue as { disabled: boolean })?.disabled ?? false
                 }
-                placeholder=""
+                placeholder={
+                  (fieldValue as { placeholder: string })?.placeholder ?? ""
+                }
                 isToolMode={false}
               />
             </div>
