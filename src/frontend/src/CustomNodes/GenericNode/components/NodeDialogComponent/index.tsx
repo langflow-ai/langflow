@@ -169,7 +169,9 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                 editNode={false}
                 handleNodeClass={() => {}}
                 nodeClass={dialogNodeData}
-                disabled={false}
+                disabled={
+                  (fieldValue as { disabled: boolean })?.disabled ?? false
+                }
                 placeholder=""
                 isToolMode={false}
               />

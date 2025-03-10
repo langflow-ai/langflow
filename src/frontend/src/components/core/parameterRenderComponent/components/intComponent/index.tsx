@@ -87,6 +87,7 @@ export default function IntComponent({
         min={getMinValue()}
         max={getMaxValue()}
         onChange={handleNumberChange}
+        isDisabled={disabled}
         value={value ?? ""}
       >
         <NumberInputField
