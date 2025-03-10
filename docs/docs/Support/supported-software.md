@@ -1,5 +1,5 @@
 ---
-title: Supported software versions
+title: Supported software versions for Langflow
 slug: /support-supported-software
 ---
 
@@ -7,7 +7,7 @@ Support covers only the following software versions for Langflow.
 
 Last updated: 2025-03-06
 
-## Core Information
+## Core information
 - **Langflow Version**: `1.2.0`
 - **Python Version Required**: `>=3.10, <3.14`
 
