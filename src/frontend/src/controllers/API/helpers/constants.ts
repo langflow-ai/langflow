@@ -16,7 +16,7 @@ export const URLs = {
   BUILD: `build`,
   CUSTOM_COMPONENT: `custom_component`,
   FLOWS: `flows`,
-  FOLDERS: `folders`,
+  PROJECTS: `projects`,
   VARIABLES: `variables`,
   VALIDATE: `validate`,
   CONFIG: `config`,

@@ -1,4 +1,4 @@
-import { DEFAULT_FOLDER } from "@/constants/constants";
+import { DEFAULT_PROJECT } from "@/constants/constants";
 import { FolderType } from "@/pages/MainPage/entities";
 import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
@@ -7,7 +7,7 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-export const useGetFoldersQuery: useQueryFunctionType<
+export const useGetProjectsQuery: useQueryFunctionType<
   undefined,
   FolderType[]
 > = (options) => {
@@ -20,10 +20,10 @@ export const useGetFoldersQuery: useQueryFunctionType<
 
   const getFoldersFn = async (): Promise<FolderType[]> => {
     if (!isAuthenticated) return [];
-    const res = await api.get(`${getURL("FOLDERS")}/`);
+    const res = await api.get(`${getURL("PROJECTS")}/`);
     const data = res.data;
 
-    const myCollectionId = data?.find((f) => f.name === DEFAULT_FOLDER)?.id;
+    const myCollectionId = data?.find((f) => f.name === DEFAULT_PROJECT)?.id;
     setMyCollectionId(myCollectionId);
     setFolders(data);
 

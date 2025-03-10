@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { UPLOAD_ERROR_ALERT } from "@/constants/alerts_constants";
 import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
-import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
+import { useGetProjectsQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import ExportModal from "@/modals/exportModal";
 import FlowLogsModal from "@/modals/flowLogsModal";
 import FlowSettingsModal from "@/modals/flowSettingsModal";
@@ -62,7 +62,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
   const [inputWidth, setInputWidth] = useState<number>(0);
   const measureRef = useRef<HTMLSpanElement>(null);
 
-  const { data: folders, isFetched: isFoldersFetched } = useGetFoldersQuery();
+  const { data: folders, isFetched: isFoldersFetched } = useGetProjectsQuery();
   const flows = useFlowsManagerStore((state) => state.flows);
   const [nameLists, setNameList] = useState<string[]>([]);
 
