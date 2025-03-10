@@ -169,6 +169,7 @@ export const nodeColorsName: { [char: string]: string } = {
   unknown: "gray",
   Document: "lime",
   Data: "red",
+  JSON: "red",
   Message: "indigo",
   Prompt: "violet",
   Embeddings: "emerald",
