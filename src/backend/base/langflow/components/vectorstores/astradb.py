@@ -108,7 +108,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="embedding_generation_model",
                                 display_name="Embedding model",
                                 info="Model to use for generating embeddings.",
-                                required=True,
                                 options=[],
                             ),
                             "04_dimension": IntInput(
@@ -592,9 +591,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             api_endpoint=build_config["api_endpoint"]["value"],
         )
 
-        # Append a special case for Bring your own
-        vectorize_providers["Bring your own"] = [None, ["Bring your own"]]
-
         # If the collection is set, allow user to see embedding options
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
             "02_embedding_generation_provider"
@@ -648,6 +644,16 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
             "disabled"
         ] = embedding_provider != "Bring your own"
+
+        # If the provider is nvidia, set the model field to required
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_embedding_generation_model"][
+            "required"
+        ] = embedding_provider != "Bring your own"
+
+        # If the provider is nvidia, set the dimension field to not required
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
+            "required"
+        ] = embedding_provider == "Bring your own"
 
         return build_config
 
@@ -767,10 +773,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             and "01_new_collection_name" in field_value
         ):
             try:
+                # Get the provider and model if provided
+                embedding_provider = field_value.get("02_embedding_generation_provider", None)
+                embedding_model = field_value.get("03_embedding_generation_model", None)
+
                 # Get the dimension if its a BYO provider
                 dimension = (
-                    field_value["04_dimension"]
-                    if field_value["02_embedding_generation_provider"] == "Bring your own"
+                    field_value.get("04_dimension", None)
+                    if embedding_provider == "Bring your own"
                     else None
                 )
 
@@ -782,8 +792,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     environment=self.environment,
                     keyspace=self.get_keyspace(),
                     dimension=dimension,
-                    embedding_generation_provider=field_value["02_embedding_generation_provider"],
-                    embedding_generation_model=field_value["03_embedding_generation_model"],
+                    embedding_generation_provider=embedding_provider,
+                    embedding_generation_model=embedding_model,
                 )
             except Exception as e:
                 msg = f"Error creating collection: {e}"
