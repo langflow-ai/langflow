@@ -2,15 +2,8 @@ import json
 
 from requests import HTTPError
 
-from langflow.custom  import Component
-from langflow.io import (
-    BoolInput,
-    DataInput,
-    IntInput,
-    Output,
-    SecretStrInput,
-    StrInput,
-)
+from langflow.custom import Component
+from langflow.io import BoolInput, DataInput, IntInput, Output, SecretStrInput, StrInput
 from langflow.schema import Data
 
 # Define HTTP status code constants
@@ -130,7 +123,7 @@ class WaterCrawlScrapeApi(Component):
                 error_message = f"Failed to scrape URL: {json.dumps(errors)}"
                 raise WaterCrawlError(error_message) from e
             if e.response.status_code in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN, HTTP_NOT_FOUND):
-                error_message = e.response.json()['message']
+                error_message = e.response.json()["message"]
                 raise WaterCrawlError(error_message) from e
 
             raise

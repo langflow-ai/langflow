@@ -195,7 +195,7 @@ class WaterCrawlCrawlApi(Component):
                 error_message = f"Failed to scrape URL: {json.dumps(errors)}"
                 raise WaterCrawlError(error_message) from e
             if e.response.status_code in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN, HTTP_NOT_FOUND):
-                error_message = e.response.json()['message']
+                error_message = e.response.json()["message"]
                 raise WaterCrawlError(error_message) from e
             raise
 
