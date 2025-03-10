@@ -141,7 +141,8 @@ export default function TableNodeComponent({
       const isCustomEdit =
         column.formatter &&
         ((column.formatter === "text" && column.edit_mode === "modal") ||
-          column.formatter === "json");
+          column.formatter === "json" ||
+          column.formatter === "boolean");
       return {
         field: column.name,
         onUpdate: updateComponent,
