@@ -639,6 +639,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
             "placeholder"
         ] = 1024 if embedding_provider != "Bring your own" else None  # TODO: Support other providers
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
+            "value"
+        ] = 1024 if embedding_provider != "Bring your own" else None
 
         # If the provider is not Bring your own, disable the dimension field
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
