@@ -1,7 +1,7 @@
 from langchain_text_splitters import CharacterTextSplitter
 
 from langflow.custom import Component
-from langflow.io import HandleInput, IntInput, MessageTextInput, Output, DropdownInput
+from langflow.io import DropdownInput, HandleInput, IntInput, MessageTextInput, Output
 from langflow.schema import Data, DataFrame
 from langflow.utils.util import unescape_string
 
@@ -108,9 +108,9 @@ class SplitTextComponent(Component):
             # Convert string 'False'/'True' to boolean
             keep_sep = self.keep_separator
             if isinstance(keep_sep, str):
-                if keep_sep.lower() == 'false':
+                if keep_sep.lower() == "false":
                     keep_sep = False
-                elif keep_sep.lower() == 'true':
+                elif keep_sep.lower() == "true":
                     keep_sep = True
                 # 'start' and 'end' are kept as strings
 
