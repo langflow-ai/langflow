@@ -73,7 +73,8 @@
             "fieldName": "data",
             "id": "ParseData-J2Axc",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -471,7 +472,8 @@
                 "dynamic": false,
                 "info": "The initial list of Data objects to iterate over.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
@@ -1030,7 +1032,8 @@
                 "dynamic": false,
                 "info": "The data to convert to text.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": true,
                 "list_add_label": "Add More",

@@ -191,7 +191,8 @@
             "fieldName": "transcript_id",
             "id": "AssemblyAITranscriptionJobPoller-wdb3c",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -396,7 +397,8 @@
                 "dynamic": false,
                 "info": "The ID of the transcription job to poll",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
