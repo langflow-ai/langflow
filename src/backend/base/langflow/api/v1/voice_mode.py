@@ -564,6 +564,13 @@ async def flow_as_tool_websocket(
                                 function_call = item
                                 function_call_args = ""
                         elif event_type == "response.output_item.done":
+                            try:
+                                transcript = extract_transcript(event)
+                                if transcript and transcript.strip():
+                                    await add_message_to_db(transcript, session, flow_id, session_id, "Machine", "AI")
+                            except Exception as e:
+                                logger.error(f"Error saving message to database: {e}")
+                                logger.error(traceback.format_exc())
                             print("Bot speaking = False")
                             bot_speaking_flag[0] = False
                         elif event_type == "response.function_call_arguments.delta":
@@ -721,3 +728,16 @@ async def add_message_to_db(message, session, flow_id, session_id, sender, sende
         content_blocks=[],
     )
     await aadd_messagetables([message], session)
+
+def extract_transcript(json_data):
+    try:
+        content_list = json_data.get("item", {}).get("content", [])
+        
+        for content_item in content_list:
+            if content_item.get("type") == "audio":
+                return content_item.get("transcript", "")
+        
+        return "" 
+    except Exception as e:
+        print(f"Error extracting transcript: {e}")
+        return ""

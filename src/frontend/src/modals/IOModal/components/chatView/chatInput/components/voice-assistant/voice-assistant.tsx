@@ -50,7 +50,6 @@ export function VoiceAssistant({
   const edges = useFlowStore((state) => state.edges);
   const setEdges = useFlowStore((state) => state.setEdges);
   const updateBuildStatus = useFlowStore((state) => state.updateBuildStatus);
-  const isBuilding = useFlowStore((state) => state.isBuilding);
   const addDataToFlowPool = useFlowStore((state) => state.addDataToFlowPool);
   const updateEdgesRunningByNodes = useFlowStore(
     (state) => state.updateEdgesRunningByNodes,
@@ -70,16 +69,20 @@ export function VoiceAssistant({
 
   const hasOpenAIAPIKey = useMemo(() => {
     return (
-      !variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
+      variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
     );
-  }, [variables]);
+  }, [variables, open]);
 
   const openaiApiKey = useMemo(() => {
     return variables?.find((variable) => variable === "OPENAI_API_KEY");
   }, [variables]);
 
-  const elevenLabsApiKey = useMemo(() => {
+  const elevenLabsApiKeyGlobalVariable = useMemo(() => {
     return variables?.find((variable) => variable === "ELEVENLABS_API_KEY");
+  }, [variables]);
+
+  const hasElevenLabsApiKeyEnv = useMemo(() => {
+    return Boolean(process.env?.ELEVENLABS_API_KEY);
   }, [variables]);
 
   const getMessagesMutation = useGetMessagesMutation();
@@ -175,14 +178,6 @@ export function VoiceAssistant({
     !isRecording ? initializeAudio() : stopRecording();
   }, [hasOpenAIAPIKey]);
 
-  const toggleRecording = () => {
-    if (!hasOpenAIAPIKey) {
-      return;
-    }
-    !isRecording ? initializeAudio() : stopRecording();
-    setIsRecording(!isRecording);
-  };
-
   const handleSave = async (apiKey: string) => {
     try {
       await createVariable.mutateAsync({
@@ -197,17 +192,6 @@ export function VoiceAssistant({
       setShowApiKeyModal(false);
     } catch (error) {
       console.error("Error saving API key:", error);
-    }
-  };
-
-  const handleApiKeySubmit = (apiKey: string) => {
-    if (!hasOpenAIAPIKey) {
-      handleSave(apiKey);
-      return;
-    }
-
-    if (!isRecording && hasOpenAIAPIKey) {
-      initializeAudio();
     }
   };
 
@@ -235,9 +219,7 @@ export function VoiceAssistant({
     };
   }, []);
 
-  const waveformBars = useMemo(() => {
-    return Array(30).fill(false);
-  }, []);
+  const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
 
   const waveformRef = useRef<HTMLDivElement>(null);
 
@@ -253,12 +235,33 @@ export function VoiceAssistant({
         setRecordingTime((prev) => prev + 1);
       }, 1000);
       return () => clearInterval(interval);
+    } else {
+      setBarHeights(Array(30).fill(20));
     }
   }, [isRecording]);
+
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const newBarHeights = [...barHeights];
+
+    const position = 29 - (recordingTime % 30);
+
+    newBarHeights[position] = Math.floor(Math.random() * 40) + 60;
+
+    setBarHeights(newBarHeights);
+  }, [recordingTime, isRecording, barHeights]);
 
   const handleCloseAudioInput = () => {
     stopRecording();
     setShowAudioInput(false);
+  };
+
+  const handleSetShowSettingsModal = (open: boolean) => {
+    setShowSettingsModal(open);
+    if (!open && hasOpenAIAPIKey) {
+      startConversation();
+    }
   };
 
   return (
@@ -280,15 +283,16 @@ export function VoiceAssistant({
             ref={waveformRef}
             className="flex h-5 flex-1 items-center justify-center"
           >
-            {waveformBars.map((active, index) => (
+            {barHeights.map((height, index) => (
               <div
                 key={index}
                 className={cn(
                   "mx-[1px] w-[2px] rounded-sm transition-all duration-200",
-                  active && isRecording
-                    ? "h-full bg-destructive"
-                    : "h-[20%] bg-placeholder-foreground",
+                  isRecording && height > 20
+                    ? "bg-destructive"
+                    : "bg-placeholder-foreground",
                 )}
+                style={{ height: `${height}%` }}
               />
             ))}
           </div>
@@ -296,21 +300,23 @@ export function VoiceAssistant({
             {formatTime(recordingTime)}
           </div>
 
-          {showSettingsButton && (
+          <div className={cn(showSettingsButton ? "block" : "hidden")}>
             <AudioSettingsDialog
               open={showSettingsModal}
               userOpenaiApiKey={openaiApiKey}
-              userElevenLabsApiKey={elevenLabsApiKey}
+              userElevenLabsApiKey={elevenLabsApiKeyGlobalVariable}
+              hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}
+              setShowSettingsModal={handleSetShowSettingsModal}
             >
               <Button unstyled onClick={() => setShowSettingsModal(true)}>
                 <IconComponent
                   name="Settings"
                   strokeWidth={ICON_STROKE_WIDTH}
-                  className="h-4 w-4 text-muted-foreground hover:text-foreground"
+                  className="relative top-[2px] h-4 w-4 text-muted-foreground hover:text-foreground"
                 />
               </Button>
             </AudioSettingsDialog>
-          )}
+          </div>
 
           <Button unstyled onClick={handleCloseAudioInput}>
             <IconComponent

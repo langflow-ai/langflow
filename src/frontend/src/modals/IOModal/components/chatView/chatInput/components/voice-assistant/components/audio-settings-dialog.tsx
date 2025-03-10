@@ -1,12 +1,7 @@
-import IconComponent, {
-  ForwardedIconComponent,
-} from "@/components/common/genericIconComponent";
+import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import GlobalVariableModal from "@/components/core/GlobalVariableModal/GlobalVariableModal";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { getPlaceholder } from "@/components/core/parameterRenderComponent/helpers/get-placeholder-disabled";
-import { Button } from "@/components/ui/button";
-import { CommandItem } from "@/components/ui/command";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,36 +18,31 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetVoiceList } from "@/controllers/API/queries/voice/use-get-voice-list";
-import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
-import { cn } from "@/utils/utils";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { toTitleCase } from "@/utils/utils";
+import { useEffect, useRef, useState } from "react";
 
 interface SettingsVoiceModalProps {
   children?: React.ReactNode;
   open?: boolean;
   userOpenaiApiKey?: string;
   userElevenLabsApiKey?: string;
+  hasElevenLabsApiKeyEnv?: boolean;
+  setShowSettingsModal: (open: boolean) => void;
 }
-
-const OPENAI_PROVIDER_LIST = [{ name: "OpenAI", value: "openai" }];
-const FULL_PROVIDER_LIST = [
-  ...OPENAI_PROVIDER_LIST,
-  { name: "ElevenLabs", value: "elevenlabs" },
-];
 
 const SettingsVoiceModal = ({
   children,
   open: initialOpen = false,
   userOpenaiApiKey,
   userElevenLabsApiKey,
+  setShowSettingsModal,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
-  const [provider, setProvider] = useState<string>("openai");
   const [voice, setVoice] = useState<string>("alloy");
   const [open, setOpen] = useState<boolean>(initialOpen);
   const voices = useVoiceStore((state) => state.voices);
@@ -62,12 +52,16 @@ const SettingsVoiceModal = ({
     userElevenLabsApiKey!,
   );
 
-  const providersList = useVoiceStore((state) => state.providersList);
-  const setProvidersList = useVoiceStore((state) => state.setProvidersList);
+  const globalVariables = useGlobalVariablesStore(
+    (state) => state.globalVariablesEntries,
+  );
 
   const openaiVoices = useVoiceStore((state) => state.openaiVoices);
-  const [elevenLabsVoices, setElevenLabsVoices] = useState<
-    { name: string; value: string }[]
+  const [allVoices, setAllVoices] = useState<
+    {
+      name: string;
+      value: string;
+    }[]
   >([]);
 
   const { data: voiceList, isFetched } = useGetVoiceList({
@@ -78,65 +72,64 @@ const SettingsVoiceModal = ({
   });
 
   useEffect(() => {
-    if (isFetched && voiceList) {
-      voiceList.length > 0
-        ? setElevenLabsVoices(voiceList)
-        : setElevenLabsVoices([]);
+    if (isFetched) {
+      if (voiceList) {
+        const allVoicesMerged = [...openaiVoices, ...voiceList];
 
-      setProviderList();
+        voiceList.length > 0
+          ? setAllVoices(allVoicesMerged)
+          : setAllVoices(openaiVoices);
+      } else {
+        setAllVoices(openaiVoices);
+      }
     }
   }, [voiceList, isFetched]);
-
-  const setProviderList = () => {
-    if (voiceList?.length === 0) {
-      setProvidersList(OPENAI_PROVIDER_LIST);
-    } else {
-      setProvidersList(FULL_PROVIDER_LIST);
-    }
-  };
-
-  const handleProviderChange = useCallback(
-    (value: string) => {
-      setProvider(value);
-      if (value === "openai") {
-        setVoice(openaiVoices[0].value);
-      } else {
-        setVoice(elevenLabsVoices[0].value);
-      }
-    },
-    [openaiVoices, elevenLabsVoices],
-  );
-
-  const handleSubmit = useCallback(() => {
-    setLocalStorage(
-      "lf_audio_settings_playground",
-      JSON.stringify({ provider, voice }),
-    );
-    setOpen(false);
-  }, [provider, voice]);
 
   useEffect(() => {
     const audioSettings = JSON.parse(
       getLocalStorage("lf_audio_settings_playground") || "{}",
     );
-    if (audioSettings.provider) {
-      setProvider(audioSettings.provider);
-      setVoice(audioSettings.voice);
+    if (isFetched) {
+      if (audioSettings.provider) {
+        setVoice(audioSettings.voice);
+      } else {
+        setVoice(openaiVoices[0].value);
+      }
     } else {
-      setProvider(providersList[0].value);
       setVoice(openaiVoices[0].value);
     }
-  }, [initialOpen]);
+  }, [initialOpen, isFetched]);
 
-  const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
+  const handleSetVoice = (value: string) => {
+    setVoice(value);
+    const isOpenAiVoice = openaiVoices.some((voice) => voice.value === value);
+    if (isOpenAiVoice) {
+      setLocalStorage(
+        "lf_audio_settings_playground",
+        JSON.stringify({
+          provider: "openai",
+          voice: value,
+        }),
+      );
+    } else {
+      setLocalStorage(
+        "lf_audio_settings_playground",
+        JSON.stringify({
+          provider: "elevenlabs",
+          voice: value,
+        }),
+      );
+    }
+  };
 
-  console.log(openaiApiKey);
+  const handleSetOpen = (open: boolean) => {
+    setOpen(open);
+    setShowSettingsModal(open);
+  };
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenu open={open} onOpenChange={handleSetOpen}>
         <DropdownMenuTrigger>{children}</DropdownMenuTrigger>
         <DropdownMenuContent
           className="w-[324px]"
@@ -247,7 +240,7 @@ const SettingsVoiceModal = ({
                 <div className="grid w-full items-center gap-2">
                   <span className="flex w-full items-center text-sm">
                     Voice
-                    <ShadTooltip content="The default provider is OpenAI.">
+                    <ShadTooltip content="You can select ElevenLabs voices if you have an ElevenLabs API key. Otherwise, you can only select OpenAI voices.">
                       <div>
                         <IconComponent
                           name="Info"
@@ -258,27 +251,19 @@ const SettingsVoiceModal = ({
                     </ShadTooltip>
                   </span>
 
-                  <Select value={voice} onValueChange={setVoice}>
+                  <Select value={voice} onValueChange={handleSetVoice}>
                     <SelectTrigger className="h-9 w-full">
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px]">
                       <SelectGroup>
-                        {provider === "openai"
-                          ? openaiVoices.map((voice) => (
-                              <SelectItem value={voice.value}>
-                                <div className="w-24 truncate text-left">
-                                  {voice.name}
-                                </div>
-                              </SelectItem>
-                            ))
-                          : elevenLabsVoices.map((voice) => (
-                              <SelectItem value={voice.value}>
-                                <div className="w-24 truncate text-left">
-                                  {voice.name}
-                                </div>
-                              </SelectItem>
-                            ))}
+                        {allVoices.map((voice) => (
+                          <SelectItem value={voice.value}>
+                            <div className="truncate text-left">
+                              {toTitleCase(voice.name)}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
