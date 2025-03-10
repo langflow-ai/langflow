@@ -107,7 +107,6 @@ export type NodeInfoType = {
   flowId: string;
   nodeType: string;
   flowName: string;
-  endpointName: string;
   isAuth: boolean;
   variableName: string;
 };

@@ -95,25 +95,46 @@ export const useGetBuildsMutation: useMutationFunctionType<
   const currentFlow = useFlowStore((state) => state.currentFlow);
 
   const flowIdRef = useRef<string | null>(null);
+  const requestInProgressRef = useRef<Record<string, boolean>>({});
 
   const getBuildsFn = async (
     payload: IGetBuilds,
   ): Promise<{ vertex_builds: FlowPoolType }> => {
-    const config = {};
-    config["params"] = { flow_id: payload.flowId };
-    const res = await api.get<any>(`${getURL("BUILDS")}`, config);
-
-    if (currentFlow) {
-      const flowPool = res?.data?.vertex_builds;
-      setFlowPool(flowPool);
+    if (requestInProgressRef.current[payload.flowId]) {
+      return Promise.reject("Request already in progress");
     }
 
-    return res.data;
+    try {
+      requestInProgressRef.current[payload.flowId] = true;
+      const config = {};
+      config["params"] = { flow_id: payload.flowId };
+      const res = await api.get<any>(`${getURL("BUILDS")}`, config);
+
+      if (currentFlow) {
+        const flowPool = res?.data?.vertex_builds;
+        setFlowPool(flowPool);
+      }
+
+      return res.data;
+    } finally {
+      requestInProgressRef.current[payload.flowId] = false;
+    }
   };
 
   const startPolling = (payload: IGetBuilds) => {
+    if (requestInProgressRef.current[payload.flowId]) {
+      return Promise.reject("Request already in progress");
+    }
+
     if (!webhookPollingInterval || webhookPollingInterval === 0) {
       return getBuildsFn(payload);
+    }
+
+    if (
+      flowIdRef.current === payload.flowId &&
+      PollingManager.activePolls.has(payload.flowId)
+    ) {
+      return Promise.resolve({ vertex_builds: {} as FlowPoolType });
     }
 
     flowIdRef.current = payload.flowId;

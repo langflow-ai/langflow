@@ -80,7 +80,6 @@ export default function TextAreaComponent({
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
         isAuth: nodeInformationMetadata?.isAuth!,
-        endpointName: nodeInformationMetadata?.endpointName!,
         flowName: nodeInformationMetadata?.flowName!,
         format: "singleline",
       });
@@ -107,7 +106,6 @@ export default function TextAreaComponent({
       const curlWebhookCode = getCurlWebhookCode({
         flowId: nodeInformationMetadata?.flowId!,
         isAuth: nodeInformationMetadata?.isAuth!,
-        endpointName: nodeInformationMetadata?.endpointName!,
         flowName: nodeInformationMetadata?.flowName!,
         format,
       });

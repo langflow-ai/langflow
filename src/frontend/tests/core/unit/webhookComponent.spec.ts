@@ -44,28 +44,20 @@ test(
     await page.getByTestId("btn_copy_str_endpoint").click();
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
 
-    await page.getByTestId("generate_token_webhook_button").click();
-    await page.waitForSelector("text=Create API Key", { timeout: 30000 });
-    await page.getByPlaceholder("My API Key").click();
-    await page.getByPlaceholder("My API Key").fill(randomApiKeyDescription);
-    await page.getByText("Generate API Key").click();
-    await page.waitForSelector(
-      "text=Please save this secret key somewhere safe and accessible.",
-      { timeout: 30000 },
-    );
+    await page.getByTestId("title-Webhook").click();
+    await page.getByTestId("edit-button-modal").click();
 
-    await page.getByTestId("btn-copy-api-key").click();
-    await page.waitForSelector("text=API Key copied", { timeout: 30000 });
+    await page
+      .getByTestId("button_open_text_area_modal_str_edit_curl_advanced")
+      .click();
 
-    await page.getByText("Done").click();
+    const curl = await page.getByTestId("text-area-modal").inputValue();
 
-    await page.getByTestId("user_menu_button").click();
-    await page.getByText("Settings").click();
+    const currentUrl = page.url();
 
-    await page.getByTestId("sidebar-nav-Langflow API Keys").click();
-    await page.waitForSelector(`text=${randomApiKeyDescription}`, {
-      timeout: 30000,
-    });
+    const flowId = currentUrl.split("/")[2];
+
+    expect(curl).toContain(flowId);
   },
 );
 
@@ -124,21 +116,6 @@ test(
 
     await page.getByTestId("btn_copy_str_endpoint").click();
     await page.waitForSelector("text=Endpoint URL copied", { timeout: 30000 });
-
-    await page.getByTestId("generate_token_webhook_button").click();
-    await page.waitForSelector("text=Create API Key", { timeout: 30000 });
-    await page.getByPlaceholder("My API Key").click();
-    await page.getByPlaceholder("My API Key").fill(randomApiKeyDescription);
-    await page.getByText("Generate API Key").click();
-    await page.waitForSelector(
-      "text=Please save this secret key somewhere safe and accessible.",
-      { timeout: 30000 },
-    );
-
-    await page.getByTestId("btn-copy-api-key").click();
-    await page.waitForSelector("text=API Key copied", { timeout: 30000 });
-
-    await page.getByText("Done").click();
 
     const monitorBuildPromise = page.waitForRequest((request) =>
       request.url().includes("/monitor/build"),
