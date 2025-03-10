@@ -37,10 +37,7 @@ class ParameterHandler:
         }
         self.params: dict[str, Any] = {}
         self.load_from_db_fields: list[str] = []
-        if not storage_service:
-            self.storage_service = get_storage_service()
-        else:
-            self.storage_service = storage_service
+        self.storage_service = storage_service or get_storage_service()
 
     def process_edge_parameters(self, edges: list[Edge]) -> dict[str, Any]:
         """Process parameters from edges.
@@ -77,10 +74,8 @@ class ParameterHandler:
 
     def process_non_list_edge_param(self, field: dict, edge: Edge) -> Any:
         """Process non-list edge parameters."""
-        if isinstance(field.get("value"), dict):
-            param_dict = field["value"]
-            if not param_dict or len(param_dict) != 1:
-                return self.vertex.graph.get_vertex(edge.source_id)
+        param_dict = field.get("value")
+        if isinstance(param_dict, dict) and len(param_dict) == 1:
             return {key: self.vertex.graph.get_vertex(edge.source_id) for key in param_dict}
         return self.vertex.graph.get_vertex(edge.source_id)
 
