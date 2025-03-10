@@ -198,44 +198,53 @@ class ParameterHandler:
 
     def _handle_dict_field(self, field_name: str, val: Any, params: dict[str, Any]) -> dict[str, Any]:
         """Handle dictionary field type."""
-        if isinstance(val, list):
-            params[field_name] = {k: v for item in val for k, v in item.items()}
-        elif isinstance(val, dict):
-            params[field_name] = val
+        match val:
+            case list():
+                params[field_name] = {k: v for item in val for k, v in item.items()}
+            case dict():
+                params[field_name] = val
         return params
 
     def _handle_other_direct_types(
         self, field_name: str, field: dict, val: Any, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Handle other direct type fields."""
-        if field.get("type") == "int" and val is not None:
-            try:
-                params[field_name] = int(val)
-            except ValueError:
-                params[field_name] = val
-        elif field.get("type") in {"float", "slider"} and val is not None:
-            try:
-                params[field_name] = float(val)
-            except ValueError:
-                params[field_name] = val
-        elif field.get("type") == "str" and val is not None:
-            if isinstance(val, list):
-                params[field_name] = [unescape_string(v) for v in val]
-            elif isinstance(val, str):
-                params[field_name] = unescape_string(val)
-            elif isinstance(val, Data):
-                params[field_name] = unescape_string(val.get_text())
-        elif field.get("type") == "bool" and val is not None:
-            if isinstance(val, bool):
-                params[field_name] = val
-            elif isinstance(val, str):
-                params[field_name] = bool(val)
-        elif field.get("type") == "table" and val is not None:
-            if isinstance(val, list) and all(isinstance(item, dict) for item in val):
-                params[field_name] = pd.DataFrame(val)
-            else:
-                msg = f"Invalid value type {type(val)} for field {field_name}"
-                raise ValueError(msg)
-        elif val:
-            params[field_name] = val
+        if val is None:
+            return params
+
+        match field.get("type"):
+            case "int":
+                try:
+                    params[field_name] = int(val)
+                except ValueError:
+                    params[field_name] = val
+            case "float" | "slider":
+                try:
+                    params[field_name] = float(val)
+                except ValueError:
+                    params[field_name] = val
+            case "str":
+                match val:
+                    case list():
+                        params[field_name] = [unescape_string(v) for v in val]
+                    case str():
+                        params[field_name] = unescape_string(val)
+                    case Data():
+                        params[field_name] = unescape_string(val.get_text())
+            case "bool":
+                match val:
+                    case bool():
+                        params[field_name] = val
+                    case str():
+                        params[field_name] = bool(val)
+            case "table":
+                if isinstance(val, list) and all(isinstance(item, dict) for item in val):
+                    params[field_name] = pd.DataFrame(val)
+                else:
+                    msg = f"Invalid value type {type(val)} for field {field_name}"
+                    raise ValueError(msg)
+            case _:
+                if val:
+                    params[field_name] = val
+
         return params
