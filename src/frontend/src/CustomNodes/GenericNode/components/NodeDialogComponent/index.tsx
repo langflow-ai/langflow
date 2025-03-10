@@ -149,8 +149,6 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     }, 5000);
   };
 
-  console.log({ dialogTemplate });
-
   // Render
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
