@@ -309,9 +309,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Sort the resulting dictionary
             return defaultdict(list, dict(sorted(vectorize_providers_mapping.items())))
-        except Exception as e:
-            msg = f"Error fetching vectorize providers: {e}"
-            raise ValueError(msg) from e
+        except Exception as _:  # noqa: BLE001
+            return {}
 
     @classmethod
     async def create_database_api(
@@ -330,6 +329,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Get the environment, set to prod if null like
         my_env = environment or "prod"
+
+        # Raise a value error if name isn't provided
+        if not new_database_name:
+            msg = "Database name is required to create a new database."
+            raise ValueError(msg)
 
         # Call the create database function
         return await admin_client.async_create_database(
@@ -367,6 +371,11 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 ).get(embedding_generation_provider, [None, []])[0],
                 model_name=embedding_generation_model,
             )
+
+        # Raise a value error if name isn't provided
+        if not new_collection_name:
+            msg = "Collection name is required to create a new collection."
+            raise ValueError(msg)
 
         # Create the collection
         return await database.create_collection(
@@ -409,15 +418,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     )
                 except Exception:  # noqa: BLE001
                     num_collections = 0
-                    if db.status != "PENDING":
-                        continue
 
                 # Add the database to the dictionary
                 db_info_dict[db.info.name] = {
                     "api_endpoint": api_endpoint,
                     "collections": num_collections,
                     "status": db.status if db.status != "ACTIVE" else None,
-                    "org_id": db.org_id,
+                    "org_id": db.org_id if db.org_id else None,
                 }
             except Exception:  # noqa: BLE001, S110
                 pass
@@ -623,8 +630,18 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
 
         # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_embedding_generation_model"][
+            "placeholder"
+        ] = "Bring your own" if embedding_provider == "Bring your own" else None
+
+        # If the provider is not Bring your own, disable the dimension field
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_embedding_generation_model"][
+            "disabled"
+        ] = embedding_provider == "Bring your own"
+
+        # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
-            "value"
+            "placeholder"
         ] = 1024 if embedding_provider != "Bring your own" else None  # TODO: Support other providers
 
         # If the provider is not Bring your own, disable the dimension field
@@ -714,7 +731,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
             # Add the new database to the list of options
             build_config["database_name"]["options"] += [field_value["01_new_database_name"]]
-            build_config["database_name"]["options_metadata"] += [{"status": "PENDING"}]
+            build_config["database_name"]["options_metadata"] += [
+                {
+                    "status": "PENDING",
+                    "collections": 0,
+                    "api_endpoint": None,
+                    "icon": "data",
+                    "org_id": None,
+                }
+            ]
 
             return self.reset_collection_list(build_config)
 
@@ -809,14 +834,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Refresh the collection name options
         if field_name == "database_name" and not isinstance(field_value, dict):
+            # First we need to refresh the list entirely
+            build_config = self.reset_database_list(build_config)
+
             # If missing, refresh the database options
             if field_value not in build_config["database_name"]["options"]:
-                build_config = await self.update_build_config(build_config, field_value=self.token, field_name="token")
                 build_config["database_name"]["value"] = ""
             else:
                 # Find the position of the selected database to align with metadata
                 index_of_name = build_config["database_name"]["options"].index(field_value)
+
+                # Get the org_id for the database
                 org_id = build_config["database_name"]["options_metadata"][index_of_name]["org_id"]
+
+                # If this is None, something went wrong or the DB is still pending
+                if not org_id:
+                    return build_config
 
                 # Set the helper text field of the embedding provider
                 build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
@@ -827,11 +860,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     f'href="https://astra.datastax.com/org/{org_id}/settings/manageIntegrations">'
                     "your database in Astra DB</a>."
                 )
-
-                # Initializing database condition
-                status = build_config["database_name"]["options_metadata"][index_of_name]["status"]
-                if status and status == "PENDING":
-                    return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
                 # Set the API endpoint based on the selected database
                 build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][
