@@ -25,7 +25,7 @@ from langflow.custom.schema import MissingDefault
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.helpers.custom import format_type
 from langflow.schema import dotdict
-from langflow.template.field.base import Input
+from langflow.template.field.base import Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode, CustomComponentFrontendNode
 from langflow.type_extraction.type_extraction import extract_inner_type
 from langflow.utils import validate
@@ -365,6 +365,11 @@ def add_code_field(frontend_node: CustomComponentFrontendNode, raw_code):
     return frontend_node
 
 
+def add_new_types_to_output(output: Output):
+    if "Data" in output.types and "JSON" not in output.types:
+        output.types.append("JSON")
+
+
 def build_custom_component_template_from_inputs(
     custom_component: Component | CustomComponent, user_id: str | UUID | None = None
 ):
@@ -376,6 +381,7 @@ def build_custom_component_template_from_inputs(
     # But we now need to calculate the return_type of the methods in the outputs
     for output in frontend_node.outputs:
         if output.types:
+            add_new_types_to_output(output)
             continue
         return_types = cc_instance.get_method_return_type(output.method)
         return_types = [format_type(return_type) for return_type in return_types]
