@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from langflow.components.models import MacrocosmosComponent
@@ -6,13 +6,10 @@ from langflow.custom import Component
 from langflow.custom.utils import build_custom_component_template
 from langflow.inputs import (
     BoolInput,
-    DictInput,
     DropdownInput,
     FloatInput,
     IntInput,
-    MessageTextInput,
     SecretStrInput,
-    SliderInput,
     StrInput,
 )
 
@@ -157,4 +154,4 @@ class TestMacrocosmosComponent(ComponentTestBaseWithoutClient):
         )
         with pytest.raises(BadRequestError) as exc_info:
             component.build_model()
-        assert exc_info.value.body["detail"] == "Invalid API key" 
+        assert exc_info.value.body["detail"] == "Invalid API key"
