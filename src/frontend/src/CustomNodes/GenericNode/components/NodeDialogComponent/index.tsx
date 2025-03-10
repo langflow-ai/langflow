@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
+import { track } from "@/customization/utils/analytics";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -121,6 +122,20 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
       handleCloseDialog,
       nodeClass.tool_mode,
     );
+
+    if (nodeId.toLowerCase().includes("astra") && name === "database_name") {
+      const {
+        cloud_provider: cloudProvider,
+        new_database_name: databaseName,
+        ...otherFields
+      } = fieldValues;
+      track("Database Created", {
+        nodeId,
+        cloudProvider,
+        databaseName,
+        ...otherFields,
+      });
+    }
 
     setTimeout(() => {
       handleCloseDialog();

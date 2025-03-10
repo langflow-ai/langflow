@@ -81,6 +81,10 @@ const useHandleOnNewValue = ({
       // Debounced tracking
       track("Component Edited", { nodeId });
 
+      if (nodeId.toLowerCase().includes("astra") && name === "database_name") {
+        track("Database Selected", { nodeId, databaseName: changes.value });
+      }
+
       if (!template) {
         setErrorData({ title: "Template not found in the component" });
         return;
