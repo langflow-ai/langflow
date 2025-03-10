@@ -162,6 +162,20 @@ class Component(CustomComponent):
         self.set_class_code()
         self._set_output_required_inputs()
 
+    @property
+    def enabled_tools(self) -> list[str] | None:
+        """Dynamically determine which tools should be enabled.
+
+        This property can be overridden by subclasses to provide custom tool filtering.
+        By default, it returns None, which means all tools are enabled.
+
+        Returns:
+            list[str] | None: List of tool names or tags to enable, or None to enable all tools.
+        """
+        # Default implementation returns None (all tools enabled)
+        # Subclasses can override this to provide custom filtering
+        return None
+
     def _there_is_overlap_in_inputs_and_outputs(self) -> set[str]:
         """Check the `.name` of inputs and outputs to see if there is overlap.
 
@@ -1067,8 +1081,11 @@ class Component(CustomComponent):
         tools = await self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            tools = self._filter_tools_by_status(tools, self.tools_metadata)
             return self._update_tools_with_metadata(tools, self.tools_metadata)
-        return tools
+
+        # If no metadata exists yet, filter based on enabled_tools
+        return self._filter_tools_by_status(tools)
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
@@ -1094,19 +1111,64 @@ class Component(CustomComponent):
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
         return old_tags != new_tags
 
+    def _filter_tools_by_status(self, tools: list[Tool], metadata: list[dict] | None = None) -> list[Tool]:
+        """Filter tools based on their status in metadata.
+
+        Args:
+            tools (list[Tool]): List of tools to filter.
+            metadata (list[dict] | None): Tools metadata containing status information.
+
+        Returns:
+            list[Tool]: Filtered list of tools.
+        """
+        if not metadata:
+            # If no metadata, use the enabled_tools property
+            enabled = self.enabled_tools
+            if enabled is None:
+                return tools
+            return [tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)]
+
+        # Create a mapping of tool names to their status
+        tool_status = {item["name"]: item.get("status", True) for item in metadata}
+        return [tool for tool in tools if tool_status.get(tool.name, True)]
+
     async def _build_tools_metadata_input(self):
-        tools = await self.to_toolkit()
+        tools = await self._get_tools()
         # Always use the latest tool data
-        tool_data = [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
+        tool_data = [
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "tags": tool.tags,
+                "status": True,  # Initialize all tools with status True
+            }
+            for tool in tools
+        ]
+
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
             new_tags = self._extract_tools_tags(tool_data)
             if self.check_for_tool_tag_change(old_tags, new_tags):
+                # If enabled tools are set, update status based on them
+                enabled = self.enabled_tools
+                if enabled is not None:
+                    for item in tool_data:
+                        item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
                 self.tools_metadata = tool_data
             else:
+                # Preserve existing status values
+                existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                for item in tool_data:
+                    item["status"] = existing_status.get(item["name"], True)
                 tool_data = self.tools_metadata
         else:
+            # If enabled tools are set, update status based on them
+            enabled = self.enabled_tools
+            if enabled is not None:
+                for item in tool_data:
+                    item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
             self.tools_metadata = tool_data
+
         try:
             from langflow.io import TableInput
         except ImportError as e:
@@ -1125,7 +1187,7 @@ class Component(CustomComponent):
             table_options=TableOptions(
                 block_add=True,
                 block_delete=True,
-                block_edit=True,
+                block_edit=False,  # Allow editing for status toggle
                 block_sort=True,
                 block_filter=True,
                 block_hide=True,
