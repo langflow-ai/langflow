@@ -88,12 +88,36 @@ module.exports = {
       type: "category",
       label: "Deployment",
       items: [
-        "Deployment/deployment-docker",
-        "Deployment/deployment-gcp",
-        "Deployment/deployment-hugging-face-spaces",
-        "Deployment/deployment-kubernetes",
-        "Deployment/deployment-railway",
-        "Deployment/deployment-render",
+        {
+          type: "doc",
+          id: "Deployment/deployment-docker",
+          label: "Docker"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-gcp",
+          label: "Google Cloud Platform"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-hugging-face-spaces",
+          label: "Hugging Face Spaces"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-kubernetes",
+          label: "Kubernetes"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-railway",
+          label: "Railway"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-render",
+          label: "Render"
+        }
       ],
     },
     {
@@ -117,6 +141,7 @@ module.exports = {
       label: "Integrations",
       items: [
         "Integrations/Apify/integrations-apify",
+        "Integrations/Arize/integrations-arize",
         "Integrations/integrations-assemblyai",
         "Integrations/Composio/integrations-composio",
         "Integrations/integrations-langfuse",
