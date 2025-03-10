@@ -16,7 +16,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.components import aget_all_types_dict
 from langflow.services.database.models import Flow
-from langflow.services.database.models.folder.model import Project
+from langflow.services.database.models.project.model import Project
 from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select

@@ -22,15 +22,15 @@ from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
-from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import (
+from langflow.services.database.models.project.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.project.model import (
     Project,
     ProjectCreate,
     ProjectRead,
     ProjectReadWithFlows,
     ProjectUpdate,
 )
-from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
+from langflow.services.database.models.project.pagination_model import FolderWithPaginatedFlows
 
 router = APIRouter(prefix="/projects", tags=["Folders"])
 

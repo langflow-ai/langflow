@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from langflow.services.database.models.folder.model import Project
+from langflow.services.database.models.project.model import Project
 
 
 async def generate_unique_folder_name(folder_name, user_id, session):

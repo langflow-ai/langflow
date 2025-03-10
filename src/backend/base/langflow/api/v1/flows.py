@@ -24,8 +24,8 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
 from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
-from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import Project
+from langflow.services.database.models.project.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.project.model import Project
 from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.settings.service import SettingsService
 

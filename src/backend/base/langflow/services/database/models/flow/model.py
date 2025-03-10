@@ -22,8 +22,8 @@ from langflow.schema import Data
 
 if TYPE_CHECKING:
     from langflow.services.database.models import TransactionTable
-    from langflow.services.database.models.folder import Project
     from langflow.services.database.models.message import MessageTable
+    from langflow.services.database.models.project import Project
     from langflow.services.database.models.subscription.model import Subscription
     from langflow.services.database.models.user import User
     from langflow.services.database.models.vertex_builds.model import VertexBuildTable
