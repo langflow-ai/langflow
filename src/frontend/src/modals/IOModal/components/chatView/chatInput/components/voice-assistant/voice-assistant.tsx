@@ -1,18 +1,17 @@
-import { SAVE_API_KEY_ALERT } from "@/constants/constants";
+import { Button } from "@/components/ui/button";
+import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
 import { useGetMessagesMutation } from "@/controllers/API/queries/messages/use-get-messages-mutation";
 import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
-import { PROXY_TARGET } from "@/customization/config-constants";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
+import { cn } from "@/utils/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import ApiKeyPopUp from "./components/api-key-popup";
-import SettingsVoiceModal from "./components/audio-settings-dialog";
-import SettingsVoiceButton from "./components/settings-voice-button";
-import VoiceButton from "./components/voice-button";
+import IconComponent from "../../../../../../../components/common/genericIconComponent";
+import AudioSettingsDialog from "./components/audio-settings-dialog";
 import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message";
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
 import { useInterruptPlayback } from "./hooks/use-interrupt-playback";
@@ -23,14 +22,20 @@ import { useStopRecording } from "./hooks/use-stop-recording";
 import { workletCode } from "./streamProcessor";
 interface VoiceAssistantProps {
   flowId: string;
+  setShowAudioInput: (value: boolean) => void;
 }
 
-export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
+export function VoiceAssistant({
+  flowId,
+  setShowAudioInput,
+}: VoiceAssistantProps) {
+  const [recordingTime, setRecordingTime] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showSettingsButton, setShowSettingsButton] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -65,7 +70,7 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
 
   const hasOpenAIAPIKey = useMemo(() => {
     return (
-      variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
+      !variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
     );
   }, [variables]);
 
@@ -153,9 +158,17 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     });
   };
 
+  useEffect(() => {
+    if (!hasOpenAIAPIKey) {
+      setShowSettingsButton(true);
+      return;
+    }
+    setShowSettingsButton(false);
+    !isRecording ? initializeAudio() : stopRecording();
+  }, [hasOpenAIAPIKey]);
+
   const toggleRecording = () => {
     if (!hasOpenAIAPIKey) {
-      setShowApiKeyModal(true);
       return;
     }
     !isRecording ? initializeAudio() : stopRecording();
@@ -214,35 +227,93 @@ export function VoiceAssistant({ flowId }: VoiceAssistantProps) {
     };
   }, []);
 
+  const waveformBars = useMemo(() => {
+    return Array(30).fill(false);
+  }, []);
+
+  const waveformRef = useRef<HTMLDivElement>(null);
+
+  const formatTime = (timeInSeconds: number): string => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}s`;
+  };
+
+  useEffect(() => {
+    if (isRecording) {
+      const interval = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isRecording]);
+
+  const handleCloseAudioInput = () => {
+    stopRecording();
+    setShowAudioInput(false);
+  };
+
   return (
-    <div className="">
-      <div className="relative flex items-center gap-2">
-        {status && (
-          <div className="text-sm text-muted-foreground">{status}</div>
-        )}
-        {message && (
-          <div className="text-sm text-muted-foreground">{message}</div>
-        )}
-
-        <SettingsVoiceModal open={showSettingsModal}>
-          <SettingsVoiceButton
-            isRecording={isRecording}
-            setShowSettingsModal={setShowSettingsModal}
-          />
-        </SettingsVoiceModal>
-
-        <ApiKeyPopUp
-          isOpen={showApiKeyModal}
-          onSubmit={handleApiKeySubmit}
-          hasMessage={status || message}
+    <>
+      <div className="mx-auto flex w-full max-w-[324px] items-center justify-center rounded-md border bg-background p-3 shadow-xl">
+        <div
+          className={cn(
+            "flex items-center",
+            showSettingsButton ? "gap-3" : "gap-5",
+          )}
         >
-          <VoiceButton
-            isRecording={isRecording}
-            toggleRecording={toggleRecording}
-            isBuilding={isBuilding}
+          <IconComponent
+            name="Mic"
+            strokeWidth={ICON_STROKE_WIDTH}
+            className="h-4 w-4 text-placeholder-foreground"
           />
-        </ApiKeyPopUp>
+
+          <div
+            ref={waveformRef}
+            className="flex h-5 flex-1 items-center justify-center"
+          >
+            {waveformBars.map((active, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "mx-[1px] w-[2px] rounded-sm transition-all duration-200",
+                  active && isRecording
+                    ? "h-full bg-destructive"
+                    : "h-[20%] bg-placeholder-foreground",
+                )}
+              />
+            ))}
+          </div>
+          <div className="min-w-[50px] cursor-default text-center font-mono text-sm font-medium text-placeholder-foreground">
+            {formatTime(recordingTime)}
+          </div>
+
+          {showSettingsButton && (
+            <AudioSettingsDialog
+              open={showSettingsModal}
+              userOpenaiApiKey={variables?.find(
+                (variable) => variable === "OPENAI_API_KEY",
+              )}
+            >
+              <Button unstyled onClick={() => setShowSettingsModal(true)}>
+                <IconComponent
+                  name="Settings"
+                  strokeWidth={ICON_STROKE_WIDTH}
+                  className="h-4 w-4 text-muted-foreground hover:text-foreground"
+                />
+              </Button>
+            </AudioSettingsDialog>
+          )}
+
+          <Button unstyled onClick={handleCloseAudioInput}>
+            <IconComponent
+              name="X"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="h-4 w-4 text-muted-foreground hover:text-foreground"
+            />
+          </Button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

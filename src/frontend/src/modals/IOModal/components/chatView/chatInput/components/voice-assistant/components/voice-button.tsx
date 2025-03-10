@@ -1,37 +1,26 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { AudioLines, Mic } from "lucide-react";
-import { FC } from "react";
+import { ICON_STROKE_WIDTH } from "@/constants/constants";
 
 interface VoiceButtonProps {
-  isRecording: boolean;
   toggleRecording: () => void;
-  isBuilding?: boolean;
 }
 
-const VoiceButton = ({
-  isRecording,
-  toggleRecording,
-  isBuilding = false,
-}: VoiceButtonProps) => {
+const VoiceButton = ({ toggleRecording }: VoiceButtonProps) => {
   return (
     <>
       <div>
         <Button
           onClick={toggleRecording}
-          disabled={isBuilding}
-          className={`btn-playground-actions ${
-            isBuilding
-              ? "cursor-not-allowed"
-              : "text-muted-foreground hover:text-primary"
-          } ${isRecording ? "bg-destructive" : ""}`}
+          className={`btn-playground-actions group`}
           unstyled
         >
           <ForwardedIconComponent
-            className={`h-[18px] w-[18px] ${
-              isRecording ? "animate-pulse text-foreground" : ""
-            }`}
-            name={isRecording ? "AudioLines" : "Mic"}
+            className={
+              "icon-size text-muted-foreground group-hover:text-primary"
+            }
+            name={"Mic"}
+            strokeWidth={ICON_STROKE_WIDTH}
           />
         </Button>
       </div>
