@@ -1,6 +1,5 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { forwardRef, useEffect, useState } from "react";
-import ShortUniqueId from "short-unique-id";
 import IconComponent from "../../components/common/genericIconComponent";
 import {
   Popover,
@@ -31,9 +30,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
       if (!open) {
         onClose?.();
       }
-    }, [open, onClose]);
-
-    const uid = new ShortUniqueId();
+    }, [open]);
 
     return (
       <Popover
@@ -48,14 +45,11 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
       >
         <PopoverTrigger asChild>{children}</PopoverTrigger>
         <PopoverContent
-          ref={ref}
+          ref={notificationRef}
           data-testid="notification-dropdown-content"
           className="noflow nowheel nopan nodelete nodrag z-10 flex h-[500px] w-[500px] flex-col"
         >
-          <div
-            ref={notificationRef}
-            className="text-md flex flex-row justify-between pl-3 font-medium text-foreground"
-          >
+          <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
             Notifications
             <div className="flex gap-3 pr-3">
               <button
@@ -81,7 +75,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
             {notificationList.length !== 0 ? (
               notificationList.map((alertItem) => (
                 <SingleAlert
-                  key={uid.randomUUID(10)}
+                  key={alertItem.id}
                   dropItem={alertItem}
                   removeAlert={removeFromNotificationList}
                 />
