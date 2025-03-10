@@ -111,11 +111,7 @@ const AnimationComponent: React.FC<{
         {segment}
       </motion.span>
     ) : per === "word" ? (
-      <motion.span
-        aria-hidden="true"
-        variants={variants}
-        className="inline-block whitespace-pre"
-      >
+      <motion.span variants={variants} className="inline-block whitespace-pre">
         {segment}
       </motion.span>
     ) : (
@@ -123,7 +119,6 @@ const AnimationComponent: React.FC<{
         {segment.split("").map((char, charIndex) => (
           <motion.span
             key={`char-${charIndex}`}
-            aria-hidden="true"
             variants={variants}
             className="inline-block whitespace-pre"
           >
@@ -151,7 +146,7 @@ AnimationComponent.displayName = "AnimationComponent";
 export function TextEffect({
   children,
   per = "word",
-  as = "p",
+  as = "span",
   variants,
   className,
   preset,
@@ -224,7 +219,7 @@ export function TextEffect({
 
 export function TextEffectPerChar({ children }: { children: string }) {
   return (
-    <TextEffect per="char" preset="fade">
+    <TextEffect per="char" preset="fade" as="span">
       {children}
     </TextEffect>
   );
