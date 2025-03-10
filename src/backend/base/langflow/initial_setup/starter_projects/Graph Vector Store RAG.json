@@ -73,7 +73,8 @@
             "fieldName": "data",
             "id": "ParseData-alciW",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -83,7 +84,7 @@
         "source": "AstraDBGraph-jr8pY",
         "sourceHandle": "{œdataTypeœ: œAstraDBGraphœ, œidœ: œAstraDBGraph-jr8pYœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-alciW",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-alciWœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-alciWœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -271,7 +272,8 @@
             "fieldName": "ingest_data",
             "id": "AstraDBGraph-FX0tA",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -280,7 +282,7 @@
         "source": "ChatInput-DA114",
         "sourceHandle": "{œdataTypeœ: œHtmlLinkExtractorœ, œidœ: œHtmlLinkExtractor-exHgkœ, œnameœ: œdataœ, œoutput_typesœ: []}",
         "target": "AstraDBGraph-xJiDN",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDBGraph-FX0tAœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDBGraph-FX0tAœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -321,7 +323,8 @@
             "fieldName": "data",
             "id": "ParseData-alciW",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -330,7 +333,7 @@
         "source": "AstraDBGraph-xJiDN",
         "sourceHandle": "{œdataTypeœ: œAstraDBGraphœ, œidœ: œAstraDBGraph-xJiDNœ, œnameœ: œsearch_resultsœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-alciW",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-alciWœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-alciWœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -371,7 +374,8 @@
             "fieldName": "ingest_data",
             "id": "AstraDBGraph-uza6S",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -380,7 +384,7 @@
         "source": "HtmlLinkExtractor-LWuvQ",
         "sourceHandle": "{œdataTypeœ: œHtmlLinkExtractorœ, œidœ: œHtmlLinkExtractor-LWuvQœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "AstraDBGraph-uza6S",
-        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDBGraph-uza6Sœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œingest_dataœ, œidœ: œAstraDBGraph-uza6Sœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1249,7 +1253,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1438,7 +1443,8 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "name": "ingest_data",
@@ -1795,7 +1801,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1828,7 +1835,8 @@
                 "dynamic": false,
                 "info": "The data to convert to text.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": true,
                 "name": "data",
@@ -2762,7 +2770,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2992,7 +3001,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -3182,7 +3192,8 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "name": "ingest_data",
@@ -3522,7 +3533,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -3708,7 +3720,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -4461,7 +4474,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -4658,7 +4672,8 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
@@ -5037,7 +5052,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -5234,7 +5250,8 @@
                 "dynamic": false,
                 "info": "",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",

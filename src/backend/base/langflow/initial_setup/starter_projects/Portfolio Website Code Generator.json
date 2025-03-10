@@ -153,7 +153,8 @@
             "fieldName": "data",
             "id": "ParseData-idUvo",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -162,7 +163,7 @@
         "source": "File-GICjp",
         "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-GICjpœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-idUvo",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-idUvoœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-idUvoœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -178,7 +179,8 @@
             "fieldName": "data",
             "id": "ParseData-qN4UL",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -187,7 +189,7 @@
         "source": "StructuredOutputv2-ZQldd",
         "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutputv2-ZQlddœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-qN4UL",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-qN4ULœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-qN4ULœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -243,7 +245,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -276,7 +279,8 @@
                 "dynamic": false,
                 "info": "The data to convert to text.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
@@ -405,7 +409,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -438,7 +443,8 @@
                 "dynamic": false,
                 "info": "The data to convert to text.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
@@ -1786,7 +1792,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2146,7 +2153,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }

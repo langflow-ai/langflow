@@ -17,7 +17,8 @@
             "fieldName": "data",
             "id": "LoopComponent-3vpc1",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -26,7 +27,7 @@
         "source": "ArXivComponent-LChQN",
         "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-LChQNœ, œnameœ: œpapersœ, œoutput_typesœ: [œDataœ]}",
         "target": "LoopComponent-3vpc1",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-3vpc1œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-3vpc1œ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -44,7 +45,8 @@
             "fieldName": "data",
             "id": "ParseData-Pf12J",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -53,7 +55,7 @@
         "source": "LoopComponent-3vpc1",
         "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-3vpc1œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-Pf12J",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-Pf12Jœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-Pf12Jœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -152,7 +154,8 @@
             "fieldName": "data",
             "id": "ParseData-igEkj",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -161,7 +164,7 @@
         "source": "LoopComponent-3vpc1",
         "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-3vpc1œ, œnameœ: œdoneœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-igEkj",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-igEkjœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-igEkjœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -257,7 +260,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -405,7 +409,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -418,7 +423,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -452,7 +458,8 @@
                 "dynamic": false,
                 "info": "The initial list of Data objects to iterate over.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
@@ -540,7 +547,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -574,7 +582,8 @@
                 "dynamic": false,
                 "info": "The data to convert to text.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
@@ -1023,7 +1032,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1146,7 +1156,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1180,7 +1191,8 @@
                 "dynamic": false,
                 "info": "The data to convert to text.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": true,
                 "list_add_label": "Add More",
