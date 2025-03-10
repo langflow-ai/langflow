@@ -31,6 +31,7 @@ from langflow.graph.graph.utils import (
     should_continue,
 )
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
+from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
@@ -1607,6 +1608,15 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
+                await log_vertex_build(
+                    flow_id=self.flow_id or "",
+                    vertex_id=result.vertex.id,
+                    valid=result.valid,
+                    params=result.params,
+                    data=result.result_dict,
+                    artifacts=result.artifacts,
+                )
+
                 vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"

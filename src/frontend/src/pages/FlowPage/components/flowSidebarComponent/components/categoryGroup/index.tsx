@@ -16,7 +16,7 @@ export const CategoryGroup = memo(function CategoryGroup({
   setOpenCategories,
   search,
   nodeColors,
-  chatInputAdded,
+  uniqueInputsComponents,
   onDragStart,
   sensitiveSort,
 }: CategoryGroupProps) {
@@ -65,9 +65,9 @@ export const CategoryGroup = memo(function CategoryGroup({
                   setOpenCategories={setOpenCategories}
                   dataFilter={dataFilter}
                   nodeColors={nodeColors}
-                  chatInputAdded={chatInputAdded}
                   onDragStart={onDragStart}
                   sensitiveSort={sensitiveSort}
+                  uniqueInputsComponents={uniqueInputsComponents}
                 />
               );
             })}

@@ -376,6 +376,7 @@ class ConfigResponse(BaseModel):
     auto_saving_interval: int
     health_check_max_retries: int
     max_file_size_upload: int
+    webhook_polling_interval: int
     event_delivery: Literal["polling", "streaming"]
 
 

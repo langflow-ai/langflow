@@ -1,6 +1,7 @@
 import { GRADIENT_CLASS } from "@/constants/constants";
+import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
 import ComponentTextModal from "@/modals/textAreaModal";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
@@ -17,6 +18,8 @@ const inputClasses = {
   disabled: "disabled-state",
   password: "password",
 };
+
+const WEBHOOK_VALUE = "CURL_WEBHOOK";
 
 const externalLinkIconClasses = {
   gradient: ({
@@ -61,11 +64,28 @@ export default function TextAreaComponent({
   password,
   placeholder,
   isToolMode = false,
+  nodeInformationMetadata,
 }: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
-
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const isWebhook = useMemo(
+    () => nodeInformationMetadata?.nodeType === "webhook",
+    [nodeInformationMetadata?.nodeType],
+  );
+
+  useEffect(() => {
+    if (isWebhook && value === WEBHOOK_VALUE) {
+      const curlWebhookCode = getCurlWebhookCode({
+        flowId: nodeInformationMetadata?.flowId!,
+        isAuth: nodeInformationMetadata?.isAuth!,
+        flowName: nodeInformationMetadata?.flowName!,
+        format: "singleline",
+      });
+      handleOnNewValue({ value: curlWebhookCode });
+    }
+  }, [isWebhook]);
 
   const getInputClassName = () => {
     return cn(
@@ -81,9 +101,21 @@ export default function TextAreaComponent({
     handleOnNewValue({ value: e.target.value });
   };
 
+  const changeWebhookFormat = (format: "multiline" | "singleline") => {
+    if (isWebhook) {
+      const curlWebhookCode = getCurlWebhookCode({
+        flowId: nodeInformationMetadata?.flowId!,
+        isAuth: nodeInformationMetadata?.isAuth!,
+        flowName: nodeInformationMetadata?.flowName!,
+        format,
+      });
+      handleOnNewValue({ value: curlWebhookCode });
+    }
+  };
+
   const renderIcon = () => (
     <div>
-      {!disabled && (
+      {!disabled && !isFocused && (
         <div
           className={cn(
             externalLinkIconClasses.gradient({
@@ -139,6 +171,7 @@ export default function TextAreaComponent({
         aria-label={disabled ? value : undefined}
         ref={inputRef}
         type={password ? (passwordVisible ? "text" : "password") : "text"}
+        readOnly={isWebhook}
       />
 
       <ComponentTextModal
@@ -146,8 +179,14 @@ export default function TextAreaComponent({
         value={value}
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
         disabled={disabled}
+        onCloseModal={() => changeWebhookFormat("singleline")}
       >
-        <div className="relative w-full">{renderIcon()}</div>
+        <div
+          onClick={() => changeWebhookFormat("multiline")}
+          className="relative w-full"
+        >
+          {renderIcon()}
+        </div>
       </ComponentTextModal>
       {password && !isFocused && (
         <div

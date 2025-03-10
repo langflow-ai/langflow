@@ -240,6 +240,7 @@ class MultilineInput(MessageTextInput, MultilineMixin, InputTraceMixin, ToolMode
 
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     multiline: CoalesceBool = True
+    copy_field: CoalesceBool = False
 
 
 class MultilineSecretInput(MessageTextInput, MultilineMixin, InputTraceMixin):

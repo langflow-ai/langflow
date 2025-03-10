@@ -1,4 +1,5 @@
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
+import { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
 import { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { cn } from "@/utils/utils";
@@ -15,6 +16,7 @@ export function CustomParameterComponent({
   disabled,
   placeholder,
   isToolMode,
+  nodeInformationMetadata,
 }: {
   handleOnNewValue: handleOnNewValueType;
   name: string;
@@ -27,6 +29,7 @@ export function CustomParameterComponent({
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  nodeInformationMetadata?: NodeInfoType;
 }) {
   return (
     <ParameterRenderComponent
@@ -41,6 +44,7 @@ export function CustomParameterComponent({
       disabled={disabled}
       placeholder={placeholder}
       isToolMode={isToolMode}
+      nodeInformationMetadata={nodeInformationMetadata}
     />
   );
 }
