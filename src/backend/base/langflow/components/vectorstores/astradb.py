@@ -626,14 +626,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ]["options"] = vectorize_providers.get(embedding_provider, [[], []])[1]
 
         # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_embedding_generation_model"][
-            "placeholder"
-        ] = "Bring your own" if embedding_provider == "Bring your own" else None
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+            "03_embedding_generation_model"
+        ]["placeholder"] = "Bring your own" if embedding_provider == "Bring your own" else None
 
         # If the provider is not Bring your own, disable the dimension field
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_embedding_generation_model"][
-            "disabled"
-        ] = embedding_provider == "Bring your own"
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+            "03_embedding_generation_model"
+        ]["disabled"] = embedding_provider == "Bring your own"
 
         # If the provider is nvidia, set the dimension field to 1024, otherwise clear it
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
@@ -646,9 +646,9 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         ] = embedding_provider != "Bring your own"
 
         # If the provider is nvidia, set the model field to required
-        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_embedding_generation_model"][
-            "required"
-        ] = embedding_provider != "Bring your own"
+        build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
+            "03_embedding_generation_model"
+        ]["required"] = embedding_provider != "Bring your own"
 
         # If the provider is nvidia, set the dimension field to not required
         build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["04_dimension"][
@@ -778,11 +778,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 embedding_model = field_value.get("03_embedding_generation_model", None)
 
                 # Get the dimension if its a BYO provider
-                dimension = (
-                    field_value.get("04_dimension", None)
-                    if embedding_provider == "Bring your own"
-                    else None
-                )
+                dimension = field_value.get("04_dimension", None) if embedding_provider == "Bring your own" else None
 
                 # Create the collection
                 await self.create_collection_api(
