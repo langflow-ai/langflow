@@ -96,6 +96,8 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
+    _enabled_tools: ClassVar[list[str] | None] = None
+
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
@@ -1067,8 +1069,11 @@ class Component(CustomComponent):
         tools = await self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
+            tools = self._filter_tools_by_status(tools, self.tools_metadata)
             return self._update_tools_with_metadata(tools, self.tools_metadata)
-        return tools
+
+        # If no metadata exists yet, filter based on enabled_tools
+        return self._filter_tools_by_status(tools)
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
@@ -1094,88 +1099,66 @@ class Component(CustomComponent):
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
         return old_tags != new_tags
 
-    async def _build_tools_metadata_input(self):
-        tools = await self.to_toolkit()
-        # Always use the latest tool data
-        tool_data = [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
-        if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            old_tags = self._extract_tools_tags(self.tools_metadata)
-            new_tags = self._extract_tools_tags(tool_data)
-            if self.check_for_tool_tag_change(old_tags, new_tags):
-                self.tools_metadata = tool_data
-            else:
-                tool_data = self.tools_metadata
-        else:
-            self.tools_metadata = tool_data
-        try:
-            from langflow.io import TableInput
-        except ImportError as e:
-            msg = "Failed to import TableInput from langflow.io"
-            raise ImportError(msg) from e
+    def _filter_tools_by_status(self, tools: list[Tool], metadata: list[dict] | None = None) -> list[Tool]:
+        """Filter tools based on their status in metadata.
 
-        return TableInput(
-            name=TOOLS_METADATA_INPUT_NAME,
-            display_name="Edit tools",
-            real_time_refresh=True,
-            table_schema=TOOL_TABLE_SCHEMA,
-            value=tool_data,
-            table_icon="Hammer",
-            trigger_icon="Hammer",
-            trigger_text="",
-            table_options=TableOptions(
-                block_add=True,
-                block_delete=True,
-                block_edit=True,
-                block_sort=True,
-                block_filter=True,
-                block_hide=True,
-                block_select=True,
-                hide_options=True,
-                field_parsers={
-                    "name": [FieldParserType.SNAKE_CASE, FieldParserType.NO_BLANK],
-                    "commands": FieldParserType.COMMANDS,
-                },
-                description=TOOLS_METADATA_INFO,
-            ),
-        )
-
-    async def _get_tools(self) -> list[Tool]:
-        """Get the list of tools for this component.
-
-        This method can be overridden by subclasses to provide custom tool implementations.
-        The default implementation uses ComponentToolkit.
+        Args:
+            tools (list[Tool]): List of tools to filter.
+            metadata (list[dict] | None): Tools metadata containing status information.
 
         Returns:
-            list[Tool]: List of tools provided by this component
+            list[Tool]: Filtered list of tools.
         """
-        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
-        return component_toolkit(component=self).get_tools(callbacks=self.get_langchain_callbacks())
+        if not metadata:
+            # If no metadata and no enabled tools are set, return all tools
+            # If enabled tools are set, filter by them
+            if self._enabled_tools is None:
+                return tools
+            return [
+                tool for tool in tools if any(enabled in [tool.name, *tool.tags] for enabled in self._enabled_tools)
+            ]
 
-    def _extract_tools_tags(self, tools_metadata: list[dict]) -> list[str]:
-        """Extract the first tag from each tool's metadata."""
-        return [tool["tags"][0] for tool in tools_metadata if tool["tags"]]
-
-    def _update_tools_with_metadata(self, tools: list[Tool], metadata: DataFrame | None) -> list[Tool]:
-        """Update tools with provided metadata."""
-        component_toolkit: type[ComponentToolkit] = _get_component_toolkit()
-        return component_toolkit(component=self, metadata=metadata).update_tools_metadata(tools=tools)
-
-    def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
-        return old_tags != new_tags
+        # Create a mapping of tool names to their status
+        tool_status = {item["name"]: item.get("status", True) for item in metadata}
+        return [tool for tool in tools if tool_status.get(tool.name, True)]
 
     async def _build_tools_metadata_input(self):
-        tools = await self.to_toolkit()
+        tools = await self._get_tools()
         # Always use the latest tool data
-        tool_data = [{"name": tool.name, "description": tool.description, "tags": tool.tags} for tool in tools]
+        tool_data = [
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "tags": tool.tags,
+                "status": True,  # Initialize all tools with status True
+            }
+            for tool in tools
+        ]
+
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
             old_tags = self._extract_tools_tags(self.tools_metadata)
             new_tags = self._extract_tools_tags(tool_data)
             if self.check_for_tool_tag_change(old_tags, new_tags):
+                # If enabled tools are set, update status based on them
+                if self._enabled_tools is not None:
+                    for item in tool_data:
+                        item["status"] = any(
+                            enabled in [item["name"], *item["tags"]] for enabled in self._enabled_tools
+                        )
                 self.tools_metadata = tool_data
             else:
+                # Preserve existing status values
+                existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                for item in tool_data:
+                    item["status"] = existing_status.get(item["name"], True)
                 tool_data = self.tools_metadata
         else:
+            # If enabled tools are set, update status based on them
+            if self._enabled_tools is not None:
+                for item in tool_data:
+                    item["status"] = any(enabled in [item["name"], *item["tags"]] for enabled in self._enabled_tools)
             self.tools_metadata = tool_data
+
         try:
             from langflow.io import TableInput
         except ImportError as e:
@@ -1194,7 +1177,7 @@ class Component(CustomComponent):
             table_options=TableOptions(
                 block_add=True,
                 block_delete=True,
-                block_edit=True,
+                block_edit=False,  # Allow editing for status toggle
                 block_sort=True,
                 block_filter=True,
                 block_hide=True,

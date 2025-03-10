@@ -37,11 +37,10 @@ TOOL_TABLE_SCHEMA = [
     },
     {
         "name": "status",
-        "display_name": "Enabled",
+        "display_name": "Enable",
         "type": "boolean",
         "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
         "default": True,
-        "edit_mode": EditMode.INLINE,
     },
 ]
 
