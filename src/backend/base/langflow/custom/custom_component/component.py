@@ -96,8 +96,6 @@ class Component(CustomComponent):
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     code_class_base_inheritance: ClassVar[str] = "Component"
-    _enabled_tools: ClassVar[list[str] | None] = None
-
 
     def __init__(self, **kwargs) -> None:
         # Initialize instance-specific attributes first
@@ -163,6 +161,20 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    @property
+    def enabled_tools(self) -> list[str] | None:
+        """Dynamically determine which tools should be enabled.
+
+        This property can be overridden by subclasses to provide custom tool filtering.
+        By default, it returns None, which means all tools are enabled.
+
+        Returns:
+            list[str] | None: List of tool names or tags to enable, or None to enable all tools.
+        """
+        # Default implementation returns None (all tools enabled)
+        # Subclasses can override this to provide custom filtering
+        return None
 
     def _there_is_overlap_in_inputs_and_outputs(self) -> set[str]:
         """Check the `.name` of inputs and outputs to see if there is overlap.
@@ -1110,13 +1122,11 @@ class Component(CustomComponent):
             list[Tool]: Filtered list of tools.
         """
         if not metadata:
-            # If no metadata and no enabled tools are set, return all tools
-            # If enabled tools are set, filter by them
-            if self._enabled_tools is None:
+            # If no metadata, use the enabled_tools property
+            enabled = self.enabled_tools
+            if enabled is None:
                 return tools
-            return [
-                tool for tool in tools if any(enabled in [tool.name, *tool.tags] for enabled in self._enabled_tools)
-            ]
+            return [tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)]
 
         # Create a mapping of tool names to their status
         tool_status = {item["name"]: item.get("status", True) for item in metadata}
@@ -1140,11 +1150,10 @@ class Component(CustomComponent):
             new_tags = self._extract_tools_tags(tool_data)
             if self.check_for_tool_tag_change(old_tags, new_tags):
                 # If enabled tools are set, update status based on them
-                if self._enabled_tools is not None:
+                enabled = self.enabled_tools
+                if enabled is not None:
                     for item in tool_data:
-                        item["status"] = any(
-                            enabled in [item["name"], *item["tags"]] for enabled in self._enabled_tools
-                        )
+                        item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
                 self.tools_metadata = tool_data
             else:
                 # Preserve existing status values
@@ -1154,9 +1163,10 @@ class Component(CustomComponent):
                 tool_data = self.tools_metadata
         else:
             # If enabled tools are set, update status based on them
-            if self._enabled_tools is not None:
+            enabled = self.enabled_tools
+            if enabled is not None:
                 for item in tool_data:
-                    item["status"] = any(enabled in [item["name"], *item["tags"]] for enabled in self._enabled_tools)
+                    item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
             self.tools_metadata = tool_data
 
         try:
