@@ -610,7 +610,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -933,7 +934,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -946,7 +948,8 @@
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -2536,7 +2539,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -3280,7 +3284,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -3294,7 +3299,8 @@
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -3976,7 +3982,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -3990,7 +3997,8 @@
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
