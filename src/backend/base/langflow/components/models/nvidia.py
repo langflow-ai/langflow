@@ -68,6 +68,13 @@ class NVIDIAModelComponent(LCModelComponent):
             advanced=True,
             value=1,
         ),
+        BoolInput(
+            name="detailed_thinking",
+            display_name="Detailed Thinking",
+            info="If true, the model will return a detailed thought process. Only supported by reasoning models.",
+            advanced=True,
+            value=False,
+        ),
     ]
 
     def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
