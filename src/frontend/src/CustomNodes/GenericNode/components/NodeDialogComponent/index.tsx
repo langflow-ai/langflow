@@ -109,6 +109,26 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   };
 
   const handleSubmitDialog = async () => {
+    // Validate required fields first
+    const missingRequiredFields = Object.entries(dialogTemplate)
+      .filter(
+        ([_, fieldValue]) =>
+          (fieldValue as { required: boolean })?.required === true &&
+          (!fieldValues[_] || fieldValues[_].trim() === ""),
+      )
+      .map(
+        ([_, fieldValue]) =>
+          (fieldValue as { display_name: string })?.display_name || _,
+      );
+
+    if (missingRequiredFields.length > 0) {
+      handleErrorData({
+        title: "Missing required fields",
+        list: missingRequiredFields,
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     await mutateTemplate(
