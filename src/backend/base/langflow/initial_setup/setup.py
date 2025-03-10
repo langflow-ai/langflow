@@ -31,7 +31,7 @@ from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
+from langflow.services.database.models.folder.model import Project, ProjectCreate, ProjectRead
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
 from langflow.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
@@ -659,7 +659,7 @@ def create_new_project(
 
 
 async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUID) -> list[Flow]:
-    stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == folder_id)
+    stmt = select(Project).options(selectinload(Project.flows)).where(Project.id == folder_id)
     return list((await session.exec(stmt)).first().flows)
 
 
@@ -671,20 +671,20 @@ async def delete_start_projects(session, folder_id) -> None:
 
 
 async def folder_exists(session, folder_name):
-    stmt = select(Folder).where(Folder.name == folder_name)
+    stmt = select(Project).where(Project.name == folder_name)
     folder = (await session.exec(stmt)).first()
     return folder is not None
 
 
 async def create_starter_folder(session):
     if not await folder_exists(session, STARTER_FOLDER_NAME):
-        new_folder = FolderCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
-        db_folder = Folder.model_validate(new_folder, from_attributes=True)
+        new_folder = ProjectCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
+        db_folder = Project.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
         await session.commit()
         await session.refresh(db_folder)
         return db_folder
-    stmt = select(Folder).where(Folder.name == STARTER_FOLDER_NAME)
+    stmt = select(Project).where(Project.name == STARTER_FOLDER_NAME)
     return (await session.exec(stmt)).first()
 
 
@@ -943,7 +943,7 @@ async def initialize_super_user_if_needed() -> None:
     logger.info("Super user initialized")
 
 
-async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:
+async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> ProjectRead:
     """Ensure the default folder exists for the given user_id. If it doesn't exist, create it.
 
     Uses an idempotent insertion approach to handle concurrent creation gracefully.
@@ -957,14 +957,14 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     Returns:
         UUID: The ID of the default folder.
     """
-    stmt = select(Folder).where(Folder.user_id == user_id, Folder.name == DEFAULT_FOLDER_NAME)
+    stmt = select(Project).where(Project.user_id == user_id, Project.name == DEFAULT_FOLDER_NAME)
     result = await session.exec(stmt)
     folder = result.first()
     if folder:
-        return FolderRead.model_validate(folder, from_attributes=True)
+        return ProjectRead.model_validate(folder, from_attributes=True)
 
     try:
-        folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME)
+        folder_obj = Project(user_id=user_id, name=DEFAULT_FOLDER_NAME)
         session.add(folder_obj)
         await session.commit()
         await session.refresh(folder_obj)
@@ -974,7 +974,7 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
         result = await session.exec(stmt)
         folder = result.first()
         if folder:
-            return FolderRead.model_validate(folder, from_attributes=True)
+            return ProjectRead.model_validate(folder, from_attributes=True)
         msg = "Failed to get or create default folder"
         raise ValueError(msg) from e
-    return FolderRead.model_validate(folder_obj, from_attributes=True)
+    return ProjectRead.model_validate(folder_obj, from_attributes=True)

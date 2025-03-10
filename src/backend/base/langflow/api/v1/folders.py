@@ -24,98 +24,102 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
-    Folder,
-    FolderCreate,
-    FolderRead,
-    FolderReadWithFlows,
-    FolderUpdate,
+    Project,
+    ProjectCreate,
+    ProjectRead,
+    ProjectReadWithFlows,
+    ProjectUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 
-router = APIRouter(prefix="/folders", tags=["Folders"])
+router = APIRouter(prefix="/projects", tags=["Folders"])
 
 
-@router.post("/", response_model=FolderRead, status_code=201)
-async def create_folder(
+@router.post("/", response_model=ProjectRead, status_code=201)
+async def create_project(
     *,
     session: DbSession,
-    folder: FolderCreate,
+    project: ProjectCreate,
     current_user: CurrentActiveUser,
 ):
     try:
-        new_folder = Folder.model_validate(folder, from_attributes=True)
-        new_folder.user_id = current_user.id
-        # First check if the folder.name is unique
+        new_project = Project.model_validate(project, from_attributes=True)
+        new_project.user_id = current_user.id
+        # First check if the project.name is unique
         # there might be flows with name like: "MyFlow", "MyFlow (1)", "MyFlow (2)"
         # so we need to check if the name is unique with `like` operator
         # if we find a flow with the same name, we add a number to the end of the name
         # based on the highest number found
         if (
             await session.exec(
-                statement=select(Folder).where(Folder.name == new_folder.name).where(Folder.user_id == current_user.id)
+                statement=select(Project)
+                .where(Project.name == new_project.name)
+                .where(Project.user_id == current_user.id)
             )
         ).first():
-            folder_results = await session.exec(
-                select(Folder).where(
-                    Folder.name.like(f"{new_folder.name}%"),  # type: ignore[attr-defined]
-                    Folder.user_id == current_user.id,
+            project_results = await session.exec(
+                select(Project).where(
+                    Project.name.like(f"{new_project.name}%"),  # type: ignore[attr-defined]
+                    Project.user_id == current_user.id,
                 )
             )
-            if folder_results:
-                folder_names = [folder.name for folder in folder_results]
-                folder_numbers = [int(name.split("(")[-1].split(")")[0]) for name in folder_names if "(" in name]
-                if folder_numbers:
-                    new_folder.name = f"{new_folder.name} ({max(folder_numbers) + 1})"
+            if project_results:
+                project_names = [project.name for project in project_results]
+                project_numbers = [int(name.split("(")[-1].split(")")[0]) for name in project_names if "(" in name]
+                if project_numbers:
+                    new_project.name = f"{new_project.name} ({max(project_numbers) + 1})"
                 else:
-                    new_folder.name = f"{new_folder.name} (1)"
+                    new_project.name = f"{new_project.name} (1)"
 
-        session.add(new_folder)
+        session.add(new_project)
         await session.commit()
-        await session.refresh(new_folder)
+        await session.refresh(new_project)
 
-        if folder.components_list:
+        if project.components_list:
             update_statement_components = (
-                update(Flow).where(Flow.id.in_(folder.components_list)).values(folder_id=new_folder.id)  # type: ignore[attr-defined]
+                update(Flow).where(Flow.id.in_(project.components_list)).values(project_id=new_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_components)
             await session.commit()
 
-        if folder.flows_list:
-            update_statement_flows = update(Flow).where(Flow.id.in_(folder.flows_list)).values(folder_id=new_folder.id)  # type: ignore[attr-defined]
+        if project.flows_list:
+            update_statement_flows = (
+                update(Flow).where(Flow.id.in_(project.flows_list)).values(project_id=new_project.id)
+            )  # type: ignore[attr-defined]
             await session.exec(update_statement_flows)
             await session.commit()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return new_folder
+    return new_project
 
 
-@router.get("/", response_model=list[FolderRead], status_code=200)
-async def read_folders(
+@router.get("/", response_model=list[ProjectRead], status_code=200)
+async def read_projects(
     *,
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
     try:
-        folders = (
+        projects = (
             await session.exec(
-                select(Folder).where(
-                    or_(Folder.user_id == current_user.id, Folder.user_id == None)  # noqa: E711
+                select(Project).where(
+                    or_(Project.user_id == current_user.id, Project.user_id == None)  # noqa: E711
                 )
             )
         ).all()
-        folders = [folder for folder in folders if folder.name != STARTER_FOLDER_NAME]
-        return sorted(folders, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
+        projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
+        return sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/{folder_id}", response_model=FolderWithPaginatedFlows | FolderReadWithFlows, status_code=200)
-async def read_folder(
+@router.get("/{project_id}", response_model=FolderWithPaginatedFlows | ProjectReadWithFlows, status_code=200)
+async def read_project(
     *,
     session: DbSession,
-    folder_id: UUID,
+    project_id: UUID,
     current_user: CurrentActiveUser,
     params: Annotated[Params | None, Depends(custom_params)],
     is_component: bool = False,
@@ -123,11 +127,11 @@ async def read_folder(
     search: str = "",
 ):
     try:
-        folder = (
+        project = (
             await session.exec(
-                select(Folder)
-                .options(selectinload(Folder.flows))
-                .where(Folder.id == folder_id, Folder.user_id == current_user.id)
+                select(Project)
+                .options(selectinload(Project.flows))
+                .where(Project.id == project_id, Project.user_id == current_user.id)
             )
         ).first()
     except Exception as e:
@@ -135,12 +139,12 @@ async def read_folder(
             raise HTTPException(status_code=404, detail="Folder not found") from e
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    if not folder:
+    if not project:
         raise HTTPException(status_code=404, detail="Folder not found")
 
     try:
         if params and params.page and params.size:
-            stmt = select(Flow).where(Flow.folder_id == folder_id)
+            stmt = select(Flow).where(Flow.project_id == project_id)
 
             if Flow.updated_at is not None:
                 stmt = stmt.order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
@@ -152,67 +156,67 @@ async def read_folder(
                 stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
             paginated_flows = await paginate(session, stmt, params=params)
 
-            return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)
+            return FolderWithPaginatedFlows(project=ProjectRead.model_validate(project), flows=paginated_flows)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    flows_from_current_user_in_folder = [flow for flow in folder.flows if flow.user_id == current_user.id]
-    folder.flows = flows_from_current_user_in_folder
-    return folder
+    flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
+    project.flows = flows_from_current_user_in_project
+    return project
 
 
-@router.patch("/{folder_id}", response_model=FolderRead, status_code=200)
-async def update_folder(
+@router.patch("/{project_id}", response_model=ProjectRead, status_code=200)
+async def update_project(
     *,
     session: DbSession,
-    folder_id: UUID,
-    folder: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
+    project_id: UUID,
+    project: ProjectUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: CurrentActiveUser,
 ):
     try:
-        existing_folder = (
-            await session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id))
+        existing_project = (
+            await session.exec(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
         ).first()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    if not existing_folder:
+    if not existing_project:
         raise HTTPException(status_code=404, detail="Folder not found")
 
     try:
-        if folder.name and folder.name != existing_folder.name:
-            existing_folder.name = folder.name
-            session.add(existing_folder)
+        if project.name and project.name != existing_project.name:
+            existing_project.name = project.name
+            session.add(existing_project)
             await session.commit()
-            await session.refresh(existing_folder)
-            return existing_folder
+            await session.refresh(existing_project)
+            return existing_project
 
-        folder_data = existing_folder.model_dump(exclude_unset=True)
-        for key, value in folder_data.items():
+        project_data = existing_project.model_dump(exclude_unset=True)
+        for key, value in project_data.items():
             if key not in {"components", "flows"}:
-                setattr(existing_folder, key, value)
-        session.add(existing_folder)
+                setattr(existing_project, key, value)
+        session.add(existing_project)
         await session.commit()
-        await session.refresh(existing_folder)
+        await session.refresh(existing_project)
 
-        concat_folder_components = folder.components + folder.flows
+        concat_project_components = project.components + project.flows
 
-        flows_ids = (await session.exec(select(Flow.id).where(Flow.folder_id == existing_folder.id))).all()
+        flows_ids = (await session.exec(select(Flow.id).where(Flow.project_id == existing_project.id))).all()
 
-        excluded_flows = list(set(flows_ids) - set(concat_folder_components))
+        excluded_flows = list(set(flows_ids) - set(concat_project_components))
 
-        my_collection_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
-        if my_collection_folder:
+        my_collection_project = (await session.exec(select(Project).where(Project.name == DEFAULT_FOLDER_NAME))).first()
+        if my_collection_project:
             update_statement_my_collection = (
-                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_folder.id)  # type: ignore[attr-defined]
+                update(Flow).where(Flow.id.in_(excluded_flows)).values(project_id=my_collection_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_my_collection)
             await session.commit()
 
-        if concat_folder_components:
+        if concat_project_components:
             update_statement_components = (
-                update(Flow).where(Flow.id.in_(concat_folder_components)).values(folder_id=existing_folder.id)  # type: ignore[attr-defined]
+                update(Flow).where(Flow.id.in_(concat_project_components)).values(project_id=existing_project.id)  # type: ignore[attr-defined]
             )
             await session.exec(update_statement_components)
             await session.commit()
@@ -220,63 +224,63 @@ async def update_folder(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return existing_folder
+    return existing_project
 
 
-@router.delete("/{folder_id}", status_code=204)
-async def delete_folder(
+@router.delete("/{project_id}", status_code=204)
+async def delete_project(
     *,
     session: DbSession,
-    folder_id: UUID,
+    project_id: UUID,
     current_user: CurrentActiveUser,
 ):
     try:
         flows = (
-            await session.exec(select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id))
+            await session.exec(select(Flow).where(Flow.project_id == project_id, Flow.user_id == current_user.id))
         ).all()
         if len(flows) > 0:
             for flow in flows:
                 await cascade_delete_flow(session, flow.id)
 
-        folder = (
-            await session.exec(select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id))
+        project = (
+            await session.exec(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
         ).first()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    if not folder:
+    if not project:
         raise HTTPException(status_code=404, detail="Folder not found")
 
     try:
-        await session.delete(folder)
+        await session.delete(project)
         await session.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/download/{folder_id}", status_code=200)
+@router.get("/download/{project_id}", status_code=200)
 async def download_file(
     *,
     session: DbSession,
-    folder_id: UUID,
+    project_id: UUID,
     current_user: CurrentActiveUser,
 ):
-    """Download all flows from folder as a zip file."""
+    """Download all flows from project as a zip file."""
     try:
-        query = select(Folder).where(Folder.id == folder_id, Folder.user_id == current_user.id)
+        query = select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
         result = await session.exec(query)
-        folder = result.first()
+        project = result.first()
 
-        if not folder:
+        if not project:
             raise HTTPException(status_code=404, detail="Folder not found")
 
-        flows_query = select(Flow).where(Flow.folder_id == folder_id)
+        flows_query = select(Flow).where(Flow.project_id == project_id)
         flows_result = await session.exec(flows_query)
         flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
 
         if not flows:
-            raise HTTPException(status_code=404, detail="No flows found in folder")
+            raise HTTPException(status_code=404, detail="No flows found in project")
 
         flows_without_api_keys = [remove_api_keys(flow.model_dump()) for flow in flows]
         zip_stream = io.BytesIO()
@@ -289,7 +293,7 @@ async def download_file(
         zip_stream.seek(0)
 
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
-        filename = f"{current_time}_{folder.name}_flows.zip"
+        filename = f"{current_time}_{project.name}_flows.zip"
 
         return StreamingResponse(
             zip_stream,
@@ -317,21 +321,21 @@ async def upload_file(
     if not data:
         raise HTTPException(status_code=400, detail="No flows found in the file")
 
-    folder_name = await generate_unique_folder_name(data["folder_name"], current_user.id, session)
+    project_name = await generate_unique_folder_name(data["project_name"], current_user.id, session)
 
-    data["folder_name"] = folder_name
+    data["project_name"] = project_name
 
-    folder = FolderCreate(name=data["folder_name"], description=data["folder_description"])
+    project = ProjectCreate(name=data["project_name"], description=data["project_description"])
 
-    new_folder = Folder.model_validate(folder, from_attributes=True)
-    new_folder.id = None
-    new_folder.user_id = current_user.id
-    session.add(new_folder)
+    new_project = Project.model_validate(project, from_attributes=True)
+    new_project.id = None
+    new_project.user_id = current_user.id
+    session.add(new_project)
     await session.commit()
-    await session.refresh(new_folder)
+    await session.refresh(new_project)
 
-    del data["folder_name"]
-    del data["folder_description"]
+    del data["project_name"]
+    del data["project_description"]
 
     if "flows" in data:
         flow_list = FlowListCreate(flows=[FlowCreate(**flow) for flow in data["flows"]])
@@ -342,6 +346,6 @@ async def upload_file(
         flow_name = await generate_unique_flow_name(flow.name, current_user.id, session)
         flow.name = flow_name
         flow.user_id = current_user.id
-        flow.folder_id = new_folder.id
+        flow.project_id = new_project.id
 
     return await create_flows(session=session, flow_list=flow_list, current_user=current_user)

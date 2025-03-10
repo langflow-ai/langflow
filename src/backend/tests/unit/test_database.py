@@ -10,7 +10,7 @@ from langflow.graph.utils import log_transaction, log_vertex_build
 from langflow.initial_setup.setup import load_starter_projects
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
-from langflow.services.database.models.folder.model import FolderCreate
+from langflow.services.database.models.folder.model import ProjectCreate
 from langflow.services.database.utils import session_getter
 from langflow.services.deps import get_db_service
 from sqlalchemy import text
@@ -340,7 +340,7 @@ async def test_delete_flows_with_transaction_and_build(client: AsyncClient, logg
 async def test_delete_folder_with_flows_with_transaction_and_build(client: AsyncClient, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+    folder = ProjectCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
 
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
@@ -412,7 +412,7 @@ async def test_delete_folder_with_flows_with_transaction_and_build(client: Async
 async def test_get_flows_from_folder_pagination(client: AsyncClient, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+    folder = ProjectCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
 
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
@@ -436,7 +436,7 @@ async def test_get_flows_from_folder_pagination(client: AsyncClient, logged_in_h
 async def test_get_flows_from_folder_pagination_with_params(client: AsyncClient, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
+    folder = ProjectCreate(name=folder_name, description="Test folder description", components_list=[], flows_list=[])
 
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201, f"Expected status code 201, but got {response.status_code}"
@@ -628,7 +628,7 @@ async def test_sqlite_pragmas():
 async def test_read_folder(client: AsyncClient, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
+    folder = ProjectCreate(name=folder_name, description="Test folder description")
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
@@ -648,7 +648,7 @@ async def test_read_folder(client: AsyncClient, logged_in_headers):
 async def test_read_folder_with_pagination(client: AsyncClient, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
+    folder = ProjectCreate(name=folder_name, description="Test folder description")
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
@@ -675,7 +675,7 @@ async def test_read_folder_with_flows(client: AsyncClient, json_flow: str, logge
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
     flow_name = f"Test Flow {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
+    folder = ProjectCreate(name=folder_name, description="Test folder description")
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
@@ -711,7 +711,7 @@ async def test_read_nonexistent_folder(client: AsyncClient, logged_in_headers):
 async def test_read_folder_with_search(client: AsyncClient, json_flow: str, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
+    folder = ProjectCreate(name=folder_name, description="Test folder description")
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()
@@ -747,7 +747,7 @@ async def test_read_folder_with_search(client: AsyncClient, json_flow: str, logg
 async def test_read_folder_with_component_filter(client: AsyncClient, json_flow: str, logged_in_headers):
     # Create a new folder
     folder_name = f"Test Folder {uuid4()}"
-    folder = FolderCreate(name=folder_name, description="Test folder description")
+    folder = ProjectCreate(name=folder_name, description="Test folder description")
     response = await client.post("api/v1/folders/", json=folder.model_dump(), headers=logged_in_headers)
     assert response.status_code == 201
     created_folder = response.json()

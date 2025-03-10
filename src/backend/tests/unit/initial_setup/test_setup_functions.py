@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.initial_setup.setup import DEFAULT_FOLDER_NAME, get_or_create_default_folder, session_scope
-from langflow.services.database.models.folder.model import FolderRead
+from langflow.services.database.models.folder.model import ProjectRead
 
 
 @pytest.mark.usefixtures("client")
@@ -43,7 +43,7 @@ async def test_get_or_create_default_folder_concurrent_calls() -> None:
     """
     test_user_id = uuid4()
 
-    async def get_folder() -> FolderRead:
+    async def get_folder() -> ProjectRead:
         async with session_scope() as session:
             return await get_or_create_default_folder(session, test_user_id)
 

@@ -202,10 +202,10 @@ class DatabaseService(Service):
             # Fetch orphaned flows
             stmt = (
                 select(models.Flow)
-                .join(models.Folder)
+                .join(models.Project)
                 .where(
                     models.Flow.user_id == None,  # noqa: E711
-                    models.Folder.name != STARTER_FOLDER_NAME,
+                    models.Project.name != STARTER_FOLDER_NAME,
                 )
             )
             orphaned_flows = (await session.exec(stmt)).all()

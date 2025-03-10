@@ -16,7 +16,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.interface.components import aget_all_types_dict
 from langflow.services.database.models import Flow
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Project
 from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -51,9 +51,9 @@ async def test_get_project_data():
         assert isinstance(updated_at_datetime, datetime), f"Project {project_name} has no updated_at_datetime"
         assert isinstance(project_data, dict), f"Project {project_name} has no data"
         assert isinstance(project_icon, str) or project_icon is None, f"Project {project_name} has no icon"
-        assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None, (
-            f"Project {project_name} has no icon_bg_color"
-        )
+        assert (
+            isinstance(project_icon_bg_color, str) or project_icon_bg_color is None
+        ), f"Project {project_name} has no icon_bg_color"
 
 
 @pytest.mark.usefixtures("client")
@@ -63,7 +63,7 @@ async def test_create_or_update_starter_projects():
         num_projects = len(await load_starter_projects())
 
         # Get the number of projects in the database
-        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)
+        stmt = select(Project).options(selectinload(Project.flows)).where(Project.name == STARTER_FOLDER_NAME)
         folder = (await session.exec(stmt)).first()
         assert folder is not None
         num_db_projects = len(folder.flows)

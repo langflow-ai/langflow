@@ -22,7 +22,7 @@ from langflow.schema import Data
 
 if TYPE_CHECKING:
     from langflow.services.database.models import TransactionTable
-    from langflow.services.database.models.folder import Folder
+    from langflow.services.database.models.folder import Project
     from langflow.services.database.models.message import MessageTable
     from langflow.services.database.models.subscription.model import Subscription
     from langflow.services.database.models.user import User
@@ -170,7 +170,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
-    folder: Optional["Folder"] = Relationship(back_populates="flows")
+    folder: Optional["Project"] = Relationship(back_populates="flows")
     messages: list["MessageTable"] = Relationship(back_populates="flow")
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
     vertex_builds: list["VertexBuildTable"] = Relationship(back_populates="flow")

@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Project
 
 
 async def generate_unique_folder_name(folder_name, user_id, session):
@@ -10,9 +10,9 @@ async def generate_unique_folder_name(folder_name, user_id, session):
         # Check if a folder with the given name exists
         existing_folder = (
             await session.exec(
-                select(Folder).where(
-                    Folder.name == folder_name,
-                    Folder.user_id == user_id,
+                select(Project).where(
+                    Project.name == folder_name,
+                    Project.user_id == user_id,
                 )
             )
         ).first()

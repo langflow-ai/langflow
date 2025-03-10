@@ -25,7 +25,7 @@ from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, F
 from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Project
 from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.settings.service import SettingsService
 
@@ -97,7 +97,9 @@ async def _new_flow(
         if db_flow.folder_id is None:
             # Make sure flows always have a folder
             default_folder = (
-                await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == user_id))
+                await session.exec(
+                    select(Project).where(Project.name == DEFAULT_FOLDER_NAME, Project.user_id == user_id)
+                )
             ).first()
             if default_folder:
                 db_flow.folder_id = default_folder.id
@@ -191,10 +193,10 @@ async def read_flows(
     try:
         auth_settings = get_settings_service().auth_settings
 
-        default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
+        default_folder = (await session.exec(select(Project).where(Project.name == DEFAULT_FOLDER_NAME))).first()
         default_folder_id = default_folder.id if default_folder else None
 
-        starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+        starter_folder = (await session.exec(select(Project).where(Project.name == STARTER_FOLDER_NAME))).first()
         starter_folder_id = starter_folder.id if starter_folder else None
 
         if not starter_folder and not default_folder:
@@ -302,7 +304,7 @@ async def update_flow(
         db_flow.updated_at = datetime.now(timezone.utc)
 
         if db_flow.folder_id is None:
-            default_folder = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
+            default_folder = (await session.exec(select(Project).where(Project.name == DEFAULT_FOLDER_NAME))).first()
             if default_folder:
                 db_flow.folder_id = default_folder.id
 
@@ -515,7 +517,7 @@ async def read_basic_examples(
     """
     try:
         # Get the starter folder
-        starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+        starter_folder = (await session.exec(select(Project).where(Project.name == STARTER_FOLDER_NAME))).first()
 
         if not starter_folder:
             return []

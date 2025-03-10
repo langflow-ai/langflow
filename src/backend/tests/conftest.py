@@ -23,7 +23,7 @@ from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Project
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
@@ -678,7 +678,7 @@ async def get_starter_project(active_user):
     async with session_getter(get_db_service()) as session:
         stmt = (
             select(Flow)
-            .where(Flow.folder.has(Folder.name == STARTER_FOLDER_NAME))
+            .where(Flow.folder.has(Project.name == STARTER_FOLDER_NAME))
             .where(Flow.name == "Basic Prompting (Hello, World)")
         )
         flow = (await session.exec(stmt)).first()

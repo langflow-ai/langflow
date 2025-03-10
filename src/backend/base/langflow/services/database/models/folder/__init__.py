@@ -1,3 +1,3 @@
-from .model import Folder, FolderCreate, FolderRead, FolderUpdate
+from .model import Project, ProjectCreate, ProjectRead, ProjectUpdate
 
-__all__ = ["Folder", "FolderCreate", "FolderRead", "FolderUpdate"]
+__all__ = ["Project", "ProjectCreate", "ProjectRead", "ProjectUpdate"]
