@@ -38,6 +38,7 @@ FIELD_FORMAT_ATTRIBUTES = [
     "refresh_button_text",
     "options",
     "advanced",
+    "copy_field",
 ]
 
 ORJSON_OPTIONS = orjson.OPT_INDENT_2 | orjson.OPT_SORT_KEYS | orjson.OPT_OMIT_MICROSECONDS
