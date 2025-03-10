@@ -56,7 +56,7 @@ export const SelectOptions = ({
           </SelectTrigger>
         </ShadTooltip>
         <SelectContent align="end" alignOffset={-16} position="popper">
-          {item.name !== "My Projects" && (
+          {item.name !== "My Actors" && (
             <SelectItem
               id="rename-button"
               value="rename"

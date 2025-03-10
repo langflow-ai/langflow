@@ -108,7 +108,7 @@ test(
 
     await page.waitForTimeout(3000);
 
-    await page.getByText("My Projects").last().click();
+    await page.getByText("My Actors").last().click();
 
     expect(
       await page.getByTestId(`card-${secondRandomName}`).first().isVisible(),

@@ -19,7 +19,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
             className="pt-5 font-chivo text-2xl font-semibold text-foreground"
             data-testid="mainpage_title"
           >
-            {folders?.length > 1 ? "Empty folder" : "Start building"}
+            {folders?.length > 1 ? "Empty project" : "Start building"}
           </h3>
           <p className="pb-5 text-sm text-secondary-foreground">
             Begin with a template, or start from scratch.

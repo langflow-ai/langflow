@@ -39,7 +39,7 @@ test(
     const element = await page.getByTestId("input-folder");
     await element.fill("new folder test name");
 
-    await page.getByText("My Projects").last().click({
+    await page.getByText("My Actors").last().click({
       force: true,
     });
 
@@ -75,7 +75,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 
   // Wait for the target element to be available before evaluation
 
-  await page.waitForSelector('[data-testid="sidebar-nav-My Projects"]', {
+  await page.waitForSelector('[data-testid="sidebar-nav-My Actors"]', {
     timeout: 100000,
   });
   // Create the DataTransfer and File
@@ -90,7 +90,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   }, jsonContent);
 
   // Now dispatch
-  await page.getByTestId("sidebar-nav-My Projects").dispatchEvent("drop", {
+  await page.getByTestId("sidebar-nav-My Actors").dispatchEvent("drop", {
     dataTransfer,
   });
   // wait for the file to be uploaded failed with waitforselector
@@ -103,7 +103,7 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
     expect(true).toBeTruthy();
   }
 
-  await page.getByTestId("sidebar-nav-My Projects").click();
+  await page.getByTestId("sidebar-nav-My Actors").click();
 
   await page.waitForSelector("text=Getting Started:", {
     timeout: 100000,
@@ -156,7 +156,7 @@ test("change flow folder", async ({ page }) => {
   await page.keyboard.press("Enter");
   await page.getByText("new folder test name").last().isVisible();
 
-  await page.getByText("My Projects").last().click();
+  await page.getByText("My Actors").last().click();
   await page.getByText("Basic Prompting").first().hover();
   await page.mouse.down();
   await page.getByText("test").first().hover();

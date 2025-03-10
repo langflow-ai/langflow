@@ -31,7 +31,7 @@ test("user must be able to move flow from folder", async ({ page }) => {
   //wait for the folder to be created and changed to the new folder
   await page.waitForTimeout(1000);
 
-  await page.getByTestId("sidebar-nav-My Projects").click();
+  await page.getByTestId("sidebar-nav-My Actors").click();
 
   await page.getByText(randomName).hover();
 

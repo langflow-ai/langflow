@@ -551,7 +551,7 @@ export const NOUNS: string[] = [
  */
 export const USER_PROJECTS_HEADER = "My Collection";
 
-export const DEFAULT_PROJECT = "My Projects";
+export const DEFAULT_PROJECT = "My Actors";
 
 /**
  * Header text for admin page

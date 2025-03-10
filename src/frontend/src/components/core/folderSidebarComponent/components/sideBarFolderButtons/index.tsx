@@ -276,7 +276,7 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleDoubleClick = (event, item) => {
-    if (item.name === "My Projects") {
+    if (item.name === "My Actors") {
       return;
     }
 
