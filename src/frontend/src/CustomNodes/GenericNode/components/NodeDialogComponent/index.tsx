@@ -112,9 +112,11 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
     // Validate required fields first
     const missingRequiredFields = Object.entries(dialogTemplate)
       .filter(
-        ([_, fieldValue]) =>
+        ([key, fieldValue]) =>
           (fieldValue as { required: boolean })?.required === true &&
-          (!fieldValues[_] || fieldValues[_].trim() === ""),
+          (!fieldValues[key] ||
+            (typeof fieldValues[key] === "string" &&
+              fieldValues[key].trim() === "")),
       )
       .map(
         ([_, fieldValue]) =>
@@ -146,6 +148,8 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
       handleCloseDialog();
     }, 5000);
   };
+
+  console.log({ dialogTemplate });
 
   // Render
   return (
