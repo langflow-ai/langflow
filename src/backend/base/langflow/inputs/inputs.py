@@ -94,7 +94,17 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin)
         input_types (list[str]): A list of input types supported by this data input.
     """
 
-    input_types: list[str] = ["Data"]
+    input_types: list[str] = ["Data", "JSON"]
+
+
+class JSONInput(DataInput):
+    """Represents an Input that has a Handle that receives a JSON object.
+
+    Attributes:
+        input_types (list[str]): A list of input types supported by this JSON input.
+    """
+
+    input_types: list[str] = ["JSON", "Data"]
 
 
 class DataFrameInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):

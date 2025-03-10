@@ -249,6 +249,12 @@ class Data(BaseModel):
         return apply_json_filter(self.data, filter_str)
 
 
+class JSON(Data):
+    # We will phase out the Data class in favor of the JSON class
+    # But they'll have the same interface and will be interchangeable
+    pass
+
+
 def custom_serializer(obj):
     if isinstance(obj, datetime):
         utc_date = obj.replace(tzinfo=timezone.utc)
