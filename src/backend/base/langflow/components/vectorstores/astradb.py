@@ -623,13 +623,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Configure embedding model field
         model_field = "03_embedding_generation_model"
-        template[model_field].update({
-            "options": vectorize_providers.get(embedding_provider, [[], []])[1],
-            "placeholder": "Bring your own" if is_bring_your_own else None,
-            "readonly": is_bring_your_own,
-            "required": not is_bring_your_own,
-            "value": None,
-        })
+        template[model_field].update(
+            {
+                "options": vectorize_providers.get(embedding_provider, [[], []])[1],
+                "placeholder": "Bring your own" if is_bring_your_own else None,
+                "readonly": is_bring_your_own,
+                "required": not is_bring_your_own,
+                "value": None,
+            }
+        )
 
         # If this is a bring your own, set dimensions to 0
         return self.reset_dimension_field(build_config)
@@ -647,12 +649,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         # Configure dimension field
         dimension_field = "04_dimension"
         dimension_value = 1024 if not is_bring_your_own else None  # TODO: Dynamically figure this out
-        template[dimension_field].update({
-            "placeholder": dimension_value,
-            "value": dimension_value,
-            "readonly": not is_bring_your_own,
-            "required": is_bring_your_own
-        })
+        template[dimension_field].update(
+            {
+                "placeholder": dimension_value,
+                "value": dimension_value,
+                "readonly": not is_bring_your_own,
+                "required": is_bring_your_own,
+            }
+        )
 
         return build_config
 
@@ -781,13 +785,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
         build_config["database_name"]["options"].append(field_value["01_new_database_name"])
-        build_config["database_name"]["options_metadata"].append({
-            "status": "PENDING",
-            "collections": 0,
-            "api_endpoint": None,
-            "icon": "data",
-            "org_id": None,
-        })
+        build_config["database_name"]["options_metadata"].append(
+            {
+                "status": "PENDING",
+                "collections": 0,
+                "api_endpoint": None,
+                "icon": "data",
+                "org_id": None,
+            }
+        )
 
     def _update_cloud_regions(self, build_config: dict, field_value: dict) -> dict:
         """Update cloud provider regions in build config."""
@@ -816,18 +822,22 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             raise ValueError(msg) from e
 
         provider = embedding_provider.lower() if embedding_provider and embedding_provider != "Bring your own" else None
-        build_config["collection_name"].update({
-            "value": field_value["01_new_collection_name"],
-            "options": build_config["collection_name"]["options"] + [field_value["01_new_collection_name"]]
-        })
+        build_config["collection_name"].update(
+            {
+                "value": field_value["01_new_collection_name"],
+                "options": build_config["collection_name"]["options"] + [field_value["01_new_collection_name"]],
+            }
+        )
         build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
         build_config["embedding_model"]["advanced"] = bool(provider)
-        build_config["collection_name"]["options_metadata"].append({
-            "records": 0,
-            "provider": provider,
-            "icon": self.get_provider_icon(provider_name=embedding_provider),
-            "model": field_value.get("03_embedding_generation_model")
-        })
+        build_config["collection_name"]["options_metadata"].append(
+            {
+                "records": 0,
+                "provider": provider,
+                "icon": self.get_provider_icon(provider_name=embedding_provider),
+                "model": field_value.get("03_embedding_generation_model"),
+            }
+        )
 
     def _handle_database_selection(self, build_config: dict, field_value: str) -> dict:
         """Handle database selection and update related configurations."""
@@ -872,12 +882,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         if field_value and field_value not in build_config["collection_name"]["options"]:
             build_config["collection_name"]["options"].append(field_value)
-            build_config["collection_name"]["options_metadata"].append({
-                "records": 0,
-                "provider": None,
-                "icon": "vectorstores",
-                "model": None,
-            })
+            build_config["collection_name"]["options_metadata"].append(
+                {
+                    "records": 0,
+                    "provider": None,
+                    "icon": "vectorstores",
+                    "model": None,
+                }
+            )
             build_config["autodetect_collection"]["value"] = False
 
         if not field_value:
