@@ -2,6 +2,7 @@ import io
 import json
 import logging
 from datetime import datetime, timezone
+import uuid
 
 import httpx
 from huggingface_hub import HfApi
@@ -54,7 +55,7 @@ class NvidiaEvaluatorComponent(Component):
         StrInput(
             name="nemo_model_base_url",
             display_name="Base model inference URL",
-            info="The base URL of the NVIDIA NIM API to obtain models that can be evaluated.",
+            info="The base URL of the NVIDIA NIM to run evaluation inference.",
             advanced=True,
         ),
         StrInput(
@@ -192,8 +193,8 @@ class NvidiaEvaluatorComponent(Component):
         ),
         DropdownInput(
             name="310_run_inference",
-            display_name="Run Inference",
-            info="Select 'True' to run inference on the provided input_file or 'False' to use an output_file.",
+            display_name="Run Inference for response",
+            info="Select 'True' to run inference or 'False' to use an `response` field in the dataset.",
             options=["True", "False"],
             value="True",
             real_time_refresh=True,
@@ -205,9 +206,10 @@ class NvidiaEvaluatorComponent(Component):
             info="Max number of tokens to generate during inference.",
             value=1024,
         ),
-        FloatInput(
+        SliderInput(
             name="312_temperature",
             display_name="Temperature",
+            range_spec=RangeSpec(min=0.0, max=1.0, step=0.01),
             value=0.1,
             info="The temperature to be used during generation sampling (0.0 to 2.0).",
         ),
@@ -218,14 +220,10 @@ class NvidiaEvaluatorComponent(Component):
             value=1,
             advanced=True,
         ),
-        StrInput(
-            name="dataset",
-            display_name="Dataset",
-            info="Enter the dataset ID or name used to train the model",
-        ),
         DataInput(
             name="evaluation_data",
-            display_name="Training Data",
+            display_name="Evaluation Data",
+            info="Dataset for evaluation, expecting 2 fields `prompt` and `ideal_response` in dataset",
             is_list=True,
         ),
     ]
@@ -335,9 +333,8 @@ class NvidiaEvaluatorComponent(Component):
             self.evaluator_base_url
             and self.entity_service_base_url
             and self.datastore_base_url
-            and self.nemo_model_base_url
         ):
-            error_msg = "Provide evaluator, data store, entity store and nim inference url to process"
+            error_msg = "Provide evaluator, data store, entity store url to process"
             raise ValueError(error_msg)
 
         # Generate the request data based on evaluation type
@@ -348,8 +345,6 @@ class NvidiaEvaluatorComponent(Component):
         else:
             error_msg = f"Unsupported evaluation type: {evaluation_type}"
             raise ValueError(error_msg)
-        msg = f"data {data}"
-        self.log(msg)
 
         # Send the request and log the output
         evaluator_url = f"{self.evaluator_base_url}/v1/evaluation/jobs"
@@ -386,7 +381,10 @@ class NvidiaEvaluatorComponent(Component):
     async def _generate_lm_evaluation_body(self) -> dict:
         target_id = await self.create_eval_target(None)
         hf_token = getattr(self, "100_huggingface_token", None)
-        namespace = self.tenant_id if self.tenant_id else "tenant"
+        if not hf_token:
+            error_msg = "Provide hf token to process"
+            raise ValueError(error_msg)
+        namespace = self.tenant_id
         config_data = {
             "type": "lm_eval_harness",
             "namespace": namespace,
@@ -455,14 +453,20 @@ class NvidiaEvaluatorComponent(Component):
             raise ValueError(error_msg) from exc
 
     async def _generate_custom_evaluation_body(self) -> dict:
-        if not self.dataset:
-            error_msg = "Provide dataset name to process"
+        # Process and upload the dataset if training_data is provided
+        if self.evaluation_data is None:
+            error_msg = "Evaluation data is empty, cannot evaluate the model"
             raise ValueError(error_msg)
 
         repo_id = await self.process_eval_dataset()
         input_file = f"nds:{repo_id}/input.json"
         # Handle run_inference as a boolean
         run_inference = getattr(self, "310_run_inference", "True").lower() == "true"
+
+        if run_inference and not self.nemo_model_base_url:
+            error_msg = "Provide the nim url for evaluation inference to be processed"
+            raise ValueError(error_msg)
+
         namespace = self.tenant_id
         # Set output_file based on run_inference
         output_file = None
@@ -550,7 +554,7 @@ class NvidiaEvaluatorComponent(Component):
                         }
                     },
                 }
-            self.log(f"Sending customization request to endpoint {eval_target_url} with data: {request_body}")
+            self.log(f"Sending eval target creation to {eval_target_url} with data: {request_body}")
 
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.post(eval_target_url, headers=self.headers, json=request_body)
@@ -587,9 +591,9 @@ class NvidiaEvaluatorComponent(Component):
         """
         try:
             # Inputs
-            user_dataset_name = getattr(self, "dataset", None)
+            dataset_name = str(uuid.uuid4())
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            repo_id = await self.get_repo_id(self.tenant_id, user_dataset_name)
+            repo_id = await self.get_repo_id(self.tenant_id, dataset_name)
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
             self.log(f"repo_id : {repo_id}")
@@ -677,19 +681,18 @@ class NvidiaEvaluatorComponent(Component):
 
         return repo_id
 
-    async def get_repo_id(self, tenant_id: str, user_dataset_name: str) -> str:
+    async def get_repo_id(self, tenant_id: str, dataset_name: str) -> str:
         """Fetches the repo id by checking if a dataset with the constructed name exists.
 
         If the dataset does not exist, creates a new dataset and returns its ID.
 
         Args:
             tenant_id (str): The tenant ID.
-            user_dataset_name (str): The user-provided dataset name.
+            dataset_name (str): The user-provided dataset name.
 
         Returns:
             str: The dataset ID if found or created, or None if an error occurs.
         """
-        dataset_name = user_dataset_name
         namespace = tenant_id
 
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
