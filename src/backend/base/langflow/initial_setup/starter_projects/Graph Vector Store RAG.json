@@ -1259,11 +1259,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [
-                  "api_endpoint",
-                  "collection_name",
-                  "token"
-                ],
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -2115,9 +2111,7 @@
                 "display_name": "Message",
                 "method": "text_response",
                 "name": "text_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2970,11 +2964,7 @@
                 "display_name": "DataFrame",
                 "method": "as_dataframe",
                 "name": "dataframe",
-                "required_inputs": [
-                  "api_endpoint",
-                  "collection_name",
-                  "token"
-                ],
+                "required_inputs": [],
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
@@ -3490,9 +3480,7 @@
                 "display_name": "Data",
                 "method": "transform_data",
                 "name": "data",
-                "required_inputs": [
-                  "data_input"
-                ],
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
@@ -3678,9 +3666,7 @@
                 "display_name": "Data",
                 "method": "transform_data",
                 "name": "data",
-                "required_inputs": [
-                  "data_input"
-                ],
+                "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
