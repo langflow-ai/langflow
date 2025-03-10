@@ -198,12 +198,12 @@ module.exports = {
     },
     {
       type: "category",
-      label: "Supported software",
+      label: "Support",
       items: [
         {
           type: "doc",
-          id: "Support/supported-software",
-          label: "Supported software",
+          id: "Support/luna-for-langflow",
+          label: "Luna for Langflow",
         },
       ],
     },
