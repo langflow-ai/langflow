@@ -252,7 +252,14 @@ class Data(BaseModel):
 class JSON(Data):
     # We will phase out the Data class in favor of the JSON class
     # But they'll have the same interface and will be interchangeable
-    pass
+    """Represents a JSON object.
+
+    Attributes:
+        data (dict): The JSON data.
+    """
+
+    def __init__(self, data: dict):
+        super().__init__(data=data)
 
 
 def custom_serializer(obj):
