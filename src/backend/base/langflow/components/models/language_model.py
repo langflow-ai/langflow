@@ -8,7 +8,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import DropdownInput, SecretStrInput, SliderInput, MessageTextInput
+from langflow.io import DropdownInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
 
@@ -89,7 +89,7 @@ class LanguageModelComponent(LCModelComponent):
                 streaming=stream,
                 api_key=self.openai_api_key,
             )
-        elif provider == "Anthropic":
+        if provider == "Anthropic":
             if not self.anthropic_api_key:
                 raise ValueError("Anthropic API key is required when using Anthropic provider")
             return ChatAnthropic(
@@ -98,8 +98,7 @@ class LanguageModelComponent(LCModelComponent):
                 streaming=stream,
                 anthropic_api_key=self.anthropic_api_key,
             )
-        else:
-            raise ValueError(f"Unknown provider: {provider}")
+        raise ValueError(f"Unknown provider: {provider}")
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "provider":
@@ -114,4 +113,4 @@ class LanguageModelComponent(LCModelComponent):
                 build_config["openai_api_key"]["show"] = False
                 build_config["anthropic_api_key"]["show"] = True
 
-        return build_config 
+        return build_config
