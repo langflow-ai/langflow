@@ -113,7 +113,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                             ),
                             "04_dimension": IntInput(
                                 name="dimension",
-                                display_name="Dimensions (Required only for `Bring your own`)",
+                                display_name="Dimensions",
                                 info="Dimensions of the embeddings to generate.",
                                 value=None,
                             ),
@@ -632,6 +632,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "disabled"
         ] = embedding_provider != "Bring your own"
 
+        return build_config
+
     def reset_collection_list(self, build_config: dict):
         # Get the list of options we have based on the token provided
         collection_options = self._initialize_collection_options(api_endpoint=build_config["api_endpoint"]["value"])
@@ -827,8 +829,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 )
 
                 # Initializing database condition
-                pending = build_config["database_name"]["options_metadata"][index_of_name]["status"] == "PENDING"
-                if pending:
+                status = build_config["database_name"]["options_metadata"][index_of_name]["status"]
+                if status and status == "PENDING":
                     return self.update_build_config(build_config, field_value=self.token, field_name="token")
 
                 # Set the API endpoint based on the selected database
