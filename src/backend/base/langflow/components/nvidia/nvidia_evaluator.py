@@ -590,7 +590,7 @@ class NvidiaEvaluatorComponent(Component):
             dataset_name = str(uuid.uuid4())
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
             await self.create_namespace(self.tenant_id)
-            repo_id =  f"{self.tenant_id}/{dataset_name}"
+            repo_id = f"{self.tenant_id}/{dataset_name}"
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
             self.log(f"repo_id : {repo_id}")
@@ -680,6 +680,7 @@ class NvidiaEvaluatorComponent(Component):
 
     async def create_namespace(self, tenant_id: str):
         """Checks and creates namespace in datastore.
+
         Args:
             tenant_id (str): The tenant ID.
 
