@@ -29,10 +29,11 @@ export default function getJsApiCode({
   {
     method: "POST",
     headers: {
-      "Authorization": "Bearer <TOKEN>",
-      "Content-Type": "application/json",${isAuth ? '\n\t\t\t"x-api-key": <your api key>' : ""}
+      ${isAuth ? '"x-api-key": "<your api key>",\n\t\t\t' : ""}"Content-Type": "application/json"
     },
     body: JSON.stringify({${activeTweaks ? "" : "\n\t\t\tinput_value: inputValue, "}
+      // Optional: Use session tracking if needed
+      session_id: "user_1",
       output_type: ${hasChatOutput ? '"chat"' : '"text"'},
       input_type: ${hasChatInput ? '"chat"' : '"text"'},
       tweaks: ${tweaksString}
