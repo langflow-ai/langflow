@@ -59,6 +59,10 @@ export default function IntComponent({
     );
   };
 
+  const getDisabledClassName = () => {
+    return "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm placeholder:text-input";
+  };
+
   const handleNumberChange = (newValue) => {
     handleOnNewValue({ value: Number(newValue) });
   };
@@ -91,7 +95,7 @@ export default function IntComponent({
         value={value ?? ""}
       >
         <NumberInputField
-          className={getInputClassName()}
+          className={disabled ? getDisabledClassName() : getInputClassName()}
           onChange={handleChangeInput}
           onKeyDown={(event) => handleKeyDown(event, value, "")}
           onInput={handleInputChange}
@@ -101,13 +105,19 @@ export default function IntComponent({
           ref={inputRef}
         />
         <NumberInputStepper className={stepperClassName}>
-          <NumberIncrementStepper className={incrementStepperClassName}>
+          <NumberIncrementStepper
+            className={incrementStepperClassName}
+            _disabled={{ cursor: "default" }}
+          >
             <PlusIcon
               className={iconClassName}
               strokeWidth={ICON_STROKE_WIDTH}
             />
           </NumberIncrementStepper>
-          <NumberDecrementStepper className={decrementStepperClassName}>
+          <NumberDecrementStepper
+            className={decrementStepperClassName}
+            _disabled={{ cursor: "default" }}
+          >
             <MinusIcon
               className={iconClassName}
               strokeWidth={ICON_STROKE_WIDTH}
