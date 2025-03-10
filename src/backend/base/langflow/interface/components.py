@@ -73,7 +73,7 @@ async def aget_component_metadata(components_paths: list[str]):
                 # Mark as needing full loading
                 components_dict["components"][component_type][name]["lazy_loaded"] = True
 
-    return components_dict
+    return components_dict.components
 
 
 async def discover_component_types(components_paths: list[str]) -> list[str]:
