@@ -20,11 +20,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_PROJECT_NAME
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
 from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
-from langflow.services.database.models.project.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.project.constants import DEFAULT_PROJECT_NAME
 from langflow.services.database.models.project.model import Project
 from langflow.services.deps import get_settings_service, get_trigger_service
 from langflow.services.settings.service import SettingsService
@@ -98,7 +98,7 @@ async def _new_flow(
             # Make sure flows always have a folder
             default_folder = (
                 await session.exec(
-                    select(Project).where(Project.name == DEFAULT_FOLDER_NAME, Project.user_id == user_id)
+                    select(Project).where(Project.name == DEFAULT_PROJECT_NAME, Project.user_id == user_id)
                 )
             ).first()
             if default_folder:
@@ -193,10 +193,10 @@ async def read_flows(
     try:
         auth_settings = get_settings_service().auth_settings
 
-        default_folder = (await session.exec(select(Project).where(Project.name == DEFAULT_FOLDER_NAME))).first()
+        default_folder = (await session.exec(select(Project).where(Project.name == DEFAULT_PROJECT_NAME))).first()
         default_folder_id = default_folder.id if default_folder else None
 
-        starter_folder = (await session.exec(select(Project).where(Project.name == STARTER_FOLDER_NAME))).first()
+        starter_folder = (await session.exec(select(Project).where(Project.name == STARTER_PROJECT_NAME))).first()
         starter_folder_id = starter_folder.id if starter_folder else None
 
         if not starter_folder and not default_folder:
@@ -304,7 +304,7 @@ async def update_flow(
         db_flow.updated_at = datetime.now(timezone.utc)
 
         if db_flow.folder_id is None:
-            default_folder = (await session.exec(select(Project).where(Project.name == DEFAULT_FOLDER_NAME))).first()
+            default_folder = (await session.exec(select(Project).where(Project.name == DEFAULT_PROJECT_NAME))).first()
             if default_folder:
                 db_flow.folder_id = default_folder.id
 
@@ -517,7 +517,7 @@ async def read_basic_examples(
     """
     try:
         # Get the starter folder
-        starter_folder = (await session.exec(select(Project).where(Project.name == STARTER_FOLDER_NAME))).first()
+        starter_folder = (await session.exec(select(Project).where(Project.name == STARTER_PROJECT_NAME))).first()
 
         if not starter_folder:
             return []

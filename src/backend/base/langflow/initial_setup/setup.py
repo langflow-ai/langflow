@@ -27,10 +27,10 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.base.constants import FIELD_FORMAT_ATTRIBUTES, NODE_FORMAT_ATTRIBUTES, ORJSON_OPTIONS
-from langflow.initial_setup.constants import STARTER_FOLDER_DESCRIPTION, STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_PROJECT_DESCRIPTION, STARTER_PROJECT_NAME
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.flow.model import Flow, FlowCreate
-from langflow.services.database.models.project.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.project.constants import DEFAULT_PROJECT_NAME
 from langflow.services.database.models.project.model import Project, ProjectCreate, ProjectRead
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.deps import get_settings_service, get_storage_service, get_variable_service, session_scope
@@ -620,7 +620,7 @@ def update_existing_project(
 ) -> None:
     logger.info(f"Updating starter project {project_name}")
     existing_project.data = project_data
-    existing_project.folder = STARTER_FOLDER_NAME
+    existing_project.folder = STARTER_PROJECT_NAME
     existing_project.description = project_description
     existing_project.is_component = project_is_component
     existing_project.updated_at = updated_at_datetime
@@ -677,14 +677,14 @@ async def folder_exists(session, folder_name):
 
 
 async def create_starter_folder(session):
-    if not await folder_exists(session, STARTER_FOLDER_NAME):
-        new_folder = ProjectCreate(name=STARTER_FOLDER_NAME, description=STARTER_FOLDER_DESCRIPTION)
+    if not await folder_exists(session, STARTER_PROJECT_NAME):
+        new_folder = ProjectCreate(name=STARTER_PROJECT_NAME, description=STARTER_PROJECT_DESCRIPTION)
         db_folder = Project.model_validate(new_folder, from_attributes=True)
         session.add(db_folder)
         await session.commit()
         await session.refresh(db_folder)
         return db_folder
-    stmt = select(Project).where(Project.name == STARTER_FOLDER_NAME)
+    stmt = select(Project).where(Project.name == STARTER_PROJECT_NAME)
     return (await session.exec(stmt)).first()
 
 
@@ -957,14 +957,14 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     Returns:
         UUID: The ID of the default folder.
     """
-    stmt = select(Project).where(Project.user_id == user_id, Project.name == DEFAULT_FOLDER_NAME)
+    stmt = select(Project).where(Project.user_id == user_id, Project.name == DEFAULT_PROJECT_NAME)
     result = await session.exec(stmt)
     folder = result.first()
     if folder:
         return ProjectRead.model_validate(folder, from_attributes=True)
 
     try:
-        folder_obj = Project(user_id=user_id, name=DEFAULT_FOLDER_NAME)
+        folder_obj = Project(user_id=user_id, name=DEFAULT_PROJECT_NAME)
         session.add(folder_obj)
         await session.commit()
         await session.refresh(folder_obj)

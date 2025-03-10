@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.model import Flow
 
-from .constants import DEFAULT_FOLDER_DESCRIPTION, DEFAULT_FOLDER_NAME
+from .constants import DEFAULT_PROJECT_DESCRIPTION, DEFAULT_PROJECT_NAME
 from .model import Project
 
 
@@ -15,9 +15,9 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
     folder = (await session.exec(stmt)).first()
     if not folder:
         folder = Project(
-            name=DEFAULT_FOLDER_NAME,
+            name=DEFAULT_PROJECT_NAME,
             user_id=user_id,
-            description=DEFAULT_FOLDER_DESCRIPTION,
+            description=DEFAULT_PROJECT_DESCRIPTION,
         )
         session.add(folder)
         await session.commit()
@@ -38,7 +38,7 @@ async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_i
 
 async def get_default_folder_id(session: AsyncSession, user_id: UUID):
     folder = (
-        await session.exec(select(Project).where(Project.name == DEFAULT_FOLDER_NAME, Project.user_id == user_id))
+        await session.exec(select(Project).where(Project.name == DEFAULT_PROJECT_NAME, Project.user_id == user_id))
     ).first()
     if not folder:
         folder = await get_or_create_default_folder(session, user_id)

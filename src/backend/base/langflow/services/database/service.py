@@ -23,7 +23,7 @@ from sqlmodel import SQLModel, select, text
 from sqlmodel.ext.asyncio.session import AsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_PROJECT_NAME
 from langflow.services.base import Service
 from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
@@ -205,7 +205,7 @@ class DatabaseService(Service):
                 .join(models.Project)
                 .where(
                     models.Flow.user_id == None,  # noqa: E711
-                    models.Project.name != STARTER_FOLDER_NAME,
+                    models.Project.name != STARTER_PROJECT_NAME,
                 )
             )
             orphaned_flows = (await session.exec(stmt)).all()

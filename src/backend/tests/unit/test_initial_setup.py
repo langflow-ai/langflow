@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from anyio import Path
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
-from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_PROJECT_NAME
 from langflow.initial_setup.setup import (
     detect_github_url,
     get_project_data,
@@ -63,7 +63,7 @@ async def test_create_or_update_starter_projects():
         num_projects = len(await load_starter_projects())
 
         # Get the number of projects in the database
-        stmt = select(Project).options(selectinload(Project.flows)).where(Project.name == STARTER_FOLDER_NAME)
+        stmt = select(Project).options(selectinload(Project.flows)).where(Project.name == STARTER_PROJECT_NAME)
         folder = (await session.exec(stmt)).first()
         assert folder is not None
         num_db_projects = len(folder.flows)

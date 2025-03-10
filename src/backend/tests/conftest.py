@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from langflow.graph import Graph
-from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_PROJECT_NAME
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
@@ -678,7 +678,7 @@ async def get_starter_project(active_user):
     async with session_getter(get_db_service()) as session:
         stmt = (
             select(Flow)
-            .where(Flow.folder.has(Project.name == STARTER_FOLDER_NAME))
+            .where(Flow.folder.has(Project.name == STARTER_PROJECT_NAME))
             .where(Flow.name == "Basic Prompting (Hello, World)")
         )
         flow = (await session.exec(stmt)).first()

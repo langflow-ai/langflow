@@ -20,9 +20,9 @@ from langflow.api.v1.flows import create_flows
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
-from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.initial_setup.constants import STARTER_PROJECT_NAME
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
-from langflow.services.database.models.project.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.project.constants import DEFAULT_PROJECT_NAME
 from langflow.services.database.models.project.model import (
     Project,
     ProjectCreate,
@@ -32,7 +32,7 @@ from langflow.services.database.models.project.model import (
 )
 from langflow.services.database.models.project.pagination_model import FolderWithPaginatedFlows
 
-router = APIRouter(prefix="/projects", tags=["Folders"])
+router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
 @router.post("/", response_model=ProjectRead, status_code=201)
@@ -109,8 +109,8 @@ async def read_projects(
                 )
             )
         ).all()
-        projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
-        return sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
+        projects = [project for project in projects if project.name != STARTER_PROJECT_NAME]
+        return sorted(projects, key=lambda x: x.name != DEFAULT_PROJECT_NAME)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -206,7 +206,9 @@ async def update_project(
 
         excluded_flows = list(set(flows_ids) - set(concat_project_components))
 
-        my_collection_project = (await session.exec(select(Project).where(Project.name == DEFAULT_FOLDER_NAME))).first()
+        my_collection_project = (
+            await session.exec(select(Project).where(Project.name == DEFAULT_PROJECT_NAME))
+        ).first()
         if my_collection_project:
             update_statement_my_collection = (
                 update(Flow).where(Flow.id.in_(excluded_flows)).values(project_id=my_collection_project.id)  # type: ignore[attr-defined]

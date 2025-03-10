@@ -2,7 +2,7 @@ import asyncio
 from uuid import uuid4
 
 import pytest
-from langflow.initial_setup.setup import DEFAULT_FOLDER_NAME, get_or_create_default_folder, session_scope
+from langflow.initial_setup.setup import DEFAULT_PROJECT_NAME, get_or_create_default_folder, session_scope
 from langflow.services.database.models.project.model import ProjectRead
 
 
@@ -16,7 +16,7 @@ async def test_get_or_create_default_folder_creation() -> None:
     test_user_id = uuid4()
     async with session_scope() as session:
         folder = await get_or_create_default_folder(session, test_user_id)
-        assert folder.name == DEFAULT_FOLDER_NAME, "The folder name should match the default."
+        assert folder.name == DEFAULT_PROJECT_NAME, "The folder name should match the default."
         assert hasattr(folder, "id"), "The folder should have an 'id' attribute after creation."
 
 

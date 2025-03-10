@@ -6,9 +6,9 @@ from langflow.utils import util_strings
     ("value", "expected"),
     [
         ("sqlite:///test.db", True),
-        ("sqlite:////var/folders/test.db", True),
+        ("sqlite:////var/projects/test.db", True),
         ("sqlite:///:memory:", True),
-        ("sqlite+aiosqlite:////var/folders/test.db", True),
+        ("sqlite+aiosqlite:////var/projects/test.db", True),
         ("postgresql://user:pass@localhost/dbname", True),
         ("postgresql+psycopg2://scott:tiger@localhost:5432/mydatabase", True),
         ("postgresql+pg8000://dbuser:kx%40jj5%2Fg@pghost10/appdb", True),
