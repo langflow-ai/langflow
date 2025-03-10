@@ -1,9 +1,9 @@
 import React, { forwardRef } from "react";
-import SvgNeedleIcon from "./NeedleIcon";
+import NeedleSvg from "./needle-icon.svg?react";
 
 export const NeedleIcon = forwardRef<
   SVGSVGElement,
   React.PropsWithChildren<{}>
 >((props, ref) => {
-  return <SvgNeedleIcon ref={ref} {...props} />;
+  return <NeedleSvg ref={ref} {...props} />;
 });
