@@ -17,7 +17,8 @@
             "fieldName": "df",
             "id": "BatchRunComponent-s2QTv",
             "inputTypes": [
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "type": "other"
           }
@@ -27,7 +28,7 @@
         "source": "YouTubeCommentsComponent-5DgSV",
         "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-5DgSVœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "BatchRunComponent-s2QTv",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-s2QTvœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-s2QTvœ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -73,7 +74,8 @@
             "fieldName": "df",
             "id": "ParseDataFrame-pJJ7Z",
             "inputTypes": [
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "type": "other"
           }
@@ -83,7 +85,7 @@
         "source": "BatchRunComponent-s2QTv",
         "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-s2QTvœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParseDataFrame-pJJ7Z",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-pJJ7Zœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-pJJ7Zœ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -352,7 +354,8 @@
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -405,7 +408,8 @@
                 "dynamic": false,
                 "info": "The DataFrame whose column (specified by 'column_name') we'll treat as text messages.",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
@@ -542,7 +546,8 @@
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1162,7 +1167,8 @@
                 "dynamic": false,
                 "info": "The DataFrame to convert to text rows.",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
