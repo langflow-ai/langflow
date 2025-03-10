@@ -165,7 +165,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                 name={fieldKey}
                 nodeId={nodeId}
                 templateData={fieldValue as Partial<InputFieldType>}
-                templateValue={fieldValues[fieldKey] || ""}
+                templateValue={(fieldValue as { value: string })?.value ?? ""}
                 editNode={false}
                 handleNodeClass={() => {}}
                 nodeClass={dialogNodeData}
