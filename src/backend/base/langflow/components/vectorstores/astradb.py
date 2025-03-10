@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 
@@ -108,6 +109,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                                 name="embedding_generation_model",
                                 display_name="Embedding model",
                                 info="Model to use for generating embeddings.",
+                                real_time_refresh=True,
                                 options=[],
                             ),
                             "04_dimension": IntInput(
@@ -469,6 +471,17 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             database_name=self.database_name,
         )
 
+    @classmethod
+    def get_database_id_static(cls, api_endpoint: str) -> str | None:
+        # Pattern matches standard UUID format: 8-4-4-4-12 hexadecimal characters
+        uuid_pattern = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+        match = re.search(uuid_pattern, api_endpoint)
+
+        return match.group(0) if match else None
+
+    def get_database_id(self):
+        return self.get_database_id_static(api_endpoint=self.get_api_endpoint())
+
     def get_keyspace(self):
         keyspace = self.keyspace
 
@@ -607,24 +620,38 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Get selected embedding provider
         embedding_provider = template[provider_field]["value"]
-        is_bring_your_own = embedding_provider == "Bring your own"
+        is_bring_your_own = embedding_provider and embedding_provider == "Bring your own"
 
         # Configure embedding model field
         model_field = "03_embedding_generation_model"
         template[model_field].update({
             "options": vectorize_providers.get(embedding_provider, [[], []])[1],
             "placeholder": "Bring your own" if is_bring_your_own else None,
-            "read_only": is_bring_your_own,
-            "required": not is_bring_your_own
+            "readonly": is_bring_your_own,
+            "required": not is_bring_your_own,
+            "value": None,
         })
+
+        # If this is a bring your own, set dimensions to 0
+        return build_config
+
+    def reset_dimension_field(self, build_config: dict) -> dict:
+        """Reset dimension field options based on provided configuration."""
+        # Extract template path for cleaner access
+        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+
+        # Get selected embedding model
+        provider_field = "02_embedding_generation_provider"
+        embedding_provider = template[provider_field]["value"]
+        is_bring_your_own = embedding_provider and embedding_provider == "Bring your own"
 
         # Configure dimension field
         dimension_field = "04_dimension"
-        dimension_value = 1024 if not is_bring_your_own else None
+        dimension_value = 1024 if not is_bring_your_own else None  # TODO: Dynamically figure this out
         template[dimension_field].update({
             "placeholder": dimension_value,
             "value": dimension_value,
-            "read_only": not is_bring_your_own,
+            "readonly": not is_bring_your_own,
             "required": is_bring_your_own
         })
 
@@ -712,202 +739,171 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         return build_config
 
-    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        # Callback for database creation
-        if field_name == "database_name" and isinstance(field_value, dict) and "01_new_database_name" in field_value:
-            try:
-                await self.create_database_api(
-                    new_database_name=field_value["01_new_database_name"],
-                    token=self.token,
-                    keyspace=self.get_keyspace(),
-                    environment=self.environment,
-                    cloud_provider=field_value["02_cloud_provider"],
-                    region=field_value["03_region"],
-                )
-            except Exception as e:
-                msg = f"Error creating database: {e}"
-                raise ValueError(msg) from e
-
-            # Add the new database to the list of options
-            build_config["database_name"]["options"] += [field_value["01_new_database_name"]]
-            build_config["database_name"]["options_metadata"] += [
-                {
-                    "status": "PENDING",
-                    "collections": 0,
-                    "api_endpoint": None,
-                    "icon": "data",
-                    "org_id": None,
-                }
-            ]
-
-            return self.reset_collection_list(build_config)
-
-        # This is the callback required to update the list of regions for a cloud provider
-        if (
-            field_name == "database_name"
-            and isinstance(field_value, dict)
-            and "01_new_database_name" not in field_value
-        ):
-            # Get the cloud provider and environment
-            cloud_provider = field_value["02_cloud_provider"]
-            my_env = self.environment or "prod"
-
-            # Update the list of regions for the cloud provider
-            build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]["03_region"][
-                "options"
-            ] = self.map_cloud_providers()[my_env][cloud_provider]["regions"]
-
-            return build_config
-
-        # Callback for the creation of collections
-        if (
-            field_name == "collection_name"
-            and isinstance(field_value, dict)
-            and "01_new_collection_name" in field_value
-        ):
-            try:
-                # Get the provider and model if provided
-                embedding_provider = field_value.get("02_embedding_generation_provider", None)
-                embedding_model = field_value.get("03_embedding_generation_model", None)
-
-                # Get the dimension if its a BYO provider
-                dimension = field_value.get("04_dimension", None) if embedding_provider == "Bring your own" else None
-
-                # Create the collection
-                await self.create_collection_api(
-                    new_collection_name=field_value["01_new_collection_name"],
-                    token=self.token,
-                    api_endpoint=build_config["api_endpoint"]["value"],
-                    environment=self.environment,
-                    keyspace=self.get_keyspace(),
-                    dimension=dimension,
-                    embedding_generation_provider=embedding_provider,
-                    embedding_generation_model=embedding_model,
-                )
-            except Exception as e:
-                msg = f"Error creating collection: {e}"
-                raise ValueError(msg) from e
-
-            # Add the new collection to the list of options
-            build_config["collection_name"]["value"] = field_value["01_new_collection_name"]
-            build_config["collection_name"]["options"].append(field_value["01_new_collection_name"])
-
-            # Get the provider and model for the new collection
-            generation_provider = field_value["02_embedding_generation_provider"]
-            provider = (
-                generation_provider.lower() if generation_provider and generation_provider != "Bring your own" else None
-            )
-            generation_model = field_value.get("03_embedding_generation_model", None)
-
-            # Set the embedding choice
-            build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
-            build_config["embedding_model"]["advanced"] = bool(provider)
-
-            # Add the new collection to the list of options
-            icon = self.get_provider_icon(provider_name=generation_provider)
-            build_config["collection_name"]["options_metadata"] += [
-                {"records": 0, "provider": provider, "icon": icon, "model": generation_model}
-            ]
-
-            return build_config
-
-        # Callback to update the model list based on the embedding provider
-        if (
-            field_name == "collection_name"
-            and isinstance(field_value, dict)
-            and "01_new_collection_name" not in field_value
-        ):
-            return self.reset_provider_options(build_config)
-
-        # When the component first executes, this is the update refresh call
-        first_run = field_name == "collection_name" and not field_value and not build_config["database_name"]["options"]
-
-        # If the token has not been provided, simply return the empty build config
+    async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
+        """Update build configuration based on field name and value."""
+        # Early return if no token provided
         if not self.token:
             return self.reset_build_config(build_config)
 
-        # If this is the first execution of the component, reset and build database list
+        # Database creation callback
+        if field_name == "database_name" and isinstance(field_value, dict):
+            if "01_new_database_name" in field_value:
+                await self._create_new_database(build_config, field_value)
+                return self.reset_collection_list(build_config)
+            return self._update_cloud_regions(build_config, field_value)
+
+        # Collection creation callback
+        if field_name == "collection_name" and isinstance(field_value, dict):
+            # Case 1: New collection creation
+            if "01_new_collection_name" in field_value:
+                await self._create_new_collection(build_config, field_value)
+                return build_config
+
+            # Case 2: Update embedding provider options
+            if "02_embedding_generation_provider" in field_value:
+                return self.reset_provider_options(build_config)
+
+            # Case 3: Update dimension field
+            if "03_embedding_generation_model" in field_value:
+                return self.reset_dimension_field(build_config)
+
+        # Initial execution or token/environment change
+        first_run = field_name == "collection_name" and not field_value and not build_config["database_name"]["options"]
         if first_run or field_name in {"token", "environment"}:
             return self.reset_database_list(build_config)
 
-        # Refresh the collection name options
+        # Database selection change
         if field_name == "database_name" and not isinstance(field_value, dict):
-            # First we need to refresh the list entirely
-            build_config = self.reset_database_list(build_config)
+            return self._handle_database_selection(build_config, field_value)
 
-            # If missing, refresh the database options
-            if field_value not in build_config["database_name"]["options"]:
-                build_config["database_name"]["value"] = ""
-            else:
-                # Find the position of the selected database to align with metadata
-                index_of_name = build_config["database_name"]["options"].index(field_value)
-
-                # Get the org_id for the database
-                org_id = build_config["database_name"]["options_metadata"][index_of_name]["org_id"]
-
-                # If this is None, something went wrong or the DB is still pending
-                if not org_id:
-                    return build_config
-
-                # Set the helper text field of the embedding provider
-                build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"][
-                    "02_embedding_generation_provider"
-                ]["helper_text"] = (
-                    "To create collections with more embedding provider options, go to "
-                    '<a class="underline" target="_blank" rel="noopener noreferrer" '
-                    f'href="https://astra.datastax.com/org/{org_id}/settings/manageIntegrations">'
-                    "your database in Astra DB</a>."
-                )
-
-                # Set the API endpoint based on the selected database
-                build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][
-                    index_of_name
-                ]["api_endpoint"]
-
-                # Reset the provider options
-                build_config = self.reset_provider_options(build_config)
-
-            # Reset the list of collections we have based on the token provided
-            return self.reset_collection_list(build_config)
-
-        # Hide embedding model option if opriona_metadata provider is not null
+        # Collection selection change
         if field_name == "collection_name" and not isinstance(field_value, dict):
-            # Assume we will be autodetecting the collection:
-            build_config["autodetect_collection"]["value"] = True
+            return self._handle_collection_selection(build_config, field_value)
 
-            # Reload the collection list
-            build_config = self.reset_collection_list(build_config)
+        return build_config
 
-            # Set the options for collection name to be the field value if its a new collection
-            if field_value and field_value not in build_config["collection_name"]["options"]:
-                # Add the new collection to the list of options
-                build_config["collection_name"]["options"].append(field_value)
-                build_config["collection_name"]["options_metadata"].append(
-                    {
-                        "records": 0,
-                        "provider": None,
-                        "icon": "vectorstores",
-                        "model": None,
-                    }
-                )
+    async def _create_new_database(self, build_config: dict, field_value: dict) -> None:
+        """Create a new database and update build config options."""
+        try:
+            await self.create_database_api(
+                new_database_name=field_value["01_new_database_name"],
+                token=self.token,
+                keyspace=self.get_keyspace(),
+                environment=self.environment,
+                cloud_provider=field_value["02_cloud_provider"],
+                region=field_value["03_region"],
+            )
+        except Exception as e:
+            msg = f"Error creating database: {e}"
+            raise ValueError(msg) from e
 
-                # Ensure that autodetect collection is set to False, since its a new collection
-                build_config["autodetect_collection"]["value"] = False
+        build_config["database_name"]["options"].append(field_value["01_new_database_name"])
+        build_config["database_name"]["options_metadata"].append({
+            "status": "PENDING",
+            "collections": 0,
+            "api_endpoint": None,
+            "icon": "data",
+            "org_id": None,
+        })
 
-            # If nothing is selected, can't detect provider - return
-            if not field_value:
-                return build_config
+    def _update_cloud_regions(self, build_config: dict, field_value: dict) -> dict:
+        """Update cloud provider regions in build config."""
+        env = self.environment or "prod"
+        cloud_provider = field_value["02_cloud_provider"]
+        template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template["03_region"]["options"] = self.map_cloud_providers()[env][cloud_provider]["regions"]
+        return build_config
 
-            # Find the position of the selected collection to align with metadata
-            index_of_name = build_config["collection_name"]["options"].index(field_value)
-            value_of_provider = build_config["collection_name"]["options_metadata"][index_of_name]["provider"]
+    async def _create_new_collection(self, build_config: dict, field_value: dict) -> None:
+        """Create a new collection and update build config options."""
+        embedding_provider = field_value.get("02_embedding_generation_provider")
+        try:
+            await self.create_collection_api(
+                new_collection_name=field_value["01_new_collection_name"],
+                token=self.token,
+                api_endpoint=build_config["api_endpoint"]["value"],
+                environment=self.environment,
+                keyspace=self.get_keyspace(),
+                dimension=field_value.get("04_dimension") if embedding_provider == "Bring your own" else None,
+                embedding_generation_provider=embedding_provider,
+                embedding_generation_model=field_value.get("03_embedding_generation_model"),
+            )
+        except Exception as e:
+            msg = f"Error creating collection: {e}"
+            raise ValueError(msg) from e
 
-            # If we were able to determine the Vectorize provider, set it accordingly
-            build_config["embedding_model"]["advanced"] = bool(value_of_provider)
-            build_config["embedding_choice"]["value"] = "Astra Vectorize" if value_of_provider else "Embedding Model"
+        provider = embedding_provider.lower() if embedding_provider and embedding_provider != "Bring your own" else None
+        build_config["collection_name"].update({
+            "value": field_value["01_new_collection_name"],
+            "options": build_config["collection_name"]["options"] + [field_value["01_new_collection_name"]]
+        })
+        build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
+        build_config["embedding_model"]["advanced"] = bool(provider)
+        build_config["collection_name"]["options_metadata"].append({
+            "records": 0,
+            "provider": provider,
+            "icon": self.get_provider_icon(provider_name=embedding_provider),
+            "model": field_value.get("03_embedding_generation_model")
+        })
 
+    def _handle_database_selection(self, build_config: dict, field_value: str) -> dict:
+        """Handle database selection and update related configurations."""
+        build_config = self.reset_database_list(build_config)
+
+        # Reset collection list if database selection changes
+        if field_value not in build_config["database_name"]["options"]:
+            build_config["database_name"]["value"] = ""
             return build_config
 
+        # Get the api endpoint for the selected database
+        index = build_config["database_name"]["options"].index(field_value)
+        build_config["api_endpoint"]["value"] = build_config["database_name"]["options_metadata"][index]["api_endpoint"]
+
+        # Get the org_id for the selected database
+        org_id = build_config["database_name"]["options_metadata"][index]["org_id"]
+        if not org_id:
+            return build_config
+
+        # Get the database id for the selected database
+        db_id = self.get_database_id_static(api_endpoint=build_config["api_endpoint"]["value"])
+        keyspace = self.get_keyspace() or "default_keyspace"
+
+        # Update the helper text for the embedding provider field
+        template = build_config["collection_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
+        template["02_embedding_generation_provider"]["helper_text"] = (
+            "To create collections with more embedding provider options, go to "
+            f'<a class="underline" target="_blank" rel="noopener noreferrer" '
+            f'href="https://astra.datastax.com/org/{org_id}/database/{db_id}/data-explorer?createCollection=1&namespace={keyspace}">'
+            "your database in Astra DB</a>."
+        )
+
+        # Reset provider options
+        build_config = self.reset_provider_options(build_config)
+
+        return self.reset_collection_list(build_config)
+
+    def _handle_collection_selection(self, build_config: dict, field_value: str) -> dict:
+        """Handle collection selection and update embedding options."""
+        build_config["autodetect_collection"]["value"] = True
+        build_config = self.reset_collection_list(build_config)
+
+        if field_value and field_value not in build_config["collection_name"]["options"]:
+            build_config["collection_name"]["options"].append(field_value)
+            build_config["collection_name"]["options_metadata"].append({
+                "records": 0,
+                "provider": None,
+                "icon": "vectorstores",
+                "model": None,
+            })
+            build_config["autodetect_collection"]["value"] = False
+
+        if not field_value:
+            return build_config
+
+        index = build_config["collection_name"]["options"].index(field_value)
+        provider = build_config["collection_name"]["options_metadata"][index]["provider"]
+        build_config["embedding_model"]["advanced"] = bool(provider)
+        build_config["embedding_choice"]["value"] = "Astra Vectorize" if provider else "Embedding Model"
         return build_config
 
     @check_cached_vector_store
