@@ -1,4 +1,3 @@
-import { ColDef, ColGroupDef } from "ag-grid-community";
 import { Message } from "../../messages";
 
 export type MessagesStoreType = {

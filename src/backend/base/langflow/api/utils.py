@@ -14,6 +14,7 @@ from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.message import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
@@ -39,13 +40,12 @@ def has_api_terms(word: str):
 
 def remove_api_keys(flow: dict):
     """Remove api keys from flow data."""
-    if flow.get("data") and flow["data"].get("nodes"):
-        for node in flow["data"]["nodes"]:
-            node_data = node.get("data").get("node")
-            template = node_data.get("template")
-            for value in template.values():
-                if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
-                    value["value"] = None
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data").get("node")
+        template = node_data.get("template")
+        for value in template.values():
+            if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
+                value["value"] = None
 
     return flow
 
@@ -281,16 +281,16 @@ def parse_value(value: Any, input_type: str) -> Any:
 
 async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None:
     try:
-        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
-        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         # TODO: Verify if deleting messages is safe in terms of session id relevance
         # If we delete messages directly, rather than setting flow_id to null,
         # it might cause unexpected behaviors because the session id could still be
         # used elsewhere to search for these messages.
-        # await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
+        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
-        msg = f"Unable to cascade delete flow: ${flow_id}"
+        msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
 
 
