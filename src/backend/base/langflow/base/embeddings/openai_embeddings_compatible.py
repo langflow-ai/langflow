@@ -207,7 +207,7 @@ class OpenAIEmbeddingsCompatible(BaseModel, Embeddings):
     def validate_environment(self) -> Self:
         """Validate that api key and python package exists in environment."""
         if self.openai_api_type in ("azure", "azure_ad", "azuread"):
-            msg = "If you are using Azure, " "please use the `AzureOpenAIEmbeddings` class."
+            msg = "If you are using Azure, please use the `AzureOpenAIEmbeddings` class."
             raise ValueError(msg)
         client_params: dict = {
             "api_key": (self.openai_api_key.get_secret_value() if self.openai_api_key else None),
@@ -234,7 +234,7 @@ class OpenAIEmbeddingsCompatible(BaseModel, Embeddings):
                 try:
                     import httpx
                 except ImportError as e:
-                    msg = "Could not import httpx python package. " "Please install it with `pip install httpx`."
+                    msg = "Could not import httpx python package. Please install it with `pip install httpx`."
                     raise ImportError(msg) from e
                 self.http_client = httpx.Client(proxy=self.openai_proxy)
             sync_specific = {"http_client": self.http_client}
@@ -244,7 +244,7 @@ class OpenAIEmbeddingsCompatible(BaseModel, Embeddings):
                 try:
                     import httpx
                 except ImportError as e:
-                    msg = "Could not import httpx python package. " "Please install it with `pip install httpx`."
+                    msg = "Could not import httpx python package. Please install it with `pip install httpx`."
                     raise ImportError(msg) from e
                 self.http_async_client = httpx.AsyncClient(proxy=self.openai_proxy)
             async_specific = {"http_client": self.http_async_client}

@@ -8,8 +8,8 @@ from langflow.components.models.google_generative_ai import GoogleGenerativeAICo
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
-from langflow.components.models.tongyi import TongyiModelComponent
 from langflow.components.models.sambanova import SambaNovaComponent
+from langflow.components.models.tongyi import TongyiModelComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -26,11 +26,7 @@ def get_filtered_inputs(component_class):
     base_input_names = {field.name for field in LCModelComponent._base_inputs}
     component_instance = component_class()
 
-    return [
-        process_inputs(input_)
-        for input_ in component_instance.inputs
-        if input_.name not in base_input_names
-    ]
+    return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
 
 
 def process_inputs(component_data: Input):
@@ -87,9 +83,7 @@ def _get_google_generative_ai_inputs_and_fields():
             "`pip install langchain-google-generative-ai`."
         )
         raise ImportError(msg) from e
-    return google_generative_ai_inputs, create_input_fields_dict(
-        google_generative_ai_inputs, ""
-    )
+    return google_generative_ai_inputs, create_input_fields_dict(google_generative_ai_inputs, "")
 
 
 def _get_openai_inputs_and_fields():
@@ -268,9 +262,7 @@ except ImportError:
     pass
 
 try:
-    google_generative_ai_inputs, google_generative_ai_fields = (
-        _get_google_generative_ai_inputs_and_fields()
-    )
+    google_generative_ai_inputs, google_generative_ai_fields = _get_google_generative_ai_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Google Generative AI"] = {
         "fields": google_generative_ai_fields,
         "inputs": google_generative_ai_inputs,
@@ -294,9 +286,7 @@ except ImportError:
     pass
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
-ALL_PROVIDER_FIELDS: list[str] = [
-    field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]
-]
+ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
 
 MODEL_DYNAMIC_UPDATE_FIELDS = [
     "api_key",
@@ -308,10 +298,6 @@ MODEL_DYNAMIC_UPDATE_FIELDS = [
 
 
 MODELS_METADATA = {
-    key: {
-        "icon": (
-            MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None
-        )
-    }
+    key: {"icon": (MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None)}
     for key in MODEL_PROVIDERS_DICT
 }

@@ -55,8 +55,7 @@ class TongyiModelComponent(LCModelComponent):
             name="tongyi_api_base",
             display_name="Tongyi API Base",
             advanced=True,
-            info="The base URL of the Tongyi API. "
-            "Defaults to https://dashscope.aliyuncs.com/compatible-mode/v1. ",
+            info="The base URL of the Tongyi API. Defaults to https://dashscope.aliyuncs.com/compatible-mode/v1. ",
         ),
         SecretStrInput(
             name="api_key",
@@ -100,17 +99,13 @@ class TongyiModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        tongyi_api_base = (
-            self.tongyi_api_base or "https://dashscope.aliyuncs.com/compatible-mode/v1"
-        )
+        tongyi_api_base = self.tongyi_api_base or "https://dashscope.aliyuncs.com/compatible-mode/v1"
         json_mode = self.json_mode
         seed = self.seed
         max_retries = self.max_retries
         timeout = self.timeout
 
-        api_key = (
-            SecretStr(tongyi_api_key).get_secret_value() if tongyi_api_key else None
-        )
+        api_key = SecretStr(tongyi_api_key).get_secret_value() if tongyi_api_key else None
         output = ChatOpenAI(
             max_tokens=max_tokens or None,
             model_kwargs=model_kwargs,
