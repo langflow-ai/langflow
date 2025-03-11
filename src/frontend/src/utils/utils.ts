@@ -1,6 +1,5 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor";
-import TableToggleCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableToggleCellEditor";
 import useAlertStore from "@/stores/alertStore";
 import { ColumnField, FormatterType } from "@/types/utils/functions";
 import { ColDef, ColGroupDef, ValueParserParams } from "ag-grid-community";
@@ -594,8 +593,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           };
         } else if (col.formatter === FormatterType.boolean) {
           newCol.cellRenderer = TableAutoCellRender;
-          newCol.cellEditorPopup = false;
-          newCol.cellEditor = TableToggleCellEditor;
+          newCol.editable = false;
           newCol.autoHeight = false;
           newCol.cellClass = "no-border !py-2";
           newCol.type = "boolean";

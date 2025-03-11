@@ -74,14 +74,21 @@ const Trigger: React.FC<TriggerProps> = ({
 const Header: React.FC<{
   children: ReactNode;
   description?: string | JSX.Element | null;
-}> = ({ children, description }: modalHeaderType): JSX.Element => {
+  clampDescription?: number;
+}> = ({
+  children,
+  description,
+  clampDescription,
+}: modalHeaderType): JSX.Element => {
   return (
     <DialogHeader>
       <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
         {children}
       </DialogTitle>
       {description && (
-        <DialogDescription className="line-clamp-2 text-sm">
+        <DialogDescription
+          className={`line-clamp-${clampDescription ?? 2} text-sm`}
+        >
           {description}
         </DialogDescription>
       )}
