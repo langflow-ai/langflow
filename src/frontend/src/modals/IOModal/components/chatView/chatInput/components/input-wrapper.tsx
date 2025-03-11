@@ -1,3 +1,4 @@
+import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
 import { FilePreviewType } from "@/types/components";
 import React from "react";
 import {
@@ -86,7 +87,9 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
             />
           </div>
           <div className="flex items-center gap-2">
-            <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
+            {ENABLE_VOICE_ASSISTANT && (
+              <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
+            )}
 
             <ButtonSendWrapper
               send={send}
