@@ -43,14 +43,16 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     define: {
-      "process.env.BACKEND_URL": JSON.stringify(envLangflow.BACKEND_URL || ""),
-      "process.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
-        envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS || "",
+      "process.env.BACKEND_URL": JSON.stringify(
+        envLangflow.BACKEND_URL ?? "http://127.0.0.1:7860",
       ),
-      "process.env.CI": JSON.stringify(envLangflow.CI || ""),
-      "process.env.ELEVENLABS_API_KEY": envLangflow.ELEVENLABS_API_KEY
-        ? JSON.stringify(true)
-        : JSON.stringify(false),
+      "process.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
+        envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60,
+      ),
+      "process.env.CI": JSON.stringify(envLangflow.CI ?? false),
+      "process.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
+        envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
+      ),
     },
     plugins: [react(), svgr(), tsconfigPaths()],
     server: {
