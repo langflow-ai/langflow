@@ -138,7 +138,7 @@ def generate_markdown(versions_info):
         "## Core information",
         "- **Langflow Version**: `" + versions_info["langflow_version"] + "`",
         "- **Python Version Required**: `" + versions_info["python_version"] + "`",
-        "\n## Dependencies"
+        "\n## Dependencies",
     ]
 
     # Add dependencies by category
