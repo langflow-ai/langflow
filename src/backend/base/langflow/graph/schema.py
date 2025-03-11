@@ -22,9 +22,7 @@ class ResultData(BaseModel):
 
     @field_serializer("results")
     def serialize_results(self, value):
-        if isinstance(value, dict):
-            return {key: serialize(val) for key, val in value.items()}
-        return serialize(value)
+        return {key: serialize(val) for key, val in value.items()} if isinstance(value, dict) else serialize(value)
 
     @model_validator(mode="before")
     @classmethod
@@ -44,7 +42,8 @@ class ResultData(BaseModel):
                     values["outputs"].update({key: OutputValue(message=stream_url, type=message["type"])})
                 elif "type" in message:
                     values["outputs"].update({key: OutputValue(message=message, type=message["type"])})
-        return values
+
+        return serialize(values)
 
 
 class InterfaceComponentTypes(str, Enum, metaclass=ContainsEnumMeta):
