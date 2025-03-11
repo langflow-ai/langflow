@@ -92,7 +92,7 @@ test(
       .first();
     const secondBlockedHandle = page
       .getByTestId("div-handle-combinetext-shownode-combined text-right")
-      .nth(3);
+      .nth(2);
     const thirdBlockedHandle = page
       .getByTestId("div-handle-textoutput-shownode-message-right")
       .first();
