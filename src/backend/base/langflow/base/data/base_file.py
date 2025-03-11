@@ -1,4 +1,3 @@
-import json
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
