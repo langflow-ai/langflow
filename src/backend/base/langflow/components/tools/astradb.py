@@ -157,6 +157,14 @@ class AstraDBToolComponent(LCToolComponent):
             value=False,
         ),
         HandleInput(name="embedding", display_name="Embedding Model", input_types=["Embeddings"]),
+        StrInput(
+            name="semantic_search_instruction",
+            display_name="Semantic Search Instruction",
+            info="The instruction to use for the semantic search.",
+            required=True,
+            value="Search query to find relevant documents.",
+            advanced=True,
+        ),
     ]
 
     _cached_client: DataAPIClient | None = None
@@ -212,9 +220,12 @@ class AstraDBToolComponent(LCToolComponent):
 
         if self.use_search_query:
             args["search_query"] = (
-                str | None,
-                Field(description="Search query to find relevant documents.", default=None),
+                str,
+                Field(description=self.semantic_search_instruction),
             )
+
+        print("args")
+        print(args)
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
@@ -225,7 +236,11 @@ class AstraDBToolComponent(LCToolComponent):
         Returns:
             Tool: The built Astra DB tool.
         """
-        schema_dict = self.create_args_schema_v2() if self.tools_params_v2 is not None else self.create_args_schema()
+        schema_dict = (
+            self.create_args_schema()
+            if len(self.tool_params.keys()) > 0
+            else self.create_args_schema_v2()
+        )
 
         tool = StructuredTool.from_function(
             name=self.tool_name,
@@ -320,6 +335,7 @@ class AstraDBToolComponent(LCToolComponent):
             find_options["projection"] = projection
 
         results = collection.find(**find_options)
+        logger.info(f"Tool {self.tool_name} executed`")
 
         data: list[Data] = [Data(data=doc) for doc in results]
         self.status = data
