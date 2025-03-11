@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import copy
 import json
 import queue
@@ -11,8 +12,8 @@ from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
-from typing import TYPE_CHECKING, Any, cast, Callable
-import contextvars
+from typing import TYPE_CHECKING, Any, cast
+
 from loguru import logger
 
 from langflow.exceptions.component import ComponentBuildError
@@ -43,7 +44,7 @@ from langflow.services.deps import get_chat_service, get_tracing_service
 from langflow.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    from collections.abc import Callable, Generator, Iterable
 
     from langflow.api.v1.schemas import InputValueRequest
     from langflow.custom.custom_component.component import Component
@@ -663,14 +664,17 @@ class Graph:
         task = asyncio.create_task(self.end_all_traces(outputs, error))
         self._end_trace_tasks.add(task)
         task.add_done_callback(self._end_trace_tasks.discard)
-    
-    def end_all_traces_in_context(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> Callable:
+
+    def end_all_traces_in_context(
+        self,
+        outputs: dict[str, Any] | None = None,
+        error: Exception | None = None,
+    ) -> Callable:
         # BackgroundTasks run in different context, so we need to copy the context
         context = contextvars.copy_context()
         async def async_end_traces_func():
             await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
-            return None
-        
+
         return async_end_traces_func
 
     async def end_all_traces(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:

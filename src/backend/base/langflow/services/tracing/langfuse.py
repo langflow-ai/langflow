@@ -99,7 +99,7 @@ class LangFuseTracer(BaseTracer):
         # if two component is built concurrently, will use wrong last span. just flatten now, maybe fix in future.
         # if len(self.spans) > 0:
         #     last_span = next(reversed(self.spans))
-        #     span = self.spans[last_span].span(**content_span) 
+        #     span = self.spans[last_span].span(**content_span)
         # else:
         span = self.trace.span(**content_span)
 
