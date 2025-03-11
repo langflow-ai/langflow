@@ -192,7 +192,7 @@ test(
     //connection 2
     const elementTextOutput1 = page
       .getByTestId("handle-textinput-shownode-message-right")
-      .nth(4);
+      .nth(2);
     await elementTextOutput1.click();
     const elementGroupInput1 = page
       .getByTestId("handle-groupnode-shownode-second text-left")
@@ -202,7 +202,7 @@ test(
     //connection 3
     const elementTextOutput2 = page
       .getByTestId("handle-textinput-shownode-message-right")
-      .nth(2);
+      .nth(1);
     await elementTextOutput2.click();
 
     const elementGroupInput2 = page
