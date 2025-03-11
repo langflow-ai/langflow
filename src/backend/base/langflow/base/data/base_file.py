@@ -1,3 +1,4 @@
+import json
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -5,9 +6,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile, is_zipfile
 
+import pandas as pd
+
 from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 
 
@@ -161,7 +165,11 @@ class BaseFileComponent(Component, ABC):
         ),
     ]
 
-    _base_outputs = [Output(display_name="Data", name="data", method="load_files")]
+    _base_outputs = [
+        Output(display_name="CSV", name="data_csv", method="load_csv"),
+        Output(display_name="JSON", name="data_json", method="load_json"),
+        Output(display_name="Others", name="data_others", method="load_others"),
+    ]
 
     @abstractmethod
     def process_files(self, file_list: list[BaseFile]) -> list[BaseFile]:
@@ -210,6 +218,70 @@ class BaseFileComponent(Component, ABC):
                         shutil.rmtree(file.path)
                     else:
                         file.path.unlink()
+
+    def load_csv(self) -> list[DataFrame]:
+        """Loads CSV files by calling load_files().
+
+        Returns:
+            DataFrame: List of DataFrames from CSV files
+        """
+        # Explicitly call load_files() from your original code
+        all_processed_data = self.load_files()
+
+        # Filter for CSV data and convert to DataFrames
+        csv_data = []
+        for data in all_processed_data:
+            # Assuming data might be a Path object or string from your BaseFile
+            if hasattr(data, "path") and str(data.path).lower().endswith(".csv"):
+                try:
+                    csv_data.append(pd.read_csv(data.path))
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"Error processing CSV file {data.path}: {e}")
+        return csv_data
+
+    def load_json(self) -> list[Message]:
+        """Loads JSON files by calling load_files().
+
+        Returns:
+            list[dict]: List of dictionaries from JSON files
+        """
+        # Explicitly call load_files() from your original code
+        all_processed_data = self.load_files()
+
+        # Filter for JSON data and convert to dictionaries
+        json_data = []
+        for data in all_processed_data:
+            if hasattr(data, "path") and str(data.path).lower().endswith(".json"):
+                try:
+                    with open(data.path) as f:  # noqa: PTH123
+                        json_content = json.load(f)
+                        json_data.append(Message(data=json_content))
+                except Exception as e:  # noqa: BLE001
+                    self.log(f"Error processing JSON file {data.path}: {e}")
+        return json_data
+
+    def load_others(self) -> list[bytes]:
+        """Loads other file types by calling load_files().
+
+        Returns:
+            list[bytes]: List of raw file contents for non-CSV/JSON files
+        """
+        # Explicitly call load_files() from your original code
+        all_processed_data = self.load_files()
+
+        # Filter for non-CSV and non-JSON files
+        other_data = []
+        for data in all_processed_data:
+            if hasattr(data, "path"):
+                file_path = str(data.path).lower()
+                if not (file_path.endswith((".csv", ".json"))):
+                    try:
+                        with open(data.path, "rb") as f:  # noqa: PTH123
+                            content = f.read()
+                            other_data.append(content)
+                    except Exception as e:  # noqa: BLE001
+                        self.log(f"Error processing file {data.path}: {e}")
+        return other_data
 
     @property
     def valid_extensions(self) -> list[str]:
