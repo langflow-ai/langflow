@@ -27,14 +27,11 @@ logger = logging.getLogger(__name__)
 
 
 class NvidiaEvaluatorComponent(Component):
-    display_name = "NVIDIA Evaluator"
-    description = "Evaluate models with flexible evaluation configurations."
+    display_name = "NeMo Evaluator"
+    description = "Evaluate models using NeMo evaluator microservice."
     icon = "NVIDIA"
     name = "NVIDIANeMoEvaluator"
     beta = True
-
-    # This assumes that the inference URL is a Kubernetes service in the same namespace as the evaluator
-    inference_url = "http://nemo-nim.model-training.svc.cluster.local:8000/v1"
 
     headers = {"accept": "application/json", "Content-Type": "application/json"}
 
@@ -43,33 +40,38 @@ class NvidiaEvaluatorComponent(Component):
         StrInput(
             name="evaluator_base_url",
             display_name="Evaluator Base URL",
-            info="The base URL of the NVIDIA NeMo Evaluator API.",
+            info="Base URL for the NeMo Evaluator API.",
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="entity_service_base_url",
             display_name="Entity service URL",
-            info="The base URL of the NVIDIA Entity service to obtain models that can be evaluated.",
+            info="Base URL for the NeMo Entity service API.",
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="nemo_model_base_url",
             display_name="Base model inference URL",
-            info="The base URL of the NVIDIA NIM to run evaluation inference.",
+            info="Base URL for the NIM to run evaluation inference.",
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="datastore_base_url",
             display_name="Datastore Base URL",
-            info="The nemo datastore base URL of the NVIDIA NeMo Datastore API.",
+            info="Base URL for the NeMo Datastore API.",
             advanced=True,
+            required=True,
         ),
         StrInput(
-            name="tenant_id",
-            display_name="Tenant ID",
-            info="Tenant id for dataset creation, if not provided default value `tenant` is used.",
+            name="namespace",
+            display_name="Namespace",
+            info="Namespace for the dataset and evaluation model",
             advanced=True,
-            value="tenant",
+            value="default",
+            required=True,
         ),
         DropdownInput(
             name="000_llm_name",
@@ -77,6 +79,7 @@ class NvidiaEvaluatorComponent(Component):
             info="Select the model for evaluation",
             options=[],  # Dynamically populated
             refresh_button=True,
+            required=True,
         ),
         StrInput(
             name="001_tag",
@@ -90,8 +93,8 @@ class NvidiaEvaluatorComponent(Component):
             display_name="Evaluation Type",
             info="Select the type of evaluation",
             options=["LM Evaluation Harness", "Similarity Metrics"],
-            value="LM Evaluation Harness",
             real_time_refresh=True,  # Ensure dropdown triggers update on change
+            required=True,
         ),
     ]
 
@@ -105,6 +108,7 @@ class NvidiaEvaluatorComponent(Component):
             name="100_huggingface_token",
             display_name="HuggingFace Token",
             info="Token for accessing HuggingFace to fet the evaluation dataset.",
+            required=True,
         ),
         StrInput(
             name="110_task_name",
@@ -140,13 +144,6 @@ class NvidiaEvaluatorComponent(Component):
             advanced=True,
             value=-1,
         ),
-        BoolInput(
-            name="150_greedy",
-            display_name="Few-shot Examples",
-            info="The number of few-shot examples before the input.",
-            advanced=True,
-            value=True,
-        ),
         FloatInput(
             name="151_top_p",
             display_name="Top_p",
@@ -168,9 +165,10 @@ class NvidiaEvaluatorComponent(Component):
             info="The temperature to be used during generation sampling (0.0 to 2.0).",
         ),
         IntInput(
-            name="155_tokens_to_generate",
-            display_name="Tokens to Generate",
-            info="Max number of tokens to generate during inference.",
+            name="154_tokens_to_generate",
+            display_name="Max Tokens",
+            advanced=True,
+            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             value=1024,
         ),
     ]
@@ -190,11 +188,12 @@ class NvidiaEvaluatorComponent(Component):
             info="List of Scorers for evaluation.",
             options=["accuracy", "bleu", "rouge", "em", "bert", "f1"],
             value=["accuracy", "bleu", "rouge", "em", "bert", "f1"],
+            required=True,
         ),
         DropdownInput(
             name="310_run_inference",
-            display_name="Run Inference for response",
-            info="Select 'True' to run inference or 'False' to use an `response` field in the dataset.",
+            display_name="Run Inference",
+            info="Select 'True' to run inference or 'False' to use a `response` field in the dataset.",
             options=["True", "False"],
             value="True",
             real_time_refresh=True,
@@ -202,8 +201,9 @@ class NvidiaEvaluatorComponent(Component):
         ),
         IntInput(
             name="311_tokens_to_generate",
-            display_name="Tokens to Generate",
-            info="Max number of tokens to generate during inference.",
+            display_name="Max Tokens",
+            advanced=True,
+            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
             value=1024,
         ),
         SliderInput(
@@ -230,7 +230,7 @@ class NvidiaEvaluatorComponent(Component):
 
     def fetch_models(self):
         """Fetch models from the specified API endpoint and return a list of model names."""
-        namespace = self.tenant_id if self.tenant_id else "tenant"
+        namespace = self.namespace
         model_url = f"{self.entity_service_base_url}/v1/models"
         params = {
             "filter[namespace]": namespace,  # This ensures proper encoding
@@ -320,8 +320,8 @@ class NvidiaEvaluatorComponent(Component):
     async def evaluate(self) -> dict:
         evaluation_type = getattr(self, "002_evaluation_type", "LM Evaluation Harness")
 
-        if not self.tenant_id:
-            error_msg = "Provide tenant id to process"
+        if not self.namespace:
+            error_msg = "Missing namespace"
             raise ValueError(error_msg)
 
         model_name = getattr(self, "000_llm_name", "")
@@ -330,7 +330,7 @@ class NvidiaEvaluatorComponent(Component):
             raise ValueError(error_msg)
 
         if not (self.evaluator_base_url and self.entity_service_base_url and self.datastore_base_url):
-            error_msg = "Provide evaluator, data store, entity store url to process"
+            error_msg = "Missing NeMo service info, provide evaluator, data store, entity store url"
             raise ValueError(error_msg)
 
         # Generate the request data based on evaluation type
@@ -378,9 +378,9 @@ class NvidiaEvaluatorComponent(Component):
         target_id = await self.create_eval_target(None)
         hf_token = getattr(self, "100_huggingface_token", None)
         if not hf_token:
-            error_msg = "Provide hf token to process"
+            error_msg = "Missing hf token"
             raise ValueError(error_msg)
-        namespace = self.tenant_id
+        namespace = self.namespace
         config_data = {
             "type": "lm_eval_harness",
             "namespace": namespace,
@@ -397,12 +397,12 @@ class NvidiaEvaluatorComponent(Component):
             ],
             "params": {
                 "hf_token": hf_token or None,
-                "use_greedy": getattr(self, "150_greedy", True),
+                "use_greedy": True,
                 "top_p": getattr(self, "151_top_p", 0.0),
                 "top_k": getattr(self, "152_top_k", 1),
                 "temperature": getattr(self, "153_temperature", 0.0),
                 "stop": [],  # not exposing this for now, would be 154_stop
-                "tokens_to_generate": getattr(self, "155_tokens_to_generate", 1024),
+                "tokens_to_generate": getattr(self, "154_tokens_to_generate", 1024),
             },
         }
 
@@ -463,7 +463,7 @@ class NvidiaEvaluatorComponent(Component):
             error_msg = "Provide the nim url for evaluation inference to be processed"
             raise ValueError(error_msg)
 
-        namespace = self.tenant_id
+        namespace = self.namespace
         # Set output_file based on run_inference
         output_file = None
         if not run_inference:  # Only set output_file if run_inference is False
@@ -531,7 +531,7 @@ class NvidiaEvaluatorComponent(Component):
 
     async def create_eval_target(self, output_file) -> str:
         eval_target_url = f"{self.evaluator_base_url}/v1/evaluation/targets"
-        namespace = self.tenant_id if self.tenant_id else "tenant"
+        namespace = self.namespace
         try:
             if output_file:
                 request_body = {
@@ -589,8 +589,8 @@ class NvidiaEvaluatorComponent(Component):
             # Inputs
             dataset_name = str(uuid.uuid4())
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            await self.create_namespace(self.tenant_id)
-            repo_id = f"{self.tenant_id}/{dataset_name}"
+            await self.create_namespace(self.namespace)
+            repo_id = f"{self.namespace}/{dataset_name}"
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
             self.log(f"repo_id : {repo_id}")
@@ -678,24 +678,22 @@ class NvidiaEvaluatorComponent(Component):
 
         return repo_id
 
-    async def create_namespace(self, tenant_id: str):
+    async def create_namespace(self, namespace: str):
         """Checks and creates namespace in datastore.
 
         Args:
-            tenant_id (str): The tenant ID.
+            namespace (str): Namespace to be created if doesn't exist.
 
         """
-        namespace = tenant_id
-
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
 
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{url}/{namespace}")
                 response.raise_for_status()
-                self.log(f"returned data {response}")
                 http_code_namespace_missing = 404
                 if response.status_code == http_code_namespace_missing:
+                    self.log(f"Namespace not found, creating namespace:  {namespace}")
                     create_payload = {"namespace": namespace}
                     create_response = await client.post(url, json=create_payload)
                     create_response.raise_for_status()

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class NvidiaCustomizerComponent(Component):
-    display_name = "NVIDIA Customizer"
+    display_name = "NeMo Customizer"
     description = "LLM fine-tuning using NeMo customizer microservice"
     icon = "NVIDIA"
     name = "NVIDIANeMoCustomizer"
@@ -35,61 +35,70 @@ class NvidiaCustomizerComponent(Component):
 
     inputs = [
         StrInput(
-            name="base_url",
+            name="customizer_url",
             display_name="Customizer Base URL",
-            info="The base URL of the NVIDIA Customizer API.",
+            info="Base URL for the NeMo Customizer API.",
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="datastore_base_url",
             display_name="Datastore Base URL",
-            info="The nemo datastore base URL of the NVIDIA Datastore API.",
+            info="Base URL for the NeMo Datastore API.",
             advanced=True,
+            required=True,
         ),
         StrInput(
             name="entity_store_base_url",
-            display_name="EntityStore Base URL",
-            info="The nemo datastore base URL of the NVIDIA EntityStore API.",
+            display_name="Entitystore Base URL",
+            info="Base URL for the Nemo Entitystore API.",
             advanced=True,
+            required=True,
         ),
         StrInput(
-            name="tenant_id",
-            display_name="Tenant ID",
-            info="Tenant id for dataset creation, if not provided default value `tenant` is used.",
+            name="namespace",
+            display_name="Namespace",
+            info="Namespace for the dataset and output model",
             advanced=True,
-            value="tenant",
+            value="default",
+            required=True,
         ),
         StrInput(
             name="fine_tuned_model_name",
-            display_name="Output model name",
+            display_name="Output Model Name",
             info="Enter the name to reference the output fine tuned model, ex: `imdb-data@v1`",
+            required=True,
         ),
         DataInput(
             name="training_data",
             display_name="Training Data",
             is_list=True,
+            required=True,
         ),
         DropdownInput(
             name="model_name",
-            display_name="Model Name",
-            info="Model to train",
+            display_name="Base Model Name",
+            info="Base model to fine tune",
             refresh_button=True,
+            required=True,
         ),
         DropdownInput(
             name="training_type",
             display_name="Training Type",
             info="Select the type of training to use",
             refresh_button=True,
+            required=True,
         ),
         DropdownInput(
             name="fine_tuning_type",
-            display_name="Fine tuning Type",
+            display_name="Fine Tuning Type",
             info="Select the fine tuning type to use",
+            required=True,
         ),
         IntInput(
             name="epochs",
-            display_name="Epochs",
-            info="Number of times to cycle through the training data. default : `5`",
+            display_name="Fine tuning cycles",
+            info="Number of cycle to run through the training data.",
             value=5,
         ),
         IntInput(
@@ -97,24 +106,26 @@ class NvidiaCustomizerComponent(Component):
             display_name="Batch size",
             info="The number of samples used in each training iteration",
             value=16,
+            advanced=True,
         ),
         FloatInput(
             name="learning_rate",
-            display_name="Learning rate",
+            display_name="Learning Rate",
             info="The number of samples used in each training iteration",
             value=0.0001,
+            advanced=True,
         ),
     ]
 
     outputs = [
-        Output(display_name="Job Result", name="data", method="customize"),
+        Output(display_name="Job Info", name="data", method="customize"),
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Updates the component's configuration based on the selected option or refresh button."""
-        models_url = f"{self.base_url}/v1/customization/configs"
+        models_url = f"{self.customizer_url}/v1/customization/configs"
         try:
-            if field_name == "model_name" and self.base_url != "":
+            if field_name == "model_name" and self.customizer_url != "":
                 self.log(f"Refreshing model names from endpoint {models_url}, value: {field_value}")
 
                 # Use a synchronous HTTP client
@@ -129,7 +140,7 @@ class NvidiaCustomizerComponent(Component):
 
                 self.log("Updated model_name dropdown options.")
 
-            if field_name == "training_type" and self.base_url != "":
+            elif field_name == "training_type" and self.customizer_url != "":
                 # Use a synchronous HTTP client
                 with httpx.Client(timeout=5.0) as client:
                     response = client.get(models_url, headers=self.headers)
@@ -175,20 +186,20 @@ class NvidiaCustomizerComponent(Component):
         fine_tuned_model_name = self.fine_tuned_model_name
 
         if not fine_tuned_model_name:
-            error_msg = "Provide fine tuned output model name to process"
+            error_msg = "Missing Output Model Name"
             raise ValueError(error_msg)
 
-        tenant = self.tenant_id
-        if not self.tenant_id:
-            error_msg = "Provide tenant id to process"
+        namespace = self.namespace
+        if not self.namespace:
+            error_msg = "Missing Namespace"
             raise ValueError(error_msg)
 
-        if not (self.base_url and self.datastore_base_url and self.entity_store_base_url):
-            error_msg = "Provide customizer, data store and entity store url to process"
+        if not (self.customizer_url and self.datastore_base_url and self.entity_store_base_url):
+            error_msg = "Missing NeMo service info, provide customizer or data store and entity store url"
             raise ValueError(error_msg)
 
         if not self.model_name:
-            error_msg = "Refresh and select the base model name to be fine tuned"
+            error_msg = "Missing Base Model Name"
             raise ValueError(error_msg)
 
         if not (self.training_type and self.fine_tuning_type):
@@ -201,15 +212,15 @@ class NvidiaCustomizerComponent(Component):
             raise ValueError(error_msg)
 
         dataset_name = await self.process_dataset()
-        customizations_url = f"{self.base_url}/v1/customization/jobs"
+        customizations_url = f"{self.customizer_url}/v1/customization/jobs"
         error_code_already_present = 409
-        output_model = f"{tenant}/{fine_tuned_model_name}"
+        output_model = f"{namespace}/{fine_tuned_model_name}"
 
         description = f"Fine tuning base model {self.model_name} using dataset {dataset_name}"
         # Build the data payload
         data = {
             "config": self.model_name,
-            "dataset": {"name": dataset_name, "namespace": tenant},
+            "dataset": {"name": dataset_name, "namespace": namespace},
             "description": description,
             "hyperparameters": {
                 "training_type": self.training_type,
@@ -255,7 +266,7 @@ class NvidiaCustomizerComponent(Component):
                 self.log("Received HTTP 409. Conflict output model name. Retry with a different output model name")
                 error_msg = (
                     f"There is already a fined tuned model with name {fine_tuned_model_name} "
-                    f"Please choose a different output model name to process."
+                    f"Please choose a different Output Model Name."
                 )
                 raise ValueError(error_msg) from exc
             status_code = exc.response.status_code
@@ -272,23 +283,21 @@ class NvidiaCustomizerComponent(Component):
         else:
             return result_dict
 
-    async def create_namespace(self, tenant_id: str):
+    async def create_namespace(self, namespace: str):
         """Checks and creates namespace in datastore.
 
         Args:
-            tenant_id (str): The tenant ID.
+            namespace (str): The namespace to be created.
 
         """
-        namespace = tenant_id
-
         url = f"{self.datastore_base_url}/v1/datastore/namespaces"
 
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{url}/{namespace}")
-                self.log(f"Datastore namespace response json:  {response}")
                 http_status_code_non_found = 404
                 if response.status_code == http_status_code_non_found:
+                    self.log(f"Namespace not found, creating namespace:  {namespace}")
                     create_payload = {"namespace": namespace}
                     create_response = await client.post(url, json=create_payload)
                     create_response.raise_for_status()
@@ -311,8 +320,8 @@ class NvidiaCustomizerComponent(Component):
             dataset_name = str(uuid.uuid4())
 
             hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            await self.create_namespace(self.tenant_id)
-            repo_id = f"{self.tenant_id}/{dataset_name}"
+            await self.create_namespace(self.namespace)
+            repo_id = f"{self.namespace}/{dataset_name}"
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
         except Exception as exc:
@@ -406,8 +415,6 @@ class NvidiaCustomizerComponent(Component):
             if validation_records:
                 is_validation = True
                 validation_df = pd.DataFrame(validation_records)
-                # Note: You will need to implement upload_validation to handle the
-                # upload of the full validation DataFrame.
                 await self.upload_chunk(validation_df, 1, dataset_name, repo_id, hf_api, is_validation)
 
         except Exception as exc:
@@ -425,7 +432,7 @@ class NvidiaCustomizerComponent(Component):
             entity_registry_url = f"{self.entity_store_base_url}/v1/datasets"
             create_payload = {
                 "name": dataset_name,
-                "namespace": self.tenant_id,
+                "namespace": self.namespace,
                 "description": description,
                 "files_url": file_url,
                 "format": "jsonl",
