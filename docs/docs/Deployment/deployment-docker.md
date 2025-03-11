@@ -102,7 +102,7 @@ wget https://raw.githubusercontent.com/langflow-ai/langflow-helm-charts/refs/hea
 
 3. Create a Dockerfile:
 ```dockerfile
-FROM langflowai/langflow:latest
+FROM langflowai/langflow-backend:latest
 RUN mkdir /app/flows
 COPY ./*json /app/flows/.
 ```
