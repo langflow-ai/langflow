@@ -1117,33 +1117,26 @@ class Component(CustomComponent):
 
         Args:
             tools (list[Tool]): List of tools to filter.
-            metadata (list[dict] | None): Tools metadata containing status information.
+            metadata (pd.DataFrame | None): Tools metadata containing status information.
 
         Returns:
             list[Tool]: Filtered list of tools.
         """
-        # Convert metadata to a list of dicts if it's a DataFrame
-        metadata_dict = None
-        if isinstance(metadata, pd.DataFrame):
-            metadata_dict = metadata.to_dict(orient="records")
+        if metadata is not None:
+            # Convert metadata to a dictionary mapping tool names to their status
+            tool_status = dict(zip(metadata["name"], metadata.get("status", [True] * len(metadata)), strict=False))
+        else:
+            tool_status = None
 
-        # If metadata is None or empty, use enabled_tools
-        if not metadata_dict:
+        # If metadata is None or the status is not provided in the metadata, use enabled_tools
+        if tool_status is None:
             enabled = self.enabled_tools
-            return (
-                tools
-                if enabled is None
-                else [
-                    tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)
-                ]
-            )
+            if enabled is None:
+                return tools
+            enabled_set = set(enabled)
+            return [tool for tool in tools if tool.name in enabled_set or bool(set(tool.tags) & enabled_set)]
 
-        # Ensure metadata is a list of dicts
-        if not isinstance(metadata_dict, list):
-            return tools
-
-        # Create a mapping of tool names to their status
-        tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
+        # Filter tools based on the status in the metadata
         return [tool for tool in tools if tool_status.get(tool.name, True)]
 
     async def _build_tools_metadata_input(self):
