@@ -649,5 +649,5 @@ class APIRequestComponent(Component):
         Returns:
             DataFrame: A DataFrame containing the API response data.
         """
-        data = asyncio.run(self.make_requests())
+        data = await self.make_requests()
         return DataFrame(data)
