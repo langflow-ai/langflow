@@ -194,7 +194,11 @@ export function VoiceAssistant({
   };
 
   useEffect(() => {
-    !isRecording && hasOpenAIAPIKey ? initializeAudio() : stopRecording();
+    if (!isRecording && hasOpenAIAPIKey) {
+      initializeAudio();
+    } else {
+      stopRecording();
+    }
   }, [hasOpenAIAPIKey]);
 
   const showErrorAlert = (title: string, list: string[]) => {
@@ -290,6 +294,17 @@ export function VoiceAssistant({
     }
   };
 
+  const handleToggleRecording = () => {
+    if (isRecording) {
+      microphoneRef.current?.disconnect();
+      setBarHeights(Array(30).fill(20));
+      setIsRecording(false);
+    } else {
+      startRecording();
+      setIsRecording(true);
+    }
+  };
+
   return (
     <>
       <div
@@ -302,11 +317,13 @@ export function VoiceAssistant({
             hasOpenAIAPIKey ? "gap-3" : "gap-2",
           )}
         >
-          <IconComponent
-            name="Mic"
-            strokeWidth={ICON_STROKE_WIDTH}
-            className="h-4 w-4 text-placeholder-foreground"
-          />
+          <Button unstyled onClick={handleToggleRecording}>
+            <IconComponent
+              name={isRecording ? "Mic" : "MicOff"}
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="h-4 w-4 text-placeholder-foreground"
+            />
+          </Button>
 
           <div
             ref={waveformRef}
@@ -336,6 +353,7 @@ export function VoiceAssistant({
               userElevenLabsApiKey={elevenLabsApiKeyGlobalVariable}
               hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}
               setShowSettingsModal={handleSetShowSettingsModal}
+              hasOpenAIAPIKey={hasOpenAIAPIKey}
             >
               {hasOpenAIAPIKey ? (
                 <>

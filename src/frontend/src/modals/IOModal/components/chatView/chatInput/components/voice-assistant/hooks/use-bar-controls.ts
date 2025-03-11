@@ -16,13 +16,17 @@ export const useBarControls = (
     } else {
       setBarHeights(Array(30).fill(20));
     }
-  }, [isRecording]);
+  }, [isRecording, setRecordingTime, setBarHeights]);
 
   useEffect(() => {
     if (!isRecording) return;
-    const newBarHeights = [...barHeights];
-    const position = 29 - (recordingTime % 30);
-    newBarHeights[position] = Math.floor(Math.random() * 40) + 60;
-    setBarHeights(newBarHeights);
-  }, [recordingTime, isRecording, barHeights]);
+
+    // Use the functional update pattern to avoid dependency on barHeights
+    setBarHeights((prevBarHeights) => {
+      const newBarHeights = [...prevBarHeights];
+      const position = 29 - (recordingTime % 30);
+      newBarHeights[position] = Math.floor(Math.random() * 40) + 60;
+      return newBarHeights;
+    });
+  }, [recordingTime, isRecording, setBarHeights]);
 };

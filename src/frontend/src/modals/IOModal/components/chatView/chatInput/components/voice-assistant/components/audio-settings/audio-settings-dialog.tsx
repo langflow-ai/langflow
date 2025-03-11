@@ -7,26 +7,13 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useGetVoiceList } from "@/controllers/API/queries/voice/use-get-voice-list";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
-import {
-  getLocalStorage,
-  removeLocalStorage,
-  setLocalStorage,
-} from "@/utils/local-storage-util";
-import { cn } from "@/utils/utils";
+import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import { useEffect, useRef, useState } from "react";
 import AudioSettingsHeader from "./components/header";
 import MicrophoneSelect from "./components/microphone-select";
@@ -43,6 +30,7 @@ interface SettingsVoiceModalProps {
     openaiApiKey: string,
     elevenLabsApiKey: string,
   ) => void;
+  hasOpenAIAPIKey: boolean;
 }
 
 const SettingsVoiceModal = ({
@@ -51,6 +39,7 @@ const SettingsVoiceModal = ({
   userOpenaiApiKey,
   userElevenLabsApiKey,
   setShowSettingsModal,
+  hasOpenAIAPIKey,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
@@ -170,6 +159,12 @@ const SettingsVoiceModal = ({
 
     refetch();
   }, [userElevenLabsApiKey]);
+
+  useEffect(() => {
+    if (!hasOpenAIAPIKey) {
+      setOpen(true);
+    }
+  }, [initialOpen]);
 
   return (
     <>
