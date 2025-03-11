@@ -140,7 +140,7 @@ async def read_folder(
 
     try:
         if params and params.page and params.size:
-            stmt = select(Flow).where(Flow.folder_id == folder_id)
+            stmt = select(Flow).where(Flow.folder_id == project_id)
 
             if Flow.updated_at is not None:
                 stmt = stmt.order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
@@ -152,7 +152,7 @@ async def read_folder(
                 stmt = stmt.where(Flow.name.like(f"%{search}%"))  # type: ignore[attr-defined]
             paginated_flows = await paginate(session, stmt, params=params)
 
-            return FolderWithPaginatedFlows(folder=FolderRead.model_validate(folder), flows=paginated_flows)
+            return FolderWithPaginatedFlows(folder=ProjectRead.model_validate(project), flows=paginated_flows)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -198,7 +198,7 @@ async def update_folder(
 
         concat_folder_components = folder.components + folder.flows
 
-        flows_ids = (await session.exec(select(Flow.id).where(Flow.folder_id == existing_folder.id))).all()
+        flows_ids = (await session.exec(select(Flow.id).where(Flow.folder_id == existing_project.id))).all()
 
         excluded_flows = list(set(flows_ids) - set(concat_folder_components))
 
@@ -232,7 +232,7 @@ async def delete_folder(
 ):
     try:
         flows = (
-            await session.exec(select(Flow).where(Flow.folder_id == folder_id, Flow.user_id == current_user.id))
+            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
         ).all()
         if len(flows) > 0:
             for flow in flows:
@@ -271,7 +271,7 @@ async def download_file(
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
 
-        flows_query = select(Flow).where(Flow.folder_id == folder_id)
+        flows_query = select(Flow).where(Flow.folder_id == project_id)
         flows_result = await session.exec(flows_query)
         flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows_result.all()]
 
@@ -342,6 +342,6 @@ async def upload_file(
         flow_name = await generate_unique_flow_name(flow.name, current_user.id, session)
         flow.name = flow_name
         flow.user_id = current_user.id
-        flow.folder_id = new_folder.id
+        flow.folder_id = new_project.id
 
     return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
