@@ -52,6 +52,7 @@ export type APIClassType = {
   flow?: FlowType;
   field_order?: string[];
   tool_mode?: boolean;
+  type?: string;
   [key: string]:
     | Array<string>
     | string
