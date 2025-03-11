@@ -179,6 +179,7 @@ module.exports = {
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-components",
+        "Contributing/contributing-component-tests",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
