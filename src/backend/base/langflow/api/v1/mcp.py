@@ -355,5 +355,5 @@ async def handle_messages(request: Request):
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)
     except BrokenResourceError as e :
-        logger.info("Client disconnected from SSE connection")
-        raise HTTPException(status_code=404, detail=f"Client disconnected, error: {e}")
+        logger.info("MCP Server disconnected")
+        raise ValueError(status_code=404, detail=f"MCP Server disconnected, error: {e}")
