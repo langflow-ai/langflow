@@ -145,9 +145,7 @@
             "dataType": "File",
             "id": "File-GICjp",
             "name": "data",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": []
           },
           "targetHandle": {
             "fieldName": "data",
@@ -160,7 +158,7 @@
         },
         "id": "reactflow__edge-File-GICjp{œdataTypeœ:œFileœ,œidœ:œFile-GICjpœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-idUvo{œfieldNameœ:œdataœ,œidœ:œParseData-idUvoœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "source": "File-GICjp",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-GICjpœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-GICjpœ, œnameœ: œdataœ, œoutput_typesœ: []}",
         "target": "ParseData-idUvo",
         "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-idUvoœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
@@ -2139,14 +2137,42 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Data",
-                "method": "load_files",
-                "name": "data",
+                "display_name": "CSV",
+                "method": "load_csv",
+                "name": "data_csv",
                 "required_inputs": [],
-                "selected": "Data",
+                "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "DataFrame"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "JSON",
+                "method": "load_json",
+                "name": "data_json",
+                "required_inputs": [],
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Others",
+                "method": "load_others",
+                "name": "data_others",
+                "required_inputs": [],
+                "selected": "bytes",
+                "tool_mode": true,
+                "types": [
+                  "bytes"
                 ],
                 "value": "__UNDEFINED__"
               }
