@@ -213,22 +213,22 @@ class DataFrameOperationsComponent(Component):
     def replace_values(self, df: DataFrame) -> DataFrame:
         df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
         return DataFrame(df)
-        
+
     def convert_dataframe_to_base64(self, df: DataFrame) -> DataFrame:
         try:
             df = pd.DataFrame(df).copy()
             fig, ax = plt.subplots(figsize=(len(df.columns) * 1.2, len(df) * 0.5))
             ax.axis("tight")
             ax.axis("off")
-            ax.table(cellText=df.values, colLabels=df.columns, loc='center')
+            ax.table(cellText=df.values, colLabels=df.columns, loc="center")
 
             buf = io.BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
+            plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
             plt.close(fig)
             buf.seek(0)
-            
-            base64_image = base64.b64encode(buf.read()).decode('utf-8')
+
+            base64_image = base64.b64encode(buf.read()).decode("utf-8")
             return DataFrame(pd.DataFrame({"base64_image": [base64_image]}))
         except Exception as e:
-            self.status = f"Error: {str(e)}"
+            self.status = f"Error: {e!s}"
             return DataFrame(pd.DataFrame({"error": [str(e)]}))
