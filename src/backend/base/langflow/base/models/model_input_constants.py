@@ -8,6 +8,7 @@ from langflow.components.models.google_generative_ai import GoogleGenerativeAICo
 from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai import OpenAIModelComponent
+from langflow.components.models.tongyi import TongyiModelComponent
 from langflow.components.models.sambanova import SambaNovaComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
@@ -25,7 +26,11 @@ def get_filtered_inputs(component_class):
     base_input_names = {field.name for field in LCModelComponent._base_inputs}
     component_instance = component_class()
 
-    return [process_inputs(input_) for input_ in component_instance.inputs if input_.name not in base_input_names]
+    return [
+        process_inputs(input_)
+        for input_ in component_instance.inputs
+        if input_.name not in base_input_names
+    ]
 
 
 def process_inputs(component_data: Input):
@@ -71,7 +76,9 @@ def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Inpu
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
-        from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
+        from langflow.components.models.google_generative_ai import (
+            GoogleGenerativeAIComponent,
+        )
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
@@ -80,7 +87,9 @@ def _get_google_generative_ai_inputs_and_fields():
             "`pip install langchain-google-generative-ai`."
         )
         raise ImportError(msg) from e
-    return google_generative_ai_inputs, create_input_fields_dict(google_generative_ai_inputs, "")
+    return google_generative_ai_inputs, create_input_fields_dict(
+        google_generative_ai_inputs, ""
+    )
 
 
 def _get_openai_inputs_and_fields():
@@ -92,6 +101,17 @@ def _get_openai_inputs_and_fields():
         msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
         raise ImportError(msg) from e
     return openai_inputs, create_input_fields_dict(openai_inputs, "")
+
+
+def _get_tongyi_inputs_and_fields():
+    try:
+        from langflow.components.models.tongyi import TongyiModelComponent
+
+        tongyi_inputs = get_filtered_inputs(TongyiModelComponent)
+    except ImportError as e:
+        msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
+        raise ImportError(msg) from e
+    return tongyi_inputs, create_input_fields_dict(tongyi_inputs, "")
 
 
 def _get_azure_inputs_and_fields():
@@ -176,6 +196,18 @@ except ImportError:
     pass
 
 try:
+    tongyi_inputs, tongyi_fields = _get_tongyi_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Tongyi"] = {
+        "fields": tongyi_fields,
+        "inputs": tongyi_inputs,
+        "prefix": "",
+        "component_class": TongyiModelComponent(),
+        "icon": TongyiModelComponent.icon,
+    }
+except ImportError:
+    pass
+
+try:
     azure_inputs, azure_fields = _get_azure_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Azure OpenAI"] = {
         "fields": azure_fields,
@@ -236,7 +268,9 @@ except ImportError:
     pass
 
 try:
-    google_generative_ai_inputs, google_generative_ai_fields = _get_google_generative_ai_inputs_and_fields()
+    google_generative_ai_inputs, google_generative_ai_fields = (
+        _get_google_generative_ai_inputs_and_fields()
+    )
     MODEL_PROVIDERS_DICT["Google Generative AI"] = {
         "fields": google_generative_ai_fields,
         "inputs": google_generative_ai_inputs,
@@ -260,12 +294,24 @@ except ImportError:
     pass
 
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
-ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
+ALL_PROVIDER_FIELDS: list[str] = [
+    field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]
+]
 
-MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
+MODEL_DYNAMIC_UPDATE_FIELDS = [
+    "api_key",
+    "model",
+    "tool_model_enabled",
+    "base_url",
+    "model_name",
+]
 
 
 MODELS_METADATA = {
-    key: {"icon": MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None}
+    key: {
+        "icon": (
+            MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None
+        )
+    }
     for key in MODEL_PROVIDERS_DICT
 }

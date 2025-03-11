@@ -318,6 +318,7 @@ import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
+import { TongyiIcon } from "../icons/Tongyi";
 import { XAIIcon } from "../icons/xAI";
 import { iconsType } from "../types/components";
 
@@ -749,6 +750,7 @@ export const nodeIconsLucide: iconsType = {
   Wikipedia: WikipediaIcon,
   Arize: ArizeIcon,
   Apify: ApifyIcon,
+  Tongyi: TongyiIcon,
 
   //Node Icons
   model_specs: FileSliders,
