@@ -79,7 +79,7 @@ test(
 
     const secondParseDataOutput = await page
       .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(2);
+      .nth(1);
 
     const loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
