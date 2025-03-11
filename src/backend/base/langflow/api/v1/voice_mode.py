@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import os
+from collections import defaultdict
 
 # For sync queue and thread
 import queue
@@ -77,6 +78,10 @@ openai_realtime_session = {
     "tool_choice": "auto",
 }
 
+# Create a global dictionary to store queues for each session
+message_queues = defaultdict(asyncio.Queue)
+# Track active message processing tasks
+message_tasks = {}
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
     """Get flow from database."""
@@ -717,7 +722,10 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
 
 
 async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
-    message = MessageTable(
+    """Add a message to the database using a queue to ensure ordered processing."""
+    queue_key = f"{flow_id}:{session_id}"
+    
+    message_obj = MessageTable(
         text=message,
         sender=sender,
         sender_name=sender_name,
@@ -727,7 +735,34 @@ async def add_message_to_db(message, session, flow_id, session_id, sender, sende
         properties=Properties().model_dump(),
         content_blocks=[],
     )
-    await aadd_messagetables([message], session)
+    
+    await message_queues[queue_key].put(message_obj)
+    
+    if queue_key not in message_tasks or message_tasks[queue_key].done():
+        message_tasks[queue_key] = asyncio.create_task(process_message_queue(queue_key, session))
+
+async def process_message_queue(queue_key, session):
+    """Process messages from the queue one by one."""
+    try:
+        while True:
+            message = await message_queues[queue_key].get()
+            
+            try:
+                await aadd_messagetables([message], session)
+                logger.debug(f"Added message to DB: {message.text[:30]}...")
+            except Exception as e:
+                logger.error(f"Error saving message to database: {e}")
+                logger.error(traceback.format_exc())
+            finally:
+                message_queues[queue_key].task_done()
+                
+            if message_queues[queue_key].empty():
+                break
+    except asyncio.CancelledError:
+        logger.debug(f"Message queue processor for {queue_key} was cancelled")
+    except Exception as e:
+        logger.error(f"Error in message queue processor for {queue_key}: {e}")
+        logger.error(traceback.format_exc())
 
 
 def extract_transcript(json_data):
