@@ -1009,4 +1009,11 @@ export const POLLING_MESSAGES = {
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
-export const POLLING_INTERVAL = 100; // milliseconds between polling attempts
+export const POLLING_INTERVAL = 100;
+
+export const IS_AUTO_LOGIN =
+  !process?.env?.LANGFLOW_AUTO_LOGIN ||
+  String(process?.env?.LANGFLOW_AUTO_LOGIN)?.toLowerCase() !== "false";
+
+export const AUTO_LOGIN_RETRY_DELAY = 2000;
+export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;
