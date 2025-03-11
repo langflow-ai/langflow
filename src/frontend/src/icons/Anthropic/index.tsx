@@ -1,6 +1,6 @@
 import { useDarkStore } from "@/stores/darkStore";
 import React, { forwardRef } from "react";
-import SvgAnthropicBox from "./AnthropicBox";
+import SvgAnthropicBox from "./Anthropic";
 
 export const AnthropicIcon = forwardRef<
   SVGSVGElement,
@@ -8,7 +8,5 @@ export const AnthropicIcon = forwardRef<
 >((props, ref) => {
   const isDark = useDarkStore((state) => state.dark);
 
-  return (
-    <SvgAnthropicBox ref={ref} {...props} color={isDark ? "#fff" : "#000"} />
-  );
+  return <SvgAnthropicBox ref={ref} {...props} isDark={isDark} />;
 });
