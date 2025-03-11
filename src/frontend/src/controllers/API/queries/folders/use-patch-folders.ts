@@ -26,7 +26,7 @@ export const usePatchFolders: useMutationFunctionType<
     };
 
     const res = await api.patch(
-      `${getURL("FOLDERS")}/${newFolder.folderId}`,
+      `${getURL("PROJECTS")}/${newFolder.folderId}`,
       payload,
     );
     return res.data;
