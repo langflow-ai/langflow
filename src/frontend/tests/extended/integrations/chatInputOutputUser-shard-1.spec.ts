@@ -97,7 +97,7 @@ test(
 
     // Connect text output to first chat output
     const urlTextOutput = await page
-      .getByTestId("handle-url-shownode-message-right")
+      .getByTestId("handle-url-shownode-text-right")
       .nth(0);
     await urlTextOutput.hover();
     await page.mouse.down();
