@@ -530,7 +530,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "status": info["status"],
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
-                    "icon": "data",
                     "org_id": info["org_id"],
                 }
                 for name, info in self.get_database_list().items()
@@ -790,7 +789,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "status": "PENDING",
                 "collections": 0,
                 "api_endpoint": None,
-                "icon": "data",
                 "org_id": None,
             }
         )
