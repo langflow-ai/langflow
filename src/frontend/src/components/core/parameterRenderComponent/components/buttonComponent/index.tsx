@@ -22,6 +22,11 @@ const ButtonComponent = ({
   const [open, setOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(isDropdown);
 
+  const handleAuthButtonClick = () => {
+    window.open("https://en.wikipedia.org/wiki/DataStax", "_blank");
+    // setIsAuthenticated(!isAuthenticated);
+  };
+
   const initialActionData = [
     {
       name: "Accept a repository invitation",
@@ -67,7 +72,7 @@ const ButtonComponent = ({
             size="icon"
             variant="warning"
             className="h-9 w-10 rounded-md border border-accent-amber-foreground"
-            onClick={() => setOpen(true)}
+            onClick={handleAuthButtonClick}
           >
             <ForwardedIconComponent
               name="unplug"
