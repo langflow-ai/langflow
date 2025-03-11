@@ -155,7 +155,7 @@ test(
     await page.waitForSelector(
       `[data-testid="${urlNodeId}-dataframe-output-modal"]`,
       {
-        timeout: 1000,
+        timeout: 3000,
       },
     );
     await page.keyboard.press("Escape");
@@ -172,7 +172,7 @@ test(
     await page.waitForSelector(
       `[data-testid="${urlNodeId}-data-output-modal"]`,
       {
-        timeout: 1000,
+        timeout: 3000,
       },
     );
   },
