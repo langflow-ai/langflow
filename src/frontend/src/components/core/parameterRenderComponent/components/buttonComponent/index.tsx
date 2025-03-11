@@ -21,6 +21,7 @@ const ButtonComponent = ({
   const isDropdown = type !== "actions";
   const [open, setOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(isDropdown);
+  const helperIcon = "OctagonAlert";
 
   const handleAuthButtonClick = () => {
     window.open("https://en.wikipedia.org/wiki/DataStax", "_blank");
@@ -48,13 +49,16 @@ const ButtonComponent = ({
     <div className="flex w-full flex-col gap-2">
       <div className="flex w-full flex-row gap-2">
         <Button
-          variant={isDropdown ? "outline" : "default"}
+          variant={isDropdown ? "primary" : "default"}
           size="xs"
+          role="combobox"
           onClick={() => setOpen(true)}
-          className="w-full py-2"
+          className="dropdown-component-outline input-edit-node w-full py-2"
         >
           {isDropdown ? (
-            <div className="flex w-full items-center justify-start text-sm">
+            <div
+              className={cn("flex w-full items-center justify-start text-sm")}
+            >
               {name || "Select a tool..."}
               <ForwardedIconComponent
                 name="ChevronsUpDown"
@@ -62,7 +66,7 @@ const ButtonComponent = ({
               />
             </div>
           ) : (
-            <div className="flex items-center text-sm font-semibold">
+            <div className={cn("flex items-center text-sm font-semibold")}>
               {name || "Select action"}
             </div>
           )}
@@ -70,17 +74,33 @@ const ButtonComponent = ({
         {isAuthenticated && (
           <Button
             size="icon"
-            variant="warning"
-            className="h-9 w-10 rounded-md border border-accent-amber-foreground"
+            variant="destructive"
+            className="h-9 w-10 rounded-md border border-destructive"
             onClick={handleAuthButtonClick}
           >
             <ForwardedIconComponent
               name="unplug"
-              className="h-5 w-5 text-accent-amber-foreground"
+              className="h-5 w-5 text-destructive"
             />
           </Button>
         )}
       </div>
+      {!isAuthenticated && (
+        <div className="flex w-full flex-row items-center gap-2">
+          <ForwardedIconComponent
+            name={helperIcon ? helperIcon : "AlertCircle"}
+            className={cn("h-5 w-5", !isAuthenticated && "text-destructive")}
+          />
+          <div
+            className={cn(
+              "flex w-full flex-col text-xs text-muted-foreground",
+              !isAuthenticated && "text-destructive",
+            )}
+          >
+            Please connect before selecting tools
+          </div>
+        </div>
+      )}
 
       {!isDropdown && (
         <div className="flex w-full flex-col">
