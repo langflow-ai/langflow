@@ -8,17 +8,21 @@ from typing_extensions import override
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
 from langflow.helpers.data import docs_to_data
-from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MultilineInput, Output, StrInput
-from langflow.schema import Data
+from langflow.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, Output
+from langflow.schema import Data, DataFrame
 
 
 class LocalDBComponent(LCVectorStoreComponent):
     """Local Vector Store with search capabilities."""
 
     display_name: str = "Local DB"
-    description: str = "Local Vector Store for data storage and retrieval. Create local collections and search them using semantic similarity."
+    description: str = (
+        "Local Vector Store for data storage and retrieval. "
+        "Create local collections and search them using semantic similarity."
+    )
     name = "LocalDB"
     icon = "database"
+    ingest_data: list[Data] | DataFrame = []
 
     outputs = [
         Output(display_name="Search Results", name="dataframe", method="as_dataframe"),
@@ -32,7 +36,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             info="Select the operation mode",
             real_time_refresh=True,
         ),
-        StrInput(
+        MessageTextInput(
             name="collection_name",
             display_name="Name Your Collection",
             value="langflow",
@@ -49,15 +53,22 @@ class LocalDBComponent(LCVectorStoreComponent):
         BoolInput(
             name="persist",
             display_name="Persist",
-            info="Save the vector store to disk so it can be reused in future sessions. If enabled, data will be stored in the cache directory or a custom directory.",
+            info=(
+                "Save the vector store to disk so it can be reused in future sessions. "
+                "If enabled, data will be stored in the cache directory or a custom directory."
+            ),
             advanced=True,
             value=True,
             show=False,
         ),
-        StrInput(
+        MessageTextInput(
             name="persist_directory",
             display_name="Persist Directory",
-            info="Custom directory to save the vector store. If not specified, it will use a default directory in your system's cache folder under 'langflow/vector_stores/your_collection_name'.",
+            info=(
+                "Custom directory to save the vector store. "
+                "If not specified, it will use a default directory in your system's cache folder "
+                "under 'langflow/vector_stores/your_collection_name'."
+            ),
             advanced=True,
             show=False,
         ),
@@ -81,21 +92,30 @@ class LocalDBComponent(LCVectorStoreComponent):
             display_name="Cache Vector Store",
             value=True,
             advanced=True,
-            info="Cache the vector store in memory during the session. This improves performance when performing multiple operations on the same collection.",
+            info=(
+                "Cache the vector store in memory during the session. "
+                "This improves performance when performing multiple operations on the same collection."
+            ),
             show=False,
         ),
         HandleInput(
             name="embedding",
             display_name="Embedding",
             input_types=["Embeddings"],
-            info="The embedding model to use for converting your data into vectors. Required for both storing and searching.",
+            info=(
+                "The embedding model to use for converting your data into vectors. "
+                "Required for both storing and searching."
+            ),
             show=False,
         ),
         BoolInput(
             name="allow_duplicates",
             display_name="Allow Duplicates",
             advanced=True,
-            info="If false, data that is identical to existing entries will not be added to the vector store. This helps prevent duplicate content.",
+            info=(
+                "If false, data that is identical to existing entries will not be added to the vector store. "
+                "This helps prevent duplicate content."
+            ),
             show=False,
         ),
         DropdownInput(
@@ -103,7 +123,10 @@ class LocalDBComponent(LCVectorStoreComponent):
             display_name="Search Type",
             options=["Similarity", "MMR"],
             value="Similarity",
-            info="Similarity: Find the most similar entries. MMR (Maximal Marginal Relevance): Balance similarity with diversity in results.",
+            info=(
+                "Similarity: Find the most similar entries. "
+                "MMR (Maximal Marginal Relevance): Balance similarity with diversity in results."
+            ),
             advanced=True,
             show=False,
         ),
@@ -119,7 +142,10 @@ class LocalDBComponent(LCVectorStoreComponent):
             name="limit",
             display_name="Limit",
             advanced=True,
-            info="Maximum number of entries to compare when checking for duplicates. Only applies when Allow Duplicates is False.",
+            info=(
+                "Maximum number of entries to compare when checking for duplicates. "
+                "Only applies when Allow Duplicates is False."
+            ),
             show=False,
         ),
     ]
@@ -210,7 +236,6 @@ class LocalDBComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Chroma:
         """Builds the vector store object."""
         try:
-            from chromadb import Client
             from langchain_chroma import Chroma
         except ImportError as e:
             msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
