@@ -60,34 +60,23 @@ class TracingService(Service):
         self.project_name: str | None = None
         self._tracers: dict[str, BaseTracer] = {}
         self._logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
-        self.running = False
         self.end_trace_tasks: set[asyncio.Task] = set()
         self.deactivated = self.settings_service.settings.deactivate_tracing
         self.session_id: str | None = None
 
     async def start(self) -> None:
-        if self.running:
-            return
-        try:
-            self.running = True
-        except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
+        pass
 
     async def flush(self) -> None:
         # This method is kept for API compatibility but now has minimal implementation
         try:
             # Wait for any pending trace tasks to complete
-            if self.end_trace_tasks:
-                await asyncio.gather(*self.end_trace_tasks, return_exceptions=True)
+            await asyncio.gather(*self.end_trace_tasks)
         except Exception:  # noqa: BLE001
             logger.exception("Error flushing logs")
 
     async def stop(self) -> None:
-        try:
-            self.running = False
-            await self.flush()
-        except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+        await self.flush()
 
     def _reset_io(self) -> None:
         self.inputs = defaultdict(dict)
@@ -99,14 +88,12 @@ class TracingService(Service):
         if self.deactivated:
             return
         try:
-            await self.start()
-
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()
             self._initialize_arize_phoenix_tracer()
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error initializing tracers: {e}")
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error initializing tracers")
 
     def _initialize_langsmith_tracer(self) -> None:
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
