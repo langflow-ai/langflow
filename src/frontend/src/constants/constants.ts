@@ -870,11 +870,6 @@ export const defaultShortcuts = [
   },
   {
     display_name: "Freeze",
-    name: "Freeze",
-    shortcut: "mod+f",
-  },
-  {
-    display_name: "Freeze Path",
     name: "Freeze Path",
     shortcut: "mod+shift+f",
   },
