@@ -148,10 +148,10 @@ class GetMemoriesComponent(Component):
             error_data = {"error": error_message}
             error_df = DataFrame(data=[error_data])
             self.status = error_df
+            return error_df
         except (ValueError, RuntimeError) as e:
             error_message = f"Error: {e!s}"
-            error_data = {"error": {"type": type(e).__name__, "message": str(e)}}
+            error_data = {"error": error_message}
             error_df = DataFrame(data=[error_data])
             self.status = error_df
-        else:
             return error_df
