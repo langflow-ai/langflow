@@ -147,6 +147,7 @@ test(
     const textEdge = await page.locator(".react-flow__edge").first();
     await textEdge.click();
     await page.keyboard.press("Backspace");
+    await page.waitForTimeout(500);
 
     // Run and verify dataframe output is now shown
     await page.getByTestId("button_run_url").first().click();
@@ -164,6 +165,7 @@ test(
     const dataEdge = await page.locator(".react-flow__edge").first();
     await dataEdge.click();
     await page.keyboard.press("Backspace");
+    await page.waitForTimeout(500);
 
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
