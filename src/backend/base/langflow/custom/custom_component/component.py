@@ -870,7 +870,7 @@ class Component(CustomComponent):
     async def _build_with_tracing(self):
         inputs = self.get_trace_as_inputs()
         metadata = self.get_trace_as_metadata()
-        async with self._tracing_service.trace_context(self, self.trace_name, inputs, metadata):
+        async with self._tracing_service.trace_component(self, self.trace_name, inputs, metadata):
             results, artifacts = await self._build_results()
             self._tracing_service.set_outputs(self.trace_name, results)
 

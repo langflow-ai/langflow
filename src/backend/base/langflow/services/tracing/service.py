@@ -4,6 +4,7 @@ import asyncio
 import os
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -46,78 +47,153 @@ def _get_arize_phoenix_tracer():
     return ArizePhoenixTracer
 
 
+trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
+component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
+
+class TraceContext:
+    def __init__(
+        self,
+        run_id: UUID | None,
+        run_name: str | None,
+        project_name: str | None,
+        user_id: str | None,
+        session_id: str | None,
+    ):
+        self.run_id: UUID | None = run_id
+        self.run_name: str | None = run_name
+        self.project_name: str | None = project_name
+        self.user_id: str | None = user_id
+        self.session_id: str | None = session_id
+        self.tracers: dict[str, BaseTracer] = {}
+        self.all_inputs: dict[str, dict] = defaultdict(dict)
+        self.all_outputs: dict[str, dict] = defaultdict(dict)
+
+        self.traces_queue: asyncio.Queue = asyncio.Queue()
+        self.running = False
+        self.worker_task: asyncio.Task | None = None
+
+class ComponentTraceContext:
+    def __init__(
+            self,
+            trace_id: str | None,
+            trace_name: str | None,
+            trace_type: str | None,
+            vertex: Vertex | None,
+            inputs: dict[str, dict],
+            metadata: dict[str, dict]):
+        self.trace_id: str | None = trace_id
+        self.trace_name: str | None = trace_name
+        self.trace_type: str | None = trace_type
+        self.vertex: Vertex | None = vertex
+        self.inputs: dict[str, dict] = inputs
+        self.inputs_metadata: dict[str, dict] = metadata or {}
+        self.outputs: dict[str, dict] = defaultdict(dict)
+        self.outputs_metadata: dict[str, dict] = defaultdict(dict)
+        self.logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
+
 class TracingService(Service):
+    """Tracing service.
+
+    To trace a graph run:
+        1. start_tracers: start a trace for a graph run
+        2. with trace_component: start a sub-trace for a component build, three methods are available:
+            - add_log
+            - set_outputs
+            - get_langchain_callbacks
+        3. end_tracers: end the trace for a graph run
+    """
     name = "tracing_service"
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
-        self.inputs: dict[str, dict] = defaultdict(dict)
-        self.inputs_metadata: dict[str, dict] = defaultdict(dict)
-        self.outputs: dict[str, dict] = defaultdict(dict)
-        self.outputs_metadata: dict[str, dict] = defaultdict(dict)
-        self.run_name: str | None = None
-        self.run_id: UUID | None = None
-        self.project_name: str | None = None
-        self._tracers: dict[str, BaseTracer] = {}
-        self._logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
-        self.logs_queue: asyncio.Queue = asyncio.Queue()
-        self.running = False
-        self.worker_task: asyncio.Task | None = None
-        self.end_trace_tasks: set[asyncio.Task] = set()
         self.deactivated = self.settings_service.settings.deactivate_tracing
-        self.session_id: str | None = None
 
-    async def log_worker(self) -> None:
-        while self.running or not self.logs_queue.empty():
-            log_func, args = await self.logs_queue.get()
+    async def _trace_worker(self) -> None:
+        trace_context = trace_context_var.get()
+        while trace_context.running or not trace_context.traces_queue.empty():
+            trace_func, args = await trace_context.traces_queue.get()
             try:
-                await log_func(*args)
+                trace_func(*args)
             except Exception:  # noqa: BLE001
-                logger.exception("Error processing log")
+                logger.exception("Error processing trace_func")
             finally:
-                self.logs_queue.task_done()
+                trace_context.traces_queue.task_done()
 
-    async def start(self) -> None:
-        if self.running:
+    async def _start(self) -> None:
+        trace_context = trace_context_var.get()
+        if trace_context.running:
             return
         try:
-            self.running = True
-            self.worker_task = asyncio.create_task(self.log_worker())
+            trace_context.running = True
+            trace_context.worker_task = asyncio.create_task(self._trace_worker())
         except Exception:  # noqa: BLE001
             logger.exception("Error starting tracing service")
 
-    async def flush(self) -> None:
-        try:
-            await self.logs_queue.join()
-        except Exception:  # noqa: BLE001
-            logger.exception("Error flushing logs")
+    def _initialize_langsmith_tracer(self) -> None:
+        langsmith_tracer = _get_langsmith_tracer()
+        trace_context = trace_context_var.get()
+        trace_context.tracers["langsmith"] = langsmith_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+        )
 
-    async def stop(self) -> None:
-        try:
-            self.running = False
-            await self.flush()
-            # check the qeue is empty
-            if not self.logs_queue.empty():
-                await self.logs_queue.join()
-            if self.worker_task:
-                self.worker_task.cancel()
-                self.worker_task = None
+    def _initialize_langwatch_tracer(self) -> None:
+        trace_context = trace_context_var.get()
+        if ("langwatch" not in trace_context.tracers or
+                trace_context.tracers["langwatch"].trace_id != trace_context.run_id):
+            langwatch_tracer = _get_langwatch_tracer()
+            trace_context.tracers["langwatch"] = langwatch_tracer(
+                trace_name=trace_context.run_name,
+                trace_type="chain",
+                project_name=trace_context.project_name,
+                trace_id=trace_context.run_id,
+            )
 
-        except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+    def _initialize_langfuse_tracer(self) -> None:
+        langfuse_tracer = _get_langfuse_tracer()
+        trace_context = trace_context_var.get()
+        trace_context.tracers["langfuse"] = langfuse_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
 
-    def _reset_io(self) -> None:
-        self.inputs = defaultdict(dict)
-        self.inputs_metadata = defaultdict(dict)
-        self.outputs = defaultdict(dict)
-        self.outputs_metadata = defaultdict(dict)
+    def _initialize_arize_phoenix_tracer(self) -> None:
+        arize_phoenix_tracer = _get_arize_phoenix_tracer()
+        trace_context = trace_context_var.get()
+        trace_context.tracers["arize_phoenix"] = arize_phoenix_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id
+        )
 
-    async def initialize_tracers(self) -> None:
+    async def start_tracers(
+        self,
+        run_id: UUID,
+        run_name: str,
+        user_id: str | None,
+        session_id: str | None,
+        project_name: str | None = None,
+    ) -> None:
+        """Start a trace for a graph run.
+
+        - create a trace context
+        - start a worker for this trace context
+        - initialize the tracers
+        """
         if self.deactivated:
             return
         try:
-            await self.start()
-
+            project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
+            trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id)
+            trace_context_var.set(trace_context)
+            await self._start()
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()
@@ -125,149 +201,43 @@ class TracingService(Service):
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error initializing tracers: {e}")
 
-    def _initialize_langsmith_tracer(self) -> None:
-        project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
-        self.project_name = project_name
-        langsmith_tracer = _get_langsmith_tracer()
-        self._tracers["langsmith"] = langsmith_tracer(
-            trace_name=self.run_name,
-            trace_type="chain",
-            project_name=self.project_name,
-            trace_id=self.run_id,
-        )
+    async def _stop(self) -> None:
+        try:
+            trace_context = trace_context_var.get()
+            trace_context.running = False
+            # check the qeue is empty
+            if not trace_context.traces_queue.empty():
+                await trace_context.traces_queue.join()
+            if trace_context.worker_task:
+                trace_context.worker_task.cancel()
+                trace_context.worker_task = None
 
-    def _initialize_langwatch_tracer(self) -> None:
-        if "langwatch" not in self._tracers or self._tracers["langwatch"].trace_id != self.run_id:
-            langwatch_tracer = _get_langwatch_tracer()
-            self._tracers["langwatch"] = langwatch_tracer(
-                trace_name=self.run_name,
-                trace_type="chain",
-                project_name=self.project_name,
-                trace_id=self.run_id,
-            )
+        except Exception:  # noqa: BLE001
+            logger.exception("Error stopping tracing service")
 
-    def _initialize_langfuse_tracer(self) -> None:
-        self.project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
-        langfuse_tracer = _get_langfuse_tracer()
-        self._tracers["langfuse"] = langfuse_tracer(
-            trace_name=self.run_name,
-            trace_type="chain",
-            project_name=self.project_name,
-            trace_id=self.run_id,
-        )
-
-    def _initialize_arize_phoenix_tracer(self) -> None:
-        self.project_name = os.getenv("ARIZE_PHOENIX_PROJECT", "Langflow")
-        arize_phoenix_tracer = _get_arize_phoenix_tracer()
-        self._tracers["arize_phoenix"] = arize_phoenix_tracer(
-            trace_name=self.run_name,
-            trace_type="chain",
-            project_name=self.project_name,
-            trace_id=self.run_id,
-            session_id=self.session_id,
-        )
-
-    def set_run_name(self, name: str) -> None:
-        self.run_name = name
-
-    def set_run_id(self, run_id: UUID) -> None:
-        self.run_id = run_id
-
-    def _start_traces(
-        self,
-        trace_id: str,
-        trace_name: str,
-        trace_type: str,
-        inputs: dict[str, Any],
-        metadata: dict[str, Any] | None = None,
-        vertex: Vertex | None = None,
-    ) -> None:
-        inputs = self._cleanup_inputs(inputs)
-        self.inputs[trace_name] = inputs
-        self.inputs_metadata[trace_name] = metadata or {}
-        for tracer in self._tracers.values():
-            if not tracer.ready:
-                continue
-            try:
-                tracer.add_trace(trace_id, trace_name, trace_type, inputs, metadata, vertex)
-            except Exception:  # noqa: BLE001
-                logger.exception(f"Error starting trace {trace_name}")
-
-    def _end_traces(self, trace_id: str, trace_name: str, error: Exception | None = None) -> None:
-        for tracer in self._tracers.values():
+    def _end_all_tracers(self, outputs: dict, error: Exception | None = None) -> None:
+        trace_context = trace_context_var.get()
+        for tracer in trace_context.tracers.values():
             if tracer.ready:
                 try:
-                    tracer.end_trace(
-                        trace_id=trace_id,
-                        trace_name=trace_name,
-                        outputs=self.outputs[trace_name],
+                    # why all_inputs and all_outputs? why metadata=outputs?
+                    tracer.end(
+                        trace_context.all_inputs,
+                        outputs=trace_context.all_outputs,
                         error=error,
-                        logs=self._logs[trace_name],
+                        metadata=outputs,
                     )
                 except Exception:  # noqa: BLE001
-                    logger.exception(f"Error ending trace {trace_name}")
-        self._reset_io()
-
-    def _end_all_traces(self, outputs: dict, error: Exception | None = None) -> None:
-        for tracer in self._tracers.values():
-            if tracer.ready:
-                try:
-                    tracer.end(self.inputs, outputs=self.outputs, error=error, metadata=outputs)
-                except Exception:  # noqa: BLE001
                     logger.exception("Error ending all traces")
-        self._reset_io()
 
-    async def end(self, outputs: dict, error: Exception | None = None) -> None:
-        await asyncio.to_thread(self._end_all_traces, outputs, error)
-        await self.stop()
+    async def end_tracers(self, outputs: dict, error: Exception | None = None) -> None:
+        """End the trace for a graph run.
 
-    def add_log(self, trace_name: str, log: Log) -> None:
-        self._logs[trace_name].append(log)
-
-    @asynccontextmanager
-    async def trace_context(
-        self,
-        component: Component,
-        trace_name: str,
-        inputs: dict[str, Any],
-        metadata: dict[str, Any] | None = None,
-    ):
-        if self.deactivated:
-            yield self
-            return
-        trace_id = trace_name
-        if component._vertex:
-            trace_id = component._vertex.id
-        trace_type = component.trace_type
-        self._start_traces(
-            trace_id,
-            trace_name,
-            trace_type,
-            inputs,
-            metadata,
-            component._vertex,
-        )
-        try:
-            yield self
-        except Exception as e:
-            self._end_and_reset(trace_id, trace_name, e)
-            raise
-        else:
-            self._end_and_reset(trace_id, trace_name)
-
-    def _end_and_reset(self, trace_id: str, trace_name: str, error: Exception | None = None) -> None:
-        task = asyncio.create_task(asyncio.to_thread(self._end_traces, trace_id, trace_name, error))
-        self.end_trace_tasks.add(task)
-        task.add_done_callback(self.end_trace_tasks.discard)
-
-    def set_outputs(
-        self,
-        trace_name: str,
-        outputs: dict[str, Any],
-        output_metadata: dict[str, Any] | None = None,
-    ) -> None:
-        self.outputs[trace_name] |= outputs or {}
-        self.outputs_metadata[trace_name] |= output_metadata or {}
+        - stop worker for current trace_context
+        - call end for all the tracers
+        """
+        await self._stop()
+        self._end_all_tracers(outputs, error)
 
     @staticmethod
     def _cleanup_inputs(inputs: dict[str, Any]):
@@ -277,18 +247,104 @@ class TracingService(Service):
                 inputs[key] = "*****"  # avoid logging api_keys for security reasons
         return inputs
 
+    def _start_component_traces(
+        self,
+        ctc: ComponentTraceContext,
+    ) -> None:
+        inputs = self._cleanup_inputs(ctc.inputs)
+        ctc.inputs = inputs
+        ctc.inputs_metadata = ctc.inputs_metadata or {}
+        trace_context = trace_context_var.get()
+        for tracer in trace_context.tracers.values():
+            if not tracer.ready:
+                continue
+            try:
+                tracer.add_trace(ctc.trace_id, ctc.trace_name, ctc.trace_type, inputs, ctc.inputs_metadata, ctc.vertex)
+            except Exception:  # noqa: BLE001
+                logger.exception(f"Error starting trace {ctc.trace_name}")
+
+    def _end_component_traces(self, ctc: ComponentTraceContext, error: Exception | None = None) -> None:
+        trace_context = trace_context_var.get()
+        for tracer in trace_context.tracers.values():
+            if tracer.ready:
+                try:
+                    tracer.end_trace(
+                        trace_id=ctc.trace_id,
+                        trace_name=ctc.trace_name,
+                        outputs=trace_context.all_outputs[ctc.trace_name],
+                        error=error,
+                        logs=ctc.logs[ctc.trace_name],
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(f"Error ending trace {ctc.trace_name}")
+
+    @asynccontextmanager
+    async def trace_component(
+        self,
+        component: Component,
+        trace_name: str,
+        inputs: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+    ):
+        """Trace a component.
+
+        @param component: the component to trace
+        @param trace_name: component name + component id
+        @param inputs: the inputs to the component
+        @param metadata: the metadata to the component
+        """
+        if self.deactivated:
+            yield self
+            return
+        trace_id = trace_name
+        if component._vertex:
+            trace_id = component._vertex.id
+        trace_type = component.trace_type
+        ctc = ComponentTraceContext(trace_id, trace_name, trace_type, component._vertex, inputs, metadata)
+        component_context_var.set(ctc)
+        trace_context = trace_context_var.get()
+        trace_context.all_inputs[trace_name] |= inputs or {}
+        await trace_context.traces_queue.put((self._start_component_traces, (ctc,)))
+        try:
+            yield self
+        except Exception as e:
+            await trace_context.traces_queue.put((self._end_component_traces, (ctc, e)))
+            raise
+        else:
+            await trace_context.traces_queue.put((self._end_component_traces, (ctc, None)))
+
+    @property
+    def project_name(self):
+        trace_context = trace_context_var.get()
+        return trace_context.project_name
+
+    def add_log(self, trace_name: str, log: Log) -> None:
+        """Add a log to the current component trace context."""
+        component_context = component_context_var.get()
+        component_context.logs[trace_name].append(log)
+
+    def set_outputs(
+        self,
+        trace_name: str,
+        outputs: dict[str, Any],
+        output_metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Set the outputs for the current component trace context."""
+        component_context = component_context_var.get()
+        component_context.outputs[trace_name] |= outputs or {}
+        component_context.outputs_metadata[trace_name] |= output_metadata or {}
+        trace_context = trace_context_var.get()
+        trace_context.all_outputs[trace_name] |= outputs or {}
+
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
         if self.deactivated:
             return []
         callbacks = []
-        for tracer in self._tracers.values():
+        trace_context = trace_context_var.get()
+        for tracer in trace_context.tracers.values():
             if not tracer.ready:  # type: ignore[truthy-function]
                 continue
             langchain_callback = tracer.get_langchain_callback()
             if langchain_callback:
                 callbacks.append(langchain_callback)
         return callbacks
-
-    def set_session_id(self, session_id: str) -> None:
-        """Set the session ID for tracing."""
-        self.session_id = session_id
