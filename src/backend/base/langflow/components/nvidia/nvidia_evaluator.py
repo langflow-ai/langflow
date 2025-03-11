@@ -10,7 +10,6 @@ from huggingface_hub import HfApi
 from langflow.custom import Component
 from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import (
-    BoolInput,
     DataInput,
     DropdownInput,
     FloatInput,
