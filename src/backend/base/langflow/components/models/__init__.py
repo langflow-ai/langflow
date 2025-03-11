@@ -14,7 +14,7 @@ from .mistral import MistralAIModelComponent
 from .novita import NovitaModelComponent
 from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
-from .openai import OpenAIModelComponent
+from .openai_chat_model import OpenAIModelComponent
 from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
