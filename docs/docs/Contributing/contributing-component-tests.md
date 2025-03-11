@@ -1,6 +1,6 @@
 ---
-title: Write component tests
-slug: /components-write-component-tests
+title: Contribute component tests
+slug: /contributing-component-tests
 ---
 
 This guide outlines how to structure and implement tests for application components to ensure consistency and adequate coverage.
