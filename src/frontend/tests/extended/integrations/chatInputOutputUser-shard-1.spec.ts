@@ -147,11 +147,12 @@ test(
     const textEdge = await page.locator(".react-flow__edge").first();
     await textEdge.click();
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Run and verify dataframe output is now shown
     await page.getByTestId("button_run_url").first().click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(300);
     await page.keyboard.press("o");
     await page.waitForSelector(
       `[data-testid="${urlNodeId}-dataframe-output-modal"]`,
@@ -165,11 +166,12 @@ test(
     const dataEdge = await page.locator(".react-flow__edge").first();
     await dataEdge.click();
     await page.keyboard.press("Backspace");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(300);
     await page.keyboard.press("o");
     await page.waitForSelector(
       `[data-testid="${urlNodeId}-data-output-modal"]`,
