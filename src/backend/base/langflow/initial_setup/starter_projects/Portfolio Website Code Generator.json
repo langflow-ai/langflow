@@ -2155,10 +2155,10 @@
                 "method": "load_json",
                 "name": "data_json",
                 "required_inputs": [],
-                "selected": "Message",
+                "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Message"
+                  "Data"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -2169,10 +2169,10 @@
                 "method": "load_others",
                 "name": "data_others",
                 "required_inputs": [],
-                "selected": "bytes",
+                "selected": "Message",
                 "tool_mode": true,
                 "types": [
-                  "bytes"
+                  "Message"
                 ],
                 "value": "__UNDEFINED__"
               }
