@@ -230,7 +230,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
 
   return currentFlow && onFlowPage ? (
     <div
-      className="flex items-center justify-center gap-2 truncate"
+      className="flex w-full items-center justify-center gap-2"
       data-testid="menu_bar_wrapper"
     >
       <div
@@ -263,15 +263,15 @@ export const MenuBar = ({}: {}): JSX.Element => {
       </div>
 
       <div
-        className="overflow-hidden truncate text-sm sm:whitespace-normal"
+        className="shrink-0 overflow-hidden text-sm sm:whitespace-normal"
         data-testid="menu_bar_display"
       >
         <div
-          className="header-menu-bar-display-2 truncate"
+          className="header-menu-bar-display-2 shrink-0"
           data-testid="menu_bar_display_wrapper"
         >
           <div
-            className="header-menu-flow-name-2 truncate"
+            className="header-menu-flow-name-2 shrink-0"
             data-testid="flow-configuration-button"
           >
             <div
@@ -280,7 +280,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <Input
                 className={cn(
-                  "h-6 w-full cursor-text font-semibold",
+                  "h-6 w-full shrink-0 cursor-text font-semibold",
                   "bg-transparent pl-1 pr-0 transition-colors duration-200",
                   "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
                   !editingName && "text-primary hover:opacity-80",
@@ -301,7 +301,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre pl-1 font-semibold"
+                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre font-semibold"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
