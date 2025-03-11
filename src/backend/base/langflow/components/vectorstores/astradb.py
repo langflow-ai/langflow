@@ -611,10 +611,13 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         vectorize_providers: dict[str, list[list[str]]] = {"Bring your own": [[], []]}
 
         # Add the remaining items (only Nvidia) from the original dictionary
-        vectorize_providers.update({
-            k: v for k, v in vectorize_providers_api.items()
-            if k.lower() in ["nvidia"]  # TODO: Eventually support more
-        })
+        vectorize_providers.update(
+            {
+                k: v
+                for k, v in vectorize_providers_api.items()
+                if k.lower() in ["nvidia"]  # TODO: Eventually support more
+            }
+        )
 
         # Set provider options
         provider_field = "02_embedding_generation_provider"
@@ -622,9 +625,7 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
 
         # Add metadata for each provider option
         template[provider_field]["options_metadata"] = [
-            {
-                "icon": self.get_provider_icon(provider_name=provider)
-            } for provider in template[provider_field]["options"]
+            {"icon": self.get_provider_icon(provider_name=provider)} for provider in template[provider_field]["options"]
         ]
 
         # Get selected embedding provider
