@@ -28,10 +28,7 @@ export default function InputGlobalComponent({
   placeholder,
   isToolMode = false,
 }: InputProps<string, InputGlobalComponentType>): JSX.Element {
-  const setErrorData = useAlertStore((state) => state.setErrorData);
-
   const { data: globalVariables } = useGetGlobalVariables();
-  const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
   );
@@ -61,31 +58,9 @@ export default function InputGlobalComponent({
     }
   }, [globalVariables, unavailableFields]);
 
-  async function handleDelete(key: string) {
-    if (!globalVariables) return;
-    const id = globalVariables.find((variable) => variable.name === key)?.id;
-    if (id !== undefined) {
-      mutateDeleteGlobalVariable(
-        { id },
-        {
-          onSuccess: () => {
-            if (value === key && load_from_db) {
-              handleOnNewValue({ value: "", load_from_db: false });
-            }
-          },
-          onError: () => {
-            setErrorData({
-              title: "Error deleting variable",
-              list: [cn("ID not found for variable: ", key)],
-            });
-          },
-        },
-      );
-    } else {
-      setErrorData({
-        title: "Error deleting variable",
-        list: [cn("ID not found for variable: ", key)],
-      });
+  function handleDelete(key: string) {
+    if (value === key && load_from_db) {
+      handleOnNewValue({ value: "", load_from_db: false });
     }
   }
 
@@ -104,7 +79,10 @@ export default function InputGlobalComponent({
       optionsIcon="Globe"
       optionsButton={<GeneralGlobalVariableModal />}
       optionButton={(option) => (
-        <GeneralDeleteConfirmationModal option={option} />
+        <GeneralDeleteConfirmationModal
+          option={option}
+          onConfirmDelete={() => handleDelete(option)}
+        />
       )}
       selectedOption={
         load_from_db &&

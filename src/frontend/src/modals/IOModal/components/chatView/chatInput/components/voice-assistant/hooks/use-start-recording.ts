@@ -15,7 +15,16 @@ export const useStartRecording = async (
   handleGetMessagesMutation: () => void,
 ) => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const selectedMicrophone = localStorage.getItem("lf_selected_microphone");
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        noiseSuppression: true,
+        echoCancellation: true,
+        deviceId: selectedMicrophone
+          ? { exact: selectedMicrophone }
+          : undefined,
+      },
+    });
     if (!audioContextRef.current) return;
 
     microphoneRef.current =

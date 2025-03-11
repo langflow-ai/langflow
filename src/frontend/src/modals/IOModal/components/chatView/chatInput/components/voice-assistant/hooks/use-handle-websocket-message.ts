@@ -1,5 +1,5 @@
 import { BuildStatus } from "@/constants/enums";
-import { base64ToFloat32Array } from "../utils";
+import { base64ToFloat32Array } from "../helpers/utils";
 
 export const useHandleWebsocketMessage = (
   event: MessageEvent,
@@ -14,15 +14,16 @@ export const useHandleWebsocketMessage = (
   setMessage: React.Dispatch<React.SetStateAction<string>>,
   edges,
   setStatus: React.Dispatch<React.SetStateAction<string>>,
-  setShowApiKeyModal: React.Dispatch<React.SetStateAction<boolean>>,
   messagesStore,
   setEdges,
   addDataToFlowPool: (data: any, nodeId: string) => void,
   updateEdgesRunningByNodes: (nodeIds: string[], isRunning: boolean) => void,
   updateBuildStatus: (nodeIds: string[], status: BuildStatus) => void,
   hasOpenAIAPIKey: boolean,
+  showErrorAlert: (title: string, list: string[]) => void,
 ) => {
   const data = JSON.parse(event.data);
+
   switch (data.type) {
     case "response.content_part.added":
       if (data.part?.type === "text" && data.part.text) {
@@ -107,10 +108,17 @@ export const useHandleWebsocketMessage = (
 
     case "error":
       if (data.code === "api_key_missing") {
-        if (!hasOpenAIAPIKey) {
-          setShowApiKeyModal(true);
-        }
         setStatus("Error: " + "API key is missing");
+        showErrorAlert("API key not valid", [
+          "Please check your API key and try again",
+        ]);
+        return;
+      }
+      if (data.error.message.toLowerCase().includes("api key")) {
+        setStatus("Error: " + "API key is missing");
+        showErrorAlert("API key not valid", [
+          "Please check your API key and try again",
+        ]);
         return;
       }
       data.error.message === "Cancellation failed: no active response found"

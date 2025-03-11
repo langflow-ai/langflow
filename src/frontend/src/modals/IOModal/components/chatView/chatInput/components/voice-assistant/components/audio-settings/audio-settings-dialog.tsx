@@ -16,15 +16,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useGetVoiceList } from "@/controllers/API/queries/voice/use-get-voice-list";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
-import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
-import { toTitleCase } from "@/utils/utils";
+import {
+  getLocalStorage,
+  removeLocalStorage,
+  setLocalStorage,
+} from "@/utils/local-storage-util";
+import { cn } from "@/utils/utils";
 import { useEffect, useRef, useState } from "react";
+import AudioSettingsHeader from "./components/header";
+import MicrophoneSelect from "./components/microphone-select";
+import VoiceSelect from "./components/voice-select";
 
 interface SettingsVoiceModalProps {
   children?: React.ReactNode;
@@ -32,7 +38,11 @@ interface SettingsVoiceModalProps {
   userOpenaiApiKey?: string;
   userElevenLabsApiKey?: string;
   hasElevenLabsApiKeyEnv?: boolean;
-  setShowSettingsModal: (open: boolean) => void;
+  setShowSettingsModal: (
+    open: boolean,
+    openaiApiKey: string,
+    elevenLabsApiKey: string,
+  ) => void;
 }
 
 const SettingsVoiceModal = ({
@@ -47,9 +57,11 @@ const SettingsVoiceModal = ({
   const [open, setOpen] = useState<boolean>(initialOpen);
   const voices = useVoiceStore((state) => state.voices);
   const shouldFetchVoices = voices.length === 0;
-  const [openaiApiKey, setOpenaiApiKey] = useState<string>(userOpenaiApiKey!);
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>(
+    userOpenaiApiKey ?? "",
+  );
   const [elevenLabsApiKey, setElevenLabsApiKey] = useState<string>(
-    userElevenLabsApiKey!,
+    userElevenLabsApiKey ?? "",
   );
 
   const globalVariables = useGlobalVariablesStore(
@@ -64,12 +76,19 @@ const SettingsVoiceModal = ({
     }[]
   >([]);
 
-  const { data: voiceList, isFetched } = useGetVoiceList({
+  const {
+    data: voiceList,
+    isFetched,
+    refetch,
+  } = useGetVoiceList({
     enabled: shouldFetchVoices,
     refetchOnMount: shouldFetchVoices,
     refetchOnWindowFocus: shouldFetchVoices,
     staleTime: Infinity,
   });
+
+  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicrophone, setSelectedMicrophone] = useState<string>("");
 
   useEffect(() => {
     if (isFetched) {
@@ -83,7 +102,7 @@ const SettingsVoiceModal = ({
         setAllVoices(openaiVoices);
       }
     }
-  }, [voiceList, isFetched]);
+  }, [voiceList, isFetched, userElevenLabsApiKey]);
 
   useEffect(() => {
     const audioSettings = JSON.parse(
@@ -124,35 +143,47 @@ const SettingsVoiceModal = ({
 
   const handleSetOpen = (open: boolean) => {
     setOpen(open);
-    setShowSettingsModal(open);
+    setShowSettingsModal(open, openaiApiKey, elevenLabsApiKey);
   };
+
+  const checkIfGlobalVariableExists = (variable: string) => {
+    return globalVariables?.map((variable) => variable).includes(variable);
+  };
+
+  const handleSetMicrophone = (deviceId: string) => {
+    setSelectedMicrophone(deviceId);
+    localStorage.setItem("lf_selected_microphone", deviceId);
+  };
+
+  useEffect(() => {
+    setOpenaiApiKey(userOpenaiApiKey ?? "");
+  }, [userOpenaiApiKey]);
+
+  useEffect(() => {
+    setElevenLabsApiKey(userElevenLabsApiKey ?? "");
+
+    if (!userElevenLabsApiKey) {
+      handleSetVoice(openaiVoices[0].value);
+      setAllVoices(openaiVoices);
+      return;
+    }
+
+    refetch();
+  }, [userElevenLabsApiKey]);
 
   return (
     <>
       <DropdownMenu open={open} onOpenChange={handleSetOpen}>
         <DropdownMenuTrigger>{children}</DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-[324px]"
+          className="w-[324px] rounded-xl shadow-lg"
           sideOffset={18}
           alignOffset={-55}
           align="end"
         >
           <div ref={popupRef} className="rounded-3xl">
             <div>
-              <div className="grid gap-1 p-4">
-                <p className="flex items-center gap-2 text-sm text-primary">
-                  <IconComponent
-                    name="Settings"
-                    strokeWidth={ICON_STROKE_WIDTH}
-                    className="h-4 w-4 text-muted-foreground hover:text-foreground"
-                  />
-                  Voice settings
-                </p>
-                <p className="text-[13px] leading-4 text-muted-foreground">
-                  Voice chat is powered by OpenAI. You can also add more voices
-                  with ElevenLabs.
-                </p>
-              </div>
+              <AudioSettingsHeader />
               <Separator className="w-full" />
 
               <div className="w-full space-y-4 p-4">
@@ -160,7 +191,7 @@ const SettingsVoiceModal = ({
                   <span className="flex items-center text-sm">
                     OpenAI API Key
                     <span className="ml-1 text-destructive">*</span>
-                    <ShadTooltip content="The default provider is OpenAI.">
+                    <ShadTooltip content="OpenAI API key is required to use the voice assistant.">
                       <div>
                         <IconComponent
                           name="Info"
@@ -186,13 +217,20 @@ const SettingsVoiceModal = ({
                     optionsIcon="Globe"
                     optionsButton={<GeneralGlobalVariableModal />}
                     optionButton={(option) => (
-                      <GeneralDeleteConfirmationModal option={option} />
+                      <GeneralDeleteConfirmationModal
+                        option={option}
+                        onConfirmDelete={() => {}}
+                      />
                     )}
                     value={openaiApiKey}
                     onChange={(value) => {
                       setOpenaiApiKey(value);
                     }}
-                    selectedOption={openaiApiKey}
+                    selectedOption={
+                      checkIfGlobalVariableExists(openaiApiKey)
+                        ? openaiApiKey
+                        : ""
+                    }
                     setSelectedOption={setOpenaiApiKey}
                   />
                 </div>
@@ -200,7 +238,7 @@ const SettingsVoiceModal = ({
                 <div className="grid w-full items-center gap-2">
                   <span className="flex items-center text-sm">
                     ElevenLabs API Key
-                    <ShadTooltip content="The default provider is OpenAI.">
+                    <ShadTooltip content="If you have an ElevenLabs API key, you can select ElevenLabs voices.">
                       <div>
                         <IconComponent
                           name="Info"
@@ -226,48 +264,37 @@ const SettingsVoiceModal = ({
                     optionsIcon="Globe"
                     optionsButton={<GeneralGlobalVariableModal />}
                     optionButton={(option) => (
-                      <GeneralDeleteConfirmationModal option={option} />
+                      <GeneralDeleteConfirmationModal
+                        option={option}
+                        onConfirmDelete={() => {}}
+                      />
                     )}
                     value={elevenLabsApiKey}
                     onChange={(value) => {
                       setElevenLabsApiKey(value);
                     }}
-                    selectedOption={elevenLabsApiKey}
+                    selectedOption={
+                      checkIfGlobalVariableExists(elevenLabsApiKey)
+                        ? elevenLabsApiKey
+                        : ""
+                    }
                     setSelectedOption={setElevenLabsApiKey}
                   />
                 </div>
 
-                <div className="grid w-full items-center gap-2">
-                  <span className="flex w-full items-center text-sm">
-                    Voice
-                    <ShadTooltip content="You can select ElevenLabs voices if you have an ElevenLabs API key. Otherwise, you can only select OpenAI voices.">
-                      <div>
-                        <IconComponent
-                          name="Info"
-                          strokeWidth={2}
-                          className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
-                        />
-                      </div>
-                    </ShadTooltip>
-                  </span>
+                <VoiceSelect
+                  voice={voice}
+                  handleSetVoice={handleSetVoice}
+                  allVoices={allVoices}
+                />
 
-                  <Select value={voice} onValueChange={handleSetVoice}>
-                    <SelectTrigger className="h-9 w-full">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      <SelectGroup>
-                        {allVoices.map((voice) => (
-                          <SelectItem value={voice.value}>
-                            <div className="truncate text-left">
-                              {toTitleCase(voice.name)}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <MicrophoneSelect
+                  selectedMicrophone={selectedMicrophone}
+                  handleSetMicrophone={handleSetMicrophone}
+                  microphones={microphones}
+                  setMicrophones={setMicrophones}
+                  setSelectedMicrophone={setSelectedMicrophone}
+                />
               </div>
             </div>
           </div>

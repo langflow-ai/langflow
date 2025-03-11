@@ -1,22 +1,60 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import {
+  useDeleteGlobalVariables,
+  useGetGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import useAlertStore from "@/stores/alertStore";
 import { cn } from "@/utils/utils";
 
 interface GeneralDeleteConfirmationModalProps {
   option: string;
+  onConfirmDelete: () => void;
 }
 
 const GeneralDeleteConfirmationModal = ({
   option,
+  onConfirmDelete,
 }: GeneralDeleteConfirmationModalProps) => {
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { mutate: mutateDeleteGlobalVariable } = useDeleteGlobalVariables();
+  const { data: globalVariables } = useGetGlobalVariables();
+
+  async function handleDelete(key: string) {
+    if (!globalVariables) return;
+    const id = globalVariables.find((variable) => variable.name === key)?.id;
+    if (id !== undefined) {
+      mutateDeleteGlobalVariable(
+        { id },
+        {
+          onSuccess: () => {
+            onConfirmDelete();
+          },
+          onError: () => {
+            setErrorData({
+              title: "Error deleting variable",
+              list: [cn("ID not found for variable: ", key)],
+            });
+          },
+        },
+      );
+    } else {
+      setErrorData({
+        title: "Error deleting variable",
+        list: [cn("ID not found for variable: ", key)],
+      });
+    }
+  }
+
   return (
     <>
       <DeleteConfirmationModal
         onConfirm={(e) => {
           e.stopPropagation();
           e.preventDefault();
+          handleDelete(option);
         }}
         description={'variable "' + option + '"'}
         asChild

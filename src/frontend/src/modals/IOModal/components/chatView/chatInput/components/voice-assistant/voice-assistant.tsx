@@ -1,17 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
 import { useGetMessagesMutation } from "@/controllers/API/queries/messages/use-get-messages-mutation";
-import { usePostGlobalVariables } from "@/controllers/API/queries/variables";
+import {
+  useGetGlobalVariables,
+  usePostGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import { cn } from "@/utils/utils";
+import { AxiosError } from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import IconComponent from "../../../../../../../components/common/genericIconComponent";
-import AudioSettingsDialog from "./components/audio-settings-dialog";
+import AudioSettingsDialog from "./components/audio-settings/audio-settings-dialog";
+import { checkProvider } from "./helpers/check-provider";
+import { formatTime } from "./helpers/format-time";
+import { workletCode } from "./helpers/streamProcessor";
+import { useBarControls } from "./hooks/use-bar-controls";
 import { useHandleWebsocketMessage } from "./hooks/use-handle-websocket-message";
 import { useInitializeAudio } from "./hooks/use-initialize-audio";
 import { useInterruptPlayback } from "./hooks/use-interrupt-playback";
@@ -19,7 +26,6 @@ import { usePlayNextAudioChunk } from "./hooks/use-play-next-audio-chunk";
 import { useStartConversation } from "./hooks/use-start-conversation";
 import { useStartRecording } from "./hooks/use-start-recording";
 import { useStopRecording } from "./hooks/use-stop-recording";
-import { workletCode } from "./streamProcessor";
 interface VoiceAssistantProps {
   flowId: string;
   setShowAudioInput: (value: boolean) => void;
@@ -33,10 +39,11 @@ export function VoiceAssistant({
   const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showSettingsButton, setShowSettingsButton] = useState(false);
+  const [addKey, setAddKey] = useState(false);
+  const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
 
+  const waveformRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const processorRef = useRef<AudioWorkletNode | null>(null);
@@ -66,24 +73,33 @@ export function VoiceAssistant({
   const createVariable = usePostGlobalVariables();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentSessionId = useUtilityStore((state) => state.currentSessionId);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { data: globalVariables } = useGetGlobalVariables();
 
   const hasOpenAIAPIKey = useMemo(() => {
     return (
       variables?.find((variable) => variable === "OPENAI_API_KEY")?.length! > 0
     );
-  }, [variables, open]);
+  }, [variables, open, addKey]);
+
+  const hasElevenLabsApiKey = useMemo(() => {
+    return (
+      variables?.find((variable) => variable === "ELEVENLABS_API_KEY")
+        ?.length! > 0
+    );
+  }, [variables, addKey, open]);
 
   const openaiApiKey = useMemo(() => {
     return variables?.find((variable) => variable === "OPENAI_API_KEY");
-  }, [variables]);
+  }, [variables, addKey]);
 
   const elevenLabsApiKeyGlobalVariable = useMemo(() => {
     return variables?.find((variable) => variable === "ELEVENLABS_API_KEY");
-  }, [variables]);
+  }, [variables, addKey]);
 
   const hasElevenLabsApiKeyEnv = useMemo(() => {
     return Boolean(process.env?.ELEVENLABS_API_KEY);
-  }, [variables]);
+  }, [variables, addKey]);
 
   const getMessagesMutation = useGetMessagesMutation();
 
@@ -136,13 +152,13 @@ export function VoiceAssistant({
       setMessage,
       edges,
       setStatus,
-      setShowApiKeyModal,
       messagesStore,
       setEdges,
       addDataToFlowPool,
       updateEdgesRunningByNodes,
       updateBuildStatus,
       hasOpenAIAPIKey,
+      showErrorAlert,
     );
   };
 
@@ -162,6 +178,14 @@ export function VoiceAssistant({
     useInterruptPlayback(audioQueueRef, isPlayingRef, processorRef);
   };
 
+  useBarControls(
+    isRecording,
+    setRecordingTime,
+    barHeights,
+    setBarHeights,
+    recordingTime,
+  );
+
   const handleGetMessagesMutation = () => {
     getMessagesMutation.mutate({
       mode: "union",
@@ -170,18 +194,21 @@ export function VoiceAssistant({
   };
 
   useEffect(() => {
-    if (!hasOpenAIAPIKey) {
-      setShowSettingsButton(true);
-      return;
-    }
-    setShowSettingsButton(false);
     !isRecording ? initializeAudio() : stopRecording();
   }, [hasOpenAIAPIKey]);
 
-  const handleSave = async (apiKey: string) => {
+  const showErrorAlert = (title: string, list: string[]) => {
+    setErrorData({
+      title,
+      list,
+    });
+    setIsRecording(false);
+  };
+
+  const handleSaveApiKey = async (apiKey: string, variableName: string) => {
     try {
       await createVariable.mutateAsync({
-        name: "OPENAI_API_KEY",
+        name: variableName,
         value: apiKey,
         type: "secret",
         default_fields: ["voice_mode"],
@@ -189,21 +216,15 @@ export function VoiceAssistant({
       setSuccessData({
         title: SAVE_API_KEY_ALERT,
       });
-      setShowApiKeyModal(false);
+      setAddKey(!addKey);
     } catch (error) {
       console.error("Error saving API key:", error);
-    }
-  };
-
-  const checkProvider = () => {
-    const audioSettings = JSON.parse(
-      getLocalStorage("lf_audio_settings_playground") || "{}",
-    );
-    if (!audioSettings.provider) {
-      setLocalStorage(
-        "lf_audio_settings_playground",
-        JSON.stringify({ provider: "openai", voice: "alloy" }),
-      );
+      if (error instanceof AxiosError) {
+        setErrorData({
+          title: "Error saving API key",
+          list: [error.response?.data?.detail ?? "Error saving API key"],
+        });
+      }
     }
   };
 
@@ -219,46 +240,51 @@ export function VoiceAssistant({
     };
   }, []);
 
-  const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
-
-  const waveformRef = useRef<HTMLDivElement>(null);
-
-  const formatTime = (timeInSeconds: number): string => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}s`;
-  };
-
-  useEffect(() => {
-    if (isRecording) {
-      const interval = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-      return () => clearInterval(interval);
-    } else {
-      setBarHeights(Array(30).fill(20));
-    }
-  }, [isRecording]);
-
-  useEffect(() => {
-    if (!isRecording) return;
-
-    const newBarHeights = [...barHeights];
-
-    const position = 29 - (recordingTime % 30);
-
-    newBarHeights[position] = Math.floor(Math.random() * 40) + 60;
-
-    setBarHeights(newBarHeights);
-  }, [recordingTime, isRecording, barHeights]);
-
   const handleCloseAudioInput = () => {
     stopRecording();
     setShowAudioInput(false);
   };
 
-  const handleSetShowSettingsModal = (open: boolean) => {
+  const handleSetShowSettingsModal = async (
+    open: boolean,
+    openaiApiKey: string,
+    elevenLabsApiKey: string,
+  ) => {
     setShowSettingsModal(open);
+
+    if (!open) {
+      setRecordingTime(0);
+      setBarHeights(Array(30).fill(20));
+    }
+
+    if (
+      hasElevenLabsApiKey &&
+      elevenLabsApiKey &&
+      elevenLabsApiKey !== "ELEVENLABS_API_KEY"
+    ) {
+      setErrorData({
+        title: "There's already an API key saved",
+        list: ["Please select your ELEVENLABS_API_KEY"],
+      });
+      return;
+    }
+
+    if (hasOpenAIAPIKey && openaiApiKey && openaiApiKey !== "OPENAI_API_KEY") {
+      setErrorData({
+        title: "There's already an API key saved",
+        list: ["Please select your OPENAI_API_KEY"],
+      });
+      return;
+    }
+
+    if (openaiApiKey && openaiApiKey !== "OPENAI_API_KEY") {
+      await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY");
+    }
+
+    if (elevenLabsApiKey && elevenLabsApiKey !== "ELEVENLABS_API_KEY") {
+      await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY");
+    }
+
     if (!open && hasOpenAIAPIKey) {
       startConversation();
     }
@@ -266,11 +292,14 @@ export function VoiceAssistant({
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[324px] items-center justify-center rounded-md border bg-background p-3 shadow-xl">
+      <div
+        data-testid="voice-assistant-container"
+        className="mx-auto flex w-full max-w-[324px] items-center justify-center rounded-md border bg-background p-3 shadow-xl"
+      >
         <div
           className={cn(
             "flex items-center",
-            showSettingsButton ? "gap-3" : "gap-5",
+            hasOpenAIAPIKey ? "gap-3" : "gap-2",
           )}
         >
           <IconComponent
@@ -300,7 +329,7 @@ export function VoiceAssistant({
             {formatTime(recordingTime)}
           </div>
 
-          <div className={cn(showSettingsButton ? "block" : "hidden")}>
+          <div>
             <AudioSettingsDialog
               open={showSettingsModal}
               userOpenaiApiKey={openaiApiKey}
@@ -308,17 +337,49 @@ export function VoiceAssistant({
               hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}
               setShowSettingsModal={handleSetShowSettingsModal}
             >
-              <Button unstyled onClick={() => setShowSettingsModal(true)}>
-                <IconComponent
-                  name="Settings"
-                  strokeWidth={ICON_STROKE_WIDTH}
-                  className="relative top-[2px] h-4 w-4 text-muted-foreground hover:text-foreground"
-                />
-              </Button>
+              {hasOpenAIAPIKey ? (
+                <>
+                  <Button
+                    data-testid="voice-assistant-settings-icon"
+                    onClick={() => setShowSettingsModal(true)}
+                    unstyled
+                  >
+                    <IconComponent
+                      name="Settings"
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className={cn(
+                        "relative top-[2px] h-4 w-4 text-muted-foreground hover:text-foreground",
+                      )}
+                    />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant={"outlineDestructive"}
+                    size={"icon"}
+                    onClick={() => setShowSettingsModal(true)}
+                    data-testid="voice-assistant-settings-icon"
+                  >
+                    <IconComponent
+                      name="Settings"
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground hover:text-foreground",
+                        !hasOpenAIAPIKey && "text-destructive",
+                      )}
+                    />
+                  </Button>
+                </>
+              )}
             </AudioSettingsDialog>
           </div>
 
-          <Button unstyled onClick={handleCloseAudioInput}>
+          <Button
+            unstyled
+            onClick={handleCloseAudioInput}
+            data-testid="voice-assistant-close-button"
+          >
             <IconComponent
               name="X"
               strokeWidth={ICON_STROKE_WIDTH}

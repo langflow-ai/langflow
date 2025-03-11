@@ -12,8 +12,9 @@ const VoiceButton = ({ toggleRecording }: VoiceButtonProps) => {
       <div>
         <Button
           onClick={toggleRecording}
-          className={`btn-playground-actions group`}
+          className="btn-playground-actions group"
           unstyled
+          data-testid="voice-button"
         >
           <ForwardedIconComponent
             className={
