@@ -39,8 +39,13 @@ def vector_store_connection(cls):
             )
 
     def as_vector_store(self) -> VectorStore:
+        """Converts the current instance to a VectorStore object.
+
+        Returns:
+            VectorStore: The resulting VectorStore object.
+        """
         return self.build_vector_store()
 
-    cls.as_vector_store = as_vector_store # Ensures that the method is added to the class
+    cls.as_vector_store = as_vector_store  # Ensures that the method is added to the class
 
     return cls
