@@ -11,7 +11,7 @@ Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontext
 * Connect a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp) to Cursor
 * Connect a [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp) to Langflow
 
-This guide will show you how to use Langflow as an MCP server with Claude Desktop as the client.
+This guide shows you how to use Langflow as an MCP server with Claude Desktop as the client.
 
 ## Access all of your flows as tools from Claude Desktop
 
@@ -19,12 +19,12 @@ The MCP server configuration is added to Claude, which can then access all of yo
 
 ### Prerequisites
 
-* [Claude desktop](https://claude.ai/download) installed
-* [uv installed](https://docs.astral.sh/uv/getting-started/installation/) to run uvx commands
+* [Claude desktop](https://claude.ai/download) is installed.
+* [uv is installed](https://docs.astral.sh/uv/getting-started/installation/) to enable you to run uvx commands.
 
 ### Add Langflow as an MCP server to Claude
 
-1. Create at least one flow, and note your host, for example, `http://127.0.0.1:7863`.
+1. Create at least one flow, and note your host. For example, `http://127.0.0.1:7863`.
 
 2. Open Claude Desktop. Go to **Settings** > **Developer** > **Edit Config**.
 This opens `claude_desktop_config.json`, which describes to Claude what MCP servers are available.
@@ -59,8 +59,8 @@ Add the [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp)
 
 ### Prerequisites
 
-* [Cursor](https://cursor.com) installed
-* [An Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with an **Astra DB API endpoint** and **Astra DB application token**
+* [Cursor](https://cursor.com) is installed.
+* You have [an Astra DB vector database](https://docs.datastax.com/en/astra-db-serverless/get-started/quickstart.html) with an **Astra DB API endpoint** and **Astra DB application token**
 
 ### Add Astra DB as an MCP server in Cursor
 
