@@ -530,7 +530,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                     "status": info["status"],
                     "collections": info["collections"],
                     "api_endpoint": info["api_endpoint"],
-                    "icon": "data",
                     "org_id": info["org_id"],
                 }
                 for name, info in self.get_database_list().items()
@@ -790,7 +789,6 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                 "status": "PENDING",
                 "collections": 0,
                 "api_endpoint": None,
-                "icon": "data",
                 "org_id": None,
             }
         )
@@ -799,8 +797,15 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         """Update cloud provider regions in build config."""
         env = self.environment or "prod"
         cloud_provider = field_value["02_cloud_provider"]
+
+        # Update the region options based on the selected cloud provider
         template = build_config["database_name"]["dialog_inputs"]["fields"]["data"]["node"]["template"]
         template["03_region"]["options"] = self.map_cloud_providers()[env][cloud_provider]["regions"]
+
+        # Reset the the 03_region value if it's not in the new options
+        if template["03_region"]["value"] not in template["03_region"]["options"]:
+            template["03_region"]["value"] = None
+
         return build_config
 
     async def _create_new_collection(self, build_config: dict, field_value: dict) -> None:
