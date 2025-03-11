@@ -311,7 +311,7 @@ export default function Dropdown({
                   data-testid={`${option}-${index}-option`}
                 >
                   <div className="flex w-full items-center gap-2">
-                    {optionsMetaData && optionsMetaData.length > 0 && (
+                    {optionsMetaData?.[index]?.icon && (
                       <ForwardedIconComponent
                         name={optionsMetaData?.[index]?.icon || "Unknown"}
                         className="h-4 w-4 shrink-0 text-primary"
