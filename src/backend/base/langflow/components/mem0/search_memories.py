@@ -215,6 +215,8 @@ class SearchMemoriesComponent(Component):
                 data={"error": {"status_code": response.status_code, "message": response.text, "query": self.query}},
             )
             logger.error(f"API request failed: {error_data.data}")
+            self.status = [error_data]
+            return DataFrame([error_data])
 
         except (ValueError, KeyError, TypeError, httpx.HTTPStatusError) as e:
             error_message = f"Error: {e!s}"
@@ -222,5 +224,5 @@ class SearchMemoriesComponent(Component):
                 text=error_message, data={"error": {"type": type(e).__name__, "message": str(e), "query": self.query}}
             )
             logger.exception(f"Exception occurred during API request: {e!s}")
-        else:
-            return [error_data]
+            self.status = [error_data]
+            return DataFrame([error_data])
