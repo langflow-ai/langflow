@@ -64,20 +64,6 @@ class TracingService(Service):
         self.deactivated = self.settings_service.settings.deactivate_tracing
         self.session_id: str | None = None
 
-    async def start(self) -> None:
-        pass
-
-    async def flush(self) -> None:
-        # This method is kept for API compatibility but now has minimal implementation
-        try:
-            # Wait for any pending trace tasks to complete
-            await asyncio.gather(*self.end_trace_tasks)
-        except Exception:  # noqa: BLE001
-            logger.exception("Error flushing logs")
-
-    async def stop(self) -> None:
-        await self.flush()
-
     def _reset_io(self) -> None:
         self.inputs = defaultdict(dict)
         self.inputs_metadata = defaultdict(dict)
@@ -189,7 +175,11 @@ class TracingService(Service):
 
     async def end(self, outputs: dict, error: Exception | None = None) -> None:
         await asyncio.to_thread(self._end_all_traces, outputs, error)
-        await self.stop()
+        try:
+            # Wait for any pending trace tasks to complete
+            await asyncio.gather(*self.end_trace_tasks)
+        except Exception:  # noqa: BLE001
+            logger.exception("Error flushing logs")
 
     def add_log(self, trace_name: str, log: Log) -> None:
         self._logs[trace_name].append(log)
