@@ -3,7 +3,14 @@ import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { targetHandleType } from "@/types/flow";
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  forwardRef,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import ForwardedIconComponent, {
   default as IconComponent,
 } from "../../../../components/common/genericIconComponent";
@@ -40,14 +47,6 @@ const EyeIcon = memo(
 
 const SnowflakeIcon = memo(() => (
   <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
-));
-
-const ScanEyeIcon = memo(({ className }: { className: string }) => (
-  <IconComponent
-    className={className}
-    name="ScanEye"
-    strokeWidth={ICON_STROKE_WIDTH}
-  />
 ));
 
 // Memoize Button components
@@ -96,49 +95,56 @@ const HideShowButton = memo(
 );
 
 const InspectButton = memo(
-  ({
-    disabled,
-    displayOutputPreview,
-    unknownOutput,
-    errorOutput,
-    isToolMode,
-    title,
-    onClick,
-    id,
-  }: {
-    disabled: boolean | undefined;
-    displayOutputPreview: boolean;
-    unknownOutput: boolean | undefined;
-    errorOutput: boolean;
-    isToolMode: boolean;
-    title: string;
-    onClick: () => void;
-    id: string;
-  }) => (
-    <Button
-      disabled={disabled}
-      data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
-      unstyled
-      onClick={onClick}
-    >
-      <IconComponent
-        name="TextSearchIcon"
-        strokeWidth={ICON_STROKE_WIDTH}
-        className={cn(
-          "icon-size",
-          isToolMode
-            ? displayOutputPreview && !unknownOutput
-              ? "text-background hover:text-secondary-hover"
-              : "cursor-not-allowed text-placeholder-foreground opacity-80"
-            : displayOutputPreview && !unknownOutput
-              ? "text-foreground hover:text-primary-hover"
-              : "cursor-not-allowed text-placeholder-foreground opacity-60",
-          errorOutput ? "text-destructive" : "",
-        )}
-      />
-    </Button>
+  forwardRef(
+    (
+      {
+        disabled,
+        displayOutputPreview,
+        unknownOutput,
+        errorOutput,
+        isToolMode,
+        title,
+        onClick,
+        id,
+      }: {
+        disabled: boolean | undefined;
+        displayOutputPreview: boolean;
+        unknownOutput: boolean | undefined;
+        errorOutput: boolean;
+        isToolMode: boolean;
+        title: string;
+        onClick: () => void;
+        id: string;
+      },
+      ref: React.ForwardedRef<HTMLButtonElement>,
+    ) => (
+      <Button
+        ref={ref}
+        disabled={disabled}
+        data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
+        unstyled
+        onClick={onClick}
+      >
+        <IconComponent
+          name="TextSearchIcon"
+          strokeWidth={ICON_STROKE_WIDTH}
+          className={cn(
+            "icon-size",
+            isToolMode
+              ? displayOutputPreview && !unknownOutput
+                ? "text-background hover:text-secondary-hover"
+                : "cursor-not-allowed text-placeholder-foreground opacity-80"
+              : displayOutputPreview && !unknownOutput
+                ? "text-foreground hover:text-primary-hover"
+                : "cursor-not-allowed text-placeholder-foreground opacity-60",
+            errorOutput ? "text-destructive" : "",
+          )}
+        />
+      </Button>
+    ),
   ),
 );
+InspectButton.displayName = "InspectButton";
 
 const MemoizedOutputComponent = memo(OutputComponent);
 

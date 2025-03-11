@@ -10,7 +10,7 @@ export default function NodeDescription({
   description,
   selected,
   nodeId,
-  emptyPlaceholder = "Double Click to Edit Description",
+  emptyPlaceholder = "",
   placeholderClassName,
   charLimit,
   inputClassName,
@@ -69,23 +69,23 @@ export default function NodeDescription({
   }, [description]);
 
   const MemoizedMarkdown = memo(Markdown);
-  const renderedDescription = useMemo(
-    () =>
-      description === "" || !description ? (
-        emptyPlaceholder
-      ) : (
-        <MemoizedMarkdown
-          linkTarget="_blank"
-          className={cn(
-            "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
-            mdClassName,
-          )}
-        >
-          {String(description)}
-        </MemoizedMarkdown>
-      ),
-    [description, emptyPlaceholder, mdClassName],
-  );
+
+  const renderedDescription = useMemo(() => {
+    if (description === "" || !description) {
+      return emptyPlaceholder;
+    }
+    return (
+      <MemoizedMarkdown
+        linkTarget="_blank"
+        className={cn(
+          "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+          mdClassName,
+        )}
+      >
+        {String(description)}
+      </MemoizedMarkdown>
+    );
+  }, [description, emptyPlaceholder, mdClassName]);
 
   const handleBlurFn = () => {
     setNodeDescription(nodeDescription);
