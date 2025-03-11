@@ -23,19 +23,26 @@ const ListSelectionComponent = ({
   const [search, setSearch] = useState("");
 
   const handleSelectAction = (action: any) => {
-    // Check if the action is already selected
-    const isAlreadySelected = selectedAction.some(
-      (selectedItem) => selectedItem.id === action.id,
-    );
-
-    if (isAlreadySelected) {
-      // If already selected, remove it from the array
-      setSelectedAction(
-        selectedAction.filter((selectedItem) => selectedItem.id !== action.id),
+    if (type) {
+      // Check if the action is already selected
+      const isAlreadySelected = selectedAction.some(
+        (selectedItem) => selectedItem.id === action.id,
       );
+
+      if (isAlreadySelected) {
+        // If already selected, remove it from the array
+        setSelectedAction(
+          selectedAction.filter(
+            (selectedItem) => selectedItem.id !== action.id,
+          ),
+        );
+      } else {
+        // If not selected, add it to the array
+        setSelectedAction([...selectedAction, action]);
+      }
     } else {
-      // If not selected, add it to the array
-      setSelectedAction([...selectedAction, action]);
+      setSelectedAction([{ name: action?.name, icon: action?.icon }]);
+      onClose();
     }
   };
 

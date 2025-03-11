@@ -20,12 +20,13 @@ const ButtonComponent = ({
 }: ButtonComponentProps) => {
   const isDropdown = type !== "actions";
   const [open, setOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(isDropdown);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const helperIcon = "OctagonAlert";
 
   const handleAuthButtonClick = () => {
+    setIsAuthenticated(!isAuthenticated);
+
     window.open("https://en.wikipedia.org/wiki/DataStax", "_blank");
-    // setIsAuthenticated(!isAuthenticated);
   };
 
   const [actionData, setActionData] = useState<any[]>([]);
@@ -37,14 +38,28 @@ const ButtonComponent = ({
           variant={isDropdown ? "primary" : "default"}
           size="xs"
           role="combobox"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            if (!isAuthenticated && !isDropdown) {
+              setIsAuthenticated(!isAuthenticated);
+            } else {
+              setOpen(true);
+            }
+          }}
           className="dropdown-component-outline input-edit-node w-full py-2"
         >
           {isDropdown ? (
             <div
               className={cn("flex w-full items-center justify-start text-sm")}
             >
-              {name || "Select a tool..."}
+              {actionData[0]?.icon && (
+                <ForwardedIconComponent
+                  name={actionData[0]?.icon}
+                  className="mr-3 h-5 w-5"
+                />
+              )}
+              {actionData.length > 0
+                ? actionData.map((action) => action.name).join(", ")
+                : "Select a tool..."}
               <ForwardedIconComponent
                 name="ChevronsUpDown"
                 className="ml-auto h-5 w-5"
@@ -56,7 +71,7 @@ const ButtonComponent = ({
             </div>
           )}
         </Button>
-        {isAuthenticated && (
+        {isDropdown && !isAuthenticated && (
           <Button
             size="icon"
             variant="destructive"
@@ -70,7 +85,7 @@ const ButtonComponent = ({
           </Button>
         )}
       </div>
-      {!isAuthenticated && (
+      {!isDropdown && !isAuthenticated && (
         <div className="flex w-full flex-row items-center gap-2">
           <ForwardedIconComponent
             name={helperIcon ? helperIcon : "AlertCircle"}
