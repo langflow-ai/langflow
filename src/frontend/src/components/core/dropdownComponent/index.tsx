@@ -137,10 +137,10 @@ export default function Dropdown({
 
   // Effects
   useEffect(() => {
-    if ((disabled && value !== "") || options.length === 0) {
+    if (disabled && value !== "") {
       onSelect("", undefined, true);
     }
-  }, [disabled, options]);
+  }, [disabled]);
 
   useEffect(() => {
     if (open) {
