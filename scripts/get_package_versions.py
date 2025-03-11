@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Run this script with the command `python3 scripts/get_package_versions.py`
-#  to generate the supported-software.md file in the docs/docs/Support directory.
+#  to generate the luna-for-langflow.md file in the docs/docs/Support directory.
 # It extracts the package versions from the uv.lock file and categorizes them.
 
 import re
@@ -115,18 +115,30 @@ def generate_markdown(versions_info):
     # Include frontmatter and introduction
     md_content = [
         "---",
-        "title: Supported software versions",
-        "slug: /support-supported-software",
+        "title: Luna for Langflow",
+        "slug: /luna-for-langflow",
         "---",
         "",
-        "Support covers only the following software versions for Langflow.",
+        "With [Luna for Langflow](https://www.datastax.com/products/luna-langflow) support, you can develop and deploy Langflow applications with confidence.",
+        "",
+        "**Luna** is a subscription to the Langflow expertise at DataStax. It's meant for users of Langflow who want all the benefits of running their own open-source deployments, but with the peace of mind that comes with having direct access to the team that has authored the majority of the Langflow code.",
+        "",
+        "**Luna** subscribers can get help with general-purpose and technical questions for their open-source Langflow deployments, and if an issue is encountered, DataStax is there to help.",
+        "",
+        "Ready to subscribe?",
+        "",
+        "Visit the [Luna for Langflow](https://www.datastax.com/products/luna-langflow) product page to get started.",
+        "",
+        "## Supported software",
+        "",
+        "Luna for Langflow support covers only the following software versions for Langflow.",
         "",
         "Last updated: " + current_date,
         "",
-        "## Core Information",
+        "## Core information",
         "- **Langflow Version**: `" + versions_info["langflow_version"] + "`",
         "- **Python Version Required**: `" + versions_info["python_version"] + "`",
-        "\n## Dependencies",
+        "\n## Dependencies"
     ]
 
     # Add dependencies by category
@@ -142,7 +154,7 @@ def generate_markdown(versions_info):
 
 def main():
     uv_lock_path = Path(__file__).parent.parent / "uv.lock"
-    output_path = Path(__file__).parent.parent / "docs/docs/Support/supported-software.md"
+    output_path = Path(__file__).parent.parent / "docs/docs/Support/luna-for-langflow.md"
 
     if not uv_lock_path.exists():
         print(f"Error: Could not find uv.lock at {uv_lock_path}")
