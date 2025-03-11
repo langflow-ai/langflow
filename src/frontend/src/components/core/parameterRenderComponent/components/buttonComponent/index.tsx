@@ -113,7 +113,7 @@ const ButtonComponent = ({
                   variant="ghost"
                   className="ml-auto h-7 w-7 opacity-0 transition-opacity duration-200 hover:bg-red-100 hover:opacity-100"
                   onClick={() => {
-                    console.log("clicked");
+                    setActionData(actionData.filter((_, i) => i !== index));
                   }}
                 >
                   <ForwardedIconComponent
