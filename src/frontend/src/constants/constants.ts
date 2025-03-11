@@ -870,11 +870,6 @@ export const defaultShortcuts = [
   },
   {
     display_name: "Freeze",
-    name: "Freeze",
-    shortcut: "mod+f",
-  },
-  {
-    display_name: "Freeze Path",
     name: "Freeze Path",
     shortcut: "mod+shift+f",
   },
@@ -997,6 +992,9 @@ export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 
 export const GRADIENT_CLASS =
   "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
+
+export const GRADIENT_CLASS_DISABLED =
+  "linear-gradient(to right, hsl(var(--muted) / 0.3), hsl(var(--muted)))";
 
 export const RECEIVING_INPUT_VALUE = "Receiving input";
 
