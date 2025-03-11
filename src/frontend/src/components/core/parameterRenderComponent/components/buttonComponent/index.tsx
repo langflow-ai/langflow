@@ -28,22 +28,7 @@ const ButtonComponent = ({
     // setIsAuthenticated(!isAuthenticated);
   };
 
-  const initialActionData = [
-    {
-      name: "Accept a repository invitation",
-      id: 1,
-    },
-    {
-      name: "Add an email address for the repository",
-      id: 2,
-    },
-    {
-      name: "Add assignee to an issue",
-      id: 3,
-    },
-  ];
-
-  const [actionData, setActionData] = useState(initialActionData);
+  const [actionData, setActionData] = useState<any[]>([]);
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -130,8 +115,8 @@ const ButtonComponent = ({
                 </div>
                 <Button
                   size="icon"
-                  variant="ghost"
-                  className="ml-auto h-7 w-7 opacity-0 transition-opacity duration-200 hover:bg-red-100 hover:opacity-100"
+                  variant="outline"
+                  className="ml-auto h-7 w-7 opacity-0 transition-opacity duration-200 hover:border hover:border-destructive hover:bg-transparent hover:opacity-100"
                   onClick={() => {
                     setActionData(actionData.filter((_, i) => i !== index));
                   }}
@@ -147,7 +132,14 @@ const ButtonComponent = ({
         </div>
       )}
 
-      <ListSelectionComponent open={open} onClose={() => setOpen(false)} />
+      <ListSelectionComponent
+        open={open}
+        onClose={() => setOpen(false)}
+        hasSearch={isDropdown}
+        setSelectedAction={setActionData}
+        selectedAction={actionData}
+        type={!isDropdown}
+      />
     </div>
   );
 };
