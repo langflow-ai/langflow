@@ -106,23 +106,8 @@ class TracingService(Service):
 
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
-<<<<<<< HEAD
-=======
-        self.inputs: dict[str, dict] = defaultdict(dict)
-        self.inputs_metadata: dict[str, dict] = defaultdict(dict)
-        self.outputs: dict[str, dict] = defaultdict(dict)
-        self.outputs_metadata: dict[str, dict] = defaultdict(dict)
-        self.run_name: str | None = None
-        self.run_id: UUID | None = None
-        self.project_name: str | None = None
-        self._tracers: dict[str, BaseTracer] = {}
-        self._logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
-        self.running = False
-        self.end_trace_tasks: set[asyncio.Task] = set()
->>>>>>> qifu_fork/trace_service_context
         self.deactivated = self.settings_service.settings.deactivate_tracing
 
-<<<<<<< HEAD
     async def _trace_worker(self) -> None:
         trace_context = trace_context_var.get()
         while trace_context.running or not trace_context.traces_queue.empty():
@@ -177,31 +162,6 @@ class TracingService(Service):
             user_id=trace_context.user_id,
             session_id=trace_context.session_id,
         )
-=======
-    async def start(self) -> None:
-        if self.running:
-            return
-        try:
-            self.running = True
-        except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
-
-    async def flush(self) -> None:
-        # This method is kept for API compatibility but now has minimal implementation
-        try:
-            # Wait for any pending trace tasks to complete
-            if self.end_trace_tasks:
-                await asyncio.gather(*self.end_trace_tasks, return_exceptions=True)
-        except Exception:  # noqa: BLE001
-            logger.exception("Error flushing logs")
-
-    async def stop(self) -> None:
-        try:
-            self.running = False
-            await self.flush()
-        except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
->>>>>>> qifu_fork/trace_service_context
 
     def _initialize_arize_phoenix_tracer(self) -> None:
         arize_phoenix_tracer = _get_arize_phoenix_tracer()
