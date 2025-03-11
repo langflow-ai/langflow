@@ -1939,8 +1939,31 @@ export function someFlowTemplateFields(
   });
 }
 
-export function checkHasToolMode(template: APITemplateType) {
-  return template && Object.values(template).some((field) => field.tool_mode);
+/**
+ * Determines if the provided API template supports tool mode.
+ *
+ * A template is considered to support tool mode if either:
+ * - It contains only the 'code' and '_type' fields (with both being truthy),
+ *   indicating that no additional fields exist.
+ * - At least one field in the template has a truthy 'tool_mode' property.
+ *
+ * @param template - The API template to evaluate.
+ * @returns True if the template supports tool mode capability; otherwise, false.
+ */
+export function checkHasToolMode(template: APITemplateType): boolean {
+  if (!template) return false;
+
+  const templateKeys = Object.keys(template);
+  const hasNoAdditionalFields =
+    templateKeys.length === 2 &&
+    Boolean(template.code) &&
+    Boolean(template._type);
+
+  const hasToolModeFields = Object.values(template).some((field) =>
+    Boolean(field.tool_mode),
+  );
+
+  return hasNoAdditionalFields || hasToolModeFields;
 }
 
 export function buildPositionDictionary(nodes: AllNodeType[]) {
