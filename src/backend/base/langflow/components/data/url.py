@@ -1,18 +1,22 @@
-import re
+from typing import Optional
+from langchain_community.document_loaders import RecursiveUrlLoader
+from bs4 import BeautifulSoup
+import logging
 
-from langchain_community.document_loaders import AsyncHtmlLoader, WebBaseLoader
-
-from langflow.custom import Component
-from langflow.helpers.data import data_to_text
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.custom.custom_component.component import Component
+from langflow.io import IntInput, BoolInput, Output, MessageTextInput, DropdownInput
 from langflow.schema import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
+from langflow.schema.dataframe import DataFrame
+from langflow.helpers.data import data_to_text
 
+logger = logging.getLogger(__name__)
 
 class URLComponent(Component):
+    """A component that loads and parses child links from a root URL recursively."""
+
     display_name = "URL"
-    description = "Load and retrive data from specified URLs."
+    description = "Load and parse child links from a root URL recursively"
     icon = "layout-template"
     name = "URL"
 
@@ -20,10 +24,40 @@ class URLComponent(Component):
         MessageTextInput(
             name="urls",
             display_name="URLs",
+            info="Enter one or more URLs to crawl recursively, by clicking the '+' button.",
             is_list=True,
             tool_mode=True,
             placeholder="Enter a URL...",
             list_add_label="Add URL",
+        ),
+        IntInput(
+            name="max_depth",
+            display_name="Max Depth",
+            info=(
+                "Controls how many 'clicks' away from the initial page the crawler will go:\n"
+                "- depth 1: only the initial page\n"
+                "- depth 2: initial page + all pages linked directly from it\n"
+                "- depth 3: initial page + direct links + links found on those direct link pages\n"
+                "Note: This is about link traversal, not URL path depth."
+            ),
+            value=1,
+            required=False,
+        ),
+        BoolInput(
+            name="prevent_outside",
+            display_name="Prevent Outside",
+            info="If enabled, only crawls URLs within the same domain as the root URL. This helps prevent the crawler from going to external websites.",
+            value=True,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="use_async",
+            display_name="Use Async",
+            info="If enabled, uses asynchronous loading which can be significantly faster but might use more system resources.",
+            value=True,
+            required=False,
+            advanced=True,
         ),
         DropdownInput(
             name="format",
@@ -31,6 +65,7 @@ class URLComponent(Component):
             info="Output Format. Use 'Text' to extract the text from the HTML or 'Raw HTML' for the raw HTML content.",
             options=["Text", "Raw HTML"],
             value="Text",
+            advanced=True,
         ),
     ]
 
@@ -40,57 +75,48 @@ class URLComponent(Component):
         Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
     ]
 
-    def ensure_url(self, string: str) -> str:
-        """Ensures the given string is a URL by adding 'http://' if it doesn't start with 'http://' or 'https://'.
-
-        Raises an error if the string is not a valid URL.
-
-        Parameters:
-            string (str): The string to be checked and possibly modified.
-
-        Returns:
-            str: The modified string that is ensured to be a URL.
-
-        Raises:
-            ValueError: If the string is not a valid URL.
-        """
-        if not string.startswith(("http://", "https://")):
-            string = "http://" + string
-
-        # Basic URL validation regex
-        url_regex = re.compile(
-            r"^(https?:\/\/)?"  # optional protocol
-            r"(www\.)?"  # optional www
-            r"([a-zA-Z0-9.-]+)"  # domain
-            r"(\.[a-zA-Z]{2,})?"  # top-level domain
-            r"(:\d+)?"  # optional port
-            r"(\/[^\s]*)?$",  # optional path
-            re.IGNORECASE,
-        )
-
-        if not url_regex.match(string):
-            msg = f"Invalid URL: {string}"
-            raise ValueError(msg)
-
-        return string
+    def ensure_url(self, url: str) -> str:
+        """Ensure URL starts with http:// or https://"""
+        if not url.startswith(("http://", "https://")):
+            url = "https://" + url
+        return url
 
     def fetch_content(self) -> list[Data]:
-        urls = [self.ensure_url(url.strip()) for url in self.urls if url.strip()]
-        if self.format == "Raw HTML":
-            loader = AsyncHtmlLoader(web_path=urls, encoding="utf-8")
-        else:
-            loader = WebBaseLoader(web_paths=urls, encoding="utf-8")
-        docs = loader.load()
-        data = [Data(text=doc.page_content, **doc.metadata) for doc in docs]
-        self.status = data
-        return data
+        """Load documents from the URLs."""
+        all_docs = []
+        try:
+            for url in [url.strip() for url in self.urls if url.strip()]:
+                url = self.ensure_url(url)
+                logger.info(f"Loading documents from {url}")
+
+                extractor = (lambda x: x) if self.format == "Raw HTML" else (lambda x: BeautifulSoup(x, "lxml").get_text())
+                loader = RecursiveUrlLoader(
+                    url=url,
+                    max_depth=self.max_depth,
+                    prevent_outside=self.prevent_outside,
+                    use_async=self.use_async,
+                    extractor=extractor
+                )
+
+                docs = loader.load()
+                logger.info(f"Found {len(docs)} documents from {url}")
+                all_docs.extend(docs)
+
+            data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
+            self.status = data
+            return data
+
+        except Exception as e:
+            logger.error(f"Error loading documents: {str(e)}")
+            raise ValueError(f"Error loading documents: {str(e)}")
 
     def fetch_content_text(self) -> Message:
+        """Load documents and return their text content."""
         data = self.fetch_content()
-
         result_string = data_to_text("{text}", data)
         self.status = result_string
         return Message(text=result_string)
 
     def as_dataframe(self) -> DataFrame:
+        """Convert the documents to a DataFrame."""
         return DataFrame(self.fetch_content())
