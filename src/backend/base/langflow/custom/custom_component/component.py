@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
 
 import nanoid
+import pandas as pd
 import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
@@ -30,6 +31,7 @@ from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
+from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
@@ -49,7 +51,6 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
-    from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType
 
 
@@ -1081,11 +1082,11 @@ class Component(CustomComponent):
         tools = await self._get_tools()
 
         if hasattr(self, TOOLS_METADATA_INPUT_NAME):
-            tools = self._filter_tools_by_status(tools, self.tools_metadata)
-            return self._update_tools_with_metadata(tools, self.tools_metadata)
+            tools = self._filter_tools_by_status(tools=tools, metadata=self.tools_metadata)
+            return self._update_tools_with_metadata(tools=tools, metadata=self.tools_metadata)
 
         # If no metadata exists yet, filter based on enabled_tools
-        return self._filter_tools_by_status(tools)
+        return self._filter_tools_by_status(tools=tools, metadata=None)
 
     async def _get_tools(self) -> list[Tool]:
         """Get the list of tools for this component.
@@ -1111,7 +1112,7 @@ class Component(CustomComponent):
     def check_for_tool_tag_change(self, old_tags: list[str], new_tags: list[str]) -> bool:
         return old_tags != new_tags
 
-    def _filter_tools_by_status(self, tools: list[Tool], metadata: list[dict] | None = None) -> list[Tool]:
+    def _filter_tools_by_status(self, tools: list[Tool], metadata: pd.DataFrame | None) -> list[Tool]:
         """Filter tools based on their status in metadata.
 
         Args:
@@ -1121,15 +1122,31 @@ class Component(CustomComponent):
         Returns:
             list[Tool]: Filtered list of tools.
         """
-        if not metadata:
+        # Check if metadata is None or empty
+        if isinstance(metadata, pd.DataFrame):
+            metadata = metadata.to_dict(orient="records")
+        if (
+            metadata is None
+            or (isinstance(metadata, list) and len(metadata) == 0)
+            or (isinstance(metadata, DataFrame) and metadata.empty)
+        ):
             # If no metadata, use the enabled_tools property
             enabled = self.enabled_tools
             if enabled is None:
                 return tools
             return [tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)]
 
+        # Convert DataFrame to list of dicts if needed
+        if isinstance(metadata, DataFrame):
+            metadata_dict = metadata.to_dict(orient="records")
+        elif isinstance(metadata, str):
+            # Handle case where metadata might be a string
+            return tools
+        else:
+            metadata_dict = metadata
+
         # Create a mapping of tool names to their status
-        tool_status = {item["name"]: item.get("status", True) for item in metadata}
+        tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
         return [tool for tool in tools if tool_status.get(tool.name, True)]
 
     async def _build_tools_metadata_input(self):
@@ -1187,7 +1204,7 @@ class Component(CustomComponent):
             table_options=TableOptions(
                 block_add=True,
                 block_delete=True,
-                block_edit=False,  # Allow editing for status toggle
+                block_edit=True,  # Allow editing for status toggle
                 block_sort=True,
                 block_filter=True,
                 block_hide=True,
