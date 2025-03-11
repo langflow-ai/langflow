@@ -31,7 +31,6 @@ from langflow.helpers.custom import format_type
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
-from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
@@ -51,6 +50,7 @@ if TYPE_CHECKING:
     from langflow.graph.edge.schema import EdgeData
     from langflow.graph.vertex.base import Vertex
     from langflow.inputs.inputs import InputTypes
+    from langflow.schema.dataframe import DataFrame
     from langflow.schema.log import LoggableType
 
 
@@ -1122,28 +1122,25 @@ class Component(CustomComponent):
         Returns:
             list[Tool]: Filtered list of tools.
         """
-        # Check if metadata is None or empty
+        # Convert metadata to a list of dicts if it's a DataFrame
+        metadata_dict = None
         if isinstance(metadata, pd.DataFrame):
-            metadata = metadata.to_dict(orient="records")
-        if (
-            metadata is None
-            or (isinstance(metadata, list) and len(metadata) == 0)
-            or (isinstance(metadata, DataFrame) and metadata.empty)
-        ):
-            # If no metadata, use the enabled_tools property
-            enabled = self.enabled_tools
-            if enabled is None:
-                return tools
-            return [tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)]
-
-        # Convert DataFrame to list of dicts if needed
-        if isinstance(metadata, DataFrame):
             metadata_dict = metadata.to_dict(orient="records")
-        elif isinstance(metadata, str):
-            # Handle case where metadata might be a string
+
+        # If metadata is None or empty, use enabled_tools
+        if not metadata_dict:
+            enabled = self.enabled_tools
+            return (
+                tools
+                if enabled is None
+                else [
+                    tool for tool in tools if any(enabled_name in [tool.name, *tool.tags] for enabled_name in enabled)
+                ]
+            )
+
+        # Ensure metadata is a list of dicts
+        if not isinstance(metadata_dict, list):
             return tools
-        else:
-            metadata_dict = metadata
 
         # Create a mapping of tool names to their status
         tool_status = {item["name"]: item.get("status", True) for item in metadata_dict}
