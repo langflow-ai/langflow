@@ -418,6 +418,8 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
                         )
                     )
                 except Exception:  # noqa: BLE001
+                    if db.status != "PENDING":
+                        continue
                     num_collections = 0
 
                 # Add the database to the dictionary
