@@ -196,5 +196,16 @@ module.exports = {
         },
       ],
     },
+    {
+      type: "category",
+      label: "Support",
+      items: [
+        {
+          type: "doc",
+          id: "Support/luna-for-langflow",
+          label: "Luna for Langflow",
+        },
+      ],
+    },
   ],
 };
