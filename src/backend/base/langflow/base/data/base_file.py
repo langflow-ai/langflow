@@ -239,7 +239,7 @@ class BaseFileComponent(Component, ABC):
                     self.log(f"Error processing CSV file {data.path}: {e}")
         return csv_data
 
-    def load_json(self) -> list[Message]:
+    def load_json(self) -> list[Data]:
         """Loads JSON files by calling load_files().
 
         Returns:
@@ -248,19 +248,9 @@ class BaseFileComponent(Component, ABC):
         # Explicitly call load_files() from your original code
         all_processed_data = self.load_files()
 
-        # Filter for JSON data and convert to dictionaries
-        json_data = []
-        for data in all_processed_data:
-            if hasattr(data, "path") and str(data.path).lower().endswith(".json"):
-                try:
-                    with open(data.path) as f:  # noqa: PTH123
-                        json_content = json.load(f)
-                        json_data.append(Message(data=json_content))
-                except Exception as e:  # noqa: BLE001
-                    self.log(f"Error processing JSON file {data.path}: {e}")
-        return json_data
+        return all_processed_data
 
-    def load_others(self) -> list[bytes]:
+    def load_others(self) -> list[Message]:
         """Loads other file types by calling load_files().
 
         Returns:
@@ -278,7 +268,7 @@ class BaseFileComponent(Component, ABC):
                     try:
                         with open(data.path, "rb") as f:  # noqa: PTH123
                             content = f.read()
-                            other_data.append(content)
+                            other_data.append(Message(data=content))
                     except Exception as e:  # noqa: BLE001
                         self.log(f"Error processing file {data.path}: {e}")
         return other_data
