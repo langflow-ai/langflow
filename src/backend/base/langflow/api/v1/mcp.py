@@ -352,4 +352,8 @@ async def handle_sse(request: Request, current_user: Annotated[User, Depends(get
 
 @router.post("/")
 async def handle_messages(request: Request):
-    await sse.handle_post_message(request.scope, request.receive, request._send)
+    try:
+        await sse.handle_post_message(request.scope, request.receive, request._send)
+    except BrokenResourceError as e :
+        logger.info("MCP Server disconnected")
+        raise ValueError(status_code=404, detail=f"MCP Server disconnected, error: {e}")
