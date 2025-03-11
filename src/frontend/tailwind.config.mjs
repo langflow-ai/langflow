@@ -262,6 +262,7 @@ const config = {
         "cosmic-void": "hsl(var(--cosmic-void))",
         "slider-input-border": "var(--slider-input-border)",
         "zinc-foreground": "hsl(var(--zinc-foreground))",
+        "red-foreground": "hsl(var(--red-foreground))",
       },
       borderRadius: {
         lg: `var(--radius)`,

@@ -194,7 +194,7 @@ export function VoiceAssistant({
   };
 
   useEffect(() => {
-    !isRecording ? initializeAudio() : stopRecording();
+    !isRecording && hasOpenAIAPIKey ? initializeAudio() : stopRecording();
   }, [hasOpenAIAPIKey]);
 
   const showErrorAlert = (title: string, list: string[]) => {
@@ -294,7 +294,7 @@ export function VoiceAssistant({
     <>
       <div
         data-testid="voice-assistant-container"
-        className="mx-auto flex w-full max-w-[324px] items-center justify-center rounded-md border bg-background p-3 shadow-xl"
+        className="mx-auto flex w-full max-w-[324px] items-center justify-center rounded-md border bg-background px-4 py-2 shadow-xl"
       >
         <div
           className={cn(
@@ -318,7 +318,7 @@ export function VoiceAssistant({
                 className={cn(
                   "mx-[1px] w-[2px] rounded-sm transition-all duration-200",
                   isRecording && height > 20
-                    ? "bg-destructive"
+                    ? "bg-red-foreground"
                     : "bg-placeholder-foreground",
                 )}
                 style={{ height: `${height}%` }}
@@ -326,7 +326,7 @@ export function VoiceAssistant({
             ))}
           </div>
           <div className="min-w-[50px] cursor-default text-center font-mono text-sm font-medium text-placeholder-foreground">
-            {formatTime(recordingTime)}
+            {hasOpenAIAPIKey ? formatTime(recordingTime) : "--:--s"}
           </div>
 
           <div>
@@ -356,17 +356,17 @@ export function VoiceAssistant({
               ) : (
                 <>
                   <Button
-                    variant={"outlineDestructive"}
+                    variant={"outlineAmber"}
                     size={"icon"}
                     onClick={() => setShowSettingsModal(true)}
                     data-testid="voice-assistant-settings-icon"
+                    className="group h-8 w-8"
                   >
                     <IconComponent
                       name="Settings"
                       strokeWidth={ICON_STROKE_WIDTH}
                       className={cn(
-                        "h-4 w-4 text-muted-foreground hover:text-foreground",
-                        !hasOpenAIAPIKey && "text-destructive",
+                        "h-4 w-4 text-accent-amber-foreground group-hover:text-accent-amber",
                       )}
                     />
                   </Button>
