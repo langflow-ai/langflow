@@ -224,9 +224,6 @@ class AstraDBToolComponent(LCToolComponent):
                 Field(description=self.semantic_search_instruction),
             )
 
-        print("args")
-        print(args)
-
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}
 
@@ -236,11 +233,7 @@ class AstraDBToolComponent(LCToolComponent):
         Returns:
             Tool: The built Astra DB tool.
         """
-        schema_dict = (
-            self.create_args_schema()
-            if len(self.tool_params.keys()) > 0
-            else self.create_args_schema_v2()
-        )
+        schema_dict = self.create_args_schema() if len(self.tool_params.keys()) > 0 else self.create_args_schema_v2()
 
         tool = StructuredTool.from_function(
             name=self.tool_name,
