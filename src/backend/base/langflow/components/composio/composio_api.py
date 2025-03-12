@@ -43,20 +43,87 @@ class ComposioAPIComponent(LCToolComponent):
             real_time_refresh=True,
         ),
         ListSelectionInput(
-            auth=True,
-            name="tool_name",
+            auth=True, # TODO: Add some type of auth link to this
+            name="tool_name", 
             display_name="Tool Name",
             placeholder="Select a tool...",
+            options=[
+                {
+                    "name": "Github",
+                    "icon": "github",
+                },
+                {
+                    "name": "Microsoft", 
+                    "icon": "microsoft",
+                },
+                {
+                    "name": "Google",
+                    "icon": "google", 
+                },
+                {
+                    "name": "Slack",
+                    "icon": "slack",
+                },
+                {
+                    "name": "Dropbox",
+                    "icon": "dropbox",
+                }
+            ],
             selection_type="single",
+            search_category=["all", "analytics & data", "collaboration"],
             value="",
             info="The name of the tool to use",
         ),
         ListSelectionInput(
             name="actions",
-            display_name="Actions",
+            display_name="Actions", 
             placeholder="Select action",
             selection_type="multiple",
             helper_text="Please connect before selecting tools",
+            helper_metadata={"icon": "OctagonAlert", "variant": "destructive"},
+            options=[
+                {
+                    "name": "Accept a repository invitation",
+                    "metaData": "21 actions",
+                },
+                {
+                    "name": "Add an email address for the repository",
+                    "metaData": "15 actions",
+                },
+                {
+                    "name": "Add assignee to an issue", 
+                    "metaData": "18 actions",
+                },
+                {
+                    "name": "Create a new branch",
+                    "metaData": "12 actions",
+                },
+                {
+                    "name": "Delete repository files",
+                    "metaData": "9 actions",
+                },
+                {
+                    "name": "Fork a repository",
+                    "metaData": "24 actions",
+                },
+                {
+                    "name": "Merge pull request",
+                    "metaData": "16 actions",
+                },
+                {
+                    "name": "Review code changes",
+                    "metaData": "19 actions",
+                },
+                {
+                    "name": "Update repository settings",
+                    "metaData": "27 actions",
+                },
+                {
+                    "name": "Create repository webhook",
+                    "metaData": "13 actions",
+                }
+            ],
+            show_sortable=True,
             value="",
             info="The actions to use",
         ),

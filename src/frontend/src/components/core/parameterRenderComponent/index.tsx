@@ -214,8 +214,12 @@ export function ParameterRenderComponent({
           <ListComponent
             {...baseInputProps}
             helperText={templateData?.helper_text}
+            helperMetadata={templateData?.helper_metadata}
             auth={templateData?.auth}
             selectionType={templateData?.selection_type}
+            showSortable={templateData?.show_sortable}
+            options={templateData?.options}
+            searchCategory={templateData?.search_category}
           />
         );
       default:

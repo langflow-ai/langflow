@@ -7,81 +7,16 @@ import { useCallback, useMemo, useState } from "react";
 // Define a union type for selection mode
 type SelectionMode = "multiple" | "single";
 
-// Move static data outside component to prevent recreation on each render
-const INITIAL_ACTION_DATA = [
-  {
-    name: "Accept a repository invitation",
-    metaData: "21 actions",
-  },
-  {
-    name: "Add an email address for the repository",
-    metaData: "15 actions",
-  },
-  {
-    name: "Add assignee to an issue",
-    metaData: "18 actions",
-  },
-  {
-    name: "Create a new branch",
-    metaData: "12 actions",
-  },
-  {
-    name: "Delete repository files",
-    metaData: "9 actions",
-  },
-  {
-    name: "Fork a repository",
-    metaData: "24 actions",
-  },
-  {
-    name: "Merge pull request",
-    metaData: "16 actions",
-  },
-  {
-    name: "Review code changes",
-    metaData: "19 actions",
-  },
-  {
-    name: "Update repository settings",
-    metaData: "27 actions",
-  },
-  {
-    name: "Create repository webhook",
-    metaData: "13 actions",
-  },
-];
-
-const TOOL_DATA = [
-  {
-    name: "Github",
-    icon: "github",
-  },
-  {
-    name: "Microsoft",
-    icon: "microsoft",
-  },
-  {
-    name: "Google",
-    icon: "google",
-  },
-  {
-    name: "Slack",
-    icon: "slack",
-  },
-  {
-    name: "Dropbox",
-    icon: "dropbox",
-  },
-];
-
 // Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
+  options: any[];
   onClose: () => void;
   hasSearch?: boolean;
   setSelectedList: (action: any[]) => void;
   selectedList: any[];
   type: SelectionMode; // true for multiple selection, false for single selection
+  searchCategory?: string[];
 }
 
 // Create a reusable list item component for better structure
@@ -123,25 +58,20 @@ const ListSelectionComponent = ({
   setSelectedList = () => {},
   selectedList = [],
   type,
+  options,
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
-
-  // Determine list to use based on type
-  const sourceData = useMemo(
-    () => (type === "multiple" ? INITIAL_ACTION_DATA : TOOL_DATA),
-    [type],
-  );
 
   // Filter list based on search term - memoized to prevent recalculation on every render
   const filteredList = useMemo(() => {
     if (!search.trim()) {
-      return sourceData;
+      return options;
     }
     const searchTerm = search.toLowerCase();
-    return sourceData.filter((item) =>
+    return options.filter((item) =>
       item.name.toLowerCase().includes(searchTerm),
     );
-  }, [sourceData, search]);
+  }, [options, search]);
 
   // Memoize selection handler to prevent recreation on each render
   const handleSelectAction = useCallback(

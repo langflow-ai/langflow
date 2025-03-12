@@ -10,8 +10,11 @@ type ListComponentProps = {
   tooltip?: string;
   name?: string;
   helperText?: string;
+  helperMetadata?: any;
   auth?: boolean;
   showSortable?: boolean;
+  options?: any[];
+  searchCategory?: string[];
   selectionType?: "multiple" | "single";
 };
 
@@ -81,8 +84,8 @@ const SortableListItem = memo(
 const HelperTextSection = memo(
   ({
     helperText,
-    variant = "destructive", // TODO: Remove this default value
-    icon = "OctagonAlert", // TODO: Remove this default value
+    variant = "destructive",
+    icon,
   }: {
     helperText: string;
     variant?: string;
@@ -111,9 +114,12 @@ const ListComponent = ({
   tooltip = "",
   name,
   helperText,
+  helperMetadata,
   auth,
   showSortable = true,
   selectionType = "multiple",
+  options = [],
+  searchCategory = [],
   ...baseInputProps
 }: InputProps<any, ListComponentProps>) => {
   const { placeholder } = baseInputProps;
@@ -172,7 +178,13 @@ const ListComponent = ({
       </div>
 
       {/* TODO: add variant and icon to this */}
-      {helperText && <HelperTextSection helperText={helperText} />}
+      {helperText && (
+        <HelperTextSection
+          helperText={helperText}
+          variant={helperMetadata?.variant}
+          icon={helperMetadata?.icon}
+        />
+      )}
 
       {showSortable && !auth && listData.length > 0 && (
         <div className="flex w-full flex-col">
@@ -200,6 +212,8 @@ const ListComponent = ({
         setSelectedList={setListData}
         selectedList={listData}
         type={selectionType}
+        options={options}
+        searchCategory={searchCategory}
       />
     </div>
   );
