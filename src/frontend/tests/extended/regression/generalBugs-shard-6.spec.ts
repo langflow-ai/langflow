@@ -61,8 +61,20 @@ class CustomComponent(Component):
 
     await page.getByText("Check & Save").last().click();
 
-    //wait for the animation to propagate
-    await page.waitForTimeout(1000);
+    // Wait for the error message to appear and have sufficient length
+    await page.waitForFunction(
+      () => {
+        const errorElement = document.querySelector(
+          '[data-testid="title_error_code_modal"]',
+        );
+        return (
+          errorElement &&
+          errorElement.textContent &&
+          errorElement.textContent.length > 20
+        );
+      },
+      { timeout: 10000 }, // 5 second timeout
+    );
 
     const error = await page
       .getByTestId("title_error_code_modal")
