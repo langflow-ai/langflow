@@ -145,7 +145,7 @@ class TracingService(Service):
 
     def _initialize_langwatch_tracer(self) -> None:
         trace_context = trace_context_var.get()
-        if ("langwatch" not in trace_context.tracers or
+        if (
                 trace_context.tracers["langwatch"].trace_id != trace_context.run_id):
             langwatch_tracer = _get_langwatch_tracer()
             trace_context.tracers["langwatch"] = langwatch_tracer(
