@@ -44,6 +44,7 @@ class TaskNotification(BaseModel):
     status: str
     flow_data: dict[str, Any] | None = None
     input_request: dict[str, Any] | None = None
+    review: dict[str, Any] | None = None
 
 
 class TaskOrchestrationService(Service):
@@ -165,6 +166,29 @@ class TaskOrchestrationService(Service):
         if "result" in update_data and update_data["result"] is not None:
             update_data["result"] = serialize(update_data["result"])
 
+        if task_update.review is not None and task.status != "completed":
+            msg = "Cannot add a review to a task that is not completed."
+            raise ValueError(msg)
+
+        # Check if a review is being added
+        is_review_submission = task_update.review is not None and task.status == "completed"
+
+        # Handle review submission - automatically change status back to pending
+        if is_review_submission and task_update.status is None:
+            update_data["status"] = "pending"
+            logger.debug(f"Task {task_id} was reviewed, automatically changing status to pending")
+
+            # Maintain review history
+            if not task.review_history:
+                update_data["review_history"] = [task_update.review.model_dump()]
+            else:
+                # Create a new list to avoid modifying the original
+                current_history = task.review_history.copy() if isinstance(task.review_history, list) else []
+                current_history.append(task_update.review.model_dump())
+                update_data["review_history"] = current_history
+
+            logger.debug(f"Added review to history, now has {len(update_data.get('review_history', []))} reviews")
+
         for key, value in update_data.items():
             setattr(task, key, value)
 
@@ -176,10 +200,11 @@ class TaskOrchestrationService(Service):
         await session.refresh(task)
 
         # If status is changing to processing, start processing the task
-        if task_update.status == "processing" and task_id not in self._processing_tasks:
+        if (task_update.status == "processing" or is_review_submission) and task_id not in self._processing_tasks:
             # Create a background task for processing
             processing_task = asyncio.create_task(self._process_task(task_id))
             self._processing_tasks[task_id] = processing_task
+            await self.event_bus_service.publish("TaskReviewed", task.model_dump())
 
         # Convert to TaskRead model
         task_read = TaskRead.model_validate(task)
@@ -339,6 +364,40 @@ Your ID: {task_assignee_id}
 
 Please process this task according to the description and provide a complete response.
 Focus on addressing all requirements in the task description."""
+
+            # Add review information if the task has been reviewed
+            if task.review:
+                reviewer_name = "Unknown"
+                # Try to get the reviewer name if possible
+                try:
+                    reviewer_actor = await session.get(Actor, UUID(task.review.get("reviewer_id")))
+                    if reviewer_actor:
+                        reviewer_name = await reviewer_actor.get_name(session) or "Unknown"
+                except Exception as e:  # noqa: BLE001
+                    logger.error(f"Error getting reviewer name: {e}")
+                review_date_str = task.review.get("reviewed_at")
+                review_date = None
+                if review_date_str:
+                    try:
+                        # Try ISO format first (which includes T and timezone info)
+                        review_date = datetime.fromisoformat(review_date_str)
+                    except ValueError:
+                        try:
+                            # Fall back to the old format
+                            review_date = datetime.strptime(review_date_str, "%Y-%m-%d %H:%M:%S").replace(
+                                tzinfo=timezone.utc
+                            )
+                        except ValueError:
+                            logger.warning(f"Could not parse review date: {review_date_str}")
+
+                input_value += f"""
+
+IMPORTANT - THIS TASK HAS BEEN REVIEWED:
+Reviewer: {reviewer_name} (ID: {task.review.get("reviewer_id")})
+Review Date: {review_date}
+Review Comment: {task.review.get("comment")}
+
+Please address the review comments in your response and make the necessary improvements."""
 
             input_value_request = {"input_value": input_value, "session": str(task_id)}
 
