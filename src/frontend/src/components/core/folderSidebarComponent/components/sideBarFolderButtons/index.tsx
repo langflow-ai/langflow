@@ -1,5 +1,4 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -458,9 +457,6 @@ const SideBarFoldersButtonsComponent = ({
               <ForwardedIconComponent name="File" />
               My Files
             </SidebarMenuButton>
-            <Button variant="ghost" size="iconMd" className="">
-              <ForwardedIconComponent name="Upload" className="!h-4 !w-4" />
-            </Button>
           </div>
         </SidebarFooter>
       )}
