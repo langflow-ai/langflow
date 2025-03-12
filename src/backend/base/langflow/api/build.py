@@ -226,7 +226,7 @@ async def generate_flow_events(
                 session=fresh_session,
                 chat_service=chat_service,
                 user_id=str(current_user.id),
-                session_id=effective_session_id
+                session_id=effective_session_id,
             )
 
         result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
