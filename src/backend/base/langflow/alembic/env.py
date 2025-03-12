@@ -75,10 +75,7 @@ def _sqlite_do_begin(conn):
 
 def _do_run_migrations(connection):
     context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        render_as_batch=True,
-        prepare_threshold=None
+        connection=connection, target_metadata=target_metadata, render_as_batch=True, prepare_threshold=None
     )
 
     with context.begin_transaction():
@@ -99,9 +96,10 @@ async def _run_async_migrations() -> None:
         # See https://docs.sqlalchemy.org/en/20/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
         listen(connectable.sync_engine, "connect", _sqlite_do_connect)
         listen(connectable.sync_engine, "begin", _sqlite_do_begin)
-
-    async with connectable.connect() as connection:
-        await connection.run_sync(_do_run_migrations)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*SQL-parsed foreign key constraint.*")
+        async with connectable.connect() as connection:
+            await connection.run_sync(_do_run_migrations)
 
     await connectable.dispose()
 
