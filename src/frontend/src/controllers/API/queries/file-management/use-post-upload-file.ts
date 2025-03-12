@@ -36,7 +36,7 @@ export const usePostUploadFileV2: useMutationFunctionType<
 
     try {
       const response = await api.post<any>(
-        `${getURL("FILE_MANAGEMENT", {}, true)}/`,
+        `${getURL("FILE_MANAGEMENT", {}, true)}`,
         formData,
         {
           onUploadProgress: (progressEvent) => {

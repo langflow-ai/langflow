@@ -19,7 +19,7 @@ export const useDuplicateFileV2: useMutationFunctionType<
   const duplicateFileFn = async (): Promise<any> => {
     // First download the file
     const response = await fetch(
-      `${getURL("FILE_MANAGEMENT", { id: params.id }, true)}/`,
+      `${getURL("FILE_MANAGEMENT", { id: params.id }, true)}`,
       {
         headers: {
           Accept: "*/*",

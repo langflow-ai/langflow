@@ -18,7 +18,7 @@ export const useGetDownloadFileV2: useMutationFunctionType<
     if (!params) return;
     // need to use fetch because axios convert blob data to string, and this convertion can corrupt the file
     const response = await fetch(
-      `${getURL("FILE_MANAGEMENT", { id: params.id }, true)}/`,
+      `${getURL("FILE_MANAGEMENT", { id: params.id }, true)}`,
       {
         headers: {
           Accept: "*/*",
