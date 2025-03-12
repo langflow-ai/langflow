@@ -80,7 +80,8 @@ class ComponentTraceContext:
         trace_type: str | None,
         vertex: Vertex | None,
         inputs: dict[str, dict],
-            metadata: dict[str, dict]):
+        metadata: dict[str, dict],
+    ):
         self.trace_id: str | None = trace_id
         self.trace_name: str | None = trace_name
         self.trace_type: str | None = trace_type
