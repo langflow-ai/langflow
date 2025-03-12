@@ -39,6 +39,7 @@ export interface TableComponentProps extends AgGridReactProps {
   addRow?: () => void;
   tableOptions?: TableOptionsTypeAPI;
   onCellEditRequest?: (event: CellEditRequestEvent) => void;
+  onRowContextMenu?: (event: any) => void;
 }
 
 const TableComponent = forwardRef<
@@ -256,6 +257,11 @@ const TableComponent = forwardRef<
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
           onCellEditRequest={props.onCellEditRequest}
+          onCellContextMenu={(event) => {
+            if (props.onRowContextMenu) {
+              props.onRowContextMenu(event);
+            }
+          }}
           onStateUpdated={(e) => {
             if (e.sources.some((source) => source.includes("column"))) {
               localStorage.setItem(

@@ -17,12 +17,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/controllers/API/api";
+import { getURL } from "@/controllers/API/helpers/constants";
 import { useGetActors } from "@/controllers/API/queries/actors";
 import { usePostTask } from "@/controllers/API/queries/tasks/use-post-task";
 import BaseModal from "@/modals/baseModal";
 import useAlertStore from "@/stores/alertStore";
+import { Task } from "@/types/Task";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -40,35 +44,79 @@ const taskSchema = z.object({
 
 type TaskFormValues = z.infer<typeof taskSchema>;
 
+type AddNewTaskButtonProps = {
+  children: JSX.Element;
+  asChild?: boolean;
+  initialData?: Task;
+  mode?: "create" | "edit";
+  onUpdate?: (data: Task) => void;
+  openFromParent?: boolean;
+  setOpenFromParent?: (open: boolean) => void;
+};
+
 export default function AddNewTaskButton({
   children,
   asChild,
-}: {
-  children: JSX.Element;
-  asChild?: boolean;
-}): JSX.Element {
+  initialData,
+  mode = "create",
+  onUpdate,
+  openFromParent,
+  setOpenFromParent,
+}: AddNewTaskButtonProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [attachmentInput, setAttachmentInput] = useState("");
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  const { mutate: mutateAddTask, isPending } = usePostTask();
+  const { mutate: mutateAddTask, isPending: isAddPending } = usePostTask();
+  const [isEditPending, setIsEditPending] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Control open state from parent if provided
+  useEffect(() => {
+    if (openFromParent !== undefined) {
+      setOpen(openFromParent);
+    }
+  }, [openFromParent]);
+
+  const handleSetOpen = (value: boolean) => {
+    setOpen(value);
+    if (setOpenFromParent) {
+      setOpenFromParent(value);
+    }
+  };
 
   // Fetch actors for the current project
-  const { data: actors, isLoading: actorsLoading } = useGetActors({});
+  const { data: actors, isLoading: actorsLoading } = useGetActors();
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      attachments: [],
-      author_id: "",
-      assignee_id: "",
-      category: "",
-      state: "",
-      status: "pending",
+      title: initialData?.title || "",
+      description: initialData?.description || "",
+      attachments: initialData?.attachments || [],
+      author_id: initialData?.author_id || "",
+      assignee_id: initialData?.assignee_id || "",
+      category: initialData?.category || "",
+      state: initialData?.state || "",
+      status: (initialData?.status as any) || "pending",
     },
   });
+
+  // Update form values when initialData changes (for edit mode)
+  useEffect(() => {
+    if (initialData && mode === "edit") {
+      form.reset({
+        title: initialData.title,
+        description: initialData.description,
+        attachments: initialData.attachments,
+        author_id: initialData.author_id,
+        assignee_id: initialData.assignee_id,
+        category: initialData.category,
+        state: initialData.state,
+        status: initialData.status,
+      });
+    }
+  }, [initialData, form, mode]);
 
   function handleAddAttachment(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter" && attachmentInput.trim()) {
@@ -90,13 +138,53 @@ export default function AddNewTaskButton({
     );
   }
 
+  async function handleEditTask(data: TaskFormValues) {
+    if (!initialData) return;
+
+    setIsEditPending(true);
+    try {
+      const response = await api.put(
+        `${getURL("TASKS")}/${initialData.id}`,
+        data,
+      );
+      setSuccessData({
+        title: `Task "${data.title}" updated successfully`,
+      });
+      handleSetOpen(false);
+      form.reset();
+
+      // Invalidate query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+
+      // Call onUpdate callback if provided
+      if (onUpdate) {
+        onUpdate(response.data);
+      }
+    } catch (error: any) {
+      setErrorData({
+        title: "Error updating task",
+        list: [
+          error?.response?.data?.detail ||
+            "An unexpected error occurred while updating the task. Please try again.",
+        ],
+      });
+    } finally {
+      setIsEditPending(false);
+    }
+  }
+
   function onSubmit(data: TaskFormValues) {
+    if (mode === "edit") {
+      handleEditTask(data);
+      return;
+    }
+
     mutateAddTask(data, {
       onSuccess: (res) => {
         setSuccessData({
           title: `Task "${res.title}" created successfully`,
         });
-        setOpen(false);
+        handleSetOpen(false);
         form.reset();
       },
       onError: (error: any) => {
@@ -111,17 +199,28 @@ export default function AddNewTaskButton({
     });
   }
 
+  const isSubmitting = mode === "create" ? isAddPending : isEditPending;
+  const modalTitle = mode === "create" ? "Create Task" : "Edit Task";
+  const modalDescription =
+    mode === "create"
+      ? "Create a new task to manage your workflow"
+      : "Update task details";
+  const submitButtonText = mode === "create" ? "Create Task" : "Update Task";
+
   return (
-    <BaseModal open={open} setOpen={setOpen} size="medium">
-      <BaseModal.Header description="Create a new task to manage your workflow">
-        <span className="pr-2">Create Task</span>
+    <BaseModal open={open} setOpen={handleSetOpen} size="three-cards">
+      <BaseModal.Header description={modalDescription}>
+        <span className="pr-2">{modalTitle}</span>
         <ForwardedIconComponent
           name="SquareCheckBig"
           className="h-6 w-6 pl-1 text-primary"
           aria-hidden="true"
         />
       </BaseModal.Header>
-      <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
+      {/* Only show trigger when in create mode, not in edit mode */}
+      {mode === "create" && (
+        <BaseModal.Trigger asChild={asChild}>{children}</BaseModal.Trigger>
+      )}
       <BaseModal.Content className="max-h-[80vh] overflow-y-auto">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -221,6 +320,7 @@ export default function AddNewTaskButton({
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -271,6 +371,7 @@ export default function AddNewTaskButton({
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -347,6 +448,7 @@ export default function AddNewTaskButton({
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -374,10 +476,10 @@ export default function AddNewTaskButton({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: "Create Task",
-          dataTestId: "save-task-btn",
+          label: submitButtonText,
+          dataTestId: mode === "create" ? "save-task-btn" : "update-task-btn",
           onClick: form.handleSubmit(onSubmit),
-          loading: isPending,
+          loading: isSubmitting,
         }}
       />
     </BaseModal>
