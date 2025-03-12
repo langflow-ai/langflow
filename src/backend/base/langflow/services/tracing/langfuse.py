@@ -53,6 +53,12 @@ class LangFuseTracer(BaseTracer):
             from langfuse import Langfuse
 
             self._client = Langfuse(**config)
+            try:
+                from langfuse.api.core.request_options import RequestOptions
+                self._client.client.health.health(request_options=RequestOptions(timeout_in_seconds=1))
+            except Exception as e:
+                logger.debug(f"can not connect to Langfuse: {e}")
+                return False
             self.trace = self._client.trace(
                 id=str(self.trace_id),
                 name=self.flow_id,
