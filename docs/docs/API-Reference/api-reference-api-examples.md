@@ -106,7 +106,6 @@ A dictionary of all Langflow components.
 
 Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
-For more configuration options when building your flow, use the [`/build` endpoint](/api-reference-api-examples#build-flow) instead.
 
 This example runs a [Basic Prompting](/starter-projects-basic-prompting) flow with a given `flow_id` and passes a JSON object as the input value.
 
@@ -403,6 +402,11 @@ The `/build` endpoint offers additional configuration for running flows.
 For a simpler execution of your flows, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead.
 
 ### Build flow
+
+:::important
+This endpoint is meant to be used by the frontend and is not optimized for external use.
+To run your flow, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead. d
+:::
 
 This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
 
