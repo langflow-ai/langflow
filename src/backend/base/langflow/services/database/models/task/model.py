@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from pydantic import field_serializer, field_validator
+from pydantic import field_serializer, field_validator, model_serializer
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.serialization.serialization import serialize
@@ -15,6 +15,27 @@ if TYPE_CHECKING:
     from langflow.services.database.models.actor.model import Actor
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.database.models.user.model import User
+
+
+class ReviewBase(SQLModel):
+    """Base model for Task Review information."""
+
+    comment: str
+    reviewer_id: UUID
+    reviewed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("reviewed_at", mode="before")
+    @classmethod
+    def validate_datetime(cls, v):
+        if isinstance(v, datetime):
+            return v
+        return datetime.fromisoformat(v)
+
+    @model_serializer()
+    def serialize_all(self):
+        if isinstance(self, dict):
+            return self
+        return serialize({"comment": self.comment, "reviewer_id": self.reviewer_id, "reviewed_at": self.reviewed_at})
 
 
 class TaskBase(SQLModel):
@@ -31,6 +52,10 @@ class TaskBase(SQLModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     cron_expression: str | None = Field(default=None)
+    # Store the current review (latest one)
+    review: ReviewBase | None = Field(default=None, sa_column=Column(JSON))
+    # Store a list of all reviews for history tracking
+    review_history: list[ReviewBase] | None = Field(default=None, sa_column=Column(JSON))
 
     @field_validator("created_at", "updated_at", mode="before")
     @classmethod
@@ -42,10 +67,17 @@ class TaskBase(SQLModel):
     @field_validator("status")
     @classmethod
     def validate_status(cls, v):
-        valid_statuses = ["pending", "running", "completed", "failed", "canceled", "processing"]
+        valid_statuses = ["pending", "running", "completed", "failed", "cancelled", "processing"]
         if v not in valid_statuses:
             msg = f"Invalid status: {v}. Must be one of {valid_statuses}"
             raise ValueError(msg)
+        return v
+
+    @field_validator("review")
+    @classmethod
+    def validate_review(cls, v) -> ReviewBase | None:
+        if isinstance(v, dict):
+            return ReviewBase(**v)
         return v
 
 
@@ -91,6 +123,7 @@ class TaskCreate(SQLModel):
     state: str
     status: str = "pending"
     cron_expression: str | None = None
+    review: ReviewBase | None = None
 
     @field_validator("author_id")
     @classmethod
@@ -131,6 +164,7 @@ class TaskRead(TaskBase):
     id: UUID
     author_id: UUID
     assignee_id: UUID
+    review_history: list[ReviewBase] | None = None
 
     @field_serializer("result")
     @classmethod
@@ -152,3 +186,4 @@ class TaskUpdate(SQLModel):
     status: str | None = None
     state: str | None = None
     result: dict[str, Any] | None = None
+    review: ReviewBase | None = None
