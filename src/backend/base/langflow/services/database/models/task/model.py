@@ -42,7 +42,7 @@ class TaskBase(SQLModel):
     @field_validator("status")
     @classmethod
     def validate_status(cls, v):
-        valid_statuses = ["pending", "running", "completed", "failed", "canceled"]
+        valid_statuses = ["pending", "running", "completed", "failed", "canceled", "processing"]
         if v not in valid_statuses:
             msg = f"Invalid status: {v}. Must be one of {valid_statuses}"
             raise ValueError(msg)
