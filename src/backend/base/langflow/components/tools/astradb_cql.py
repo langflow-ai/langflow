@@ -1,12 +1,12 @@
 import urllib
 from http import HTTPStatus
 
-from langflow.schema.dataframe import DataFrame
 import requests
 
 from langflow.custom import Component
 from langflow.io import DictInput, IntInput, MessageTextInput, Output, SecretStrInput
 from langflow.schema import Data
+from langflow.schema.dataframe import DataFrame
 
 
 class AstraDBCQLToolComponent(Component):
@@ -84,7 +84,7 @@ class AstraDBCQLToolComponent(Component):
     ]
     outputs = [
         Output(name="api_run_model", display_name="Data", method="run_model"),
-        Output(name="api_as_dataframe", display_name="Dataframe", method="as_dataframe",tool_mode=False),
+        Output(name="api_as_dataframe", display_name="Dataframe", method="as_dataframe", tool_mode=False),
     ]
 
     def astra_rest(self, args):
