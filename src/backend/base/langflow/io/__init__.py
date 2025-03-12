@@ -23,6 +23,7 @@ from langflow.inputs import (
     SliderInput,
     StrInput,
     TableInput,
+    TabInput,
 )
 from langflow.template import Output
 
@@ -53,4 +54,5 @@ __all__ = [
     "SliderInput",
     "StrInput",
     "TableInput",
+    "TabInput",
 ]
