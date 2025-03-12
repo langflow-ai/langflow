@@ -92,6 +92,8 @@ export default function NodeInputField({
     !isToolMode;
 
   const isFlexView = FLEX_VIEW_TYPES.includes(type ?? "");
+  const hasInputField =
+    data.node?.template[name]?.input_types?.length! > 0 ?? false;
 
   const Handle = (
     <HandleRenderComponent
@@ -123,7 +125,7 @@ export default function NodeInputField({
       ref={ref}
       className={cn(
         "relative flex min-h-10 w-full flex-wrap items-center justify-between px-5 py-2",
-        lastInput ? "rounded-b-[0.69rem] pb-5" : "",
+        lastInput ? "mb-4 rounded-b-[0.69rem]" : "",
         isToolMode && "bg-primary/10",
         (name === "code" && type === "code") || (name.includes("code") && proxy)
           ? "hidden"
@@ -133,8 +135,9 @@ export default function NodeInputField({
       {displayHandle && Handle}
       <div
         className={cn(
-          "flex w-full flex-col gap-2",
+          "flex w-full flex-col",
           isFlexView ? "flex-row" : "flex-col",
+          hasInputField ? "gap-2" : "gap-0",
         )}
       >
         <div className="flex w-full items-center justify-between text-sm">
