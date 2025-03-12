@@ -225,7 +225,7 @@ class APIRequestComponent(Component):
 
     def _unescape_curl(self, curl: str) -> str:
         """Unescape a cURL command that might have escaped characters.
-        
+
         This method handles various forms of escaped cURL commands:
         1. JSON string encoded curl commands
         2. Double escaped quotes
@@ -233,7 +233,7 @@ class APIRequestComponent(Component):
         """
         if not curl:
             return curl
-            
+
         try:
             # If it's a JSON string, decode it first
             if curl.startswith('"') and curl.endswith('"'):
@@ -242,13 +242,13 @@ class APIRequestComponent(Component):
                 except json.JSONDecodeError:
                     # If JSON decoding fails, try to handle escaped quotes
                     curl = curl.strip('"')
-                    
+
             # Handle escaped quotes if present
-            if '\\\"' in curl or '\\\'' in curl:
-                curl = curl.replace('\\\"', '"').replace('\\\'', "'")
-                
+            if '\\"' in curl or "\\'" in curl:
+                curl = curl.replace('\\"', '"').replace("\\'", "'")
+
             return curl
-            
+
         except Exception as e:
             self.log(f"Error unescaping curl command: {e}")
             return curl  # Return original if unescaping fails
