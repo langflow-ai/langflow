@@ -19,6 +19,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
+from langflow.services.deps import get_settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -34,27 +35,6 @@ class NvidiaCustomizerComponent(Component):
     chunk_number = 1
 
     inputs = [
-        StrInput(
-            name="customizer_url",
-            display_name="Customizer Base URL",
-            info="Base URL for the NeMo Customizer API.",
-            advanced=True,
-            required=True,
-        ),
-        StrInput(
-            name="datastore_base_url",
-            display_name="Datastore Base URL",
-            info="Base URL for the NeMo Datastore API.",
-            advanced=True,
-            required=True,
-        ),
-        StrInput(
-            name="entity_store_base_url",
-            display_name="Entitystore Base URL",
-            info="Base URL for the Nemo Entitystore API.",
-            advanced=True,
-            required=True,
-        ),
         StrInput(
             name="namespace",
             display_name="Namespace",
@@ -123,9 +103,11 @@ class NvidiaCustomizerComponent(Component):
 
     def update_build_config(self, build_config, field_value, field_name=None):
         """Updates the component's configuration based on the selected option or refresh button."""
-        models_url = f"{self.customizer_url}/v1/customization/configs"
+        settings_service = get_settings_service()
+        nemo_customizer_url = settings_service.settings.nemo_customizer_url
+        models_url = f"{nemo_customizer_url}/v1/customization/configs"
         try:
-            if field_name == "model_name" and self.customizer_url != "":
+            if field_name == "model_name" and nemo_customizer_url != "":
                 self.log(f"Refreshing model names from endpoint {models_url}, value: {field_value}")
 
                 # Use a synchronous HTTP client
@@ -140,7 +122,7 @@ class NvidiaCustomizerComponent(Component):
 
                 self.log("Updated model_name dropdown options.")
 
-            elif field_name == "training_type" and self.customizer_url != "":
+            elif field_name == "training_type" and nemo_customizer_url != "":
                 # Use a synchronous HTTP client
                 with httpx.Client(timeout=5.0) as client:
                     response = client.get(models_url, headers=self.headers)
@@ -183,6 +165,11 @@ class NvidiaCustomizerComponent(Component):
         return build_config
 
     async def customize(self) -> dict:
+        settings_service = get_settings_service()
+        nemo_customizer_url = settings_service.settings.nemo_customizer_url
+        nemo_data_store_url = settings_service.settings.nemo_data_store_url
+        nemo_entity_store_url = settings_service.settings.nemo_entity_store_url
+
         fine_tuned_model_name = self.fine_tuned_model_name
 
         if not fine_tuned_model_name:
@@ -194,7 +181,7 @@ class NvidiaCustomizerComponent(Component):
             error_msg = "Missing Namespace"
             raise ValueError(error_msg)
 
-        if not (self.customizer_url and self.datastore_base_url and self.entity_store_base_url):
+        if not (nemo_customizer_url and nemo_data_store_url and nemo_entity_store_url):
             error_msg = "Missing NeMo service info, provide customizer or data store and entity store url"
             raise ValueError(error_msg)
 
@@ -211,8 +198,8 @@ class NvidiaCustomizerComponent(Component):
             error_msg = "Training data is empty, cannot customize the model"
             raise ValueError(error_msg)
 
-        dataset_name = await self.process_dataset()
-        customizations_url = f"{self.customizer_url}/v1/customization/jobs"
+        dataset_name = await self.process_dataset(nemo_data_store_url, nemo_entity_store_url)
+        customizations_url = f"{nemo_customizer_url}/v1/customization/jobs"
         error_code_already_present = 409
         output_model = f"{namespace}/{fine_tuned_model_name}"
 
@@ -283,14 +270,14 @@ class NvidiaCustomizerComponent(Component):
         else:
             return result_dict
 
-    async def create_namespace(self, namespace: str):
+    async def create_namespace(self, namespace: str, nemo_data_store_url: str):
         """Checks and creates namespace in datastore.
 
         Args:
             namespace (str): The namespace to be created.
-
+            nemo_data_store_url (str): Data store api url to create namespace.
         """
-        url = f"{self.datastore_base_url}/v1/datastore/namespaces"
+        url = f"{nemo_data_store_url}/v1/datastore/namespaces"
 
         try:
             async with httpx.AsyncClient() as client:
@@ -310,17 +297,21 @@ class NvidiaCustomizerComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from e
 
-    async def process_dataset(self) -> str:
+    async def process_dataset(self, nemo_data_store_url: str, nemo_entity_store_url: str) -> str:
         """Asynchronously processes and uploads the dataset for training(90%) and validation(10%).
 
         If the total valid record count is less than 10, at least one record is added to validation.
+
+        Args:
+            nemo_data_store_url (str): Data store api url to create dataset.
+            nemo_entity_store_url (str): Entity store api url to register dataset.
         """
         try:
             # Inputs and repo setup
             dataset_name = str(uuid.uuid4())
 
-            hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            await self.create_namespace(self.namespace)
+            hf_api = HfApi(endpoint=f"{nemo_data_store_url}/v1/hf", token="")
+            await self.create_namespace(self.namespace, nemo_data_store_url)
             repo_id = f"{self.namespace}/{dataset_name}"
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
@@ -429,7 +420,7 @@ class NvidiaCustomizerComponent(Component):
         try:
             file_url = f"hf://datasets/{repo_id}"
             description = f"Dataset loaded using the input data {dataset_name}"
-            entity_registry_url = f"{self.entity_store_base_url}/v1/datasets"
+            entity_registry_url = f"{nemo_entity_store_url}/v1/datasets"
             create_payload = {
                 "name": dataset_name,
                 "namespace": self.namespace,

@@ -22,6 +22,7 @@ from langflow.io import (
     StrInput,
 )
 from langflow.schema import Data
+from langflow.services.deps import get_settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -38,31 +39,9 @@ class NvidiaEvaluatorComponent(Component):
     # Define initial static inputs
     inputs = [
         StrInput(
-            name="evaluator_base_url",
-            display_name="Evaluator Base URL",
-            info="Base URL for the NeMo Evaluator API.",
-            advanced=True,
-            required=True,
-        ),
-        StrInput(
-            name="entity_service_base_url",
-            display_name="Entity service URL",
-            info="Base URL for the NeMo Entity service API.",
-            advanced=True,
-            required=True,
-        ),
-        StrInput(
-            name="nemo_model_base_url",
-            display_name="Base model inference URL",
+            name="inference_model_url",
+            display_name="Inference URL",
             info="Base URL for the NIM to run evaluation inference.",
-            advanced=True,
-            required=True,
-        ),
-        StrInput(
-            name="datastore_base_url",
-            display_name="Datastore Base URL",
-            info="Base URL for the NeMo Datastore API.",
-            advanced=True,
             required=True,
         ),
         StrInput(
@@ -228,10 +207,11 @@ class NvidiaEvaluatorComponent(Component):
         ),
     ]
 
-    def fetch_models(self):
+    def fetch_models(self, nemo_entity_store_url: str):
         """Fetch models from the specified API endpoint and return a list of model names."""
+
         namespace = self.namespace
-        model_url = f"{self.entity_service_base_url}/v1/models"
+        model_url = f"{nemo_entity_store_url}/v1/models"
         params = {
             "filter[namespace]": namespace,  # This ensures proper encoding
             "page_size": 100,
@@ -287,12 +267,13 @@ class NvidiaEvaluatorComponent(Component):
         try:
             message = f"Updating build config: field_name={field_name}, field_value={field_value}"
             logger.info(message)
-
+            settings_service = get_settings_service()
             saved_values = {}
 
             if field_name == "000_llm_name":
+                nemo_entity_store_url = settings_service.settings.nemo_entity_store_url
                 # Refresh model options for LLM Name dropdown
-                build_config["000_llm_name"]["options"] = self.fetch_models()
+                build_config["000_llm_name"]["options"] = self.fetch_models(nemo_entity_store_url)
                 options = build_config["000_llm_name"]["options"]
                 msg = f"Updated LLM Name options: {options}"
                 logger.info(msg)
@@ -320,6 +301,10 @@ class NvidiaEvaluatorComponent(Component):
     async def evaluate(self) -> dict:
         evaluation_type = getattr(self, "002_evaluation_type", "LM Evaluation Harness")
 
+        settings_service = get_settings_service()
+        nemo_evaluator_url = settings_service.settings.nemo_evaluator_url
+        nemo_data_store_url = settings_service.settings.nemo_data_store_url
+
         if not self.namespace:
             error_msg = "Missing namespace"
             raise ValueError(error_msg)
@@ -329,28 +314,28 @@ class NvidiaEvaluatorComponent(Component):
             error_msg = "Refresh and select the model name to be evaluated"
             raise ValueError(error_msg)
 
-        if not (self.evaluator_base_url and self.entity_service_base_url and self.datastore_base_url):
+        if not (nemo_evaluator_url and nemo_data_store_url):
             error_msg = "Missing NeMo service info, provide evaluator, data store, entity store url"
             raise ValueError(error_msg)
 
         # Generate the request data based on evaluation type
         if evaluation_type == "LM Evaluation Harness":
-            data = await self._generate_lm_evaluation_body()
+            data = await self._generate_lm_evaluation_body(nemo_evaluator_url)
         elif evaluation_type == "Similarity Metrics":
-            data = await self._generate_custom_evaluation_body()
+            data = await self._generate_custom_evaluation_body(nemo_evaluator_url, nemo_data_store_url)
         else:
             error_msg = f"Unsupported evaluation type: {evaluation_type}"
             raise ValueError(error_msg)
 
         # Send the request and log the output
-        evaluator_url = f"{self.evaluator_base_url}/v1/evaluation/jobs"
+        eval_job_url = f"{nemo_evaluator_url}/v1/evaluation/jobs"
         try:
             # Format the data as a JSON string for logging
             formatted_data = json.dumps(data, indent=2)
             self.log(f"Sending evaluation request to NeMo API with data: {formatted_data}")
 
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.post(evaluator_url, headers=self.headers, json=data)
+                response = await client.post(eval_job_url, headers=self.headers, json=data)
                 response.raise_for_status()
                 result = response.json()
 
@@ -360,12 +345,12 @@ class NvidiaEvaluatorComponent(Component):
                 self.log(msg)
                 return result
         except httpx.HTTPStatusError as exc:
-            error_msg = f"HTTP error {exc.response.status_code} on URL {evaluator_url}."
+            error_msg = f"HTTP error {exc.response.status_code} on URL {eval_job_url}."
             self.log(error_msg, name="NeMoEvaluatorComponent")
             raise ValueError(error_msg) from exc
         except (httpx.RequestError, ValueError) as exc:
             error_str = str(exc)
-            error_msg = f"Unexpected error on {error_str} : {evaluator_url} {msg}"
+            error_msg = f"Unexpected error on {error_str} : {nemo_evaluator_url} {msg}"
             self.log(error_msg, name="NeMoEvaluatorComponent")
             raise ValueError(error_msg) from exc
         except Exception as exc:
@@ -374,8 +359,8 @@ class NvidiaEvaluatorComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
-    async def _generate_lm_evaluation_body(self) -> dict:
-        target_id = await self.create_eval_target(None)
+    async def _generate_lm_evaluation_body(self, nemo_evaluator_url: str) -> dict:
+        target_id = await self.create_eval_target(None, nemo_evaluator_url)
         hf_token = getattr(self, "100_huggingface_token", None)
         if not hf_token:
             error_msg = "Missing hf token"
@@ -406,7 +391,7 @@ class NvidiaEvaluatorComponent(Component):
             },
         }
 
-        eval_config_url = f"{self.evaluator_base_url}/v1/evaluation/configs"
+        eval_config_url = f"{nemo_evaluator_url}/v1/evaluation/configs"
 
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -448,18 +433,18 @@ class NvidiaEvaluatorComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
-    async def _generate_custom_evaluation_body(self) -> dict:
+    async def _generate_custom_evaluation_body(self, nemo_evaluator_url: str, nemo_data_store_url: str) -> dict:
         # Process and upload the dataset if training_data is provided
         if self.evaluation_data is None:
             error_msg = "Evaluation data is empty, cannot evaluate the model"
             raise ValueError(error_msg)
 
-        repo_id = await self.process_eval_dataset()
+        repo_id = await self.process_eval_dataset(nemo_data_store_url)
         input_file = f"nds:{repo_id}/input.json"
         # Handle run_inference as a boolean
         run_inference = getattr(self, "310_run_inference", "True").lower() == "true"
 
-        if run_inference and not self.nemo_model_base_url:
+        if run_inference and not self.inference_model_url:
             error_msg = "Provide the nim url for evaluation inference to be processed"
             raise ValueError(error_msg)
 
@@ -470,7 +455,7 @@ class NvidiaEvaluatorComponent(Component):
             output_file = f"nds:{repo_id}/output.json"
         self.log(f"input_file: {input_file}, output_file: {output_file}")
 
-        target_id = await self.create_eval_target(output_file)
+        target_id = await self.create_eval_target(output_file, nemo_evaluator_url)
         scores = getattr(self, "351_scorers", ["accuracy", "bleu", "rouge", "em", "bert", "f1"])
 
         # Transform the list into the desired format
@@ -493,7 +478,7 @@ class NvidiaEvaluatorComponent(Component):
             ],
         }
 
-        eval_config_url = f"{self.evaluator_base_url}/v1/evaluation/configs"
+        eval_config_url = f"{nemo_evaluator_url}/v1/evaluation/configs"
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.post(eval_config_url, headers=self.headers, json=config_data)
@@ -529,8 +514,8 @@ class NvidiaEvaluatorComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
-    async def create_eval_target(self, output_file) -> str:
-        eval_target_url = f"{self.evaluator_base_url}/v1/evaluation/targets"
+    async def create_eval_target(self, output_file, nemo_evaluator_url: str) -> str:
+        eval_target_url = f"{nemo_evaluator_url}/v1/evaluation/targets"
         namespace = self.namespace
         try:
             if output_file:
@@ -545,7 +530,7 @@ class NvidiaEvaluatorComponent(Component):
                     "namespace": namespace,
                     "model": {
                         "api_endpoint": {
-                            "url": f"{self.nemo_model_base_url}/v1/completions",
+                            "url": f"{self.inference_model_url}/v1/completions",
                             "model_id": getattr(self, "000_llm_name", ""),
                         }
                     },
@@ -580,16 +565,19 @@ class NvidiaEvaluatorComponent(Component):
             self.log(error_msg)
             raise ValueError(error_msg) from exc
 
-    async def process_eval_dataset(self) -> str:
+    async def process_eval_dataset(self, nemo_data_store_url: str) -> str:
         """Asynchronously processes and uploads the dataset to the API in chunks.
 
         Returns the upload status.
+
+        Args:
+            nemo_data_store_url (str): Data store api url to create dataset.
         """
         try:
             # Inputs
             dataset_name = str(uuid.uuid4())
-            hf_api = HfApi(endpoint=f"{self.datastore_base_url}/v1/hf", token="")
-            await self.create_namespace(self.namespace)
+            hf_api = HfApi(endpoint=f"{nemo_data_store_url}/v1/hf", token="")
+            await self.create_namespace(self.namespace, nemo_data_store_url)
             repo_id = f"{self.namespace}/{dataset_name}"
             repo_type = "dataset"
             hf_api.create_repo(repo_id, repo_type=repo_type, exist_ok=True)
@@ -678,14 +666,16 @@ class NvidiaEvaluatorComponent(Component):
 
         return repo_id
 
-    async def create_namespace(self, namespace: str):
+    async def create_namespace(self, namespace: str, nemo_data_store_url: str):
         """Checks and creates namespace in datastore.
 
         Args:
-            namespace (str): Namespace to be created if doesn't exist.
+            Args:
+            namespace (str): The namespace to be created.
+            nemo_data_store_url (str): Data store api url to create namespace.
 
         """
-        url = f"{self.datastore_base_url}/v1/datastore/namespaces"
+        url = f"{nemo_data_store_url}/v1/datastore/namespaces"
 
         try:
             async with httpx.AsyncClient() as client:
