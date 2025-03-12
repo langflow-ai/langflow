@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AgentQL-XIw0m{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-XIw0mœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-O1xzr{œfieldNameœ:œtoolsœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-XIw0m",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-XIw0mœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-XIw0mœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-O1xzr",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-O1xzrœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-KdiYi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KdiYiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-O1xzr{œfieldNameœ:œinput_valueœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-KdiYi",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KdiYiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-KdiYiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-O1xzr",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-O1xzrœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -769,10 +769,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": null,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1093,10 +1091,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
                 "method": "message_response",
                 "name": "response",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [

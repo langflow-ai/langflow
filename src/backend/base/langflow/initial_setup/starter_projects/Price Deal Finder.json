@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AgentQL-R0YLG{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-R0YLGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-R0YLG",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-R0YLGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-R0YLGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-TavilySearchComponent-K4joL{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-K4joLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-K4joL",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-K4joLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-K4joLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-ChatInput-M0lPa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-M0lPaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7PMCu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-M0lPa",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-M0lPaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-M0lPaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -435,10 +435,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Message",
-                "hidden": null,
                 "method": "message_response",
                 "name": "message",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -1415,10 +1413,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
                 "method": "message_response",
                 "name": "response",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
