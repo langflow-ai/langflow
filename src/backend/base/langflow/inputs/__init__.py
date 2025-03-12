@@ -22,8 +22,8 @@ from .inputs import (
     SecretStrInput,
     SliderInput,
     StrInput,
-    TableInput,
     TabInput,
+    TableInput,
 )
 
 __all__ = [
@@ -53,6 +53,6 @@ __all__ = [
     "SecretStrInput",
     "SliderInput",
     "StrInput",
-    "TableInput",
     "TabInput",
+    "TableInput",
 ]
