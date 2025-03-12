@@ -10,6 +10,7 @@ from sqlmodel import col, select
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
+from langflow.services.database.models.actor.utils import delete_orphaned_actors, ensure_actors_for_all_entities
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.database.utils import initialize_database
@@ -239,6 +240,8 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         await setup_superuser(settings_service, session)
     try:
         await get_db_service().assign_orphaned_flows_to_superuser()
+        await ensure_actors_for_all_entities(session)
+        await delete_orphaned_actors(session)
     except sqlalchemy_exc.IntegrityError as exc:
         logger.warning(f"Error assigning orphaned flows to the superuser: {exc!s}")
     await clean_transactions(settings_service, session)
