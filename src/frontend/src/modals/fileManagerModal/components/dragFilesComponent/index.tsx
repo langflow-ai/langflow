@@ -13,7 +13,6 @@ export default function DragFilesComponent({
   types: string[];
   isList: boolean;
 }) {
-  const image = `url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23FFFFFF' stroke-width='2px' stroke-dasharray='5%2c 5' stroke-dashoffset='0' stroke-linecap='butt'/%3E%3C/svg%3E")`;
   const [isDragging, setIsDragging] = useState(false);
   const uploadFile = useUploadFile({
     types,
@@ -113,13 +112,32 @@ export default function DragFilesComponent({
           </span>
           <span>max</span>
         </p>
-        <div
-          className="pointer-events-none absolute h-full w-full rounded-2xl bg-placeholder-foreground"
-          style={{
-            WebkitMaskImage: image,
-            maskImage: image,
-          }}
-        />
+        <div className="pointer-events-none absolute inset-0 h-full w-full">
+          <svg
+            width="100%"
+            height="100%"
+            className="overflow-visible stroke-muted-foreground/50"
+            style={{
+              position: "absolute",
+              top: 2,
+              left: 2,
+              right: 0,
+              bottom: 0,
+            }}
+          >
+            <rect
+              width="99.5%"
+              height="99.5%"
+              fill="none"
+              rx="16"
+              ry="16"
+              strokeWidth="1"
+              strokeDasharray="5,5"
+              strokeDashoffset="0"
+              strokeLinecap="butt"
+            />
+          </svg>
+        </div>
       </div>
     </div>
   );
