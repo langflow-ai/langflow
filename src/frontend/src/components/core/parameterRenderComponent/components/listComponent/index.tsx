@@ -16,16 +16,16 @@ type ListComponentProps = {
 };
 
 const AuthButtonContent = memo(
-  ({ actionData, placeholder }: { actionData: any[]; placeholder: string }) => (
+  ({ listData, placeholder }: { listData: any[]; placeholder: string }) => (
     <div className={cn("flex w-full items-center justify-start text-sm")}>
-      {actionData[0]?.icon && (
+      {listData[0]?.icon && (
         <ForwardedIconComponent
-          name={actionData[0]?.icon}
+          name={listData[0]?.icon}
           className="mr-3 h-5 w-5"
         />
       )}
-      {actionData.length > 0
-        ? actionData.map((action) => action.name).join(", ")
+      {listData.length > 0
+        ? listData.map((action) => action.name).join(", ")
         : placeholder}
       <ForwardedIconComponent
         name="ChevronsUpDown"
@@ -119,7 +119,7 @@ const ListComponent = ({
   const { placeholder } = baseInputProps;
   const [open, setOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [actionData, setActionData] = useState<any[]>([]);
+  const [listData, setListData] = useState<any[]>([]);
 
   const handleAuthButtonClick = useCallback(() => {
     setIsAuthenticated((prev) => !prev);
@@ -131,7 +131,7 @@ const ListComponent = ({
 
   const createRemoveHandler = useCallback((index: number) => {
     return () => {
-      setActionData((current) => current.filter((_, i) => i !== index));
+      setListData((current) => current.filter((_, i) => i !== index));
     };
   }, []);
 
@@ -147,7 +147,7 @@ const ListComponent = ({
         >
           {auth ? (
             <AuthButtonContent
-              actionData={actionData}
+              listData={listData}
               placeholder={placeholder || "Select an option"}
             />
           ) : (
@@ -174,14 +174,14 @@ const ListComponent = ({
       {/* TODO: add variant and icon to this */}
       {helperText && <HelperTextSection helperText={helperText} />}
 
-      {showSortable && !auth && actionData.length > 0 && (
+      {showSortable && !auth && listData.length > 0 && (
         <div className="flex w-full flex-col">
           <ReactSortable
-            list={actionData}
-            setList={setActionData}
+            list={listData}
+            setList={setListData}
             className="flex w-full flex-col"
           >
-            {actionData.map((data, index) => (
+            {listData.map((data, index) => (
               <SortableListItem
                 key={data?.name || index}
                 data={data}
@@ -197,8 +197,8 @@ const ListComponent = ({
         open={open}
         onClose={handleCloseDialog}
         hasSearch={auth}
-        setSelectedAction={setActionData}
-        selectedAction={actionData}
+        setSelectedList={setListData}
+        selectedList={listData}
         type={selectionType}
       />
     </div>

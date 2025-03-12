@@ -79,8 +79,8 @@ interface ListSelectionComponentProps {
   open: boolean;
   onClose: () => void;
   hasSearch?: boolean;
-  setSelectedAction: (action: any[]) => void;
-  selectedAction: any[];
+  setSelectedList: (action: any[]) => void;
+  selectedList: any[];
   type: SelectionMode; // true for multiple selection, false for single selection
 }
 
@@ -120,8 +120,8 @@ const ListSelectionComponent = ({
   open,
   onClose,
   hasSearch = true,
-  setSelectedAction = () => {},
-  selectedAction = [],
+  setSelectedList = () => {},
+  selectedList = [],
   type,
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
@@ -148,22 +148,22 @@ const ListSelectionComponent = ({
     (action: any) => {
       if (type === "multiple") {
         // Multiple selection mode
-        const isAlreadySelected = selectedAction.some(
+        const isAlreadySelected = selectedList.some(
           (selectedItem) => selectedItem.name === action.name,
         );
 
         if (isAlreadySelected) {
-          setSelectedAction(
-            selectedAction.filter(
+          setSelectedList(
+            selectedList.filter(
               (selectedItem) => selectedItem.name !== action.name,
             ),
           );
         } else {
-          setSelectedAction([...selectedAction, action]);
+          setSelectedList([...selectedList, action]);
         }
       } else {
         // Single selection mode
-        setSelectedAction([
+        setSelectedList([
           {
             name: action.name,
             icon: "icon" in action ? action.icon : undefined,
@@ -172,7 +172,7 @@ const ListSelectionComponent = ({
         onClose();
       }
     },
-    [type, selectedAction, setSelectedAction, onClose],
+    [type, selectedList, setSelectedList, onClose],
   );
 
   // Use the callback directly
@@ -219,7 +219,7 @@ const ListSelectionComponent = ({
               <ListItem
                 key={item.name}
                 item={item}
-                isSelected={selectedAction.some(
+                isSelected={selectedList.some(
                   (selected) => selected.name === item.name,
                 )}
                 onClick={() => handleSelectAction(item)}
