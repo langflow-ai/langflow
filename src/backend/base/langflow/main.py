@@ -23,7 +23,7 @@ from pydantic_core import PydanticSerializationError
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router, router_v2
+from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -34,7 +34,11 @@ from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_queue_service,
+    get_settings_service,
+    get_telemetry_service,
+)
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -52,7 +56,9 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
         super().__init__(app)
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         sentinel = object()
 
         async def cancel_handler():
@@ -64,7 +70,9 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
         handler_task = asyncio.create_task(call_next(request))
         cancel_task = asyncio.create_task(cancel_handler())
 
-        done, pending = await asyncio.wait([handler_task, cancel_task], return_when=asyncio.FIRST_COMPLETED)
+        done, pending = await asyncio.wait(
+            [handler_task, cancel_task], return_when=asyncio.FIRST_COMPLETED
+        )
 
         for task in pending:
             task.cancel()
@@ -75,7 +83,9 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         try:
             response = await call_next(request)
         except Exception as exc:
@@ -85,7 +95,9 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
                     "Please share this error on our GitHub repository."
                 )
                 error_messages = json.dumps([message, str(exc)])
-                raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages) from exc
+                raise HTTPException(
+                    status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=error_messages
+                ) from exc
             raise
         if (
             "files/" not in request.url.path
@@ -122,8 +134,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             setup_llm_caching()
             await initialize_super_user_if_needed()
-            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-            get_settings_service().settings.components_path.extend(bundles_components_paths)
+            temp_dirs, bundles_components_paths = (
+                await load_bundles_with_error_handling()
+            )
+            get_settings_service().settings.components_path.extend(
+                bundles_components_paths
+            )
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
             await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
@@ -142,7 +158,9 @@ def get_lifespan(*, fix_migration=False, version=None):
             logger.info("Cleaning up resources...")
             await teardown_services()
             await logger.complete()
-            temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
+            temp_dir_cleanups = [
+                asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs
+            ]
             await asyncio.gather(*temp_dir_cleanups)
             # Final message
             rprint("[bold red]Langflow shutdown complete[/bold red]")
@@ -180,10 +198,16 @@ def create_app():
         if "/api/v1/files/upload" in request.url.path:
             content_type = request.headers.get("Content-Type")
 
-            if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
+            if (
+                not content_type
+                or "multipart/form-data" not in content_type
+                or "boundary=" not in content_type
+            ):
                 return JSONResponse(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
+                    content={
+                        "detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."
+                    },
                 )
 
             boundary = content_type.split("boundary=")[-1].strip()
@@ -202,7 +226,9 @@ def create_app():
             boundary_end = f"--{boundary}--\r\n".encode()
             boundary_end_no_newline = f"--{boundary}--".encode()
 
-            if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
+            if not body.startswith(boundary_start) or not body.endswith(
+                (boundary_end, boundary_end_no_newline)
+            ):
                 return JSONResponse(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     content={"detail": "Invalid multipart formatting"},
@@ -225,7 +251,9 @@ def create_app():
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
         if prome_port > 0 or prome_port < MAX_PORT:
-            rprint(f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]")
+            rprint(
+                f"[bold green]Starting Prometheus server on port {prome_port}...[/bold green]"
+            )
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
@@ -243,7 +271,6 @@ def create_app():
         router.include_router(mcp_router)
 
     app.include_router(router)
-    app.include_router(router_v2)
     app.include_router(health_check_router)
     app.include_router(log_router)
 
@@ -310,7 +337,9 @@ def get_static_files_dir():
     return frontend_path / "frontend"
 
 
-def setup_app(static_files_dir: Path | None = None, *, backend_only: bool = False) -> FastAPI:
+def setup_app(
+    static_files_dir: Path | None = None, *, backend_only: bool = False
+) -> FastAPI:
     """Setup the FastAPI app."""
     # get the directory of the current file
     logger.info(f"Setting up app with static files directory {static_files_dir}")
