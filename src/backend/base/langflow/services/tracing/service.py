@@ -91,6 +91,7 @@ class ComponentTraceContext:
         self.outputs_metadata: dict[str, dict] = defaultdict(dict)
         self.logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
 
+
 class TracingService(Service):
     """Tracing service.
 
