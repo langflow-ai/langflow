@@ -405,7 +405,7 @@ For a simpler execution of your flows, use the [`/run` endpoint](/api-reference-
 
 :::important
 This endpoint is meant to be used by the frontend and is not optimized for external use.
-To run your flow, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead. d
+To run your flow, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead.
 :::
 
 This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
