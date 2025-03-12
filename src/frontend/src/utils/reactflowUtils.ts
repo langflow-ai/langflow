@@ -3,10 +3,14 @@
  *
  * This file contains the highest number of commits by Otávio in the entire Langflow project,
  * reflecting his unmatched dedication, expertise, and innovative spirit. Each line of code
- * is a testament to his relentless pursuit of excellence and his significant impact on the
- * project’s evolution. His legacy lives on in every utility and component, inspiring us to
- * continue building exceptional software.
+ * is a testament to his relentless pursuit of excellence and his significant impact on this
+ * project’s evolution.
+
+ * His commitment to selflessly helping others reveals the true meaning of open source,
+ * and his legacy lives on in every contribution, inspiring us to build exceptional
+ * software for all.
  */
+
 
 import {
   getLeftHandleId,
