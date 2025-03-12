@@ -28,6 +28,11 @@ INPUT_TYPE_MAP = {
 }
 
 
+async def get_project_id(flow_id: str) -> UUID:
+    async with session_scope() as session:
+        return (await session.exec(select(Flow.folder_id).where(Flow.id == flow_id))).first()
+
+
 async def list_flows(*, user_id: str | None = None) -> list[Data]:
     if not user_id:
         msg = "Session is invalid"

@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar
+from uuid import UUID
 
 import yaml
 from cachetools import TTLCache
@@ -11,7 +12,7 @@ from langchain_core.documents import Document
 from pydantic import BaseModel
 
 from langflow.custom.custom_component.base_component import BaseComponent
-from langflow.helpers.flow import list_flows, load_flow, run_flow
+from langflow.helpers.flow import get_project_id, list_flows, load_flow, run_flow
 from langflow.schema import Data
 from langflow.services.deps import get_storage_service, get_variable_service, session_scope
 from langflow.services.storage.service import StorageService
@@ -532,6 +533,14 @@ class CustomComponent(BaseComponent):
         except Exception as e:
             msg = f"Error listing flows: {e}"
             raise ValueError(msg) from e
+
+    async def get_project_id(self) -> UUID:
+        """Get the project ID for the current user.
+
+        Returns:
+            str: The project ID for the current user.
+        """
+        return await get_project_id(flow_id=str(self.flow_id))
 
     def build(self, *args: Any, **kwargs: Any) -> Any:
         """Builds the custom component.
