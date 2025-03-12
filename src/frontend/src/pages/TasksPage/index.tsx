@@ -7,11 +7,28 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useDeleteSubscription } from "@/controllers/API/queries/subscriptions/use-delete-subscription";
@@ -45,6 +62,22 @@ export default function TaskPage() {
   }>({ value: "", title: "" });
   const [isTextDialogOpen, setIsTextDialogOpen] = useState(false);
   const [textCopyFeedback, setTextCopyFeedback] = useState(false);
+  const [selectedTaskToEdit, setSelectedTaskToEdit] = useState<Task | null>(
+    null,
+  );
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<Partial<Task>>({});
+  const [isBatchEditDialogOpen, setIsBatchEditDialogOpen] = useState(false);
+  const [batchEditFormData, setBatchEditFormData] = useState<Partial<Task>>({});
+  const [batchEditFields, setBatchEditFields] = useState<
+    Record<string, boolean>
+  >({
+    title: false,
+    description: false,
+    category: false,
+    state: false,
+    status: false,
+  });
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const navigate = useCustomNavigate();
   const queryClient = useQueryClient();
@@ -72,13 +105,25 @@ export default function TaskPage() {
 
   useEffect(() => {
     if (tasks && Array.isArray(tasks) && !showSubscriptions) {
-      setTaskData(tasks);
+      // Sort tasks by created_at in descending order (newest first)
+      const sortedTasks = [...tasks].sort((a, b) => {
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      });
+      setTaskData(sortedTasks);
     }
   }, [tasks, showSubscriptions]);
 
   useEffect(() => {
     if (subscriptions && Array.isArray(subscriptions) && showSubscriptions) {
-      setSubscriptionData(subscriptions);
+      // Sort subscriptions by created_at in descending order (newest first)
+      const sortedSubscriptions = [...subscriptions].sort((a, b) => {
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+      });
+      setSubscriptionData(sortedSubscriptions);
     }
   }, [subscriptions, showSubscriptions]);
 
@@ -286,11 +331,222 @@ export default function TaskPage() {
     }
   };
 
+  const handleEditTask = (taskId: string) => {
+    const taskToEdit = taskData.find((task) => task.id === taskId);
+    if (taskToEdit) {
+      setSelectedTaskToEdit(taskToEdit);
+      setEditFormData({
+        title: taskToEdit.title,
+        description: taskToEdit.description,
+        category: taskToEdit.category,
+        state: taskToEdit.state,
+        status: taskToEdit.status,
+      });
+      setIsEditTaskDialogOpen(true);
+    }
+  };
+
+  const handleEditFormChange = (field: string, value: string) => {
+    setEditFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveEditedTask = async () => {
+    if (!selectedTaskToEdit) return;
+
+    try {
+      // Update task via API
+      await api.put(
+        `${getURL("TASKS")}/${selectedTaskToEdit.id}`,
+        editFormData,
+      );
+
+      // Update local state
+      setTaskData((prevData) =>
+        prevData.map((item) =>
+          item.id === selectedTaskToEdit.id
+            ? { ...item, ...editFormData }
+            : item,
+        ),
+      );
+
+      // Invalidate query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+
+      // Close dialog
+      setIsEditTaskDialogOpen(false);
+      setSelectedTaskToEdit(null);
+    } catch (error) {
+      setErrorData({
+        title: "Error updating task",
+        list: [(error as Error).message],
+      });
+    }
+  };
+
+  // Function to handle viewing task details
+  const handleViewTaskDetails = (task: Task) => {
+    // Set the selected text to the task description
+    setSelectedText({
+      value: task.description,
+      title: `Task: ${task.title}`,
+    });
+    setIsTextDialogOpen(true);
+  };
+
+  // Function to handle deleting a single task
+  const handleDeleteSingleTask = (taskId: string) => {
+    mutateDeleteTask(
+      { taskId },
+      {
+        onError: (error: Error) => {
+          setErrorData({
+            title: "Error deleting task",
+            list: [error.message],
+          });
+        },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        },
+      },
+    );
+  };
+
+  // Function to handle batch edit
+  const handleBatchEdit = () => {
+    // Reset form data and field selections
+    setBatchEditFormData({});
+    setBatchEditFields({
+      title: false,
+      description: false,
+      category: false,
+      state: false,
+      status: false,
+    });
+    setIsBatchEditDialogOpen(true);
+  };
+
+  // Function to handle batch edit form changes
+  const handleBatchEditFormChange = (field: string, value: string) => {
+    setBatchEditFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Function to toggle which fields to include in batch edit
+  const toggleBatchEditField = (field: string) => {
+    setBatchEditFields((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
+  };
+
+  // Function to save batch edits
+  const handleSaveBatchEdits = async () => {
+    try {
+      // Create an object with only the fields that are selected for editing
+      const fieldsToUpdate: Partial<Task> = {};
+      Object.keys(batchEditFields).forEach((field) => {
+        if (
+          batchEditFields[field] &&
+          batchEditFormData[field as keyof Task] !== undefined
+        ) {
+          // Use type assertion to fix the type error
+          fieldsToUpdate[field as keyof Task] = batchEditFormData[
+            field as keyof Task
+          ] as any;
+        }
+      });
+
+      // If no fields are selected, return
+      if (Object.keys(fieldsToUpdate).length === 0) {
+        setIsBatchEditDialogOpen(false);
+        return;
+      }
+
+      // Update each selected task
+      const updatePromises = selectedRows.map((taskId) =>
+        api.put(`${getURL("TASKS")}/${taskId}`, fieldsToUpdate),
+      );
+
+      await Promise.all(updatePromises);
+
+      // Update local state
+      setTaskData((prevData) =>
+        prevData.map((task) =>
+          selectedRows.includes(task.id)
+            ? { ...task, ...fieldsToUpdate }
+            : task,
+        ),
+      );
+
+      // Invalidate query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+
+      // Close dialog
+      setIsBatchEditDialogOpen(false);
+    } catch (error) {
+      setErrorData({
+        title: "Error updating tasks",
+        list: [(error as Error).message],
+      });
+    }
+  };
+
   const taskColDefs: ColDef[] = [
+    {
+      headerName: "Actions",
+      field: "actions",
+      flex: 1,
+      sortable: false,
+      cellRenderer: (params: any) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => e.stopPropagation()}
+              title="Task actions"
+            >
+              <ForwardedIconComponent name="MoreVertical" className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => handleEditTask(params.data.id)}
+              className="cursor-pointer"
+            >
+              <ForwardedIconComponent name="Edit" className="mr-2 h-4 w-4" />
+              Edit Task
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleViewTaskDetails(params.data)}
+              className="cursor-pointer"
+            >
+              <ForwardedIconComponent name="Eye" className="mr-2 h-4 w-4" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleDeleteSingleTask(params.data.id)}
+              className="cursor-pointer text-red-600 focus:text-red-600"
+            >
+              <ForwardedIconComponent name="Trash2" className="mr-2 h-4 w-4" />
+              Delete Task
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      editable: false,
+    },
     {
       headerName: "ID",
       field: "id",
       flex: 1,
+      sortable: true,
       cellRenderer: (params: any) =>
         TextRenderer({ value: params.value, fieldName: "id" }),
       editable: false,
@@ -299,6 +555,7 @@ export default function TaskPage() {
       headerName: "Title",
       field: "title",
       flex: 2,
+      sortable: true,
       cellRenderer: (params: any) =>
         TextRenderer({ value: params.value, fieldName: "title" }),
       editable: true,
@@ -307,6 +564,7 @@ export default function TaskPage() {
       headerName: "Description",
       field: "description",
       flex: 3,
+      sortable: true,
       cellRenderer: DescriptionRenderer,
       editable: true,
     },
@@ -314,6 +572,7 @@ export default function TaskPage() {
       headerName: "Category",
       field: "category",
       flex: 1,
+      sortable: true,
       cellRenderer: BadgeRenderer,
       editable: true,
     },
@@ -321,6 +580,7 @@ export default function TaskPage() {
       headerName: "State",
       field: "state",
       flex: 1,
+      sortable: true,
       cellRenderer: BadgeRenderer,
       editable: true,
     },
@@ -328,6 +588,7 @@ export default function TaskPage() {
       headerName: "Status",
       field: "status",
       flex: 1,
+      sortable: true,
       cellRenderer: BadgeRenderer,
       editable: true,
     },
@@ -335,6 +596,7 @@ export default function TaskPage() {
       headerName: "Result",
       field: "result",
       flex: 2,
+      sortable: false,
       cellRenderer: ResultRenderer,
       editable: false,
     },
@@ -342,6 +604,8 @@ export default function TaskPage() {
       headerName: "Created At",
       field: "created_at",
       flex: 1,
+      sortable: true,
+      sort: "desc",
       cellRenderer: DateRenderer,
       editable: false,
     },
@@ -349,6 +613,7 @@ export default function TaskPage() {
       headerName: "Updated At",
       field: "updated_at",
       flex: 1,
+      sortable: true,
       cellRenderer: DateRenderer,
       editable: false,
     },
@@ -359,6 +624,7 @@ export default function TaskPage() {
       headerName: "ID",
       field: "id",
       flex: 1,
+      sortable: true,
       cellRenderer: (params: any) =>
         TextRenderer({ value: params.value, fieldName: "id" }),
       editable: false,
@@ -367,6 +633,7 @@ export default function TaskPage() {
       headerName: "Flow ID",
       field: "flow_id",
       flex: 2,
+      sortable: true,
       cellRenderer: (params: any) =>
         TextRenderer({ value: params.value, fieldName: "flow id" }),
       editable: false,
@@ -375,6 +642,7 @@ export default function TaskPage() {
       headerName: "Event Type",
       field: "event_type",
       flex: 2,
+      sortable: true,
       cellRenderer: (params: any) =>
         TextRenderer({ value: params.value, fieldName: "event type" }),
       editable: true,
@@ -383,6 +651,7 @@ export default function TaskPage() {
       headerName: "Category",
       field: "category",
       flex: 1,
+      sortable: true,
       cellRenderer: BadgeRenderer,
       editable: true,
     },
@@ -390,6 +659,7 @@ export default function TaskPage() {
       headerName: "State",
       field: "state",
       flex: 2,
+      sortable: true,
       cellRenderer: (params: any) => {
         // If state is a string that looks like JSON, parse it and use ResultRenderer
         if (params.value && typeof params.value === "string") {
@@ -415,6 +685,8 @@ export default function TaskPage() {
       headerName: "Created At",
       field: "created_at",
       flex: 1,
+      sortable: true,
+      sort: "desc",
       cellRenderer: DateRenderer,
       editable: false,
     },
@@ -422,6 +694,7 @@ export default function TaskPage() {
       headerName: "Updated At",
       field: "updated_at",
       flex: 1,
+      sortable: true,
       cellRenderer: DateRenderer,
       editable: false,
     },
@@ -599,12 +872,23 @@ export default function TaskPage() {
         button={
           <div className="flex gap-2">
             {!showSubscriptions && (
-              <AddNewTaskButton asChild>
-                <Button variant="primary">
-                  <ForwardedIconComponent name="Plus" className="w-4" />
-                  Add New Task
-                </Button>
-              </AddNewTaskButton>
+              <>
+                <AddNewTaskButton asChild>
+                  <Button variant="primary">
+                    <ForwardedIconComponent name="Plus" className="w-4" />
+                    Add New Task
+                  </Button>
+                </AddNewTaskButton>
+                {selectedRows.length > 1 && (
+                  <Button variant="outline" onClick={handleBatchEdit}>
+                    <ForwardedIconComponent
+                      name="Edit2"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Batch Edit ({selectedRows.length})
+                  </Button>
+                )}
+              </>
             )}
           </div>
         }
@@ -659,6 +943,19 @@ export default function TaskPage() {
                 quickFilterText={inputValue}
                 editable={true}
                 onCellEditRequest={handleCellEditRequest}
+                defaultColDef={{
+                  sortable: true,
+                  resizable: true,
+                }}
+                onGridReady={(params) => {
+                  // Set default sorting by created_at in descending order
+                  params.api.setSortModel([
+                    {
+                      colId: "created_at",
+                      sort: "desc",
+                    },
+                  ]);
+                }}
               />
             </div>
           )}
@@ -789,6 +1086,260 @@ export default function TaskPage() {
           <div className="mt-4 flex justify-end">
             <Button onClick={() => setIsTextDialogOpen(false)}>Close</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Edit Task Dialog */}
+      <Dialog
+        open={isEditTaskDialogOpen}
+        onOpenChange={setIsEditTaskDialogOpen}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                Title
+              </Label>
+              <Input
+                id="title"
+                value={editFormData.title || ""}
+                onChange={(e) => handleEditFormChange("title", e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                value={editFormData.description || ""}
+                onChange={(e) =>
+                  handleEditFormChange("description", e.target.value)
+                }
+                className="col-span-3"
+                rows={4}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="category" className="text-right">
+                Category
+              </Label>
+              <Input
+                id="category"
+                value={editFormData.category || ""}
+                onChange={(e) =>
+                  handleEditFormChange("category", e.target.value)
+                }
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="state" className="text-right">
+                State
+              </Label>
+              <Input
+                id="state"
+                value={editFormData.state || ""}
+                onChange={(e) => handleEditFormChange("state", e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Status
+              </Label>
+              <Select
+                value={editFormData.status}
+                onValueChange={(value) => handleEditFormChange("status", value)}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditTaskDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEditedTask}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Edit Dialog */}
+      <Dialog
+        open={isBatchEditDialogOpen}
+        onOpenChange={setIsBatchEditDialogOpen}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Batch Edit Tasks ({selectedRows.length})</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="mb-4 rounded-md bg-amber-50 p-3 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+              <p className="flex items-center text-sm">
+                <ForwardedIconComponent name="Info" className="mr-2 h-4 w-4" />
+                Select which fields to update for all selected tasks. Only
+                checked fields will be modified.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-5 items-center gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="edit-title"
+                  checked={batchEditFields.title}
+                  onChange={() => toggleBatchEditField("title")}
+                  className="mr-2"
+                />
+                <Label htmlFor="edit-title" className="text-right">
+                  Title
+                </Label>
+              </div>
+              <Input
+                id="batch-title"
+                value={batchEditFormData.title || ""}
+                onChange={(e) =>
+                  handleBatchEditFormChange("title", e.target.value)
+                }
+                className="col-span-4"
+                disabled={!batchEditFields.title}
+              />
+            </div>
+
+            <div className="grid grid-cols-5 items-center gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="edit-description"
+                  checked={batchEditFields.description}
+                  onChange={() => toggleBatchEditField("description")}
+                  className="mr-2"
+                />
+                <Label htmlFor="edit-description" className="text-right">
+                  Description
+                </Label>
+              </div>
+              <Textarea
+                id="batch-description"
+                value={batchEditFormData.description || ""}
+                onChange={(e) =>
+                  handleBatchEditFormChange("description", e.target.value)
+                }
+                className="col-span-4"
+                rows={4}
+                disabled={!batchEditFields.description}
+              />
+            </div>
+
+            <div className="grid grid-cols-5 items-center gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="edit-category"
+                  checked={batchEditFields.category}
+                  onChange={() => toggleBatchEditField("category")}
+                  className="mr-2"
+                />
+                <Label htmlFor="edit-category" className="text-right">
+                  Category
+                </Label>
+              </div>
+              <Input
+                id="batch-category"
+                value={batchEditFormData.category || ""}
+                onChange={(e) =>
+                  handleBatchEditFormChange("category", e.target.value)
+                }
+                className="col-span-4"
+                disabled={!batchEditFields.category}
+              />
+            </div>
+
+            <div className="grid grid-cols-5 items-center gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="edit-state"
+                  checked={batchEditFields.state}
+                  onChange={() => toggleBatchEditField("state")}
+                  className="mr-2"
+                />
+                <Label htmlFor="edit-state" className="text-right">
+                  State
+                </Label>
+              </div>
+              <Input
+                id="batch-state"
+                value={batchEditFormData.state || ""}
+                onChange={(e) =>
+                  handleBatchEditFormChange("state", e.target.value)
+                }
+                className="col-span-4"
+                disabled={!batchEditFields.state}
+              />
+            </div>
+
+            <div className="grid grid-cols-5 items-center gap-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="edit-status"
+                  checked={batchEditFields.status}
+                  onChange={() => toggleBatchEditField("status")}
+                  className="mr-2"
+                />
+                <Label htmlFor="edit-status" className="text-right">
+                  Status
+                </Label>
+              </div>
+              <div className="col-span-4">
+                <Select
+                  value={batchEditFormData.status}
+                  onValueChange={(value) =>
+                    handleBatchEditFormChange("status", value)
+                  }
+                  disabled={!batchEditFields.status}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBatchEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveBatchEdits}>
+              Apply to {selectedRows.length} Tasks
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
