@@ -74,7 +74,7 @@ class TraceContext:
 
 class ComponentTraceContext:
     def __init__(
-            self,
+        self,
             trace_id: str | None,
             trace_name: str | None,
             trace_type: str | None,
