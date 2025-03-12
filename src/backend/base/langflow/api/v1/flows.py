@@ -9,6 +9,8 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
+from aiofile import async_open
+from anyio import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
@@ -34,6 +36,22 @@ from langflow.services.settings.service import SettingsService
 router = APIRouter(prefix="/flows", tags=["Flows"])
 
 
+async def _verify_fs_path(path: str | None) -> None:
+    if path:
+        path_ = Path(path)
+        if not await path_.exists():
+            await path_.touch()
+
+
+async def _save_flow_to_fs(flow: Flow) -> None:
+    if flow.fs_path:
+        async with async_open(flow.fs_path, "w") as f:
+            try:
+                await f.write(flow.model_dump_json())
+            except OSError:
+                logger.exception("Failed to write flow %s to path %s", flow.name, flow.fs_path)
+
+
 async def _new_flow(
     *,
     session: AsyncSession,
@@ -41,6 +59,8 @@ async def _new_flow(
     user_id: UUID,
 ):
     try:
+        await _verify_fs_path(flow.fs_path)
+
         """Create a new flow."""
         if flow.user_id is None:
             flow.user_id = user_id
@@ -145,6 +165,9 @@ async def create_flow(
                 await Actor.create_from_flow(session=session, flow_id=db_flow.id)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Error creating actor for flow: {e}")
+
+        await _save_flow_to_fs(db_flow)
+
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -312,6 +335,8 @@ async def update_flow(
         for key, value in update_data.items():
             setattr(db_flow, key, value)
 
+        await _verify_fs_path(db_flow.fs_path)
+
         webhook_component = get_webhook_component_in_flow(db_flow.data)
         db_flow.webhook = webhook_component is not None
         db_flow.updated_at = datetime.now(timezone.utc)
@@ -331,6 +356,8 @@ async def update_flow(
             await trigger_service.update_subscriptions_for_flow(db_flow, session)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Error updating subscriptions for flow: {e}")
+
+        await _save_flow_to_fs(db_flow)
 
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
@@ -436,6 +463,7 @@ async def upload_file(
         await session.commit()
         for db_flow in response_list:
             await session.refresh(db_flow)
+            await _save_flow_to_fs(db_flow)
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed

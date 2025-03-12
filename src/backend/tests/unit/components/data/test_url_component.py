@@ -111,7 +111,7 @@ class TestURLComponent(ComponentTestBaseWithoutClient):
         component.set_attributes({"urls": ["not_a_valid_url"]})
 
         # Test that invalid URLs raise a ValueError
-        with pytest.raises(ValueError, match="Invalid URL: http://not_a_valid_url"):
+        with pytest.raises(ValueError, match="Invalid URL - http://not_a_valid_url"):
             component.fetch_content()
 
     def test_url_component_multiple_urls(self, mock_web_load):

@@ -171,6 +171,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     folder: Optional["Project"] = Relationship(back_populates="flows")
+    fs_path: str | None = Field(default=None, nullable=True)
     messages: list["MessageTable"] = Relationship(back_populates="flow")
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
     vertex_builds: list["VertexBuildTable"] = Relationship(back_populates="flow")
@@ -197,6 +198,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
 class FlowCreate(FlowBase):
     user_id: UUID | None = None
     folder_id: UUID | None = None
+    fs_path: str | None = None
 
 
 class FlowRead(FlowBase):
@@ -236,6 +238,7 @@ class FlowUpdate(SQLModel):
     folder_id: UUID | None = None
     endpoint_name: str | None = None
     locked: bool | None = None
+    fs_path: str | None = None
 
     @field_validator("endpoint_name")
     @classmethod
