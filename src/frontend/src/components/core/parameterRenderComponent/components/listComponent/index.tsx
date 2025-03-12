@@ -177,7 +177,6 @@ const ListComponent = ({
         )}
       </div>
 
-      {/* TODO: add variant and icon to this */}
       {helperText && (
         <HelperTextSection
           helperText={helperText}

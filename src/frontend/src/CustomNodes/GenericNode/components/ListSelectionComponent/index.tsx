@@ -15,11 +15,10 @@ interface ListSelectionComponentProps {
   hasSearch?: boolean;
   setSelectedList: (action: any[]) => void;
   selectedList: any[];
-  type: SelectionMode; // true for multiple selection, false for single selection
+  type: SelectionMode;
   searchCategory?: string[];
 }
 
-// Create a reusable list item component for better structure
 const ListItem = ({
   item,
   isSelected,
@@ -62,7 +61,6 @@ const ListSelectionComponent = ({
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
 
-  // Filter list based on search term - memoized to prevent recalculation on every render
   const filteredList = useMemo(() => {
     if (!search.trim()) {
       return options;
@@ -73,7 +71,6 @@ const ListSelectionComponent = ({
     );
   }, [options, search]);
 
-  // Memoize selection handler to prevent recreation on each render
   const handleSelectAction = useCallback(
     (action: any) => {
       if (type === "multiple") {
@@ -105,7 +102,6 @@ const ListSelectionComponent = ({
     [type, selectedList, setSelectedList, onClose],
   );
 
-  // Use the callback directly
   const handleCloseDialog = useCallback(() => {
     onClose();
   }, [onClose]);
