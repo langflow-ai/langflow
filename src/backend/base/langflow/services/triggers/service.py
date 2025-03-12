@@ -15,7 +15,7 @@ from langflow.services.database.models.task.model import TaskCreate
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.base.triggers.model import BaseTriggerComponent
     from langflow.services.task_orchestration.service import TaskOrchestrationService
