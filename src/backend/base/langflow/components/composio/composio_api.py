@@ -43,8 +43,8 @@ class ComposioAPIComponent(LCToolComponent):
             real_time_refresh=True,
         ),
         ListSelectionInput(
-            auth=True, # TODO: Add some type of auth link to this
-            name="tool_name", 
+            auth=True,  # TODO: Add some type of auth link to this
+            name="tool_name",
             display_name="Tool Name",
             placeholder="Select a tool...",
             options=[
@@ -53,12 +53,12 @@ class ComposioAPIComponent(LCToolComponent):
                     "icon": "github",
                 },
                 {
-                    "name": "Microsoft", 
+                    "name": "Microsoft",
                     "icon": "microsoft",
                 },
                 {
                     "name": "Google",
-                    "icon": "google", 
+                    "icon": "google",
                 },
                 {
                     "name": "Slack",
@@ -67,7 +67,7 @@ class ComposioAPIComponent(LCToolComponent):
                 {
                     "name": "Dropbox",
                     "icon": "dropbox",
-                }
+                },
             ],
             selection_type="single",
             search_category=["all", "analytics & data", "collaboration"],
@@ -76,7 +76,7 @@ class ComposioAPIComponent(LCToolComponent):
         ),
         ListSelectionInput(
             name="actions",
-            display_name="Actions", 
+            display_name="Actions",
             placeholder="Select action",
             selection_type="multiple",
             helper_text="Please connect before selecting tools",
@@ -91,7 +91,7 @@ class ComposioAPIComponent(LCToolComponent):
                     "metaData": "15 actions",
                 },
                 {
-                    "name": "Add assignee to an issue", 
+                    "name": "Add assignee to an issue",
                     "metaData": "18 actions",
                 },
                 {
@@ -121,7 +121,7 @@ class ComposioAPIComponent(LCToolComponent):
                 {
                     "name": "Create repository webhook",
                     "metaData": "13 actions",
-                }
+                },
             ],
             show_sortable=True,
             value="",
