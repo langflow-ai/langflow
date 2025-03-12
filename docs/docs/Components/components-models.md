@@ -480,7 +480,7 @@ For more information, see [Apex Documentation](https://app.macrocosmos.ai).
 | temperature        | Float         | Controls randomness in the output. Range: `[0.0, 1.0]`. Default: `0.7`.    |
 | top_k               | Integer      | The number of highest probability vocabulary tokens to keep for top-k-filtering.   |
 | top_p               | Float        | The cumulative probability of parameter highest probability vocabulary tokens to keep for nucleus sampling. Default: 0.95. |
-| inference_mode     | String        | Determines the type of inference to perform. Options: `[Base-Inference, Chain-of-Thought, Reasoning-Fast, Mixture-of-Agents]`. |
+| inference_mode     | String        | Determines the type of inference to perform. Options: `[Base-Inference, Reasoning-Fast, Mixture-of-Agents]`. |
 
 #### Outputs
 

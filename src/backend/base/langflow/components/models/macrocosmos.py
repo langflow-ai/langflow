@@ -33,7 +33,7 @@ class MacrocosmosComponent(LCModelComponent):
             name="inference_mode",
             display_name="Inference Mode",
             advanced=True,
-            options=["Base-Inference", "Chain-of-Thought", "Reasoning-Fast", "Mixture-of-Agents"],
+            options=["Base-Inference", "Reasoning-Fast", "Mixture-of-Agents"],
             value="Base-Inference",
         ),
         SecretStrInput(
@@ -82,7 +82,7 @@ class MacrocosmosComponent(LCModelComponent):
             model=model_name,
             base_url=macrocosmos_url,
             api_key=str(api_key),
-            inference_mode=inference_mode,
-            extra_body=sample_params,
+            extra_body={'sampling_parameters': sample_params,
+            'inference_mode': inference_mode},
             seed=seed,
         )
