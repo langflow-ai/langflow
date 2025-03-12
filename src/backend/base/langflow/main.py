@@ -23,7 +23,7 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from rich import print as rprint
-from sqlmodel import select
+from sqlmodel import col, select
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router, router_v2
@@ -38,7 +38,12 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.database.models import Flow
-from langflow.services.deps import get_db_service, get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_queue_service,
+    get_settings_service,
+    get_telemetry_service,
+    session_scope,
+)
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -80,11 +85,10 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
 
 async def sync_flows_from_fs():
     flow_mtimes = {}
-    db_service = get_db_service()
     while True:
         try:
-            async with db_service.with_session() as session:
-                stmt = select(Flow).where(Flow.fs_path is not None)
+            async with session_scope() as session:
+                stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
                 flows = (await session.exec(stmt)).all()
                 for flow in flows:
                     if flow.fs_path not in flow_mtimes:
