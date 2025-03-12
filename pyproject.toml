@@ -114,7 +114,7 @@ dependencies = [
     "smolagents>=1.8.0",
     "apify-client>=1.8.1",
     "pylint>=3.3.4",
-    "ruff>=0.9.7",
+    "ruff>=0.9.7"
 ]
 
 [dependency-groups]
@@ -157,7 +157,7 @@ dev = [
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
     "locust>=2.32.9",
-    "pytest-rerunfailures>=15.0",
+    "pytest-rerunfailures>=15.0"
 ]
 
 [tool.uv.sources]
@@ -201,13 +201,12 @@ nv-ingest = [
     "nv-ingest-client==2025.2.7.dev0",
     "python-pptx==0.6.23",
     "pymilvus[bulk_writer,model]==2.5.0",
-    "llama-index-embeddings-nvidia==0.1.5",
+    "llama-index-embeddings-nvidia==0.1.5"
 ]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
-
+    "sqlalchemy[postgresql_psycopg2binary]",
+    "sqlalchemy[postgresql_psycopg]"
 ]
 
 [project.scripts]
@@ -284,13 +283,13 @@ external = ["RUF027"]
 "scripts/*" = [
     "D1",
     "INP",
-    "T201",
+    "T201"
 ]
 "src/backend/tests/*" = [
     "D1",
     "PLR2004",
     "S101",
-    "SLF001",
+    "SLF001"
 ]
 
 [tool.ruff.lint.flake8-builtins]
