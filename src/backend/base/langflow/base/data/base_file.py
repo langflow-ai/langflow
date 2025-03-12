@@ -218,7 +218,7 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_csv(self) -> list[DataFrame]:
+    def load_csv(self) -> DataFrame:
         """Loads CSV files by calling load_files().
 
         Returns:
@@ -231,46 +231,39 @@ class BaseFileComponent(Component, ABC):
         csv_data = []
         for data in all_processed_data:
             # Assuming data might be a Path object or string from your BaseFile
-            if hasattr(data, "path") and str(data.path).lower().endswith(".csv"):
+            if data.file_path.lower().endswith(".csv"):
                 try:
-                    csv_data.append(pd.read_csv(data.path))
+                    csv_data.extend(pd.read_csv(data.file_path).to_dict("records"))
                 except Exception as e:  # noqa: BLE001
                     self.log(f"Error processing CSV file {data.path}: {e}")
-        return csv_data
+
+        return DataFrame(csv_data)
 
     def load_json(self) -> list[Data]:
-        """Loads JSON files by calling load_files().
+        """Loads json file types.
 
         Returns:
-            list[dict]: List of dictionaries from JSON files
+            list[Data]: List of Data JSON files.
         """
-        # Explicitly call load_files() from your original code
-        all_processed_data = self.load_files()
+        # Filter for JSON data and convert to Data objects
+        return [data for data in self.load_files() if data.file_path.lower().endswith(".json")]
 
-        return all_processed_data
 
     def load_others(self) -> list[Message]:
         """Loads other file types by calling load_files().
 
         Returns:
-            list[bytes]: List of raw file contents for non-CSV/JSON files
+            list[Message]: List of raw file contents for non-CSV/JSON files
         """
         # Explicitly call load_files() from your original code
         all_processed_data = self.load_files()
 
         # Filter for non-CSV and non-JSON files
-        other_data = []
-        for data in all_processed_data:
-            if hasattr(data, "path"):
-                file_path = str(data.path).lower()
-                if not (file_path.endswith((".csv", ".json"))):
-                    try:
-                        with open(data.path, "rb") as f:  # noqa: PTH123
-                            content = f.read()
-                            other_data.append(Message(data=content))
-                    except Exception as e:  # noqa: BLE001
-                        self.log(f"Error processing file {data.path}: {e}")
-        return other_data
+        return [
+            Message(data=data.data)
+            for data in all_processed_data
+            if not data.file_path.lower().endswith((".csv", ".json"))
+        ]
 
     @property
     def valid_extensions(self) -> list[str]:
