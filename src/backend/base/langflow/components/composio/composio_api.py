@@ -13,7 +13,15 @@ from loguru import logger
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput,ListSelectionInput
+from langflow.inputs import (
+    DropdownInput,
+    LinkInput,
+    ListSelectionInput,
+    MessageTextInput,
+    MultiselectInput,
+    SecretStrInput,
+    StrInput,
+)
 from langflow.io import Output
 
 
