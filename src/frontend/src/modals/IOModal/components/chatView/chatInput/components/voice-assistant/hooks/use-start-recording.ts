@@ -12,7 +12,6 @@ export const useStartRecording = async (
   workletCode: string,
   processorRef: MutableRefObject<AudioWorkletNode | null>,
   setStatus: (status: string) => void,
-  handleGetMessagesMutation: () => void,
 ) => {
   try {
     const selectedMicrophone = localStorage.getItem("lf_selected_microphone");
@@ -85,7 +84,6 @@ export const useStartRecording = async (
             playNextAudioChunk();
           } else {
             isPlayingRef.current = false;
-            handleGetMessagesMutation();
           }
         }
       };

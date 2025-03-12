@@ -36,4 +36,6 @@ export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
       value: string;
     }[],
   ) => set({ openaiVoices }),
+  soundDetected: false,
+  setSoundDetected: (soundDetected: boolean) => set({ soundDetected }),
 }));

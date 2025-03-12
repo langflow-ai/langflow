@@ -29,4 +29,6 @@ export type VoiceStoreType = {
       value: string;
     }[],
   ) => void;
+  soundDetected: boolean;
+  setSoundDetected: (soundDetected: boolean) => void;
 };

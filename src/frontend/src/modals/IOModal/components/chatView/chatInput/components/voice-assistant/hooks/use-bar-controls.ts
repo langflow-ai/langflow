@@ -5,7 +5,7 @@ export const useBarControls = (
   setRecordingTime: React.Dispatch<React.SetStateAction<number>>,
   setBarHeights: React.Dispatch<React.SetStateAction<number[]>>,
   analyserRef?: React.MutableRefObject<AnalyserNode | null>,
-  setSoundDetected?: React.Dispatch<React.SetStateAction<boolean>>,
+  setSoundDetected?,
 ) => {
   const animationFrameRef = useRef<number | null>(null);
   const timeDataRef = useRef<Uint8Array | null>(null);

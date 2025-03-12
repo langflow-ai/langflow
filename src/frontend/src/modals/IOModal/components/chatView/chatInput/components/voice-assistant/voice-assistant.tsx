@@ -2,6 +2,7 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
 import { useGetMessagesMutation } from "@/controllers/API/queries/messages/use-get-messages-mutation";
+import { useGetMessagesPollingMutation } from "@/controllers/API/queries/messages/use-get-messages-polling";
 import {
   useGetGlobalVariables,
   usePostGlobalVariables,
@@ -11,6 +12,7 @@ import useFlowStore from "@/stores/flowStore";
 import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { useVoiceStore } from "@/stores/voiceStore";
 import { cn } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -44,7 +46,6 @@ export function VoiceAssistant({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [addKey, setAddKey] = useState(false);
   const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
-  const [soundDetected, setSoundDetected] = useState(false);
   const [preferredLanguage, setPreferredLanguage] = useState(
     localStorage.getItem("lf_preferred_language") || "en-US",
   );
@@ -58,6 +59,8 @@ export function VoiceAssistant({
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
+  const soundDetected = useVoiceStore((state) => state.soundDetected);
+  const setSoundDetected = useVoiceStore((state) => state.setSoundDetected);
   const messagesStore = useMessagesStore();
   const setIsBuilding = useFlowStore((state) => state.setIsBuilding);
   const edges = useFlowStore((state) => state.edges);
@@ -107,7 +110,7 @@ export function VoiceAssistant({
     return Boolean(process.env?.ELEVENLABS_API_KEY);
   }, [variables, addKey]);
 
-  const getMessagesMutation = useGetMessagesMutation();
+  const getMessagesMutation = useGetMessagesPollingMutation();
 
   const initializeAudio = async () => {
     useInitializeAudio(audioContextRef, setStatus, startConversation);
@@ -126,7 +129,6 @@ export function VoiceAssistant({
       workletCode,
       processorRef,
       setStatus,
-      handleGetMessagesMutation,
     );
   };
 
@@ -187,9 +189,7 @@ export function VoiceAssistant({
   useBarControls(
     isRecording,
     setRecordingTime,
-    barHeights,
     setBarHeights,
-    recordingTime,
     analyserRef,
     setSoundDetected,
   );
@@ -242,6 +242,7 @@ export function VoiceAssistant({
 
   useEffect(() => {
     checkProvider();
+    handleGetMessagesMutation();
 
     return () => {
       stopRecording();

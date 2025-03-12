@@ -6,7 +6,6 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import { ChatMessageType } from "@/types/chat";
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
 import Robot from "../../../../../assets/robot.png";
