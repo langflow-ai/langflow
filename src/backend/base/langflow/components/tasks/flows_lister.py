@@ -1,50 +1,47 @@
-"""Component for listing all flows in the system."""
+"""Component for listing all flows and users as actors in the system."""
 
 from uuid import UUID
 
 from langflow.custom import Component
 from langflow.io import Output
 from langflow.schema import Data
+from langflow.services.database.models.actor.utils import list_actors_with_details_for_user
 
 
 class FlowsListerComponent(Component):
-    display_name = "Flows Lister"
-    description = "Lists all flows in the system."
+    display_name = "Actors Lister"
+    description = "Lists all actors (flows and users) in the project."
     icon = "list"
     name = "FlowsLister"
 
     outputs = [
-        Output(name="flows", display_name="Flows", method="list_flows"),
+        Output(name="actors", display_name="Actors", method="list_actors"),
     ]
 
-    async def list_flows(self) -> Data:
-        """Return a list of all flow names in the system."""
+    async def list_actors(self) -> Data:
+        """Return a list of all actors in the system."""
         try:
-            # Get flow information as a list of dictionaries
-            flows_list = await self.get_flows_info()
+            # Get actor information as a list of dictionaries
+            actors_list = await self.get_actors_info()
             # Structure the response
-            flows_dict = {"flows": flows_list}
-            return Data(data=flows_dict)
+            actors_dict = {"actors": actors_list}
+            return Data(data=actors_dict)
         except Exception as e:  # noqa: BLE001
-            return Data(data={"error": str(e), "flow_names": []})
+            return Data(data={"error": str(e), "actors": []})
 
-    async def get_folder_id(self, flow_data: list[Data], flow_id: str) -> UUID | None:
-        """Get the folder_id of the flow that flow_id == self.flow_id."""
-        folder_id = next((flow.folder_id for flow in flow_data if flow.id == flow_id), None)
-        if folder_id is None:
-            msg = "Folder ID not found"
+    async def get_actors_info(self) -> list[dict]:
+        """Get all actor information from the system as a list of dictionaries."""
+        # Get the folder_id of the current flow
+        project_id = await self.get_project_id()
+
+        # Get the user_id of the current flow
+        user_id = self.user_id
+        if user_id is None:
+            msg = "User ID not found"
             raise ValueError(msg)
-        if isinstance(folder_id, str):
-            folder_id = UUID(folder_id)
-        return folder_id
 
-    async def get_flows_info(self) -> list[dict]:
-        """Get all flow information from the system as a list of dictionaries."""
-        flow_data = await self.alist_flows()
-        # Get the folder_id of the flow that flow_id == self.flow_id
-        folder_id = await self.get_folder_id(flow_data, self.flow_id)
-        return [
-            {"name": flow.name, "id": flow.id, "description": flow.description}
-            for flow in flow_data
-            if flow.folder_id == folder_id
-        ]
+        if isinstance(user_id, str):
+            user_id = UUID(user_id)
+
+        # Use the utility function to get actors with details for this user in this project
+        return await list_actors_with_details_for_user(user_id=user_id, project_id=project_id)
