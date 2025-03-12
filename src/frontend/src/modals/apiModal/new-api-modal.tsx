@@ -2,7 +2,6 @@ import { TweaksComponent } from "@/components/core/codeTabsComponent/components/
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CustomAPIGenerator } from "@/customization/components/custom-api-generator";
-import { useCustomAPICode } from "@/customization/hooks/use-custom-api-code";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import "ace-builds/src-noconflict/ext-language_tools";
@@ -11,9 +10,7 @@ import "ace-builds/src-noconflict/theme-github";
 import "ace-builds/src-noconflict/theme-twilight";
 import { ReactNode, useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
-import { EXPORT_CODE_DIALOG } from "../../constants/constants";
 import { useTweaksStore } from "../../stores/tweaksStore";
-import { FlowType } from "../../types/flow/index";
 import BaseModal from "../baseModal";
 import APITabsComponent from "./codeTabs/code-tabs";
 
@@ -106,11 +103,35 @@ export default function ApiModal({
       <BaseModal
         open={openTweaks}
         setOpen={setOpenTweaks}
-        size="medium"
-        className="p-0"
+        size="medium-small-tall"
       >
+        <BaseModal.Header
+          description={
+            autoLogin ? undefined : (
+              <>
+                <span className="pr-2">
+                  API access requires an API key. You can{" "}
+                  <a
+                    href="/settings/api-keys"
+                    className="text-accent-pink-foreground"
+                  >
+                    {" "}
+                    create an API key
+                  </a>{" "}
+                  in settings.
+                </span>
+              </>
+            )
+          }
+        >
+          <IconComponent
+            name="SlidersHorizontal"
+            className="h-6 w-6 text-gray-800 dark:text-white"
+          />
+          <span className="pl-2">Tweaks</span>
+        </BaseModal.Header>
         <BaseModal.Content overflowHidden>
-          <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted pt-10 custom-scroll">
+          <div className="h-full w-full overflow-y-auto overflow-x-hidden rounded-lg bg-muted custom-scroll">
             <TweaksComponent open={openTweaks} />
           </div>
         </BaseModal.Content>
