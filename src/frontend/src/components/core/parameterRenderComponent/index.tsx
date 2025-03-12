@@ -209,7 +209,6 @@ export function ParameterRenderComponent({
           />
         );
       case "list":
-        console.log("templateData", templateData);
         return (
           <ListComponent
             {...baseInputProps}
