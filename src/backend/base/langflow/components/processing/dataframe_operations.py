@@ -63,10 +63,17 @@ class DataFrameOperationsComponent(Component):
             dynamic=True,
             show=False,
         ),
-        MessageTextInput(
-            name="new_column_value",
-            display_name="New Column Value",
+        DataFrameInput(
+            name="df_add",
+            display_name="DataFrame Column",
             info="The value to populate the new column with.",
+            dynamic=True,
+            show=False,
+        ),
+        StrInput(
+            name="source_column_name",
+            display_name="DataFrame Column Name",
+            info="The name of the source column.",
             dynamic=True,
             show=False,
         ),
@@ -141,7 +148,8 @@ class DataFrameOperationsComponent(Component):
                 build_config["new_column_name"]["show"] = True
             elif field_value == "Add Column":
                 build_config["new_column_name"]["show"] = True
-                build_config["new_column_value"]["show"] = True
+                build_config["df_add"]["show"] = True
+                build_config["source_column_name"]["show"] = True
             elif field_value == "Select Columns":
                 build_config["columns_to_select"]["show"] = True
             elif field_value in {"Head", "Tail"}:
@@ -155,6 +163,7 @@ class DataFrameOperationsComponent(Component):
 
     def perform_operation(self) -> DataFrame:
         dataframe_copy = self.df.copy()
+        dataframe_add_copy = self.df_add.copy()
         operation = self.operation
 
         if operation == "Filter":
@@ -166,7 +175,7 @@ class DataFrameOperationsComponent(Component):
         if operation == "Rename Column":
             return self.rename_column(dataframe_copy)
         if operation == "Add Column":
-            return self.add_column(dataframe_copy)
+            return self.add_column(dataframe_copy, dataframe_add_copy)
         if operation == "Select Columns":
             return self.select_columns(dataframe_copy)
         if operation == "Head":
@@ -192,8 +201,8 @@ class DataFrameOperationsComponent(Component):
     def rename_column(self, df: DataFrame) -> DataFrame:
         return DataFrame(df.rename(columns={self.column_name: self.new_column_name}))
 
-    def add_column(self, df: DataFrame) -> DataFrame:
-        df[self.new_column_name] = [self.new_column_value] * len(df)
+    def add_column(self, df: DataFrame, df_add: DataFrame) -> DataFrame:
+        df[self.new_column_name] = df_add[self.source_column_name]  # * len(df)
         return DataFrame(df)
 
     def select_columns(self, df: DataFrame) -> DataFrame:
