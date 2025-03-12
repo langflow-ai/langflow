@@ -314,14 +314,16 @@ async def test_deactivated_tracing(mock_settings_service):
     trace_name = "test_component_trace"
     inputs = {"input_key": "input_value"}
 
-    async with tracing_service.trace_component(mock_component, trace_name, inputs):
-        # With tracing disabled, trace_component should return normally but not perform any tracing
-        pass
+    async with tracing_service.trace_component(mock_component, trace_name, inputs) as ts:
+        ts.add_log(trace_name, {"message": "test log"})
+        ts.set_outputs(trace_name, {"output_key": "output_value"})
+        
+        # Test getting LangChain callback handlers
+        callbacks = tracing_service.get_langchain_callbacks()
+        assert len(callbacks) == 0  # Should return empty list when tracing is disabled
 
-    # Test getting LangChain callback handlers
-    callbacks = tracing_service.get_langchain_callbacks()
-    assert len(callbacks) == 0  # Should return empty list when tracing is disabled
-
+    # Test end_tracers
+    await tracing_service.end_tracers({})
 
 @pytest.mark.asyncio
 async def test_cleanup_inputs():

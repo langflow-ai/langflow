@@ -236,6 +236,8 @@ class TracingService(Service):
         - stop worker for current trace_context
         - call end for all the tracers
         """
+        if self.deactivated:
+            return
         await self._stop()
         self._end_all_tracers(outputs, error)
 
@@ -315,11 +317,15 @@ class TracingService(Service):
 
     @property
     def project_name(self):
+        if self.deactivated:
+            return os.getenv("LANGCHAIN_PROJECT", "Langflow")
         trace_context = trace_context_var.get()
         return trace_context.project_name
 
     def add_log(self, trace_name: str, log: Log) -> None:
         """Add a log to the current component trace context."""
+        if self.deactivated:
+            return
         component_context = component_context_var.get()
         component_context.logs[trace_name].append(log)
 
@@ -330,6 +336,8 @@ class TracingService(Service):
         output_metadata: dict[str, Any] | None = None,
     ) -> None:
         """Set the outputs for the current component trace context."""
+        if self.deactivated:
+            return
         component_context = component_context_var.get()
         component_context.outputs[trace_name] |= outputs or {}
         component_context.outputs_metadata[trace_name] |= output_metadata or {}
