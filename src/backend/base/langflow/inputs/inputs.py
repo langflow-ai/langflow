@@ -37,35 +37,28 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, _info):
+        # Early return if v is already a list of dicts or Data instances
+        if isinstance(v, list) and all(isinstance(item, (dict, Data)) for item in v):
+            return v
+
         # Convert single dict or Data instance into a list.
-        if isinstance(v, dict | Data):
-            v = [v]
+        if isinstance(v, (dict, Data)):
+            return [v]
+
         # Automatically convert DataFrame into a list of dictionaries.
         if isinstance(v, DataFrame):
-            v = v.to_dict(orient="records")
-        # Verify the value is now a list.
-        if not isinstance(v, list):
-            msg = (
-                "The table input must be a list of rows. You provided a "
-                f"{type(v).__name__}, which cannot be converted to table format. "
-                "Please provide your data as either:\n"
-                "- A list of dictionaries (each dict is a row)\n"
-                "- A pandas DataFrame\n"
-                "- A single dictionary (will become a one-row table)\n"
-                "- A Data object (Langflow's internal data structure)\n"
-            )
-            raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
-        # Ensure each item in the list is either a dict or a Data instance.
-        for i, item in enumerate(v):
-            if not isinstance(item, dict | Data):
-                msg = (
-                    f"Row {i + 1} in your table has an invalid format. Each row must be either:\n"
-                    "- A dictionary containing column name/value pairs\n"
-                    "- A Data object (Langflow's internal data structure for passing data between components)\n"
-                    f"Instead, got a {type(item).__name__}. Please check the format of your input data."
-                )
-                raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
-        return v
+            return v.to_dict(orient="records")
+
+        msg = (
+            "The table input must be a list of rows. You provided a "
+            f"{type(v).__name__}, which cannot be converted to table format. "
+            "Please provide your data as either:\n"
+            "- A list of dictionaries (each dict is a row)\n"
+            "- A pandas DataFrame\n"
+            "- A single dictionary (will become a one-row table)\n"
+            "- A Data object (Langflow's internal data structure)\n"
+        )
+        raise ValueError(msg)
 
 
 class HandleInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin):
