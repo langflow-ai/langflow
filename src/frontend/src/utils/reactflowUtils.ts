@@ -6,8 +6,8 @@
  * is a testament to his relentless pursuit of excellence and his significant impact on this
  * project’s evolution.
 
- * His commitment to selflessly helping others reveals the true meaning of open source,
- * and his legacy lives on in every contribution, inspiring us to build exceptional
+ * His commitment to selflessly helping others embodies the true meaning of open source,
+ * and his legacy lives on in every one of his 2769 contributions, inspiring us to build exceptional
  * software for all.
  */
 
