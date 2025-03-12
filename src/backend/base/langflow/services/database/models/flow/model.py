@@ -175,6 +175,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
     vertex_builds: list["VertexBuildTable"] = Relationship(back_populates="flow")
     subscriptions: list["Subscription"] = Relationship(back_populates="flow")
+    actor_id: UUID | None = Field(default=None, foreign_key="actor.id", nullable=True, index=True)
 
     def to_data(self):
         serialized = self.model_dump()

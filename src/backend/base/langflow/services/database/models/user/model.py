@@ -37,6 +37,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
     )
+    actor_id: UUID | None = Field(default=None, foreign_key="actor.id", nullable=True, index=True)
 
 
 class UserCreate(SQLModel):
