@@ -1,4 +1,5 @@
 import { FileType } from "@/types/file_management";
+import { useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useEffect, useState } from "react";
 import { ForwardedIconComponent } from "../../components/common/genericIconComponent";
 import BaseModal from "../baseModal";
@@ -25,6 +26,14 @@ export default function FileManagerModal({
   isList?: boolean;
 }): JSX.Element {
   const [internalOpen, internalSetOpen] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    queryClient.refetchQueries({
+      queryKey: ["useGetFilesV2"],
+    });
+  }, [internalOpen]);
 
   const [internalSelectedFiles, setInternalSelectedFiles] = useState<string[]>(
     selectedFiles || [],
