@@ -493,7 +493,7 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid truncate text-wrap p-4 leading-5",
+            "grid text-wrap p-4 leading-5",
             showNode ? "border-b" : "relative",
             hasDescription && "gap-3",
           )}
@@ -548,9 +548,11 @@ function GenericNode({
               <div
                 className={cn(showHiddenOutputs ? "" : "h-0 overflow-hidden")}
               >
-                <div className="block">
-                  {renderOutputs(data.node!.outputs, "hidden")}
-                </div>
+                {showHiddenOutputs && (
+                  <div className="block">
+                    {renderOutputs(data.node!.outputs, "hidden")}
+                  </div>
+                )}
               </div>
               {hiddenOutputs && hiddenOutputs.length > 0 && (
                 <ShadTooltip
