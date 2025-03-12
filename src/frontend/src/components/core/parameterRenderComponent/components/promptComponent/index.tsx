@@ -8,7 +8,7 @@ import { InputProps, PromptAreaComponentType } from "../../types";
 
 const promptContentClasses = {
   base: "overflow-hidden text-clip whitespace-nowrap bg-background h-fit max-h-28",
-  editNode: "input-edit-node input-dialog",
+  editNode: "input-edit-node input-dialog py-2",
   normal: "primary-input text-primary",
   disabled: "disabled-state",
 };
