@@ -16,7 +16,7 @@ import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function PublishDropdown() {
   const domain = window.location.origin;
@@ -134,11 +134,15 @@ export default function PublishDropdown() {
                 : "Add a Chat Input or Chat Output to access your flow"
             }
           >
-            <div className={!hasIO ? "cursor-not-allowed" : ""}>
+            <div
+              className={
+                !hasIO ? "cursor-not-allowed" : "" + "flex items-center"
+              }
+            >
               <DropdownMenuItem
                 data-testid="shareable-playground"
-                disabled={!hasIO}
-                className="deploy-dropdown-item group"
+                disabled={!hasIO || !isPublished}
+                className="deploy-dropdown-item group flex-1"
                 onClick={() => {
                   if (hasIO) {
                     if (isPublished) {
@@ -153,22 +157,20 @@ export default function PublishDropdown() {
                     className={`${groupStyle} icon-size mr-2`}
                   />
                   <span>Shareable Playground</span>
-                  <div
-                    className={`icon-size ml-auto pb-6 pr-10 text-foreground`}
-                  >
-                    <Switch
-                      data-testid="publish-switch"
-                      className="scale-[85%]"
-                      checked={isPublished}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handlePublishedSwitch(isPublished);
-                      }}
-                    />
-                  </div>
                 </div>
               </DropdownMenuItem>
+              <div className={`z-50 mr-2 text-foreground`}>
+                <Switch
+                  data-testid="publish-switch"
+                  className="scale-[85%]"
+                  checked={isPublished}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePublishedSwitch(isPublished);
+                  }}
+                />
+              </div>
             </div>
           </ShadTooltipComponent>
           {/* <DropdownMenuItem className="deploy-dropdown-item group">
