@@ -672,6 +672,7 @@ class Graph:
     ) -> Callable:
         # BackgroundTasks run in different context, so we need to copy the context
         context = contextvars.copy_context()
+
         async def async_end_traces_func():
             await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
 
