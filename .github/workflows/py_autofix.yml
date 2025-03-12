@@ -1,8 +1,6 @@
 name: autofix.ci
 on:
-  pull_request:
-    paths:
-      - "**/*.py"
+  workflow_dispatch:
 env:
   POETRY_VERSION: "1.8.2"
 
