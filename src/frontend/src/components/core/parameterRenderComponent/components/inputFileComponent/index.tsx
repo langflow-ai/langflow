@@ -200,7 +200,7 @@ export default function InputFileComponent({
         <div className="flex items-center gap-2.5">
           {ENABLE_FILE_MANAGEMENT && files ? (
             <div className="relative flex w-full flex-col gap-2">
-              <div className="flex flex-col pl-1">
+              <div className="flex flex-col">
                 <FilesRendererComponent
                   files={files.filter((file) =>
                     selectedFiles.includes(file.path),
