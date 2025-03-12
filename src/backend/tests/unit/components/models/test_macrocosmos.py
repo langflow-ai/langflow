@@ -124,8 +124,7 @@ class TestMacrocosmosComponent(ComponentTestBaseWithoutClient):
             model="hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4",
             base_url="https://sn1.api.macrocosmos.ai/v1",
             api_key="test-key",
-            extra_body={'sampling_parameters': sample_params,
-            'inference_mode': "Base-Inference"},
+            extra_body={"sampling_parameters": sample_params, "inference_mode": "Base-Inference"},
             seed=42,
         )
         assert model == mock_chat_openai.return_value

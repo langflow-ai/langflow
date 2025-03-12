@@ -82,7 +82,6 @@ class MacrocosmosComponent(LCModelComponent):
             model=model_name,
             base_url=macrocosmos_url,
             api_key=str(api_key),
-            extra_body={'sampling_parameters': sample_params,
-            'inference_mode': inference_mode},
+            extra_body={"sampling_parameters": sample_params, "inference_mode": inference_mode},
             seed=seed,
         )
