@@ -1,9 +1,7 @@
 ---
-title: MCP (Model context protocol)
+title: Integrate Langflow with MCP (Model context protocol)
 slug: /integrations-mcp
 ---
-
-# Integrate Langflow with MCP
 
 Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction). This allows you to use your Langflow flows as tools in other applications that support the MCP protocol, or extend Langflow with the [MCP stdio component](/components-tools#mcp-tools-stdio) to access MCP servers.
 
@@ -15,7 +13,7 @@ This guide shows you how to use Langflow as an MCP server with Claude Desktop as
 
 ## Access all of your flows as tools from Claude Desktop
 
-The MCP server configuration is added to Claude, which can then access all of your flows as tools with the MCP protocol.
+Add your Langflow MCP server configuration to Claude, so it can access all of your flows as tools with the MCP protocol.
 
 ### Prerequisites
 
@@ -25,10 +23,11 @@ The MCP server configuration is added to Claude, which can then access all of yo
 ### Add Langflow as an MCP server to Claude
 
 1. Create at least one flow, and note your host. For example, `http://127.0.0.1:7863`.
-
-2. Open Claude Desktop. Go to **Settings** > **Developer** > **Edit Config**.
-This opens `claude_desktop_config.json`, which describes to Claude what MCP servers are available.
-3. Add the following code to  `claude_desktop_config.json`.
+2. Open Claude for Desktop, and then go to the program settings.
+For example, on the MacOS menu bar, click **Claude**, and then select **Settings**.
+3. In the **Settings** dialog, click **Developer**, and then click **Edit Config**.
+This creates a `claude_desktop_config.json` file if you don't already have one.
+4. Add the following code to `claude_desktop_config.json`.
 Your args may differ for your `uvx` and `Python` installations.
 
 ```json
@@ -64,10 +63,13 @@ Add the [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp)
 
 ### Add Astra DB as an MCP server in Cursor
 
-1. Open Cursor. Go to **Cursor** > **Settings** > **Features** > **MCP Servers**.
-2. Click **Add new MCP server**.
-3. Name the server. For **Type**, select **command** to use the stdio library.
-4. Add the following code to the **Command** field, replacing the environment variables with your values.
+In Cursor, you can configure an `astra-db-mcp` server in the same way as other MCP servers.
+For more information, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
+1. Open Cursor, and then go to **Cursor Settings**.
+2. Click **MCP**, and then click **Add New MCP Server**.
+3. For **Name**, enter a human-readable name for the server, such as `astra-db`.*
+4. For **Type**, select **command** to use the `stdio` library.
+5. Add the following code to the **Command** field, replacing the environment variables with your values.
 
 ```plain
 env ASTRA_DB_APPLICATION_TOKEN=YOUR_ASTRA_DB_TOKEN ASTRA_DB_API_ENDPOINT=YOUR_ASTRA_DB_ENDPOINT npx -y @datastax/astra-db-mcp
@@ -75,16 +77,16 @@ env ASTRA_DB_APPLICATION_TOKEN=YOUR_ASTRA_DB_TOKEN ASTRA_DB_API_ENDPOINT=YOUR_AS
 
 This command runs the [Datastax Astra DB MCP server](https://github.com/datastax/astra-db-mcp) with your credentials to connect to your database.
 
-5. Restart Cursor.
-6. Return to your list of **MCP Servers**.
+6. Restart Cursor.
+7. Return to your list of **MCP Servers**.
 Your new MCP server is available, with 10 tools for Astra operations like `GetCollections`, `FindRecord`, and `CreateCollection`.
-7. In Cursor, open the **Composer** chat window, and then select **Agent**.
-8. Prompt your Cursor agent to perform an operation in Astra, like `Create an Astra collection about software requirements.`
+8. In Cursor, open the **Composer** chat window, and then select **Agent**.
+9. Prompt your Cursor agent to perform an operation in Astra, like `Create an Astra collection about software requirements.`
 The **Agent** knows to use the tools available in the MCP server you added, and may prompt you further, depending on what decisions are required.
 
 ![Astra DB MCP in Cursor](/img/integrations-mcp-astra-cursor.png)
 
-9. To confirm the agent created a new collection, navigate to your Astra database.
+10. To confirm the agent created a new collection, navigate to your Astra database.
 This confirms the agent is correctly using the MCP tools to perform Astra operations.
 ```json
 {"_id":"e83483a9-3748-4448-b483-a937487448c5","requirement_id":"REQ-001","title":"User Authentication","description":"The system shall provide secure user authentication using email and password","type":"Functional","priority":"High","status":"Approved","created_date":"2024-03-20","last_modified":"2024-03-20","assigned_to":"Security Team","dependencies":[],"acceptance_criteria":["Users must be able to log in with email and password","Passwords must be securely hashed","Failed login attempts must be logged"]}
