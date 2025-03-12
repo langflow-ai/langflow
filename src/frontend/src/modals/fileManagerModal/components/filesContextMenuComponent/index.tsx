@@ -9,6 +9,7 @@ import { useGetDownloadFileV2 } from "@/controllers/API/queries/file-management"
 import { useDeleteFileV2 } from "@/controllers/API/queries/file-management/use-delete-file";
 import { useDuplicateFileV2 } from "@/controllers/API/queries/file-management/use-duplicate-file";
 import ConfirmationModal from "@/modals/confirmationModal";
+import useAlertStore from "@/stores/alertStore";
 import { FileType } from "@/types/file_management";
 import { ReactNode, useState } from "react";
 
@@ -25,6 +26,8 @@ export default function FilesContextMenuComponent({
 }) {
   const isLocal = file.provider == null;
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const { mutate: downloadFile } = useGetDownloadFileV2({
     id: file.id,
@@ -159,6 +162,9 @@ export default function FilesContextMenuComponent({
         destructive
         onConfirm={() => {
           deleteFile();
+          setSuccessData({
+            title: "The file has been deleted successfully",
+          });
           setShowDeleteConfirmation(false);
         }}
       >
