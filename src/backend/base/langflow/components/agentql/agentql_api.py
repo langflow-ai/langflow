@@ -95,9 +95,8 @@ class AgentQL(Component):
             self.status = msg
             raise ValueError(msg)
         if self.prompt and self.query:
-            msg = "Please provide either an AgentQL Query or a natural language prompt, not both."
-            self.status = msg
-            raise ValueError(msg)
+            self.status = "Both Query and Prompt can't be provided at the same time."
+            raise ValueError(self.status)
 
         try:
             response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
