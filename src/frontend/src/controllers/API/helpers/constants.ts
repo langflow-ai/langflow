@@ -25,6 +25,7 @@ export const URLs = {
   ALL: `all`,
   TASKS: `tasks`,
   SUBSCRIPTIONS: `subscriptions`,
+  ACTORS: `actors`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
