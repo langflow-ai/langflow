@@ -91,32 +91,26 @@ async def sync_flows_from_fs():
                 stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
                 flows = (await session.exec(stmt)).all()
                 for flow in flows:
-                    if flow.fs_path not in flow_mtimes:
-                        flow_mtimes[flow.fs_path] = 0
-                for path_str, mtime in flow_mtimes.items():
-                    path = anyio.Path(path_str)
+                    mtime = flow_mtimes.setdefault(flow.id, 0)
+                    path = anyio.Path(flow.fs_path)
                     try:
                         if await path.exists():
                             new_mtime = (await path.stat()).st_mtime
                             if new_mtime > mtime:
                                 update_data = orjson.loads(await path.read_text(encoding="utf-8"))
-                                for flow in flows:
-                                    if flow.fs_path == path_str:
-                                        try:
-                                            for field_name in ("name", "description", "data", "locked"):
-                                                if new_value := update_data.get(field_name):
-                                                    setattr(flow, field_name, new_value)
-                                            if folder_id := update_data.get("folder_id"):
-                                                flow.folder_id = UUID(folder_id)
-                                            await session.commit()
-                                            await session.refresh(flow)
-                                        except Exception:  # noqa: BLE001
-                                            logger.exception(
-                                                f"Couldn't update flow {flow.id} in database from path {path_str}"
-                                            )
-                                flow_mtimes[path_str] = new_mtime
+                                try:
+                                    for field_name in ("name", "description", "data", "locked"):
+                                        if new_value := update_data.get(field_name):
+                                            setattr(flow, field_name, new_value)
+                                    if folder_id := update_data.get("folder_id"):
+                                        flow.folder_id = UUID(folder_id)
+                                    await session.commit()
+                                    await session.refresh(flow)
+                                except Exception:  # noqa: BLE001
+                                    logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
+                                flow_mtimes[flow.id] = new_mtime
                     except Exception:  # noqa: BLE001
-                        logger.exception(f"Error while handling flow file {path_str}")
+                        logger.exception(f"Error while handling flow file {path}")
         except Exception:  # noqa: BLE001
             logger.exception("Error while syncing flows from database")
         await asyncio.sleep(10)
