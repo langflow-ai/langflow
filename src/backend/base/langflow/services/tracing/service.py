@@ -176,7 +176,7 @@ class TracingService(Service):
             trace_name=trace_context.run_name,
             trace_type="chain",
             project_name=trace_context.project_name,
-            trace_id=trace_context.run_id
+            trace_id=trace_context.run_id,
         )
 
     async def start_tracers(
