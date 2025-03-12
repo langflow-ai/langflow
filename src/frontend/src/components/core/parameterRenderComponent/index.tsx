@@ -215,6 +215,7 @@ export function ParameterRenderComponent({
             {...baseInputProps}
             helperText={templateData?.helper_text}
             auth={templateData?.auth}
+            selectionType={templateData?.selection_type}
           />
         );
       default:

@@ -191,6 +191,8 @@ class ListSelectionMixin(BaseModel):
     """Adds a helper text to the field. Defaults to an empty string."""
     auth: bool = False
     """Specifies if the field should have authentication. Defaults to False."""
+    selection_type: str = Field(default="multiple")
+    """Specifies the type of selection for the field. Defaults to "multiple"."""
 
 
 class MultilineMixin(BaseModel):

@@ -2,15 +2,119 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+
+// Define a union type for selection mode
+type SelectionMode = "multiple" | "single";
+
+// Move static data outside component to prevent recreation on each render
+const INITIAL_ACTION_DATA = [
+  {
+    name: "Accept a repository invitation",
+    metaData: "21 actions",
+  },
+  {
+    name: "Add an email address for the repository",
+    metaData: "15 actions",
+  },
+  {
+    name: "Add assignee to an issue",
+    metaData: "18 actions",
+  },
+  {
+    name: "Create a new branch",
+    metaData: "12 actions",
+  },
+  {
+    name: "Delete repository files",
+    metaData: "9 actions",
+  },
+  {
+    name: "Fork a repository",
+    metaData: "24 actions",
+  },
+  {
+    name: "Merge pull request",
+    metaData: "16 actions",
+  },
+  {
+    name: "Review code changes",
+    metaData: "19 actions",
+  },
+  {
+    name: "Update repository settings",
+    metaData: "27 actions",
+  },
+  {
+    name: "Create repository webhook",
+    metaData: "13 actions",
+  },
+];
+
+const TOOL_DATA = [
+  {
+    name: "Github",
+    icon: "github",
+  },
+  {
+    name: "Microsoft",
+    icon: "microsoft",
+  },
+  {
+    name: "Google",
+    icon: "google",
+  },
+  {
+    name: "Slack",
+    icon: "slack",
+  },
+  {
+    name: "Dropbox",
+    icon: "dropbox",
+  },
+];
+
+// Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
   onClose: () => void;
   hasSearch?: boolean;
   setSelectedAction: (action: any[]) => void;
   selectedAction: any[];
-  type: boolean;
+  type: SelectionMode; // true for multiple selection, false for single selection
 }
+
+// Create a reusable list item component for better structure
+const ListItem = ({
+  item,
+  isSelected,
+  onClick,
+}: {
+  item: any;
+  isSelected: boolean;
+  onClick: () => void;
+}) => (
+  <Button
+    key={item.id}
+    unstyled
+    size="sm"
+    className="w-full py-3"
+    onClick={onClick}
+  >
+    <div className="flex items-center gap-2">
+      {item.icon && (
+        <ForwardedIconComponent name={item.icon} className="h-5 w-5" />
+      )}
+      <span className="font-semibold">{item.name}</span>
+      {"metaData" in item && item.metaData && (
+        <span className="text-gray-500">{item.metaData}</span>
+      )}
+      {isSelected && (
+        <ForwardedIconComponent name="check" className="ml-auto flex h-4 w-4" />
+      )}
+    </div>
+  </Button>
+);
 
 const ListSelectionComponent = ({
   open,
@@ -22,116 +126,59 @@ const ListSelectionComponent = ({
 }: ListSelectionComponentProps) => {
   const [search, setSearch] = useState("");
 
-  const handleSelectAction = (action: any) => {
-    if (type) {
-      // Check if the action is already selected
-      const isAlreadySelected = selectedAction.some(
-        (selectedItem) => selectedItem.id === action.id,
-      );
+  // Determine list to use based on type
+  const sourceData = useMemo(
+    () => (type === "multiple" ? INITIAL_ACTION_DATA : TOOL_DATA),
+    [type],
+  );
 
-      if (isAlreadySelected) {
-        // If already selected, remove it from the array
-        setSelectedAction(
-          selectedAction.filter(
-            (selectedItem) => selectedItem.id !== action.id,
-          ),
-        );
-      } else {
-        // If not selected, add it to the array
-        setSelectedAction([...selectedAction, action]);
-      }
-    } else {
-      setSelectedAction([{ name: action?.name, icon: action?.icon }]);
-      onClose();
+  // Filter list based on search term - memoized to prevent recalculation on every render
+  const filteredList = useMemo(() => {
+    if (!search.trim()) {
+      return sourceData;
     }
-  };
+    const searchTerm = search.toLowerCase();
+    return sourceData.filter((item) =>
+      item.name.toLowerCase().includes(searchTerm),
+    );
+  }, [sourceData, search]);
 
-  const handleCloseDialog = () => {
+  // Memoize selection handler to prevent recreation on each render
+  const handleSelectAction = useCallback(
+    (action: any) => {
+      if (type === "multiple") {
+        // Multiple selection mode
+        const isAlreadySelected = selectedAction.some(
+          (selectedItem) => selectedItem.name === action.name,
+        );
+
+        if (isAlreadySelected) {
+          setSelectedAction(
+            selectedAction.filter(
+              (selectedItem) => selectedItem.name !== action.name,
+            ),
+          );
+        } else {
+          setSelectedAction([...selectedAction, action]);
+        }
+      } else {
+        // Single selection mode
+        setSelectedAction([
+          {
+            name: action.name,
+            icon: "icon" in action ? action.icon : undefined,
+          },
+        ]);
+        onClose();
+      }
+    },
+    [type, selectedAction, setSelectedAction, onClose],
+  );
+
+  // Use the callback directly
+  const handleCloseDialog = useCallback(() => {
     onClose();
-  };
-
-  const initialActionData = [
-    {
-      name: "Accept a repository invitation",
-      id: 1,
-      metaData: "21 actions",
-    },
-    {
-      name: "Add an email address for the repository",
-      id: 2,
-      metaData: "15 actions",
-    },
-    {
-      name: "Add assignee to an issue",
-      id: 3,
-      metaData: "18 actions",
-    },
-    {
-      name: "Create a new branch",
-      id: 4,
-      metaData: "12 actions",
-    },
-    {
-      name: "Delete repository files",
-      id: 5,
-      metaData: "9 actions",
-    },
-    {
-      name: "Fork a repository",
-      id: 6,
-      metaData: "24 actions",
-    },
-    {
-      name: "Merge pull request",
-      id: 7,
-      metaData: "16 actions",
-    },
-    {
-      name: "Review code changes",
-      id: 8,
-      metaData: "19 actions",
-    },
-    {
-      name: "Update repository settings",
-      id: 9,
-      metaData: "27 actions",
-    },
-    {
-      name: "Create repository webhook",
-      id: 10,
-      metaData: "13 actions",
-    },
-  ];
-
-  const toolData = [
-    {
-      name: "Github",
-      id: 1,
-      icon: "github",
-    },
-    {
-      name: "Microsoft",
-      id: 2,
-      icon: "microsoft",
-    },
-    {
-      name: "Google",
-      id: 3,
-      icon: "google",
-    },
-    {
-      name: "Slack",
-      id: 4,
-      icon: "slack",
-    },
-    {
-      name: "Dropbox",
-      id: 5,
-      icon: "dropbox",
-    },
-  ];
-
-  const listOfStuff = type ? initialActionData : toolData;
+  }, [onClose]);
 
   return (
     <Dialog open={open} onOpenChange={handleCloseDialog}>
@@ -167,34 +214,22 @@ const ListSelectionComponent = ({
         </div>
 
         <div className="flex flex-col gap-1">
-          {listOfStuff.map((action, index) => (
-            <Button
-              key={action.id}
-              unstyled
-              size="sm"
-              className="w-full py-3"
-              onClick={() => handleSelectAction(action)}
-            >
-              <div className="flex items-center gap-2">
-                {action?.icon && (
-                  <ForwardedIconComponent
-                    name={action?.icon}
-                    className="h-5 w-5"
-                  />
+          {filteredList.length > 0 ? (
+            filteredList.map((item) => (
+              <ListItem
+                key={item.name}
+                item={item}
+                isSelected={selectedAction.some(
+                  (selected) => selected.name === item.name,
                 )}
-                <span className="font-semibold">{action.name}</span>
-                <span className="text-gray-500">{action.metaData}</span>
-                {selectedAction.some(
-                  (selectedItem) => selectedItem.id === action.id,
-                ) && (
-                  <ForwardedIconComponent
-                    name="check"
-                    className="ml-auto flex h-4 w-4"
-                  />
-                )}
-              </div>
-            </Button>
-          ))}
+                onClick={() => handleSelectAction(item)}
+              />
+            ))
+          ) : (
+            <div className="py-3 text-center text-gray-500">
+              No items match your search
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

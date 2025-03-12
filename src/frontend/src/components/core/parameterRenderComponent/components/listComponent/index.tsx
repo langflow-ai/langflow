@@ -12,6 +12,7 @@ type ListComponentProps = {
   helperText?: string;
   auth?: boolean;
   showSortable?: boolean;
+  selectionType?: "multiple" | "single";
 };
 
 const AuthButtonContent = memo(
@@ -112,6 +113,7 @@ const ListComponent = ({
   helperText,
   auth,
   showSortable = true,
+  selectionType = "multiple",
   ...baseInputProps
 }: InputProps<any, ListComponentProps>) => {
   const { placeholder } = baseInputProps;
@@ -181,7 +183,7 @@ const ListComponent = ({
           >
             {actionData.map((data, index) => (
               <SortableListItem
-                key={data?.id || index}
+                key={data?.name || index}
                 data={data}
                 index={index}
                 onRemove={createRemoveHandler(index)}
@@ -197,7 +199,7 @@ const ListComponent = ({
         hasSearch={auth}
         setSelectedAction={setActionData}
         selectedAction={actionData}
-        type={!auth}
+        type={selectionType}
       />
     </div>
   );
