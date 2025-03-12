@@ -20,6 +20,7 @@ from langflow.inputs.inputs import (
     SliderInput,
     StrInput,
     TableInput,
+    TabInput,
 )
 from langflow.inputs.utils import instantiate_input
 from langflow.schema.message import Message
@@ -77,7 +78,9 @@ def test_instantiate_input_valid():
 
 def test_instantiate_input_invalid():
     with pytest.raises(ValueError, match="Invalid input type: InvalidInput"):
-        instantiate_input("InvalidInput", {"name": "invalid_input", "value": "This is a string"})
+        instantiate_input(
+            "InvalidInput", {"name": "invalid_input", "value": "This is a string"}
+        )
 
 
 def test_handle_input_valid():
@@ -101,12 +104,16 @@ def test_prompt_input_valid():
 
 
 def test_code_input_valid():
-    code_input = CodeInput(name="valid_code", value="def hello():\n    print('Hello, World!')")
+    code_input = CodeInput(
+        name="valid_code", value="def hello():\n    print('Hello, World!')"
+    )
     assert code_input.value == "def hello():\n    print('Hello, World!')"
 
 
 def test_multiline_input_valid():
-    multiline_input = MultilineInput(name="valid_multiline", value="This is a\nmultiline input")
+    multiline_input = MultilineInput(
+        name="valid_multiline", value="This is a\nmultiline input"
+    )
     assert multiline_input.value == "This is a\nmultiline input"
     assert multiline_input.multiline is True
 
@@ -117,7 +124,9 @@ def test_multiline_input_invalid():
 
 
 def test_multiline_secret_input_valid():
-    multiline_secret_input = MultilineSecretInput(name="valid_multiline_secret", value="secret")
+    multiline_secret_input = MultilineSecretInput(
+        name="valid_multiline_secret", value="secret"
+    )
     assert multiline_secret_input.value == "secret"
     assert multiline_secret_input.password is True
 
@@ -169,7 +178,9 @@ def test_bool_input_invalid():
 
 
 def test_nested_dict_input_valid():
-    nested_dict_input = NestedDictInput(name="valid_nested_dict", value={"key": "value"})
+    nested_dict_input = NestedDictInput(
+        name="valid_nested_dict", value={"key": "value"}
+    )
     assert nested_dict_input.value == {"key": "value"}
 
 
@@ -189,7 +200,9 @@ def test_dict_input_invalid():
 
 
 def test_dropdown_input_valid():
-    dropdown_input = DropdownInput(name="valid_dropdown", options=["option1", "option2"])
+    dropdown_input = DropdownInput(
+        name="valid_dropdown", options=["option1", "option2"]
+    )
     assert dropdown_input.options == ["option1", "option2"]
 
 
@@ -199,7 +212,9 @@ def test_dropdown_input_invalid():
 
 
 def test_multiselect_input_valid():
-    multiselect_input = MultiselectInput(name="valid_multiselect", value=["option1", "option2"])
+    multiselect_input = MultiselectInput(
+        name="valid_multiselect", value=["option1", "option2"]
+    )
     assert multiselect_input.value == ["option1", "option2"]
 
 
@@ -213,6 +228,57 @@ def test_file_input_valid():
     assert file_input.value == ["/path/to/file"]
 
 
+def test_tab_input_valid():
+    # Test with valid tab values (3 values, each <= 20 chars)
+    data = TabInput(
+        name="valid_tab",
+        options=["Tab1", "Tab2", "Tab3"],
+        value="Tab1",
+    )
+    assert data.options == ["Tab1", "Tab2", "Tab3"]
+    assert data.value == "Tab1"
+
+    # Test with fewer than 3 values
+    data = TabInput(name="valid_tab_fewer", options=["Tab1", "Tab2"], value="Tab2")
+    assert data.options == ["Tab1", "Tab2"]
+    assert data.value == "Tab2"
+
+    # Test with empty options
+    data = TabInput(name="valid_tab_empty", options=[], value="")
+    assert data.options == []
+    assert data.value == ""
+
+
+def test_tab_input_invalid():
+    # Test with more than 3 tab values
+    with pytest.raises(ValidationError):
+        TabInput(
+            name="invalid_tab_too_many",
+            options=["Tab1", "Tab2", "Tab3", "Tab4"],
+            value="Tab1",
+        )
+
+    # Test with tab value exceeding 20 characters
+    with pytest.raises(ValidationError):
+        TabInput(
+            name="invalid_tab_too_long",
+            options=[
+                "Tab1",
+                "ThisTabValueIsTooLongAndExceedsTwentyCharacters",
+                "Tab3",
+            ],
+            value="Tab1",
+        )
+
+    # Test with non-string value
+    with pytest.raises(ValidationError):
+        TabInput(
+            name="invalid_tab_value_type",
+            options=["Tab1", "Tab2", "Tab3"],
+            value=123,
+        )
+
+
 def test_instantiate_input_comprehensive():
     valid_data = {
         "StrInput": {"name": "str_input", "value": "A string"},
@@ -223,6 +289,11 @@ def test_instantiate_input_comprehensive():
         "MultiselectInput": {
             "name": "multiselect_input",
             "value": ["option1", "option2"],
+        },
+        "TabInput": {
+            "name": "tab_input",
+            "options": ["Tab1", "Tab2", "Tab3"],
+            "value": "Tab1",
         },
     }
 
