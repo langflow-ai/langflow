@@ -77,7 +77,7 @@ class NvidiaEvaluatorComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Job Result", name="job_result", method="evaluate"),
+        Output(display_name="Job Info", name="job_info", method="evaluate"),
     ]
 
     # Inputs for LM Evaluation

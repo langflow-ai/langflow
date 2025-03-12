@@ -98,7 +98,7 @@ class NvidiaCustomizerComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Job Info", name="data", method="customize"),
+        Output(display_name="Job Info", name="job_info", method="customize"),
     ]
 
     def update_build_config(self, build_config, field_value, field_name=None):
