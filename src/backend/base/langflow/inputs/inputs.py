@@ -20,6 +20,7 @@ from .input_mixin import (
     InputTraceMixin,
     LinkMixin,
     ListableInputMixin,
+    ListSelectionMixin,
     MetadataTraceMixin,
     MultilineMixin,
     RangeMixin,
@@ -451,17 +452,17 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
 
-class ButtonInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolModeMixin):
-    """Represents a button input field.
+class ListSelectionInput(BaseInputMixin, ListSelectionMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a list selection input field.
 
-    This class represents a button input field and provides functionality for handling button values.
+    This class represents a list selection input field and provides functionality for handling list selection values.
     It inherits from the `BaseInputMixin` and `ListableInputMixin` classes.
 
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BUTTON.
     """
 
-    field_type: SerializableFieldTypes = FieldTypes.BUTTON
+    field_type: SerializableFieldTypes = FieldTypes.LIST
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -537,7 +538,7 @@ InputTypes: TypeAlias = (
     | DictInput
     | DropdownInput
     | MultiselectInput
-    | ButtonInput
+    | ListSelectionInput
     | FileInput
     | FloatInput
     | HandleInput

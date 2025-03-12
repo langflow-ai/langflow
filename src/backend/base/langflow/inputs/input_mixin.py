@@ -23,7 +23,7 @@ class FieldTypes(str, Enum):
     BOOLEAN = "bool"
     DICT = "dict"
     NESTED_DICT = "NestedDict"
-    BUTTON = "button"
+    LIST = "list"
     FILE = "file"
     PROMPT = "prompt"
     CODE = "code"
@@ -185,6 +185,11 @@ class DropDownMixin(BaseModel):
     dialog_inputs: dict[str, Any] | None = None
     """Dictionary of dialog inputs for the field. Default is an empty object."""
 
+class ListSelectionMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    auth: bool = False
+    """Specifies if the field should have authentication. Defaults to False."""
 
 class MultilineMixin(BaseModel):
     multiline: CoalesceBool = True

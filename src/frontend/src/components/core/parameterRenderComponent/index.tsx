@@ -5,7 +5,6 @@ import SliderComponent from "@/components/core/parameterRenderComponent/componen
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
-import ButtonComponent from "./components/buttonComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -14,6 +13,7 @@ import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
 import LinkComponent from "./components/linkComponent";
+import ListComponent from "./components/listComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
@@ -208,10 +208,13 @@ export function ParameterRenderComponent({
             id={`slider_${id}`}
           />
         );
-      case "button":
+      case "list":
+        console.log("templateData", templateData);
         return (
-          <ButtonComponent
-            type={templateData?.name as "tool_name" | "actions"}
+          <ListComponent
+            {...baseInputProps}
+            helperText={templateData?.helper_text}
+            auth={templateData?.auth}
           />
         );
       default:

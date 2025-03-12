@@ -13,8 +13,7 @@ from loguru import logger
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
-from langflow.inputs.inputs import ButtonInput
+from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput,ListSelectionInput
 from langflow.io import Output
 
 
@@ -35,15 +34,19 @@ class ComposioAPIComponent(LCToolComponent):
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
         ),
-        ButtonInput(
+        ListSelectionInput(
+            auth=True,
             name="tool_name",
             display_name="Tool Name",
+            placeholder="Select a tool...",
             value="",
             info="The name of the tool to use",
         ),
-        ButtonInput(
+        ListSelectionInput(
             name="actions",
             display_name="Actions",
+            placeholder="Select action",
+            helper_text="Please connect before selecting tools",
             value="",
             info="The actions to use",
         ),

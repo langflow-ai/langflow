@@ -6,19 +6,23 @@ import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSel
 import { cn } from "@/utils/utils";
 import { useEffect, useRef, useState } from "react";
 import { ReactSortable } from "react-sortablejs";
-
-type ButtonComponentProps = {
+import { InputProps } from "../../types";
+type ListComponentProps = {
   tooltip?: string;
-  type: "tool_name" | "actions" | undefined;
   name?: string;
+  helperText?: string;
+  auth?: boolean;
 };
 
-const ButtonComponent = ({
+const ListComponent = ({
   tooltip = "",
-  type,
   name,
-}: ButtonComponentProps) => {
-  const isDropdown = type !== "actions";
+  helperText,
+  auth,
+  ...baseInputProps
+}: InputProps<any, ListComponentProps>) => {
+  const { placeholder } = baseInputProps;
+
   const [open, setOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const helperIcon = "OctagonAlert";
@@ -35,19 +39,13 @@ const ButtonComponent = ({
     <div className="flex w-full flex-col gap-2">
       <div className="flex w-full flex-row gap-2">
         <Button
-          variant={isDropdown ? "primary" : "default"}
+          variant={auth ? "primary" : "default"}
           size="xs"
           role="combobox"
-          onClick={() => {
-            if (!isAuthenticated && !isDropdown) {
-              setIsAuthenticated(!isAuthenticated);
-            } else {
-              setOpen(true);
-            }
-          }}
+          onClick={() => setOpen(true)}
           className="dropdown-component-outline input-edit-node w-full py-2"
         >
-          {isDropdown ? (
+          {auth ? (
             <div
               className={cn("flex w-full items-center justify-start text-sm")}
             >
@@ -59,7 +57,7 @@ const ButtonComponent = ({
               )}
               {actionData.length > 0
                 ? actionData.map((action) => action.name).join(", ")
-                : "Select a tool..."}
+                : placeholder}
               <ForwardedIconComponent
                 name="ChevronsUpDown"
                 className="ml-auto h-5 w-5"
@@ -67,11 +65,11 @@ const ButtonComponent = ({
             </div>
           ) : (
             <div className={cn("flex items-center text-sm font-semibold")}>
-              {name || "Select action"}
+              {placeholder}
             </div>
           )}
         </Button>
-        {isDropdown && !isAuthenticated && (
+        {auth && !isAuthenticated && (
           <Button
             size="icon"
             variant="destructive"
@@ -85,24 +83,24 @@ const ButtonComponent = ({
           </Button>
         )}
       </div>
-      {!isDropdown && !isAuthenticated && (
+      {helperText && (
         <div className="flex w-full flex-row items-center gap-2">
           <ForwardedIconComponent
             name={helperIcon ? helperIcon : "AlertCircle"}
-            className={cn("h-5 w-5", !isAuthenticated && "text-destructive")}
+            className={cn("h-5 w-5", !auth && "text-destructive")}
           />
           <div
             className={cn(
               "flex w-full flex-col text-xs text-muted-foreground",
-              !isAuthenticated && "text-destructive",
+              !auth && "text-destructive",
             )}
           >
-            Please connect before selecting tools
+            {helperText}
           </div>
         </div>
       )}
 
-      {!isDropdown && (
+      {!auth && (
         <div className="flex w-full flex-col">
           <ReactSortable
             list={actionData}
@@ -150,13 +148,13 @@ const ButtonComponent = ({
       <ListSelectionComponent
         open={open}
         onClose={() => setOpen(false)}
-        hasSearch={isDropdown}
+        hasSearch={auth}
         setSelectedAction={setActionData}
         selectedAction={actionData}
-        type={!isDropdown}
+        type={!auth}
       />
     </div>
   );
 };
 
-export default ButtonComponent;
+export default ListComponent;
