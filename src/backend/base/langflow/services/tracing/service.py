@@ -50,6 +50,7 @@ def _get_arize_phoenix_tracer():
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
+
 class TraceContext:
     def __init__(
         self,
@@ -72,6 +73,7 @@ class TraceContext:
         self.running = False
         self.worker_task: asyncio.Task | None = None
 
+
 class ComponentTraceContext:
     def __init__(
         self,
@@ -91,7 +93,6 @@ class ComponentTraceContext:
         self.outputs: dict[str, dict] = defaultdict(dict)
         self.outputs_metadata: dict[str, dict] = defaultdict(dict)
         self.logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
-
 
 
 class TracingService(Service):

@@ -140,7 +140,7 @@ def mock_tracers():
 
 
 @pytest.mark.asyncio
-async def test_start_end_tracers(tracing_service, mock_tracers): # noqa: ARG001
+async def test_start_end_tracers(tracing_service, mock_tracers):  # noqa: ARG001
     """Test starting and ending tracers."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -149,9 +149,7 @@ async def test_start_end_tracers(tracing_service, mock_tracers): # noqa: ARG001
     project_name = "test_project"
     outputs = {"output_key": "output_value"}
 
-    await tracing_service.start_tracers(
-        run_id, run_name, user_id, session_id, project_name
-    )
+    await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
     # Verify trace_context is set correctly
     trace_context = trace_context_var.get()
     assert trace_context is not None
@@ -182,7 +180,7 @@ async def test_start_end_tracers(tracing_service, mock_tracers): # noqa: ARG001
 
 
 @pytest.mark.asyncio
-async def test_trace_component(tracing_service, mock_component, mock_tracers): # noqa: ARG001
+async def test_trace_component(tracing_service, mock_component, mock_tracers):  # noqa: ARG001
     """Test component tracing context manager."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -194,13 +192,9 @@ async def test_trace_component(tracing_service, mock_component, mock_tracers): #
     inputs = {"input_key": "input_value"}
     metadata = {"metadata_key": "metadata_value"}
 
-    await tracing_service.start_tracers(
-        run_id, run_name, user_id, session_id, project_name
-    )
+    await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
-    async with tracing_service.trace_component(
-        mock_component, trace_name, inputs, metadata
-    ) as ts:
+    async with tracing_service.trace_component(mock_component, trace_name, inputs, metadata) as ts:
         # Verify component context is set
         component_context = component_context_var.get()
         assert component_context is not None
@@ -239,9 +233,7 @@ async def test_trace_component(tracing_service, mock_component, mock_tracers): #
     for tracer in trace_context.tracers.values():
         assert tracer.end_trace_list[0]["trace_id"] == mock_component._vertex.id
         assert tracer.end_trace_list[0]["trace_name"] == trace_name
-        assert (
-            tracer.end_trace_list[0]["outputs"] == trace_context.all_outputs[trace_name]
-        )
+        assert tracer.end_trace_list[0]["outputs"] == trace_context.all_outputs[trace_name]
         assert tracer.end_trace_list[0]["error"] is None
         assert tracer.end_trace_list[0]["logs"] == component_context.logs[trace_name]
 
@@ -250,7 +242,7 @@ async def test_trace_component(tracing_service, mock_component, mock_tracers): #
 
 
 @pytest.mark.asyncio
-async def test_trace_component_with_exception(tracing_service, mock_component, mock_tracers): # noqa: ARG001
+async def test_trace_component_with_exception(tracing_service, mock_component, mock_tracers):  # noqa: ARG001
     """Test component tracing context manager with exception handling."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -261,9 +253,7 @@ async def test_trace_component_with_exception(tracing_service, mock_component, m
     trace_name = "test_component_trace"
     inputs = {"input_key": "input_value"}
 
-    await tracing_service.start_tracers(
-        run_id, run_name, user_id, session_id, project_name
-    )
+    await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
     test_exception = ValueError("Test exception")
 
@@ -282,7 +272,7 @@ async def test_trace_component_with_exception(tracing_service, mock_component, m
 
 
 @pytest.mark.asyncio
-async def test_get_langchain_callbacks(tracing_service, mock_tracers): # noqa: ARG001
+async def test_get_langchain_callbacks(tracing_service, mock_tracers):  # noqa: ARG001
     """Test getting LangChain callback handlers."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -290,9 +280,7 @@ async def test_get_langchain_callbacks(tracing_service, mock_tracers): # noqa: A
     session_id = "test_session"
     project_name = "test_project"
 
-    await tracing_service.start_tracers(
-        run_id, run_name, user_id, session_id, project_name
-    )
+    await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
     callbacks = tracing_service.get_langchain_callbacks()
 
@@ -322,9 +310,7 @@ async def test_deactivated_tracing(mock_settings_service):
     project_name = "test_project"
 
     # Starting tracers should have no effect
-    await tracing_service.start_tracers(
-        run_id, run_name, user_id, session_id, project_name
-    )
+    await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
     # With tracing disabled, trace_context_var may be None or uninitialized
     assert trace_context_var.get() is None
@@ -335,9 +321,7 @@ async def test_deactivated_tracing(mock_settings_service):
     trace_name = "test_component_trace"
     inputs = {"input_key": "input_value"}
 
-    async with tracing_service.trace_component(
-        mock_component, trace_name, inputs
-    ) as ts:
+    async with tracing_service.trace_component(mock_component, trace_name, inputs) as ts:
         ts.add_log(trace_name, {"message": "test log"})
         ts.set_outputs(trace_name, {"output_key": "output_value"})
 
@@ -393,9 +377,7 @@ async def test_start_tracers_with_exception(tracing_service):
         patch("langflow.services.tracing.service.logger.debug") as mock_logger,
     ):
         # start_tracers should return normally even with exception
-        await tracing_service.start_tracers(
-            run_id, run_name, user_id, session_id, project_name
-        )
+        await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
         # Verify exception was logged
         mock_logger.assert_any_call("Error initializing tracers: Mock exception")
@@ -411,7 +393,7 @@ async def test_start_tracers_with_exception(tracing_service):
 
 
 @pytest.mark.asyncio
-async def test_trace_worker_with_exception(tracing_service, mock_tracers): # noqa: ARG001
+async def test_trace_worker_with_exception(tracing_service, mock_tracers):  # noqa: ARG001
     """Test trace worker exception handling."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -426,9 +408,7 @@ async def test_trace_worker_with_exception(tracing_service, mock_tracers): # noq
 
     with patch("langflow.services.tracing.service.logger.exception") as mock_logger:
         # Remove incorrect context manager usage
-        await tracing_service.start_tracers(
-            run_id, run_name, user_id, session_id, project_name
-        )
+        await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
         # Get trace_context and add failing trace function to queue
         trace_context = trace_context_var.get()
@@ -445,7 +425,7 @@ async def test_trace_worker_with_exception(tracing_service, mock_tracers): # noq
 
 
 @pytest.mark.asyncio
-async def test_concurrent_tracing(tracing_service, mock_component, mock_tracers): # noqa: ARG001
+async def test_concurrent_tracing(tracing_service, mock_component, mock_tracers):  # noqa: ARG001
     """Test two tasks running start_tracers concurrently, with each task running 2 concurrent trace_component tasks."""
 
     # Define common task function: start tracers and run two component traces
@@ -460,35 +440,21 @@ async def test_concurrent_tracing(tracing_service, mock_component, mock_tracers)
         task_prefix,
         sleep_duration=0.1,
     ):
-        await tracing_service.start_tracers(
-            run_id, run_name, user_id, session_id, project_name
-        )
+        await tracing_service.start_tracers(run_id, run_name, user_id, session_id, project_name)
 
         async def run_component_task(component, trace_name, component_suffix):
-            async with tracing_service.trace_component(
-                component, trace_name, inputs, metadata
-            ) as ts:
+            async with tracing_service.trace_component(component, trace_name, inputs, metadata) as ts:
                 ts.add_log(trace_name, {"message": f"{task_prefix} {component_suffix} log"})
                 outputs = {"output_key": f"{task_prefix}_{component_suffix}_output"}
                 await asyncio.sleep(sleep_duration)
                 ts.set_outputs(trace_name, outputs)
 
-        task1 = asyncio.create_task(
-            run_component_task(
-                mock_component, f"{run_id} trace_name1", f"{run_id} component1"
-            )
-        )
+        task1 = asyncio.create_task(run_component_task(mock_component, f"{run_id} trace_name1", f"{run_id} component1"))
         await task1
-        task2 = asyncio.create_task(
-            run_component_task(
-                mock_component, f"{run_id} trace_name2", f"{run_id} component2"
-            )
-        )
+        task2 = asyncio.create_task(run_component_task(mock_component, f"{run_id} trace_name2", f"{run_id} component2"))
         await task2
 
-        await tracing_service.end_tracers(
-            {"final_output": f"{task_prefix}_final_output"}
-        )
+        await tracing_service.end_tracers({"final_output": f"{task_prefix}_final_output"})
         trace_context = trace_context_var.get()
         return trace_context.tracers["langfuse"]
 
@@ -532,20 +498,12 @@ async def test_concurrent_tracing(tracing_service, mock_component, mock_tracers)
     assert tracer1.project_name == "project_name1"
     assert tracer1.user_id == "user_id1"
     assert tracer1.session_id == "session_id1"
-    assert dict(tracer1.outputs_param.get("run_id1 trace_name1")) == {
-        "output_key": "task1_run_id1 component1_output"
-    }
-    assert dict(tracer1.outputs_param.get("run_id1 trace_name2")) == {
-        "output_key": "task1_run_id1 component2_output"
-    }
+    assert dict(tracer1.outputs_param.get("run_id1 trace_name1")) == {"output_key": "task1_run_id1 component1_output"}
+    assert dict(tracer1.outputs_param.get("run_id1 trace_name2")) == {"output_key": "task1_run_id1 component2_output"}
 
     assert tracer2.trace_name == "run_name2"
     assert tracer2.project_name == "project_name2"
     assert tracer2.user_id == "user_id2"
     assert tracer2.session_id == "session_id2"
-    assert dict(tracer2.outputs_param.get("run_id2 trace_name1")) == {
-        "output_key": "task2_run_id2 component1_output"
-    }
-    assert dict(tracer2.outputs_param.get("run_id2 trace_name2")) == {
-        "output_key": "task2_run_id2 component2_output"
-    }
+    assert dict(tracer2.outputs_param.get("run_id2 trace_name1")) == {"output_key": "task2_run_id2 component1_output"}
+    assert dict(tracer2.outputs_param.get("run_id2 trace_name2")) == {"output_key": "task2_run_id2 component2_output"}

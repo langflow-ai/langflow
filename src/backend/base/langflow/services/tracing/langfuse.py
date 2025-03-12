@@ -55,6 +55,7 @@ class LangFuseTracer(BaseTracer):
             self._client = Langfuse(**config)
             try:
                 from langfuse.api.core.request_options import RequestOptions
+
                 self._client.client.health.health(request_options=RequestOptions(timeout_in_seconds=1))
             except Exception as e:  # noqa: BLE001
                 logger.debug(f"can not connect to Langfuse: {e}")
