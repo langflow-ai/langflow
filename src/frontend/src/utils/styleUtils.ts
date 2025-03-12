@@ -312,6 +312,7 @@ import { Streamlit } from "../icons/Streamlit";
 import { UpstashSvgIcon } from "../icons/Upstash";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
+import { WatsonxAiIcon } from "@/icons/IBMWatsonx";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
@@ -749,6 +750,7 @@ export const nodeIconsLucide: iconsType = {
   Arize: ArizeIcon,
   Apify: ApifyIcon,
   ApifyWhite: ApifyWhiteIcon,
+  WatsonxAI: WatsonxAiIcon,
 
   //Node Icons
   model_specs: FileSliders,
