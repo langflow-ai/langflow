@@ -30,9 +30,12 @@ class FieldTypes(str, Enum):
     TABLE = "table"
     LINK = "link"
     SLIDER = "slider"
+    TAB = "tab"
 
 
-SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
+SerializableFieldTypes = Annotated[
+    FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)
+]
 
 
 # Base mixin for common input field attributes and methods
@@ -183,6 +186,28 @@ class DropDownMixin(BaseModel):
     """Variable that defines if the user can insert custom values in the dropdown."""
     dialog_inputs: dict[str, Any] | None = None
     """Dictionary of dialog inputs for the field. Default is an empty object."""
+
+
+class TabMixin(BaseModel):
+    """Mixin for tab input fields that allows a maximum of 3 values, each with a maximum of 20 characters."""
+
+    options: list[str] = Field(default_factory=list, max_length=3)
+    """List of tab options. Maximum of 3 values allowed."""
+
+    @field_validator("options")
+    @classmethod
+    def validate_options(cls, v):
+        """Validate that there are at most 3 tab values and each value has at most 20 characters."""
+        if len(v) > 3:
+            msg = f"Maximum of 3 tab values allowed. Got {len(v)} values."
+            raise ValueError(msg)
+
+        for i, value in enumerate(v):
+            if len(value) > 20:
+                msg = f"Tab value at index {i} exceeds maximum length of 20 characters. Got {len(value)} characters."
+                raise ValueError(msg)
+
+        return v
 
 
 class MultilineMixin(BaseModel):
