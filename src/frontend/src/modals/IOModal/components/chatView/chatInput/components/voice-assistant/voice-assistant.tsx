@@ -44,6 +44,7 @@ export function VoiceAssistant({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [addKey, setAddKey] = useState(false);
   const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
+  const [soundDetected, setSoundDetected] = useState(false);
   const [preferredLanguage, setPreferredLanguage] = useState(
     localStorage.getItem("lf_preferred_language") || "en-US",
   );
@@ -189,6 +190,8 @@ export function VoiceAssistant({
     barHeights,
     setBarHeights,
     recordingTime,
+    analyserRef,
+    setSoundDetected,
   );
 
   const handleGetMessagesMutation = () => {
@@ -354,7 +357,7 @@ export function VoiceAssistant({
                 key={index}
                 className={cn(
                   "mx-[1px] w-[2px] rounded-sm transition-all duration-200",
-                  isRecording && height > 20
+                  isRecording && soundDetected
                     ? "bg-red-foreground"
                     : "bg-placeholder-foreground",
                 )}

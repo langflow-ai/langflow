@@ -413,9 +413,11 @@ export default function ChatMessage({
                   ) : (
                     <>
                       <div
-                        className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
-                          isEmpty ? "text-muted-foreground" : "text-primary"
-                        }`}
+                        className={cn(
+                          "w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal",
+                          isEmpty ? "text-muted-foreground" : "text-primary",
+                          isAudioMessage && "italic",
+                        )}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
                         {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
