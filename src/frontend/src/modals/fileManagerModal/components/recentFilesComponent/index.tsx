@@ -6,7 +6,6 @@ import { FileType } from "@/types/file_management";
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useState } from "react";
 import FilesRendererComponent from "../filesRendererComponent";
-import ImportButtonComponent from "../importButtonComponent";
 
 export default function RecentFilesComponent({
   files,
@@ -80,9 +79,9 @@ export default function RecentFilesComponent({
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="flex w-48 justify-end">
+        {/* <div className="flex w-48 justify-end">
           <ImportButtonComponent variant="small" />
-        </div>
+        </div> */}
       </div>
       <div className={`flex h-80 min-h-80 flex-col gap-1 overflow-y-auto`}>
         {searchResults.length > 0 ? (
