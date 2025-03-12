@@ -21,6 +21,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_PROJECT_NAME
+from langflow.services.database.models.actor.model import Actor, EntityType
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
 from langflow.services.database.models.flow.model import FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
@@ -116,6 +117,11 @@ async def _new_flow(
     return db_flow
 
 
+def flow_has_chat_input_component(flow: Flow) -> bool:
+    """Check if a flow has a Chat Input component."""
+    return any(component.get("data", {}).get("type") == "ChatInput" for component in flow.data.get("nodes", []))
+
+
 @router.post("/", response_model=FlowRead, status_code=201)
 async def create_flow(
     *,
@@ -132,6 +138,13 @@ async def create_flow(
         )
         await session.commit()
         await session.refresh(db_flow)
+
+        # Create an actor for this flow
+        try:
+            if flow_has_chat_input_component(db_flow):
+                await Actor.create_from_flow(session=session, flow_id=db_flow.id)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error creating actor for flow: {e}")
     except Exception as e:
         if "UNIQUE constraint failed" in str(e):
             # Get the name of the column that failed
@@ -311,7 +324,8 @@ async def update_flow(
         session.add(db_flow)
         await session.commit()
         await session.refresh(db_flow)
-
+        if flow_has_chat_input_component(db_flow) and not db_flow.actor_id:
+            await Actor.create_from_flow(session=session, flow_id=db_flow.id)
         try:
             trigger_service = get_trigger_service()
             await trigger_service.update_subscriptions_for_flow(db_flow, session)
@@ -353,6 +367,17 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
+
+    # Delete associated actor if it exists
+    try:
+        actor_query = select(Actor).where((Actor.entity_type == EntityType.FLOW) & (Actor.entity_id == flow_id))
+        result = await session.exec(actor_query)
+        actor = result.first()
+        if actor:
+            await session.delete(actor)
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Error deleting actor for flow: {e}")
+
     await cascade_delete_flow(session, flow.id)
     await session.commit()
 
@@ -451,6 +476,18 @@ async def delete_multiple_flows(
         flows_to_delete = (
             await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
         ).all()
+
+        # Delete associated actors for these flows
+        try:
+            for flow in flows_to_delete:
+                actor_query = select(Actor).where((Actor.entity_type == EntityType.FLOW) & (Actor.entity_id == flow.id))
+                result = await db.exec(actor_query)
+                actor = result.first()
+                if actor:
+                    await db.delete(actor)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error deleting actors for flows: {e}")
+
         for flow in flows_to_delete:
             await cascade_delete_flow(db, flow.id)
 

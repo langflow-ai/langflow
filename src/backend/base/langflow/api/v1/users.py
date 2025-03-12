@@ -2,8 +2,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from sqlalchemy import func
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import select
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -38,6 +39,15 @@ async def add_user(
         folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
             raise HTTPException(status_code=500, detail="Error creating default folder")
+
+        # Create an actor for this user
+        try:
+            from langflow.services.database.models.actor.model import Actor
+
+            await Actor.create_from_user(session=session, user_id=new_user.id)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error creating actor for user: {e}")
+
     except IntegrityError as e:
         await session.rollback()
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
@@ -139,6 +149,19 @@ async def delete_user(
     user_db = (await session.exec(stmt)).first()
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Delete associated actor if it exists
+    try:
+        from langflow.services.database.models.actor.model import Actor, EntityType
+
+        actor_query = select(Actor).where((Actor.entity_type == EntityType.USER) & (Actor.entity_id == user_id))
+        result = await session.exec(actor_query)
+        actor = result.first()
+        if actor:
+            await session.delete(actor)
+            logger.info(f"Deleted actor for user {user_id}")
+    except SQLAlchemyError as e:
+        logger.error(f"Database error deleting actor for user: {e}")
 
     await session.delete(user_db)
     await session.commit()
