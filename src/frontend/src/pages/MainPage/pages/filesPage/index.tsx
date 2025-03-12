@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
+import {
+  useGetFilesV2,
+  usePostUploadFileV2,
+} from "@/controllers/API/queries/file-management";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
 import useUploadFile from "@/hooks/files/use-upload-file";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
@@ -62,6 +65,8 @@ export const FilesPage = () => {
     }
   };
 
+  const { mutate: uploadFileDirect } = usePostUploadFileV2();
+
   const colDefs: ColDef[] = [
     {
       headerName: "Name",
@@ -71,24 +76,54 @@ export const FilesPage = () => {
       filter: "agTextColumnFilter",
       cellClass: "cursor-text select-text",
       cellRenderer: (params) => {
+        const type = params.data.path.split(".")[1]?.toLowerCase();
         return (
           <div className="flex items-center gap-2 font-medium">
-            {params.data.progress ? (
-              <div className="text-xs font-semibold text-muted-foreground">
+            {params.data.progress !== undefined &&
+            params.data.progress !== -1 ? (
+              <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
                 {Math.round(params.data.progress * 100)}%
               </div>
             ) : (
               <ForwardedIconComponent
-                name={
-                  FILE_ICONS[params.data.path.split(".")[1]]?.icon ?? "File"
-                }
+                name={FILE_ICONS[type]?.icon ?? "File"}
                 className={cn(
-                  FILE_ICONS[params.data.path.split(".")[1]]?.color,
-                  "shrink-0",
+                  "h-6 w-6 shrink-0",
+                  params.data.progress !== undefined
+                    ? "text-placeholder-foreground"
+                    : (FILE_ICONS[type]?.color ?? undefined),
                 )}
               />
             )}
-            {params.value}.{params.data.path.split(".")[1]?.toLowerCase()}
+            <div
+              className={cn(
+                "flex cursor-text items-center gap-2 text-sm font-medium",
+                params.data.progress !== undefined &&
+                  params.data.progress === -1 &&
+                  "pointer-events-none text-placeholder-foreground",
+              )}
+            >
+              {params.value}.{type}
+            </div>
+            {params.data.progress !== undefined &&
+            params.data.progress === -1 ? (
+              <span className="text-[13px] text-primary">
+                Upload failed,{" "}
+                <span
+                  className="cursor-pointer text-accent-pink-foreground underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (params.data.file) {
+                      uploadFileDirect({ file: params.data.file });
+                    }
+                  }}
+                >
+                  try again?
+                </span>
+              </span>
+            ) : (
+              <></>
+            )}
           </div>
         );
       }, //This column will be twice as wide as the others
