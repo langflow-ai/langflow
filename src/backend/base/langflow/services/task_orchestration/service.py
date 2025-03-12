@@ -16,7 +16,6 @@ from pydantic import BaseModel
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import build_graph_from_data
 from langflow.graph.graph.state_model import create_output_state_model_from_graph
 from langflow.services.base import Service
 from langflow.services.database.models.flow.model import Flow
@@ -305,6 +304,8 @@ Focus on addressing all requirements in the task description."""
                     raise ValueError(msg)
 
                 try:
+                    from langflow.api.utils import build_graph_from_data
+
                     logger.debug(f"Building graph for task {task_id}")
                     # Build the graph
                     graph = await build_graph_from_data(
