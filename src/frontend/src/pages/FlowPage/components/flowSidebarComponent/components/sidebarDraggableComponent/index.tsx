@@ -97,6 +97,7 @@ export const SidebarDraggableComponent = forwardRef(
     const handleKeyDown = (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        e.stopPropagation();
         addComponent(apiClass, itemName);
       }
     };
