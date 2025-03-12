@@ -11,7 +11,6 @@
  * software for all.
  */
 
-
 import {
   getLeftHandleId,
   getRightHandleId,
