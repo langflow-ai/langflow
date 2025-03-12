@@ -17,8 +17,9 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.graph.graph.state_model import create_output_state_model_from_graph
+from langflow.serialization.serialization import serialize
 from langflow.services.base import Service
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.actor.model import Actor
 from langflow.services.database.models.task.model import Task, TaskCreate, TaskRead, TaskUpdate
 from langflow.services.deps import get_chat_service, get_task_service, session_scope
 
@@ -159,6 +160,11 @@ class TaskOrchestrationService(Service):
         update_data = task_update.model_dump(
             exclude_unset=True, exclude={"user_author_id", "flow_author_id", "user_assignee_id", "flow_assignee_id"}
         )
+
+        # Make sure the result field is JSON serializable
+        if "result" in update_data and update_data["result"] is not None:
+            update_data["result"] = serialize(update_data["result"])
+
         for key, value in update_data.items():
             setattr(task, key, value)
 
@@ -264,10 +270,21 @@ class TaskOrchestrationService(Service):
         Args:
             task_id: Task identifier
         """
-        # Use a new session for processing the task
-        async with session_scope() as session:
-            try:
+        # Get initial task data in its own session scope
+        flow_data = None
+        user_id = None
+        task_title = None
+        task_description = None
+        task_attachments = None
+        task_author_id = None
+        task_assignee_id = None
+        author_name = "Unknown"
+
+        try:
+            # Step 1: Fetch all required information in a short-lived session
+            async with session_scope() as session:
                 logger.info(f"Starting to process task {task_id}")
+
                 # Update task to processing
                 await self.update_task(task_id, TaskUpdate(status="processing"), session)
 
@@ -277,162 +294,182 @@ class TaskOrchestrationService(Service):
                     msg = f"Task with id {task_id} not found"
                     raise ValueError(msg)
 
-                # The assignee_id is a flow_id. We need to get the flow_data by getting the flow from the flow_id
-                flow = await session.get(Flow, task.assignee_id)
-                if not flow:
-                    msg = f"Flow with id {task.assignee_id} not found"
+                # Store task data to use outside this session
+                task_title = task.title
+                task_description = task.description
+                task_attachments = task.attachments
+                task_author_id = task.author_id
+                task_assignee_id = task.assignee_id
+
+                # Get the assignee actor
+                assignee_actor = await session.get(Actor, task_assignee_id)
+                if not assignee_actor:
+                    msg = f"Actor with id {task_assignee_id} not found"
                     raise ValueError(msg)
+
+                # Get the flow entity from the actor
+                flow = await assignee_actor.get_entity(session)
+                if not flow or assignee_actor.entity_type != "flow":
+                    msg = f"Flow entity not found for actor {task_assignee_id}"
+                    raise ValueError(msg)
+
+                # Store flow data to use outside this session
                 flow_data = flow.data
+                flow_id = flow.id
                 user_id = flow.user_id
 
-                input_value = f"""You are a task processing agent. Your job is to complete the following task:
+                # Get the author actor for additional context
+                author_actor = await session.get(Actor, task_author_id)
+                if author_actor:
+                    author_name = await author_actor.get_name(session) or "Unknown"
 
-Task Title: {task.title}
-Task Description: {task.description}
-Task Author: {task.author_id}
-Task Attachments: {task.attachments}
-Your ID: {task.assignee_id}
+            # Step 2: Process the task with the collected data
+            if not flow_data:
+                logger.error(f"Task {task_id} has no flow_data")
+                msg = "No flow data provided for task processing"
+                raise ValueError(msg)
+
+            input_value = f"""You are a task processing agent. Your job is to complete the following task:
+
+Task Title: {task_title}
+Task Description: {task_description}
+Task Author: {author_name} (ID: {task_author_id})
+Task Attachments: {task_attachments}
+Your ID: {task_assignee_id}
 
 Please process this task according to the description and provide a complete response.
 Focus on addressing all requirements in the task description."""
 
-                input_value_request = {"input_value": input_value, "session": str(task_id)}
-                if not flow_data:
-                    logger.error(f"Task {task_id} has no flow_data")
-                    msg = "No flow data provided for task processing"
-                    raise ValueError(msg)
+            input_value_request = {"input_value": input_value, "session": str(task_id)}
 
-                try:
-                    from langflow.api.utils import build_graph_from_data
+            from langflow.api.utils import build_graph_from_data
 
-                    logger.debug(f"Building graph for task {task_id}")
-                    # Build the graph
-                    graph = await build_graph_from_data(
-                        flow_id=str(task_id),
-                        payload=flow_data,
-                        user_id=str(user_id),
-                        flow_name=task.title or "Untitled Flow",
-                    )
+            # Build the graph outside the session scope
+            logger.debug(f"Building graph for task {task_id}")
+            graph = await build_graph_from_data(
+                flow_id=str(task_id),
+                payload=flow_data,
+                user_id=str(user_id),
+                flow_name=task_title or "Untitled Flow",
+            )
 
-                    # Set session_id from input_request if available
-                    if input_value_request and "session" in input_value_request:
-                        session_id = input_value_request.get("session")
-                        if session_id:
-                            logger.debug(f"Setting session_id {session_id} for task {task_id}")
-                            graph.session_id = session_id
+            # Set session_id from input_request if available
+            if input_value_request and "session" in input_value_request:
+                session_id = input_value_request.get("session")
+                if session_id:
+                    logger.debug(f"Setting session_id {session_id} for task {task_id}")
+                    graph.session_id = session_id
 
-                            # Also set session_id on all Agent components in the graph
-                            for vertex in graph.vertices:
-                                if "Agent" in vertex.vertex_type:
-                                    logger.debug(f"Setting session_id on Agent component {vertex.id}")
-                                    if hasattr(vertex, "set") and callable(vertex.set):
-                                        # Set session_id, sender and sender_name
-                                        sender = input_value_request.get("sender", "Machine")
-                                        sender_name = input_value_request.get("sender_name", "Agent")
-                                        vertex.set(session_id=session_id, sender=sender, sender_name=sender_name)
-                        else:
-                            logger.warning(f"Empty session_id provided for task {task_id}")
-                    else:
-                        # Use the task_id as fallback
-                        logger.debug(f"No session_id in input_request, using task_id for task {task_id}")
-                        graph.session_id = str(task_id)
+                    # Also set session_id on all Agent components in the graph
+                    for vertex in graph.vertices:
+                        if "Agent" in vertex.vertex_type:
+                            logger.debug(f"Setting session_id on Agent component {vertex.id}")
+                            if hasattr(vertex, "set") and callable(vertex.set):
+                                # Set session_id, sender and sender_name
+                                sender = input_value_request.get("sender", "Machine")
+                                sender_name = input_value_request.get("sender_name", "Agent")
+                                vertex.set(session_id=session_id, sender=sender, sender_name=sender_name)
+                else:
+                    logger.warning(f"Empty session_id provided for task {task_id}")
+            else:
+                # Use the task_id as fallback
+                logger.debug(f"No session_id in input_request, using task_id for task {task_id}")
+                graph.session_id = str(task_id)
 
-                    # Create input value request and set it in the graph
-                    input_value = input_value_request.get("input_value", "")
-                    logger.debug(f"Input value for task {task_id}: {input_value}")
+            # Create input value request and set it in the graph
+            input_value = input_value_request.get("input_value", "")
+            logger.debug(f"Input value for task {task_id}: {input_value}")
 
-                    # Prepare the graph for processing
-                    logger.debug(f"Preparing graph for task {task_id}")
-                    graph.prepare()
+            # Prepare the graph for processing
+            logger.debug(f"Preparing graph for task {task_id}")
+            graph.prepare()
 
-                    # Create output state model for tracking
-                    output_state_model = create_output_state_model_from_graph(graph)()
+            # Create output state model for tracking
+            output_state_model = create_output_state_model_from_graph(graph)()
 
-                    # Process the graph
-                    logger.info(f"Starting graph execution for task {task_id}")
-                    results = []
-                    async for result in graph.async_start(inputs=input_value_request, attachments=task.attachments):
-                        if hasattr(result, "vertex") and result.vertex.is_output:
-                            # Get the output state for this vertex
-                            vertex_state = getattr(output_state_model, result.vertex.id, None)
-                            results.append(
-                                {
-                                    "id": result.vertex.id,
-                                    "type": result.vertex.vertex_type,
-                                    "value": result.vertex.built_object,
-                                    "output_state": vertex_state.model_dump() if vertex_state else None,
-                                }
-                            )
+            # Process the graph
+            logger.info(f"Starting graph execution for task {task_id}")
+            results = []
 
-                    if not results:
-                        logger.debug(f"No explicit outputs for task {task_id}, using output state model")
-                        # If no explicit outputs, get the output state model
-                        results = [{"output_state": output_state_model.model_dump(), "type": "output_state"}]
-
-                    logger.info(f"Task {task_id} completed successfully with {len(results)} results")
-
-                    # Update task as completed
-                    await self.update_task(
-                        task_id,
-                        TaskUpdate(
-                            status="completed",
-                            result={"outputs": results},
-                        ),
-                        session,
-                    )
-
-                    # Publish completion event
-                    await self.event_bus_service.publish(
-                        "TaskCompleted",
+            # Run the graph and collect results
+            async for result in graph.async_start(inputs=input_value_request, attachments=task_attachments):
+                if hasattr(result, "vertex") and result.vertex.is_output:
+                    # Get the output state for this vertex
+                    vertex_state = getattr(output_state_model, result.vertex.id, None)
+                    results.append(
                         {
-                            "task_id": str(task_id),
-                            "flow_id": str(flow.id),
-                            "result": results,
-                        },
+                            "id": result.vertex.id,
+                            "type": result.vertex.vertex_type,
+                            "value": result.vertex.built_object,
+                            "output_state": vertex_state.model_dump() if vertex_state else None,
+                        }
                     )
 
-                except Exception as e:  # noqa: BLE001
-                    logger.error(f"Error processing graph for task {task_id}: {e!s}")
-                    error_result = {"error": str(e)}
+            if not results:
+                logger.debug(f"No explicit outputs for task {task_id}, using output state model")
+                # If no explicit outputs, get the output state model
+                results = [{"output_state": output_state_model.model_dump(), "type": "output_state"}]
 
-                    # Update task as failed
-                    await self.update_task(
-                        task_id,
-                        TaskUpdate(
-                            status="failed",
-                            result=error_result,
-                        ),
-                        session,
-                    )
+            logger.info(f"Task {task_id} completed successfully with {len(results)} results")
 
-                    # Publish failure event
-                    await self.event_bus_service.publish(
-                        "TaskFailed",
-                        {
-                            "task_id": str(task_id),
-                            "flow_id": str(flow.id),
-                            "error": str(e),
-                        },
-                    )
+            # Update task status in a new session
+            async with session_scope() as session:
+                # Make sure results are serializable
+                serializable_results = serialize({"outputs": results})
 
-            except asyncio.CancelledError:
-                logger.info(f"Task {task_id} was cancelled")
+                # Update the task with results
+                await self.update_task(
+                    task_id,
+                    TaskUpdate(
+                        status="completed",
+                        result=serializable_results,
+                    ),
+                    session,
+                )
+
+                # Publish completion event
+                await self.event_bus_service.publish(
+                    "TaskCompleted",
+                    {
+                        "task_id": str(task_id),
+                        "flow_id": str(flow_id),
+                        "result": serialize(results),
+                    },
+                )
+
+        except asyncio.CancelledError:
+            logger.info(f"Task {task_id} was cancelled")
+            async with session_scope() as session:
                 await self.update_task(task_id, TaskUpdate(status="cancelled"), session)
-                raise
+            raise
 
-            except Exception as e:  # noqa: BLE001
-                logger.error(f"Error in task processing {task_id}: {e!s}")
-                try:
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error in task processing {task_id}: {e!s}")
+            error_message = str(e)
+
+            try:
+                async with session_scope() as session:
                     await self.update_task(
                         task_id,
                         TaskUpdate(
                             status="failed",
-                            result={"error": f"Error processing task: {e!s}"},
+                            result={"error": f"Error processing task: {error_message}"},
                         ),
                         session,
                     )
-                except ValueError as update_error:
-                    logger.error(f"Error updating failed task {task_id}: {update_error}")
+
+                    # If we have flow_id, publish failure event
+                    if "flow_id" in locals() and flow_id is not None:
+                        await self.event_bus_service.publish(
+                            "TaskFailed",
+                            {
+                                "task_id": str(task_id),
+                                "flow_id": str(flow_id),
+                                "error": error_message,
+                            },
+                        )
+            except Exception as update_error:  # noqa: BLE001
+                logger.error(f"Error updating failed task {task_id}: {update_error}")
 
     async def _build_vertex(
         self,
