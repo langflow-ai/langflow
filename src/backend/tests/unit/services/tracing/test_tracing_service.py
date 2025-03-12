@@ -389,7 +389,7 @@ async def test_start_tracers_with_exception(tracing_service):
         assert trace_context.run_name == run_name
 
         # Cleanup
-        await tracing_service._stop()
+        await tracing_service.end_tracers({})
 
 
 @pytest.mark.asyncio
@@ -421,7 +421,7 @@ async def test_trace_worker_with_exception(tracing_service, mock_tracers):  # no
         mock_logger.assert_called_with("Error processing trace_func")
 
         # Cleanup
-        await tracing_service._stop()
+        await tracing_service.end_tracers({})
 
 
 @pytest.mark.asyncio
