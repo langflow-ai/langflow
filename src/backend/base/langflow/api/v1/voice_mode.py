@@ -402,12 +402,12 @@ async def flow_as_tool_websocket(
 
             def merge(from_dict, to_dict, keys):
                 for key in keys:
-                    if (key in from_dict):
+                    if key in from_dict:
                         if not isinstance(from_dict[key], str):
                             raise ValueError(f"Only string values are supported for merge. Issue with key: {key}")
                         new_value = from_dict[key]
-                        
-                        if (key not in to_dict):
+
+                        if key not in to_dict:
                             to_dict[key] = new_value
                         else:
                             if not isinstance(to_dict[key], str):
@@ -415,7 +415,6 @@ async def flow_as_tool_websocket(
                             old_value = to_dict[key]
 
                             to_dict[key] = f"{old_value}\n{new_value}"
-                        
 
             def warn_if_present(dict, keys):
                 for key in keys:
