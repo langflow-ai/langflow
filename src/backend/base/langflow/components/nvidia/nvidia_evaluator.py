@@ -208,7 +208,6 @@ class NvidiaEvaluatorComponent(Component):
 
     def fetch_models(self, nemo_entity_store_url: str):
         """Fetch models from the specified API endpoint and return a list of model names."""
-
         namespace = self.namespace
         model_url = f"{nemo_entity_store_url}/v1/models"
         params = {
