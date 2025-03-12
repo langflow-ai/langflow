@@ -237,7 +237,7 @@ async def generate_flow_events(
             payload=data.model_dump(),
             user_id=str(current_user.id),
             flow_name=flow_name,
-            session_id=effective_session_id
+            session_id=effective_session_id,
         )
 
     def sort_vertices(graph: Graph) -> list[str]:
