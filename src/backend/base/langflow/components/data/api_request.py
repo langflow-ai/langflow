@@ -223,6 +223,36 @@ class APIRequestComponent(Component):
         """Check if an item is a valid key-value dictionary."""
         return isinstance(item, dict) and "key" in item and "value" in item
 
+    def _unescape_curl(self, curl: str) -> str:
+        """Unescape a cURL command that might have escaped characters.
+        
+        This method handles various forms of escaped cURL commands:
+        1. JSON string encoded curl commands
+        2. Double escaped quotes
+        3. Single escaped quotes
+        """
+        if not curl:
+            return curl
+            
+        try:
+            # If it's a JSON string, decode it first
+            if curl.startswith('"') and curl.endswith('"'):
+                try:
+                    return json.loads(curl)
+                except json.JSONDecodeError:
+                    # If JSON decoding fails, try to handle escaped quotes
+                    curl = curl.strip('"')
+                    
+            # Handle escaped quotes if present
+            if '\\\"' in curl or '\\\'' in curl:
+                curl = curl.replace('\\\"', '"').replace('\\\'', "'")
+                
+            return curl
+            
+        except Exception as e:
+            self.log(f"Error unescaping curl command: {e}")
+            return curl  # Return original if unescaping fails
+
     def parse_curl(self, curl: str, build_config: dotdict) -> dotdict:
         """Parse a cURL command and update build configuration.
 
@@ -233,6 +263,9 @@ class APIRequestComponent(Component):
             Updated build configuration
         """
         try:
+            # Unescape the curl command if it contains escaped characters
+            curl = self._unescape_curl(curl)
+            self.log(f"Unescaped curl command: {curl}")  # Log for debugging
             parsed = parse_context(curl)
 
             # Update basic configuration
