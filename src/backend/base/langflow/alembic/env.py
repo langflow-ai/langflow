@@ -1,5 +1,6 @@
 # noqa: INP001
 import asyncio
+import warnings
 from logging.config import fileConfig
 
 from alembic import context
@@ -49,11 +50,12 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         render_as_batch=True,
-        prepare_threshold=None
+        prepare_threshold=None,
     )
-
-    with context.begin_transaction():
-        context.run_migrations()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*SQL-parsed foreign key constraint.*")
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 def _sqlite_do_connect(
