@@ -1,3 +1,4 @@
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
 import { useGetMessagesMutation } from "@/controllers/API/queries/messages/use-get-messages-mutation";
@@ -258,18 +259,22 @@ export function VoiceAssistant({
     openaiApiKey: string,
     elevenLabsApiKey: string,
   ) => {
-    setShowSettingsModal(open);
+    const saveApiKey = openaiApiKey && openaiApiKey !== "OPENAI_API_KEY";
+    const saveElevenLabsApiKey =
+      elevenLabsApiKey && elevenLabsApiKey !== "ELEVENLABS_API_KEY";
+    const hasOpenAIApiKeySaved =
+      hasOpenAIAPIKey && openaiApiKey && openaiApiKey !== "OPENAI_API_KEY";
+    const hasElevenLabsApiKeySaved =
+      hasElevenLabsApiKey &&
+      elevenLabsApiKey &&
+      elevenLabsApiKey !== "ELEVENLABS_API_KEY";
 
     if (!open) {
       setRecordingTime(0);
       setBarHeights(Array(30).fill(20));
     }
 
-    if (
-      hasElevenLabsApiKey &&
-      elevenLabsApiKey &&
-      elevenLabsApiKey !== "ELEVENLABS_API_KEY"
-    ) {
+    if (hasElevenLabsApiKeySaved) {
       setErrorData({
         title: "There's already an API key saved",
         list: ["Please select your ELEVENLABS_API_KEY"],
@@ -277,7 +282,7 @@ export function VoiceAssistant({
       return;
     }
 
-    if (hasOpenAIAPIKey && openaiApiKey && openaiApiKey !== "OPENAI_API_KEY") {
+    if (hasOpenAIApiKeySaved) {
       setErrorData({
         title: "There's already an API key saved",
         list: ["Please select your OPENAI_API_KEY"],
@@ -285,11 +290,11 @@ export function VoiceAssistant({
       return;
     }
 
-    if (openaiApiKey && openaiApiKey !== "OPENAI_API_KEY") {
+    if (saveApiKey) {
       await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY");
     }
 
-    if (elevenLabsApiKey && elevenLabsApiKey !== "ELEVENLABS_API_KEY") {
+    if (saveElevenLabsApiKey) {
       await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY");
     }
 
@@ -327,13 +332,18 @@ export function VoiceAssistant({
             hasOpenAIAPIKey ? "gap-3" : "gap-2",
           )}
         >
-          <Button unstyled onClick={handleToggleRecording}>
-            <IconComponent
-              name={isRecording ? "Mic" : "MicOff"}
-              strokeWidth={ICON_STROKE_WIDTH}
-              className="h-4 w-4 text-placeholder-foreground"
-            />
-          </Button>
+          <ShadTooltip
+            content={isRecording ? "Mute" : "Unmute"}
+            delayDuration={500}
+          >
+            <Button unstyled onClick={handleToggleRecording}>
+              <IconComponent
+                name={isRecording ? "Mic" : "MicOff"}
+                strokeWidth={ICON_STROKE_WIDTH}
+                className="h-4 w-4 text-placeholder-foreground"
+              />
+            </Button>
+          </ShadTooltip>
 
           <div
             ref={waveformRef}

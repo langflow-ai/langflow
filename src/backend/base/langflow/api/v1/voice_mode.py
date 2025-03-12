@@ -735,6 +735,7 @@ async def add_message_to_db(message, session, flow_id, session_id, sender, sende
         flow_id=uuid.UUID(flow_id) if isinstance(flow_id, str) else flow_id,
         properties=Properties().model_dump(),
         content_blocks=[],
+        category="audio",
     )
 
     await message_queues[queue_key].put(message_obj)

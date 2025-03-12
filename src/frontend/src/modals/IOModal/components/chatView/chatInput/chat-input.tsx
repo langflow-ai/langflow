@@ -3,6 +3,7 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
@@ -20,6 +21,7 @@ import NoInputView from "./components/no-input";
 import { VoiceAssistant } from "./components/voice-assistant/voice-assistant";
 import useAutoResizeTextArea from "./hooks/use-auto-resize-text-area";
 import useFocusOnUnlock from "./hooks/use-focus-unlock";
+
 export default function ChatInput({
   sendMessage,
   inputRef,
@@ -169,30 +171,46 @@ export default function ChatInput({
   }
 
   return (
-    <>
+    <AnimatePresence mode="wait">
       {showAudioInput ? (
-        <VoiceAssistant
-          flowId={currentFlowId}
-          setShowAudioInput={setShowAudioInput}
-        />
+        <motion.div
+          key="voice-assistant"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <VoiceAssistant
+            flowId={currentFlowId}
+            setShowAudioInput={setShowAudioInput}
+          />
+        </motion.div>
       ) : (
-        <InputWrapper
-          isBuilding={isBuilding}
-          checkSendingOk={checkSendingOk}
-          send={send}
-          noInput={noInput}
-          chatValue={chatValue}
-          inputRef={inputRef}
-          files={files}
-          isDragging={isDragging}
-          handleDeleteFile={handleDeleteFile}
-          fileInputRef={fileInputRef}
-          handleFileChange={handleFileChange}
-          handleButtonClick={handleButtonClick}
-          setShowAudioInput={setShowAudioInput}
-          currentFlowId={currentFlowId}
-        />
+        <motion.div
+          key="input-wrapper"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <InputWrapper
+            isBuilding={isBuilding}
+            checkSendingOk={checkSendingOk}
+            send={send}
+            noInput={noInput}
+            chatValue={chatValue}
+            inputRef={inputRef}
+            files={files}
+            isDragging={isDragging}
+            handleDeleteFile={handleDeleteFile}
+            fileInputRef={fileInputRef}
+            handleFileChange={handleFileChange}
+            handleButtonClick={handleButtonClick}
+            setShowAudioInput={setShowAudioInput}
+            currentFlowId={currentFlowId}
+          />
+        </motion.div>
       )}
-    </>
+    </AnimatePresence>
   );
 }

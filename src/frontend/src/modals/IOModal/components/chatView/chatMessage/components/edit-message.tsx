@@ -11,6 +11,7 @@ type MarkdownFieldProps = {
   isEmpty: boolean;
   chatMessage: string;
   editedFlag: React.ReactNode;
+  isAudioMessage?: boolean;
 };
 
 export const MarkdownField = ({
@@ -18,6 +19,7 @@ export const MarkdownField = ({
   isEmpty,
   chatMessage,
   editedFlag,
+  isAudioMessage,
 }: MarkdownFieldProps) => {
   return (
     <div className="w-full items-baseline gap-2">
@@ -28,6 +30,7 @@ export const MarkdownField = ({
         className={cn(
           "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
           isEmpty ? "text-muted-foreground" : "text-primary",
+          isAudioMessage && "italic",
         )}
         components={{
           p({ node, ...props }) {

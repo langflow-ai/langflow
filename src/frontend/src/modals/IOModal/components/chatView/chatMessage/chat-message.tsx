@@ -50,6 +50,8 @@ export default function ChatMessage({
   const [showError, setShowError] = useState(false);
   const isBuilding = useFlowStore((state) => state.isBuilding);
 
+  const isAudioMessage = chat.category === "audio";
+
   useEffect(() => {
     const chatMessageString = chat.message ? chat.message.toString() : "";
     setChatMessage(chatMessageString);
@@ -300,7 +302,17 @@ export default function ChatMessage({
                   "sender_name_" + chat.sender_name?.toLocaleLowerCase()
                 }
               >
-                {chat.sender_name}
+                <span className="flex items-center gap-2">
+                  {chat.sender_name}
+                  {isAudioMessage && (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
+                      <ForwardedIconComponent
+                        name="mic"
+                        className="h-3 w-3 text-muted-foreground"
+                      />
+                    </div>
+                  )}
+                </span>
                 {chat.properties?.source && (
                   <div className="text-[13px] font-normal text-muted-foreground">
                     {chat.properties?.source.source}
@@ -372,6 +384,7 @@ export default function ChatMessage({
                               />
                             ) : (
                               <MarkdownField
+                                isAudioMessage={isAudioMessage}
                                 chat={chat}
                                 isEmpty={isEmpty}
                                 chatMessage={chatMessage}
@@ -434,6 +447,7 @@ export default function ChatMessage({
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}
+                  isAudioMessage={isAudioMessage}
                 />
               </div>
             </div>

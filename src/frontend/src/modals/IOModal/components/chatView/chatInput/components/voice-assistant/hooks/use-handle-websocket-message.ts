@@ -31,6 +31,17 @@ export const useHandleWebsocketMessage = (
       }
       break;
 
+    case "response.done":
+      if (data.response?.status_details?.error?.code) {
+        const errorCode =
+          data.response?.status_details?.error?.code?.replaceAll("_", " ");
+        setStatus(`API key error: ${errorCode}`);
+        showErrorAlert("API key error: " + errorCode, [
+          "Please check your API key and try again",
+        ]);
+      }
+      break;
+
     case "response.cancelled":
       interruptPlayback();
       break;

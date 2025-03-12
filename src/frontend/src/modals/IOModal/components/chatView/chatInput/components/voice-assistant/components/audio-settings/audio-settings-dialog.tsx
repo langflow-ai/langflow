@@ -204,6 +204,8 @@ const SettingsVoiceModal = ({
     }
   }, [language]);
 
+  console.log(open);
+
   return (
     <>
       <DropdownMenu open={open} onOpenChange={handleSetOpen}>
