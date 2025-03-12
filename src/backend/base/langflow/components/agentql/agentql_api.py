@@ -91,9 +91,8 @@ class AgentQL(Component):
         }
 
         if not self.prompt and not self.query:
-            msg = "Please provide either an AgentQL Query or a natural language prompt."
-            self.status = msg
-            raise ValueError(msg)
+            self.status = "Either Query or Prompt must be provided."
+            raise ValueError(self.status)
         if self.prompt and self.query:
             self.status = "Both Query and Prompt can't be provided at the same time."
             raise ValueError(self.status)
