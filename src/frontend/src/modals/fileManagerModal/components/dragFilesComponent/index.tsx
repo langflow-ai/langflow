@@ -119,8 +119,8 @@ export default function DragFilesComponent({
             className="overflow-visible stroke-muted-foreground/50"
             style={{
               position: "absolute",
-              top: 2,
-              left: 2,
+              top: 1,
+              left: 1,
               right: 0,
               bottom: 0,
             }}
