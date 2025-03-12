@@ -8,11 +8,9 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
-from uuid import UUID
 
 import anyio
 import httpx
-import orjson
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -23,7 +21,6 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from rich import print as rprint
-from sqlmodel import col, select
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from langflow.api import health_check_router, log_router, router, router_v2
@@ -32,17 +29,16 @@ from langflow.initial_setup.setup import (
     initialize_super_user_if_needed,
     load_bundles_from_urls,
     load_flows_from_directory,
+    sync_flows_from_fs,
 )
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.database.models import Flow
 from langflow.services.deps import (
     get_queue_service,
     get_settings_service,
     get_telemetry_service,
-    session_scope,
 )
 from langflow.services.utils import initialize_services, teardown_services
 
@@ -81,39 +77,6 @@ class RequestCancelledMiddleware(BaseHTTPMiddleware):
         if cancel_task in done:
             return Response("Request was cancelled", status_code=499)
         return await handler_task
-
-
-async def sync_flows_from_fs():
-    flow_mtimes = {}
-    while True:
-        try:
-            async with session_scope() as session:
-                stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
-                flows = (await session.exec(stmt)).all()
-                for flow in flows:
-                    mtime = flow_mtimes.setdefault(flow.id, 0)
-                    path = anyio.Path(flow.fs_path)
-                    try:
-                        if await path.exists():
-                            new_mtime = (await path.stat()).st_mtime
-                            if new_mtime > mtime:
-                                update_data = orjson.loads(await path.read_text(encoding="utf-8"))
-                                try:
-                                    for field_name in ("name", "description", "data", "locked"):
-                                        if new_value := update_data.get(field_name):
-                                            setattr(flow, field_name, new_value)
-                                    if folder_id := update_data.get("folder_id"):
-                                        flow.folder_id = UUID(folder_id)
-                                    await session.commit()
-                                    await session.refresh(flow)
-                                except Exception:  # noqa: BLE001
-                                    logger.exception(f"Couldn't update flow {flow.id} in database from path {path}")
-                                flow_mtimes[flow.id] = new_mtime
-                    except Exception:  # noqa: BLE001
-                        logger.exception(f"Error while handling flow file {path}")
-        except Exception:  # noqa: BLE001
-            logger.exception("Error while syncing flows from database")
-        await asyncio.sleep(10)
 
 
 class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
