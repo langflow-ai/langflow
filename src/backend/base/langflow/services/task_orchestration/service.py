@@ -88,7 +88,6 @@ class TaskOrchestrationService(Service):
         # Create a new Task instance
         task = Task(
             id=uuid4(),
-            status="pending",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
             **task_create.model_dump(

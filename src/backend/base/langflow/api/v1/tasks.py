@@ -30,10 +30,11 @@ async def create_task(
     try:
         # Use the task orchestration service to create the task
         # This will handle the business logic and event publishing
-        return await task_orchestration_service.create_task(task_create, session)
+        task_read = await task_orchestration_service.create_task(task_create, session)
     except Exception as e:
         logger.error(f"Error creating task: {e!s}")
         raise HTTPException(status_code=400, detail=f"Error creating task: {e!s}") from e
+    return task_read
 
 
 @router.get("/", response_model=list[TaskRead])
