@@ -179,6 +179,7 @@ interface BaseModalProps {
     | "large-h-full"
     | "templates"
     | "small-h-full"
+    | "medium-small-tall"
     | "medium-h-full"
     | "md-thin"
     | "sm-thin"
