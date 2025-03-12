@@ -16,10 +16,15 @@ export const useStartRecording = async (
 ) => {
   try {
     const selectedMicrophone = localStorage.getItem("lf_selected_microphone");
+    const preferredLanguage =
+      localStorage.getItem("lf_preferred_language") || "en-US";
+
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         noiseSuppression: true,
         echoCancellation: true,
+        autoGainControl: true,
+        sampleRate: 48000,
         deviceId: selectedMicrophone
           ? { exact: selectedMicrophone }
           : undefined,
@@ -30,6 +35,7 @@ export const useStartRecording = async (
     microphoneRef.current =
       audioContextRef.current.createMediaStreamSource(stream);
     analyserRef.current = audioContextRef.current.createAnalyser();
+    analyserRef.current.fftSize = 2048;
     microphoneRef.current.connect(analyserRef.current);
 
     const blob = new Blob([workletCode], { type: "application/javascript" });
@@ -71,6 +77,7 @@ export const useStartRecording = async (
             JSON.stringify({
               type: "input_audio_buffer.append",
               audio: base64Audio,
+              language: preferredLanguage,
             }),
           );
         } else if (event.data.type === "done") {

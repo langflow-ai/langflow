@@ -26,6 +26,7 @@ import { usePlayNextAudioChunk } from "./hooks/use-play-next-audio-chunk";
 import { useStartConversation } from "./hooks/use-start-conversation";
 import { useStartRecording } from "./hooks/use-start-recording";
 import { useStopRecording } from "./hooks/use-stop-recording";
+
 interface VoiceAssistantProps {
   flowId: string;
   setShowAudioInput: (value: boolean) => void;
@@ -42,6 +43,9 @@ export function VoiceAssistant({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [addKey, setAddKey] = useState(false);
   const [barHeights, setBarHeights] = useState<number[]>(Array(30).fill(20));
+  const [preferredLanguage, setPreferredLanguage] = useState(
+    localStorage.getItem("lf_preferred_language") || "en-US",
+  );
 
   const waveformRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -305,6 +309,12 @@ export function VoiceAssistant({
     }
   };
 
+  useEffect(() => {
+    if (preferredLanguage) {
+      localStorage.setItem("lf_preferred_language", preferredLanguage);
+    }
+  }, [preferredLanguage]);
+
   return (
     <>
       <div
@@ -354,6 +364,8 @@ export function VoiceAssistant({
               hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}
               setShowSettingsModal={handleSetShowSettingsModal}
               hasOpenAIAPIKey={hasOpenAIAPIKey}
+              language={preferredLanguage}
+              setLanguage={setPreferredLanguage}
             >
               {hasOpenAIAPIKey ? (
                 <>

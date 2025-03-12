@@ -16,8 +16,24 @@ import { useVoiceStore } from "@/stores/voiceStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import { useEffect, useRef, useState } from "react";
 import AudioSettingsHeader from "./components/header";
+import LanguageSelect from "./components/language-select";
 import MicrophoneSelect from "./components/microphone-select";
 import VoiceSelect from "./components/voice-select";
+
+const ALL_LANGUAGES = [
+  { value: "en-US", name: "English (US)" },
+  { value: "en-GB", name: "English (UK)" },
+  { value: "it-IT", name: "Italian" },
+  { value: "fr-FR", name: "French" },
+  { value: "es-ES", name: "Spanish" },
+  { value: "de-DE", name: "German" },
+  { value: "ja-JP", name: "Japanese" },
+  { value: "pt-BR", name: "Portuguese (Brazil)" },
+  { value: "zh-CN", name: "Chinese (Simplified)" },
+  { value: "ru-RU", name: "Russian" },
+  { value: "ar-SA", name: "Arabic" },
+  { value: "hi-IN", name: "Hindi" },
+];
 
 interface SettingsVoiceModalProps {
   children?: React.ReactNode;
@@ -31,6 +47,8 @@ interface SettingsVoiceModalProps {
     elevenLabsApiKey: string,
   ) => void;
   hasOpenAIAPIKey: boolean;
+  language?: string;
+  setLanguage?: (language: string) => void;
 }
 
 const SettingsVoiceModal = ({
@@ -40,6 +58,8 @@ const SettingsVoiceModal = ({
   userElevenLabsApiKey,
   setShowSettingsModal,
   hasOpenAIAPIKey,
+  language,
+  setLanguage,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
@@ -78,6 +98,10 @@ const SettingsVoiceModal = ({
 
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [selectedMicrophone, setSelectedMicrophone] = useState<string>("");
+
+  const [currentLanguage, setCurrentLanguage] = useState(
+    localStorage.getItem("lf_preferred_language") || "en-US",
+  );
 
   useEffect(() => {
     if (isFetched) {
@@ -165,6 +189,20 @@ const SettingsVoiceModal = ({
       setOpen(true);
     }
   }, [initialOpen]);
+
+  const handleSetLanguage = (value: string) => {
+    setCurrentLanguage(value);
+    localStorage.setItem("lf_preferred_language", value);
+    if (setLanguage) {
+      setLanguage(value);
+    }
+  };
+
+  useEffect(() => {
+    if (language) {
+      setCurrentLanguage(language);
+    }
+  }, [language]);
 
   return (
     <>
@@ -289,6 +327,12 @@ const SettingsVoiceModal = ({
                   microphones={microphones}
                   setMicrophones={setMicrophones}
                   setSelectedMicrophone={setSelectedMicrophone}
+                />
+
+                <LanguageSelect
+                  language={currentLanguage}
+                  handleSetLanguage={handleSetLanguage}
+                  allLanguages={ALL_LANGUAGES}
                 />
               </div>
             </div>
