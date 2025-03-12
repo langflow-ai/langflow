@@ -165,3 +165,67 @@ async def test_delete_task_not_found(client: AsyncClient, logged_in_headers):
     non_existent_id = str(uuid.uuid4())
     response = await client.delete(f"api/v1/tasks/{non_existent_id}", headers=logged_in_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_review_task(client: AsyncClient, logged_in_headers, json_memory_chatbot_no_llm):
+    # First create a flow
+    flow_id = await _create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Create a task
+    task_id, task_data = await _create_task(client, logged_in_headers, flow_id)
+
+    # Update task to completed
+    update_data = {"status": "completed"}
+    response = await client.put(f"api/v1/tasks/{task_id}", json=update_data, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["status"] == "completed"
+
+    # Now review the task
+    review_data_1 = {
+        "review": {
+            "comment": "This task needs more work",
+            "reviewer_id": flow_id,
+            "reviewed_at": "2023-01-01T00:00:00+00:00",
+        }
+    }
+
+    response = await client.put(f"api/v1/tasks/{task_id}", json=review_data_1, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+
+    # Task should be back to pending status after review
+    assert result["status"] == "pending"
+    assert "review" in result
+    assert result["review"]["comment"] == "This task needs more work"
+    assert result["review"]["reviewer_id"] == flow_id
+    assert "review_history" in result
+    assert len(result["review_history"]) == 1
+
+    # Complete the task again
+    update_data = {"status": "completed"}
+    response = await client.put(f"api/v1/tasks/{task_id}", json=update_data, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["status"] == "completed"
+
+    # Add a second review
+    review_data_2 = {
+        "review": {
+            "comment": "Still needs improvement",
+            "reviewer_id": flow_id,
+            "reviewed_at": "2023-01-02T00:00:00+00:00",
+        }
+    }
+
+    response = await client.put(f"api/v1/tasks/{task_id}", json=review_data_2, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+
+    # Verify review history has been updated
+    assert result["status"] == "pending"
+    assert result["review"]["comment"] == "Still needs improvement"
+    assert "review_history" in result
+    assert len(result["review_history"]) == 2
+    assert result["review_history"][0]["comment"] == "This task needs more work"
+    assert result["review_history"][1]["comment"] == "Still needs improvement"
