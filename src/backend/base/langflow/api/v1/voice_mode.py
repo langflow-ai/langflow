@@ -44,12 +44,13 @@ PREFIX_PADDING_MS = 100
 SILENCE_DURATION_MS = 100
 SESSION_INSTRUCTIONS = (
     "Converse with the user to assist with their question. "
-    "When appropriate, call the execute_flow function to assist with the user's question "
+    "When the user's query necessitates use of one of the enumerated tools, "
+    "call the execute_flow function to assist, and pass in the user's entire query "
     "as the input parameter and use that to craft your responses. "
-    "*Always* let the user know before you call a function that you will be doing so. "
-    "Once the function responds make sure to update the user with the required information."
-    "If the execute_flow function failed to get a response for a certain query, but the user asks again, run it again"
-    "When encountering URLs, use them in tools, access, and process their content as needed, but do not read the URLs themselves aloud."
+    "Always let the user know before you call a function that you will be doing so. "
+    "Always update the user with the required information, when the function returns. "
+    "Always call the function again, regardless of whether execute_flow succeeded or failed. "
+    "Never provide URLs in repsonses, but you may use URLs in tool calls or when processing those URLs' content."
 )
 
 use_elevenlabs = False
@@ -60,7 +61,7 @@ elevenlabs_key = None
 
 barge_in_enabled = False
 
-openai_realtime_session = {
+default_openai_realtime_session = {
     "modalities": ["text", "audio"],
     "instructions": SESSION_INSTRUCTIONS,
     "voice": "echo",
@@ -77,6 +78,7 @@ openai_realtime_session = {
     "tools": [],
     "tool_choice": "auto",
 }
+openai_realtime_session = {}
 
 # Create a global dictionary to store queues for each session
 message_queues = defaultdict(asyncio.Queue)
@@ -266,7 +268,7 @@ async def flow_as_tool_websocket(
     session_id: str,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
-    global openai_realtime_session
+    global default_openai_realtime_session
     try:
         await client_websocket.accept()
         token = client_websocket.cookies.get("access_token_lf")
@@ -329,6 +331,7 @@ async def flow_as_tool_websocket(
         }
 
         async with websockets.connect(url, extra_headers=headers) as openai_ws:
+            openai_realtime_session = dict(default_openai_realtime_session)
             openai_realtime_session["tools"] = [flow_tool]
             session_update = {"type": "session.update", "session": openai_realtime_session}
             await openai_ws.send(json.dumps(session_update))
@@ -399,14 +402,19 @@ async def flow_as_tool_websocket(
 
             def merge(from_dict, to_dict, keys):
                 for key in keys:
-                    if key in from_dict and key in to_dict and isinstance(to_dict[key], str):
+                    if key in from_dict:
+                        if not isinstance(from_dict[key], str):
+                            raise ValueError(f"Only string values are supported for merge. Issue with key: {key}")
                         new_value = from_dict[key]
-                        old_value = to_dict[key]
 
-                        if new_value and new_value not in old_value:
+                        if key not in to_dict:
+                            to_dict[key] = new_value
+                        else:
+                            if not isinstance(to_dict[key], str):
+                                raise ValueError(f"Only string values are supported for merge. Issue with key: {key}")
+                            old_value = to_dict[key]
+
                             to_dict[key] = f"{old_value}\n{new_value}"
-                    else:
-                        raise ValueError(f"Only string values are supported for merge. Issue with key: {key}")
 
             def warn_if_present(dict, keys):
                 for key in keys:
@@ -486,8 +494,9 @@ async def flow_as_tool_websocket(
                 threading.Thread(target=tts_thread, daemon=True).start()
 
             async def forward_to_openai() -> None:
-                global use_elevenlabs, elevenlabs_voice
+                global use_elevenlabs, elevenlabs_voice, openai_realtime_session
                 try:
+                    num_audio_samples = 0
                     while True:
                         message_text = await client_websocket.receive_text()
                         msg = json.loads(message_text)
@@ -497,11 +506,17 @@ async def flow_as_tool_websocket(
                             base64_data = msg.get("audio", "")
                             if not base64_data:
                                 continue
+                            num_audio_samples += len(base64_data)
                             event = {"type": "input_audio_buffer.append", "audio": base64_data}
                             await openai_ws.send(json.dumps(event))
                             log_event(event, "↑")
                             if barge_in_enabled:
                                 await vad_queue.put(base64_data)
+                        elif msg.get("type") == "input_audio_buffer.commit":
+                            if num_audio_samples > 100:
+                                await openai_ws.send(message_text)
+                                log_event(msg, "↑")
+                                num_audio_samples = 0
                         elif msg.get("type") == "langflow.elevenlabs.config":
                             logger.info(f"langflow.elevenlabs.config {msg}")
                             use_elevenlabs = msg["enabled"]
@@ -510,15 +525,12 @@ async def flow_as_tool_websocket(
                             if use_elevenlabs:
                                 modalities = ["text"]
                             openai_realtime_session["modalities"] = modalities
-
                             session_update = {"type": "session.update", "session": openai_realtime_session}
                             await openai_ws.send(json.dumps(session_update))
                             log_event(session_update, "↑")
                         elif msg.get("type") == "session.update":
-                            session = msg["session"]
-                            update_global_session(session)
-                            session_update = msg
-                            session_update["session"] = openai_realtime_session
+                            update_global_session(msg["session"])
+                            session_update = {"type": "session.update", "session": openai_realtime_session}
                             await openai_ws.send(json.dumps(session_update))
                             log_event(session_update, "↑")
                         else:
@@ -539,8 +551,11 @@ async def flow_as_tool_websocket(
                         event = json.loads(data)
                         event_type = event.get("type")
 
-                        # forward all openai events except response.done if using elevenlabs to the client
-                        if not (event_type == "response.done" and use_elevenlabs):
+                        do_forward = True
+                        # Don't forward response.done if using elevenlabs to the client
+                        do_forward = do_forward and not (event_type == "response.done" and use_elevenlabs)
+                        do_forward = do_forward and not (event_type.find("flow.") == 0)
+                        if do_forward:
                             await client_websocket.send_text(data)
 
                         if event_type == "response.text.delta":
