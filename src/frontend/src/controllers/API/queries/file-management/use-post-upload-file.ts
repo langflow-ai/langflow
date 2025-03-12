@@ -80,15 +80,10 @@ export const usePostUploadFileV2: useMutationFunctionType<
             queryClient.invalidateQueries({
               queryKey: ["useGetFilesV2"],
             });
-          } else {
-            setTimeout(() => {
-              queryClient.invalidateQueries({
-                queryKey: ["useGetFilesV2"],
-              });
-            }, 5000);
           }
           options?.onSettled?.(data, error, variables, context);
         },
+        retry: 0,
         ...options,
       },
     );
