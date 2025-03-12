@@ -76,7 +76,7 @@ class ComponentTraceContext:
     def __init__(
         self,
         trace_id: str | None,
-            trace_name: str | None,
+        trace_name: str | None,
             trace_type: str | None,
             vertex: Vertex | None,
             inputs: dict[str, dict],
