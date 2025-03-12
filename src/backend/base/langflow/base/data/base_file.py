@@ -248,7 +248,6 @@ class BaseFileComponent(Component, ABC):
         # Filter for JSON data and convert to Data objects
         return [data for data in self.load_files() if data.file_path.lower().endswith(".json")]
 
-
     def load_others(self) -> list[Message]:
         """Loads other file types by calling load_files().
 
