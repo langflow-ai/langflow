@@ -77,7 +77,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             display_name="Ingest Data",
             input_types=["Data", "DataFrame"],
             is_list=True,
-            info="Data to store. It will be embbeded and indexed for semantic search.",
+            info="Data to store. It will be embedded and indexed for semantic search.",
             show=False,
         ),
         MultilineInput(
