@@ -324,6 +324,11 @@ export function VoiceAssistant({
     }
   }, [preferredLanguage]);
 
+  const handleClickSaveOpenAIApiKey = async (openaiApiKey: string) => {
+    await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY");
+    setShowSettingsModal(false);
+  };
+
   return (
     <>
       <div
@@ -380,6 +385,7 @@ export function VoiceAssistant({
               hasOpenAIAPIKey={hasOpenAIAPIKey}
               language={preferredLanguage}
               setLanguage={setPreferredLanguage}
+              handleClickSaveOpenAIApiKey={handleClickSaveOpenAIApiKey}
             >
               {hasOpenAIAPIKey ? (
                 <>

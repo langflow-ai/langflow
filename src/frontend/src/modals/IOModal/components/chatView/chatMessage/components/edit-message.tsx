@@ -30,7 +30,6 @@ export const MarkdownField = ({
         className={cn(
           "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
           isEmpty ? "text-muted-foreground" : "text-primary",
-          isAudioMessage && "italic",
         )}
         components={{
           p({ node, ...props }) {

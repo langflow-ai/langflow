@@ -2,6 +2,7 @@ import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { getPlaceholder } from "@/components/core/parameterRenderComponent/helpers/get-placeholder-disabled";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +50,7 @@ interface SettingsVoiceModalProps {
   hasOpenAIAPIKey: boolean;
   language?: string;
   setLanguage?: (language: string) => void;
+  handleClickSaveOpenAIApiKey: (openaiApiKey: string) => void;
 }
 
 const SettingsVoiceModal = ({
@@ -60,6 +62,7 @@ const SettingsVoiceModal = ({
   hasOpenAIAPIKey,
   language,
   setLanguage,
+  handleClickSaveOpenAIApiKey,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
@@ -84,6 +87,8 @@ const SettingsVoiceModal = ({
       value: string;
     }[]
   >([]);
+
+  const saveButtonClicked = useRef(false);
 
   const {
     data: voiceList,
@@ -154,7 +159,8 @@ const SettingsVoiceModal = ({
     }
   };
 
-  const handleSetOpen = (open: boolean) => {
+  const onOpenChangeDropdownMenu = (open: boolean) => {
+    if (!saveButtonClicked.current && !hasOpenAIAPIKey) return;
     setOpen(open);
     setShowSettingsModal(open, openaiApiKey, elevenLabsApiKey);
   };
@@ -188,7 +194,7 @@ const SettingsVoiceModal = ({
     if (!hasOpenAIAPIKey) {
       setOpen(true);
     }
-  }, [initialOpen]);
+  }, [initialOpen, hasOpenAIAPIKey]);
 
   const handleSetLanguage = (value: string) => {
     setCurrentLanguage(value);
@@ -204,11 +210,15 @@ const SettingsVoiceModal = ({
     }
   }, [language]);
 
-  console.log(open);
+  const handleClickSaveApiKey = () => {
+    handleClickSaveOpenAIApiKey(openaiApiKey);
+    setOpen(false);
+    saveButtonClicked.current = true;
+  };
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={handleSetOpen}>
+      <DropdownMenu open={open} onOpenChange={onOpenChangeDropdownMenu}>
         <DropdownMenuTrigger>{children}</DropdownMenuTrigger>
         <DropdownMenuContent
           className="w-[324px] rounded-xl shadow-lg"
@@ -267,75 +277,95 @@ const SettingsVoiceModal = ({
                         : ""
                     }
                     setSelectedOption={setOpenaiApiKey}
+                    commandWidth="11rem"
                   />
                 </div>
 
-                <div className="grid w-full items-center gap-2">
-                  <span className="flex items-center text-sm">
-                    ElevenLabs API Key
-                    <ShadTooltip content="If you have an ElevenLabs API key, you can select ElevenLabs voices.">
-                      <div>
-                        <IconComponent
-                          name="Info"
-                          strokeWidth={2}
-                          className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
-                        />
-                      </div>
-                    </ShadTooltip>
-                  </span>
+                {!hasOpenAIAPIKey && (
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      className="h-9 w-full"
+                      variant="default"
+                      onClick={handleClickSaveApiKey}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                )}
 
-                  <InputComponent
-                    isObjectOption={false}
-                    password={false}
-                    nodeStyle
-                    popoverWidth="16rem"
-                    placeholder={getPlaceholder(
-                      false,
-                      "Enter your ElevenLabs API key",
-                    )}
-                    id="eleven-labs-api-key"
-                    options={globalVariables?.map((variable) => variable) ?? []}
-                    optionsPlaceholder={"Global Variables"}
-                    optionsIcon="Globe"
-                    optionsButton={<GeneralGlobalVariableModal />}
-                    optionButton={(option) => (
-                      <GeneralDeleteConfirmationModal
-                        option={option}
-                        onConfirmDelete={() => {}}
+                {hasOpenAIAPIKey && (
+                  <>
+                    <div className="grid w-full items-center gap-2">
+                      <span className="flex items-center text-sm">
+                        ElevenLabs API Key
+                        <ShadTooltip content="If you have an ElevenLabs API key, you can select ElevenLabs voices.">
+                          <div>
+                            <IconComponent
+                              name="Info"
+                              strokeWidth={2}
+                              className="relative -top-[3px] left-1 h-[14px] w-[14px] text-placeholder"
+                            />
+                          </div>
+                        </ShadTooltip>
+                      </span>
+
+                      <InputComponent
+                        isObjectOption={false}
+                        password={false}
+                        nodeStyle
+                        popoverWidth="16rem"
+                        placeholder={getPlaceholder(
+                          false,
+                          "Enter your ElevenLabs API key",
+                        )}
+                        id="eleven-labs-api-key"
+                        options={
+                          globalVariables?.map((variable) => variable) ?? []
+                        }
+                        optionsPlaceholder={"Global Variables"}
+                        optionsIcon="Globe"
+                        optionsButton={<GeneralGlobalVariableModal />}
+                        optionButton={(option) => (
+                          <GeneralDeleteConfirmationModal
+                            option={option}
+                            onConfirmDelete={() => {}}
+                          />
+                        )}
+                        value={elevenLabsApiKey}
+                        onChange={(value) => {
+                          setElevenLabsApiKey(value);
+                        }}
+                        selectedOption={
+                          checkIfGlobalVariableExists(elevenLabsApiKey)
+                            ? elevenLabsApiKey
+                            : ""
+                        }
+                        setSelectedOption={setElevenLabsApiKey}
+                        commandWidth="11rem"
                       />
-                    )}
-                    value={elevenLabsApiKey}
-                    onChange={(value) => {
-                      setElevenLabsApiKey(value);
-                    }}
-                    selectedOption={
-                      checkIfGlobalVariableExists(elevenLabsApiKey)
-                        ? elevenLabsApiKey
-                        : ""
-                    }
-                    setSelectedOption={setElevenLabsApiKey}
-                  />
-                </div>
+                    </div>
 
-                <VoiceSelect
-                  voice={voice}
-                  handleSetVoice={handleSetVoice}
-                  allVoices={allVoices}
-                />
+                    <VoiceSelect
+                      voice={voice}
+                      handleSetVoice={handleSetVoice}
+                      allVoices={allVoices}
+                    />
 
-                <MicrophoneSelect
-                  selectedMicrophone={selectedMicrophone}
-                  handleSetMicrophone={handleSetMicrophone}
-                  microphones={microphones}
-                  setMicrophones={setMicrophones}
-                  setSelectedMicrophone={setSelectedMicrophone}
-                />
+                    <MicrophoneSelect
+                      selectedMicrophone={selectedMicrophone}
+                      handleSetMicrophone={handleSetMicrophone}
+                      microphones={microphones}
+                      setMicrophones={setMicrophones}
+                      setSelectedMicrophone={setSelectedMicrophone}
+                    />
 
-                <LanguageSelect
-                  language={currentLanguage}
-                  handleSetLanguage={handleSetLanguage}
-                  allLanguages={ALL_LANGUAGES}
-                />
+                    <LanguageSelect
+                      language={currentLanguage}
+                      handleSetLanguage={handleSetLanguage}
+                      allLanguages={ALL_LANGUAGES}
+                    />
+                  </>
+                )}
               </div>
             </div>
           </div>
