@@ -14,7 +14,6 @@ from langflow.inputs import (
     IntInput,
     LinkInput,
     MessageTextInput,
-    MultiselectInput,
     SecretStrInput,
     StrInput,
 )
@@ -43,7 +42,7 @@ class GmailAPIComponent(LCToolComponent):
             "actions": [],
         },
         "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
-            "display_name": "Get Email by ID",
+            "display_name": "Get Email By ID",
             "actions": ["message_id"],
         },
         "GMAIL_CREATE_EMAIL_DRAFT": {
@@ -59,7 +58,7 @@ class GmailAPIComponent(LCToolComponent):
             "actions": ["max_results", "query"],
         },
         "GMAIL_REPLY_TO_THREAD": {
-            "display_name": "Reply to Thread",
+            "display_name": "Reply To Thread",
             "actions": ["thread_id", "message_body", "recipient_email"],
         },
         "GMAIL_LIST_LABELS": {
@@ -114,16 +113,6 @@ class GmailAPIComponent(LCToolComponent):
             dynamic=True,
             show=False,
             refresh_button=True,
-        ),
-        MultiselectInput(
-            name="actions",
-            display_name="Actions",
-            required=True,
-            options=[],
-            value=[],
-            info="The actions to pass to agent to execute",
-            dynamic=True,
-            show=False,
         ),
         # Non tool-mode input fields
         DropdownInput(
@@ -390,13 +379,6 @@ class GmailAPIComponent(LCToolComponent):
         if field_name == "tool_mode":
             if field_value:
                 build_config["action"]["show"] = False
-                build_config["actions"]["show"] = True
-
-                gmail_display_names = [
-                    self._actions_data[action]["display_name"] for action in list(self._actions_data.keys())
-                ]
-                build_config["actions"]["options"] = gmail_display_names
-                build_config["actions"]["value"] = [gmail_display_names[0]]
 
                 all_fields = set()
                 for action_data in self._actions_data.values():
@@ -406,7 +388,6 @@ class GmailAPIComponent(LCToolComponent):
 
             else:
                 build_config["action"]["show"] = True
-                build_config["actions"]["show"] = False
 
         if field_name == "action":
             self.show_hide_fields(build_config, field_value)
@@ -480,14 +461,16 @@ class GmailAPIComponent(LCToolComponent):
             msg = "Please provide a valid Composio API Key in the component settings"
             raise ValueError(msg) from e
 
-    async def to_toolkit(self) -> list[Tool]:
+    async def _get_tools(self) -> list[Tool]:
         toolset = self._build_wrapper()
+        tools = toolset.get_tools(actions=self._actions_data.keys())
+        for tool in tools:
+            tool.tags = [tool.name]  # Assigning tags directly
+        return tools
 
-        action_enums = []
-        for action_display_name in self.actions:
-            for action_key, data in self._actions_data.items():
-                if data["display_name"] == action_display_name:
-                    action_enums.append(getattr(Action, action_key))
-                    break
-
-        return toolset.get_tools(actions=action_enums)
+    @property
+    def enabled_tools(self):
+        return [
+            "GMAIL_SEND_EMAIL",
+            "GMAIL_FETCH_EMAILS",
+        ]
