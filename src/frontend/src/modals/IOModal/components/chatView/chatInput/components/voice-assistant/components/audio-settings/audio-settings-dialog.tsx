@@ -226,7 +226,7 @@ const SettingsVoiceModal = ({
 
     debounceTimeoutRef.current = setTimeout(() => {
       handleClickSaveApiKey(value);
-    }, 2000);
+    }, 1000);
   };
 
   useEffect(() => {
@@ -270,7 +270,7 @@ const SettingsVoiceModal = ({
         <DropdownMenuContent
           className="w-[324px] rounded-xl shadow-lg"
           sideOffset={18}
-          alignOffset={-50}
+          alignOffset={-54}
           align="end"
         >
           <div ref={popupRef} className="rounded-3xl">
