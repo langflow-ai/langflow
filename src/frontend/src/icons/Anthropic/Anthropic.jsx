@@ -6,6 +6,7 @@ const SvgAnthropicBox = (props) => {
       viewBox="0 0 280 196"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      {...props}
     >
       <path d="M201.88 0H159.04L237.16 196H280L201.88 0Z" fill="#FAFAF8" />
       <path
