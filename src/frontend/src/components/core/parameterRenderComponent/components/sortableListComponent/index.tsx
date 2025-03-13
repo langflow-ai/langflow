@@ -61,7 +61,7 @@ const SortableListComponent = ({
   searchCategory = [],
   ...baseInputProps
 }: InputProps<any, SortableListComponentProps>) => {
-  const { placeholder } = baseInputProps;
+  const { placeholder, handleOnNewValue } = baseInputProps;
   const [open, setOpen] = useState(false);
   const [listData, setListData] = useState<any[]>([]);
 

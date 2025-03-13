@@ -2,7 +2,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import ListSelectionComponent from "@/CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "@/utils/utils";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { InputProps } from "../../types";
 import HelperTextComponent from "../helperTextComponent";
 
@@ -28,10 +28,12 @@ const ConnectionComponent = ({
   connectionLink = "https://en.wikipedia.org/wiki/DataStax",
   ...baseInputProps
 }: InputProps<any, ConnectionComponentProps>) => {
+  const { value, handleOnNewValue } = baseInputProps;
+
   const { placeholder } = baseInputProps;
   const [open, setOpen] = useState(false);
   const [connectionButton, setConnectionButton] = useState(true);
-  const [listData, setListData] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any[]>([]);
 
   const handleConnectionButtonClick = useCallback(() => {
     setConnectionButton((prev) => !prev);
@@ -39,7 +41,14 @@ const ConnectionComponent = ({
   }, []);
 
   const handleOpenListSelectionDialog = useCallback(() => setOpen(true), []);
-  const handleCloseListSelectionDialog = useCallback(() => setOpen(false), []);
+
+  const handleCloseListSelectionDialog = useCallback(() => {
+    setOpen(false);
+  }, [value, selectedItem]);
+
+  useEffect(() => {
+    handleOnNewValue({ value: selectedItem[0]?.name }, { skipSnapshot: true });
+  }, [selectedItem]);
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -52,15 +61,13 @@ const ConnectionComponent = ({
           className="dropdown-component-outline input-edit-node w-full py-2"
         >
           <div className={cn("flex w-full items-center justify-start text-sm")}>
-            {listData[0]?.icon && (
+            {selectedItem[0]?.icon && (
               <ForwardedIconComponent
-                name={listData[0]?.icon}
+                name={selectedItem[0]?.icon}
                 className="mr-3 h-5 w-5"
               />
             )}
-            {listData.length > 0
-              ? listData.map((action) => action.name).join(", ")
-              : placeholder}
+            {selectedItem[0]?.name || placeholder}
             <ForwardedIconComponent
               name="ChevronsUpDown"
               className="ml-auto h-5 w-5"
@@ -71,6 +78,7 @@ const ConnectionComponent = ({
         {connectionButton && (
           <Button
             size="icon"
+            disabled={!selectedItem[0]?.name}
             variant={buttonMetadata.variant as any}
             className={cn(
               "h-9 w-10 rounded-md border",
@@ -99,8 +107,8 @@ const ConnectionComponent = ({
         open={open}
         onClose={handleCloseListSelectionDialog}
         searchCategories={searchCategory}
-        setSelectedList={setListData}
-        selectedList={listData}
+        setSelectedList={setSelectedItem}
+        selectedList={selectedItem}
         options={options}
         type="single"
       />
