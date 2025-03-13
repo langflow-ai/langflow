@@ -7,6 +7,7 @@ const SidebarMenuButtons = ({
   hasStore = false,
   customComponent,
   addComponent,
+  isLoading = false,
 }) => {
   return (
     <>
@@ -37,6 +38,7 @@ const SidebarMenuButtons = ({
       <SidebarMenuButton asChild>
         <Button
           unstyled
+          disabled={isLoading}
           onClick={() => {
             if (customComponent) {
               addComponent(customComponent, "CustomComponent");

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -165,7 +166,7 @@ class BatchRunComponent(Component):
             ]
 
             # Sort by index to maintain order
-            responses_with_idx.sort(key=lambda x: x[0])
+            responses_with_idx.sort(key=operator.itemgetter(0))
 
             # Build the final data with enhanced metadata
             rows: list[dict[str, Any]] = []

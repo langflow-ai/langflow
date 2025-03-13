@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
       - name: "Setup Environment"
         uses: ./.github/actions/setup-uv
-      - run: uv sync --extra dev
+      - run: uv sync
       - name: Run Codeflash Optimizer
         working-directory: ./src/backend/base
         continue-on-error: true
