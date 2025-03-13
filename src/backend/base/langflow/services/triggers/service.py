@@ -9,15 +9,17 @@ from loguru import logger
 from sqlmodel import select
 
 from langflow.services.base import Service
+from langflow.services.database.models.actor.model import Actor
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.subscription.model import Subscription
-from langflow.services.database.models.task.model import TaskCreate
+from langflow.services.database.models.task.model import TaskCreate, TaskRead
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.base.triggers.model import BaseTriggerComponent
+    from langflow.services.discord.service import DiscordService
     from langflow.services.task_orchestration.service import TaskOrchestrationService
     from langflow.services.triggers.base_trigger import BaseTrigger
 
@@ -28,13 +30,21 @@ class TriggerService(Service):
     name = "triggers_service"
     _worker_task: asyncio.Task | None = None
 
-    def __init__(self, task_orchestration_service: TaskOrchestrationService):
+    def __init__(self, task_orchestration_service: TaskOrchestrationService, discord_service: DiscordService = None):
         """Initialize the trigger service.
 
         Args:
             task_orchestration_service: Service for creating and managing tasks
+            discord_service: Service for Discord integration (optional)
         """
         self.task_orchestration_service = task_orchestration_service
+        self.discord_service = discord_service
+
+        # Set Discord service in DiscordTrigger class if available
+        if discord_service:
+            from langflow.services.triggers.discord_trigger import DiscordTrigger
+
+            DiscordTrigger.set_discord_service(discord_service)
 
     async def start(self) -> None:
         """Start the trigger service and its worker."""
@@ -165,19 +175,109 @@ class TriggerService(Service):
                 await session.rollback()
                 logger.error(f"Error checking for events: {e}")
 
-    async def _process_event(self, event: dict[str, Any], subscription: Subscription | None = None) -> None:
+    async def process_trigger_event(
+        self,
+        event_type: str,
+        trigger_data: dict[str, Any],
+        flow_id: UUID | None = None,
+        session: AsyncSession | None = None,
+    ) -> TaskRead | None:
+        """Process a trigger event and run the associated flow.
+
+        This is a public method that can be called by any service to process an event
+        and trigger a flow. If flow_id is provided, it will trigger that specific flow.
+        Otherwise, it will find all subscriptions for the event_type and trigger them.
+
+        Args:
+            event_type: The type of event (e.g., "discord_message_received")
+            trigger_data: The data associated with the event
+            flow_id: Optional flow ID to trigger a specific flow
+            session: Optional database session
+
+        Returns:
+            The created task, if any
+        """
+        task = None
+        try:
+            # Create the event object
+            event = {
+                "event_type": event_type,
+                "trigger_data": trigger_data,
+            }
+
+            # If flow_id is provided, trigger that specific flow
+            if flow_id:
+                return await self._create_task_from_event(flow_id, event)
+
+            # Otherwise, find all subscriptions for this event type
+            if session is None:
+                async with session_scope() as new_session:
+                    return await self._process_event_with_subscriptions(event_type, event, new_session)
+            else:
+                return await self._process_event_with_subscriptions(event_type, event, session)
+
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error processing trigger event: {e}")
+        return task
+
+    async def _process_event_with_subscriptions(
+        self, event_type: str, event: dict[str, Any], session: AsyncSession
+    ) -> TaskRead | None:
+        """Process an event by finding all matching subscriptions.
+
+        Args:
+            event_type: The type of event
+            event: The event data
+            session: Database session
+
+        Returns:
+            The last created task, if any
+        """
+        # Get all subscriptions for this event type that point to existing flows
+        query = (
+            select(Subscription)
+            .where(Subscription.event_type == event_type)
+            .join(Flow, Flow.id == Subscription.flow_id)
+        )
+        result = await session.exec(query)
+        subscriptions = result.all()
+
+        if not subscriptions:
+            logger.warning(f"No subscriptions found for event type: {event_type}")
+            return None
+
+        task = None
+        # Process the event for each subscription
+        for subscription in subscriptions:
+            try:
+                # Add subscription_id to the event
+                event_copy = event.copy()
+                event_copy["subscription_id"] = subscription.id
+
+                # Process the event
+                task = await self._process_event(event_copy, subscription)
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Error processing event for subscription {subscription.id}: {e}")
+
+        return task
+
+    async def _process_event(self, event: dict[str, Any], subscription: Subscription | None = None) -> TaskRead | None:
         """Process a single event.
 
         Args:
             event: The event to process
             subscription: The subscription to process the event for
+
+        Returns:
+            The created task, if any
         """
+        task = None
         try:
             if not subscription:
                 subscription_id = event.get("subscription_id")
                 if not subscription_id:
                     logger.warning("Event has no subscription_id, skipping")
-                    return
+                    return None
 
                 # Use the session_scope context manager instead of direct get_session call
                 async with session_scope() as session:
@@ -188,12 +288,83 @@ class TriggerService(Service):
 
                     if not subscription:
                         logger.warning(f"Subscription {subscription_id} not found, skipping event")
-                        return
+                        return None
 
             # Create a task for the flow
-            await self._create_task_from_event(subscription.flow_id, event)
+            task = await self._create_task_from_event(subscription.flow_id, event)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Error processing event: {e}")
+        return task
+
+    async def _create_task_from_event(self, flow_id: UUID, event: dict[str, Any]) -> TaskRead | None:
+        """Create a task from an event.
+
+        Args:
+            flow_id: The flow ID to create the task for
+            event: The event data
+
+        Returns:
+            The created task, if any
+        """
+        task = None
+        try:
+            async with session_scope() as session:
+                trigger_data = event.get("trigger_data", {})
+                result = await session.exec(select(Actor).where(Actor.entity_id == flow_id))
+                flow_actor = result.first()
+                if not flow_actor:
+                    logger.warning(f"Actor with id {flow_id} not found, skipping task creation")
+                    return None
+                # Also get the user owner of the flow by selecting the flow
+                result = await session.exec(select(Flow).where(Flow.id == flow_id))
+                flow = result.first()
+                if not flow:
+                    logger.warning(f"Flow with id {flow_id} not found, skipping task creation")
+                    return None
+                result = await session.exec(select(Actor).where(Actor.entity_id == flow.user_id))
+                user_actor = result.first()
+                if not user_actor:
+                    logger.warning(f"User with id {flow.user_id} not found, skipping task creation")
+                    return None
+                # Format the event data in a more readable way using rich
+
+                # Create a task for the flow
+                # Format JSON to look like YAML but still be valid JSON
+                def format_json_like_yaml(data, indent=0):
+                    lines = []
+                    for key, value in data.items():
+                        if isinstance(value, dict):
+                            lines.append(f"{'  ' * indent}{key}:")
+                            lines.append(format_json_like_yaml(value, indent + 1))
+                        elif isinstance(value, list):
+                            lines.append(f"{'  ' * indent}{key}:")
+                            for item in value:
+                                if isinstance(item, dict):
+                                    lines.append(f"{'  ' * (indent + 1)}- ")
+                                    lines.append(format_json_like_yaml(item, indent + 2))
+                                else:
+                                    lines.append(f"{'  ' * (indent + 1)}- {item}")
+                        else:
+                            lines.append(f"{'  ' * indent}{key}: {value}")
+                    return "\n".join(lines)
+
+                formatted_event = format_json_like_yaml(event)
+
+                task_create = TaskCreate(
+                    title=f"Triggered by {trigger_data.get('source', 'external event')}",
+                    description=f"Event Data:\n```\n{formatted_event}\n```",
+                    status="pending",
+                    state="initial",
+                    author_id=user_actor.id,
+                    assignee_id=flow_actor.id,
+                    category="trigger",
+                    attachments=[json.dumps(event, default=str)],
+                )
+                task = await self.task_orchestration_service.create_task(task_create, session)
+                logger.info(f"Created task for flow {flow_id} from trigger event")
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error creating task from event: {e}")
+        return task
 
     def _get_trigger_class_for_subscription(self, subscription: Subscription) -> type[BaseTrigger] | None:
         """Get the trigger class for a subscription.
@@ -206,6 +377,7 @@ class TriggerService(Service):
         """
         # Import all trigger components
         from langflow.components.triggers import (
+            discord_message_trigger,
             gmail_inbox_trigger,
             local_file_watcher,
             schedule_trigger,
@@ -218,36 +390,10 @@ class TriggerService(Service):
             "schedule_triggered": schedule_trigger.ScheduleTrigger,
             "local_file_updated": local_file_watcher.LocalFileWatcherTrigger,
             "task_category_status_updated": task_category_status_trigger.TaskCategoryStatusTrigger,
+            "discord_message_received": discord_message_trigger.DiscordTrigger,
         }
 
         return event_type_map.get(subscription.event_type)
-
-    async def _create_task_from_event(self, flow_id: UUID, event: dict[str, Any]) -> None:
-        """Create a task from an event.
-
-        Args:
-            flow_id: The flow ID to create the task for
-            event: The event data
-        """
-        try:
-            trigger_data = event.get("trigger_data", {})
-
-            # Create a task for the flow
-            task_create = TaskCreate(
-                title=f"Triggered by {trigger_data.get('source', 'external event')}",
-                description=f"Event Data: {event}",
-                status="pending",
-                state="initial",
-                author_id=flow_id,  # Using flow_id as author_id
-                assignee_id=flow_id,  # Using flow_id as assignee_id
-                category="trigger",  # Using "trigger" as the category
-                attachments=[json.dumps(event, default=str)],
-            )
-
-            await self.task_orchestration_service.create_task(task_create)
-            logger.info(f"Created task for flow {flow_id} from trigger event")
-        except Exception as e:  # noqa: BLE001
-            logger.error(f"Error creating task from event: {e}")
 
     def _extract_triggers_from_flow(self, flow_data: dict[str, Any]) -> list[BaseTrigger]:
         """Extract triggers from a flow.
@@ -331,6 +477,20 @@ class TriggerService(Service):
                     trigger = ScheduleTrigger(cron_expression=cron_expression, description=description)
                     triggers.append(trigger)
                     logger.debug(f"Found Schedule trigger in flow: {node_id}")
+                    continue
+
+                # For Discord trigger, check if it has the required fields
+                if "DiscordMessageTrigger" in node_type:
+                    from langflow.services.triggers.discord_trigger import DiscordTrigger
+
+                    # Extract the required fields from the template
+                    discord_user_id = template.get("discord_user_id", {}).get("value", "*")
+                    discord_username = template.get("discord_username", {}).get("value", "Any Discord User")
+
+                    # Create the trigger directly
+                    trigger = DiscordTrigger(discord_user_id=discord_user_id, discord_username=discord_username)
+                    triggers.append(trigger)
+                    logger.debug(f"Found Discord trigger in flow: {node_id}")
                     continue
 
                 # Try to get the component class from the code
@@ -423,17 +583,13 @@ class TriggerService(Service):
         Returns:
             List of events that need to be processed
         """
-        from sqlalchemy.future import select
-
-        from langflow.services.deps import session_scope
-
         events = []
 
         async with session_scope() as session:
             try:
                 # Get all subscriptions
                 result = await session.exec(select(Subscription))
-                subscriptions = result.scalars().all()
+                subscriptions = result.all()
 
                 for subscription in subscriptions:
                     try:

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from langflow.services.cache.service import AsyncBaseCacheService, CacheService
     from langflow.services.chat.service import ChatService
     from langflow.services.database.service import DatabaseService
+    from langflow.services.discord.service import DiscordService
     from langflow.services.event_bus.service import EventBusService
     from langflow.services.job_queue.service import JobQueueService
     from langflow.services.session.service import SessionService
@@ -278,3 +279,10 @@ def get_trigger_service() -> TriggerService:
     from langflow.services.triggers.factory import TriggerServiceFactory
 
     return get_service(ServiceType.TRIGGER_SERVICE, TriggerServiceFactory())
+
+
+def get_discord_service() -> DiscordService:
+    """Retrieves the DiscordService instance from the service manager."""
+    from langflow.services.discord.factory import DiscordServiceFactory
+
+    return get_service(ServiceType.DISCORD_SERVICE, DiscordServiceFactory())

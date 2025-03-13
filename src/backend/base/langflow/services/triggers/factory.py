@@ -4,6 +4,7 @@ from langflow.services.factory import ServiceFactory
 from langflow.services.triggers.service import TriggerService
 
 if TYPE_CHECKING:
+    from langflow.services.discord.service import DiscordService
     from langflow.services.task_orchestration.service import TaskOrchestrationService
 
 
@@ -20,13 +21,14 @@ class TriggerServiceFactory(ServiceFactory):
     def __init__(self) -> None:
         super().__init__(TriggerService)
 
-    def create(self, task_orchestration_service: "TaskOrchestrationService"):
+    def create(self, task_orchestration_service: "TaskOrchestrationService", discord_service: "DiscordService"):
         """Create a new TriggerService instance.
 
         Args:
             task_orchestration_service: The task orchestration service to use
+            discord_service: The Discord service to use
 
         Returns:
             A new TriggerService instance
         """
-        return TriggerService(task_orchestration_service)
+        return TriggerService(task_orchestration_service, discord_service)
