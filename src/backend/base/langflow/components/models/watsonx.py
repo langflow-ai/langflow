@@ -165,6 +165,8 @@ class WatsonxAIComponent(LCModelComponent):
             try:
                 models = self.fetch_models(base_url=build_config.url.value)
                 build_config.model_name.options = models
+                if build_config.model_name.value:
+                    build_config.model_name.value = models[0]
                 logger.info(
                     f"Updated model options: {len(models)} models found in {build_config.url.value}")
             except Exception as e:
