@@ -217,6 +217,8 @@ class Settings(BaseSettings):
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
     webhook_polling_interval: int = 5000
     """The polling interval for the webhook in ms."""
+    fs_flows_polling_interval: int = 10000
+    """The polling interval for synchronizing flows from the file system."""
 
     # MCP Server
     mcp_server_enabled: bool = True
