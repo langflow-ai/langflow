@@ -108,6 +108,9 @@ const SettingsVoiceModal = ({
     localStorage.getItem("lf_preferred_language") || "en-US",
   );
 
+  // Add a debounce timeout ref
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (isFetched) {
       if (voiceList) {
@@ -210,11 +213,32 @@ const SettingsVoiceModal = ({
     }
   }, [language]);
 
-  const handleClickSaveApiKey = () => {
-    handleClickSaveOpenAIApiKey(openaiApiKey);
-    setOpen(false);
+  const handleClickSaveApiKey = (value: string) => {
+    if (!value) return;
+    handleClickSaveOpenAIApiKey(value);
     saveButtonClicked.current = true;
   };
+
+  const handleOpenAIKeyChange = (value: string) => {
+    if (!value) return;
+    setOpenaiApiKey(value);
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      handleClickSaveApiKey(value);
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -268,9 +292,7 @@ const SettingsVoiceModal = ({
                       />
                     )}
                     value={openaiApiKey}
-                    onChange={(value) => {
-                      setOpenaiApiKey(value);
-                    }}
+                    onChange={handleOpenAIKeyChange}
                     selectedOption={
                       checkIfGlobalVariableExists(openaiApiKey)
                         ? openaiApiKey
@@ -280,18 +302,6 @@ const SettingsVoiceModal = ({
                     commandWidth="11rem"
                   />
                 </div>
-
-                {!hasOpenAIAPIKey && (
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      className="h-9 w-full"
-                      variant="default"
-                      onClick={handleClickSaveApiKey}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                )}
 
                 {hasOpenAIAPIKey && (
                   <>

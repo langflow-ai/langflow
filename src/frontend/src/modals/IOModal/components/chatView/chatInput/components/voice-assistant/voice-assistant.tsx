@@ -1,7 +1,6 @@
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
-import { useGetMessagesMutation } from "@/controllers/API/queries/messages/use-get-messages-mutation";
 import { useGetMessagesPollingMutation } from "@/controllers/API/queries/messages/use-get-messages-polling";
 import {
   useGetGlobalVariables,
@@ -326,7 +325,6 @@ export function VoiceAssistant({
 
   const handleClickSaveOpenAIApiKey = async (openaiApiKey: string) => {
     await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY");
-    setShowSettingsModal(false);
   };
 
   return (
