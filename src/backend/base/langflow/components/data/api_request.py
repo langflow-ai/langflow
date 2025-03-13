@@ -235,21 +235,15 @@ class APIRequestComponent(Component):
             return curl
 
         try:
-            # If it's a JSON string, decode it first
-            if curl.startswith('"') and curl.endswith('"'):
-                try:
-                    return json.loads(curl)
-                except json.JSONDecodeError:
-                    # If JSON decoding fails, try to handle escaped quotes
-                    curl = curl.strip('"')
-
             # Handle escaped quotes if present
             if '\\"' in curl or "\\'" in curl:
                 curl = curl.replace('\\"', '"').replace("\\'", "'")
-
-            return curl
-
-        except Exception as e:
+            try:
+                return json.loads(curl)
+            except json.JSONDecodeError:
+                # If JSON decoding fails, try to handle escaped quotes
+                return curl.strip('"')
+        except (ValueError, AttributeError) as e:
             self.log(f"Error unescaping curl command: {e}")
             return curl  # Return original if unescaping fails
 
