@@ -1,8 +1,14 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { ProfileIcon } from "@/components/core/appHeaderComponent/components/ProfileIcon";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
+import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
+import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { useVoiceStore } from "@/stores/voiceStore";
+import { cn } from "@/utils/utils";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import useTabVisibility from "../../../../../shared/hooks/use-tab-visibility";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -151,6 +157,7 @@ export default function ChatView({
   };
 
   const flowRunningSkeletonMemo = useMemo(() => <FlowRunningSqueleton />, []);
+  const soundDetected = useVoiceStore((state) => state.soundDetected);
 
   return (
     <div
@@ -175,27 +182,31 @@ export default function ChatView({
               ))}
             </>
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center">
-              <div className="flex flex-col items-center justify-center gap-4 p-8">
-                <LangflowLogo
-                  title="Langflow logo"
-                  className="h-10 w-10 scale-[1.5]"
-                />
-                <div className="flex flex-col items-center justify-center">
-                  <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
-                    New chat
-                  </h3>
-                  <p
-                    className="text-lg text-muted-foreground"
-                    data-testid="new-chat-text"
-                  >
-                    <TextEffectPerChar>
-                      Test your flow with a chat prompt
-                    </TextEffectPerChar>
-                  </p>
+            <>
+              {!soundDetected && (
+                <div className="flex h-full w-full flex-col items-center justify-center">
+                  <div className="flex flex-col items-center justify-center gap-4 p-8">
+                    <LangflowLogo
+                      title="Langflow logo"
+                      className="h-10 w-10 scale-[1.5]"
+                    />
+                    <div className="flex flex-col items-center justify-center">
+                      <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
+                        New chat
+                      </h3>
+                      <p
+                        className="text-lg text-muted-foreground"
+                        data-testid="new-chat-text"
+                      >
+                        <TextEffectPerChar>
+                          Test your flow with a chat prompt
+                        </TextEffectPerChar>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )}
+            </>
           ))}
         <div
           className={
@@ -209,7 +220,46 @@ export default function ChatView({
             !(chatHistory?.[chatHistory.length - 1]?.category === "error") &&
             flowRunningSkeletonMemo}
         </div>
+
+        {soundDetected && (
+          <div className="flex w-5/6 max-w-[768px] gap-4 p-2 py-4 word-break-break-word">
+            <div
+              className={cn(
+                "mb-6 flex h-[32px] w-[32px] rounded-md border border-border text-2xl hover:border-input",
+              )}
+            >
+              <div className="flex items-center justify-center p-1">
+                {!ENABLE_DATASTAX_LANGFLOW ? (
+                  <ProfileIcon />
+                ) : (
+                  <CustomProfileIcon />
+                )}
+              </div>
+            </div>
+            <div className="grid">
+              <div className="flex items-baseline truncate">
+                <div className="flex gap-2">
+                  <span className="text-[14px] font-semibold">You</span>
+                  <div className="z-10 flex h-5 w-5 items-center justify-center rounded-sm bg-muted">
+                    <ForwardedIconComponent
+                      name="mic"
+                      className="h-3 w-3 text-muted-foreground"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="relative bottom-2 flex items-center">
+                <div className="ml-1 flex space-x-1">
+                  <div className="h-1.5 w-1.5 animate-[bounce_1s_infinite_0ms] rounded-full bg-primary/80"></div>
+                  <div className="h-1.5 w-1.5 animate-[bounce_1s_infinite_200ms] rounded-full bg-primary/60"></div>
+                  <div className="h-1.5 w-1.5 animate-[bounce_1s_infinite_400ms] rounded-full bg-primary/40"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
           noInput={!inputTypes.includes("ChatInput")}
