@@ -19,13 +19,13 @@ The examples in this guide use environment variables for these values.
 
 * Export your Langflow URL in your terminal.
 Langflow starts by default at `http://127.0.0.1:7860`.
-```plain
+```bash
 export LANGFLOW_URL="http://127.0.0.1:7860"
 ```
 
 * Export the `flow-id` in your terminal.
 The `flow-id` is found in the [API pane](/concepts-api) or in the flow's URL.
-```plain
+```bash
 export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 ```
 
@@ -33,14 +33,14 @@ export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
 To find your folder ID, call the Langflow [/api/v1/folders/](#read-folders) endpoint for a list of folders.
 <Tabs>
   <TabItem value="curl" label="curl" default>
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/folders/" \
   -H "accept: application/json"
 ```
   </TabItem>
   <TabItem value="result" label="Result">
-```plain
+```json
 [
   {
     "name": "My Projects",
@@ -53,7 +53,7 @@ curl -X GET \
   </TabItem>
 </Tabs>
 Export the `folder-id` as an environment variable.
-```plain
+```bash
 export FOLDER_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 ```
 
@@ -61,19 +61,19 @@ export FOLDER_ID="1415de42-8f01-4f36-bf34-539f23e47466"
 To create a Langflow API key, run the following command in the Langflow CLI.
 <Tabs>
   <TabItem value="curl" label="curl" default>
-```plain
+```text
 langflow api-key
 ```
   </TabItem>
   <TabItem value="result" label="Result">
-```plain
+```text
 API Key Created Successfully:
 sk-...
 ```
   </TabItem>
 </Tabs>
 Export the generated API key as an environment variable.
-```plain
+```text
 export LANGFLOW_API_KEY="sk-..."
 ```
 
@@ -88,7 +88,7 @@ This operation returns a dictionary of all Langflow components.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/all" \
   -H "accept: application/json"
@@ -96,7 +96,7 @@ curl -X GET \
 
   </TabItem>
   <TabItem value="result" label="Result">
-```result
+```text
 A dictionary of all Langflow components.
 ```
   </TabItem>
@@ -106,24 +106,61 @@ A dictionary of all Langflow components.
 
 Execute a specified flow by ID or name.
 The flow is executed as a batch, but LLM responses can be streamed.
-For more configuration options when building your flow, use the [`/build` endpoint](/api-reference-api-examples#build-flow) instead.
+
+This example runs a [Basic Prompting](/starter-projects-basic-prompting) flow with a given `flow_id` and passes a JSON object as the input value.
+
+The parameters are passed in the request body. In this example, the values are the default values.
 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
-  "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=false" \
-  -H "accept: application/json" \
+  "$LANGFLOW_URL/api/v1/run/$FLOW_ID" \
   -H "Content-Type: application/json" \
-  -d '{}'
+  -d '{
+    "input_value": "Tell me about something interesting!",
+    "session_id": "chat-123",
+    "input_type": "chat",
+    "output_type": "chat",
+    "output_component": "",
+    "tweaks": null
+  }'
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
 ```result
-{"session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","outputs":[{"inputs":{},"outputs":[{"results":{"message":{"text_key":"text","data":{"timestamp":"2025-02-04T21:44:02+00:00","sender":"Machine","sender_name":"AI","session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","files":[],"error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-g7uMN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"dcb15280-a16c-489a-9818-bec697fd123e","flow_id":"947eaf64-bc35-4431-ae52-8b30d819915b"},"default_value":"","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","timestamp":"2025-02-04T21:44:02+00:00","flow_id":"947eaf64-bc35-4431-ae52-8b30d819915b","error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-g7uMN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[]}},"artifacts":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"outputs":{"message":{"message":{"timestamp":"2025-02-04T21:44:02","sender":"Machine","sender_name":"AI","session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","files":[],"error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-g7uMN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"dcb15280-a16c-489a-9818-bec697fd123e","flow_id":"947eaf64-bc35-4431-ae52-8b30d819915b"},"type":"message"}},"logs":{"message":[]},"messages":[{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","session_id":"947eaf64-bc35-4431-ae52-8b30d819915b","stream_url":null,"component_id":"ChatOutput-HnFx1","files":[],"type":"message"}],"timedelta":null,"duration":null,"component_display_name":"Chat Output","component_id":"ChatOutput-HnFx1","used_frozen_result":false}]}]}
+{
+  "session_id": "chat-123",
+  "outputs": [{
+    "inputs": {
+      "input_value": "Tell me about something interesting!"
+    },
+    "outputs": [{
+      "results": {
+        "message": {
+          "text": "Sure! Have you ever heard of the phenomenon known as \"bioluminescence\"? It's a fascinating natural occurrence where living organisms produce and emit light. This ability is found in various species, including certain types of jellyfish, fireflies, and deep-sea creatures like anglerfish.\n\nBioluminescence occurs through a chemical reaction in which a light-emitting molecule called luciferin reacts with oxygen, catalyzed by an enzyme called luciferase. The result is a beautiful glow that can serve various purposes, such as attracting mates, deterring predators, or luring prey.\n\nOne of the most stunning displays of bioluminescence can be seen in the ocean, where certain plankton emit light when disturbed, creating a mesmerizing blue glow in the water. This phenomenon is often referred to as \"sea sparkle\" and can be seen in coastal areas around the world.\n\nBioluminescence not only captivates our imagination but also has practical applications in science and medicine, including the development of biosensors and imaging techniques. It's a remarkable example of nature's creativity and complexity!",
+          "sender": "Machine",
+          "sender_name": "AI",
+          "session_id": "chat-123",
+          "timestamp": "2025-03-03T17:17:37+00:00",
+          "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201",
+          "properties": {
+            "source": {
+              "id": "OpenAIModel-d1wOZ",
+              "display_name": "OpenAI",
+              "source": "gpt-4o-mini"
+            },
+            "icon": "OpenAI"
+          },
+          "component_id": "ChatOutput-ylMzN"
+        }
+      }
+    }]
+  }]
+}
 ```
 
   </TabItem>
@@ -134,38 +171,93 @@ To stream LLM token responses, append the `?stream=true` query parameter to the 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=true" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{"message": "Tell me something interesting!"}'
+  -d '{
+    "message": "Tell me something interesting!",
+    "session_id": "chat-123"
+  }'
 ```
 
   </TabItem>
   <TabItem value="result" label="Result">
 
 ```result
-{"event": "add_message", "data": {"timestamp": "2025-02-05T14:46:24", "sender": "User", "sender_name": "User", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "1d6044d6-332c-431a-a50c-dcea5deee4ab", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}}
+{"event": "add_message", "data": {"timestamp": "2025-03-03T17:20:18", "sender": "User", "sender_name": "User", "session_id": "chat-123", "text": "Tell me about something interesting!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "0103a21b-ebf7-4c02-9d72-017fb297f812", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
 
-{"event": "add_message", "data": {"timestamp": "2025-02-05T14:46:24", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "be9db128-eaac-49db-bfd7-ed63406ebbcf", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}}
+{"event": "add_message", "data": {"timestamp": "2025-03-03T17:20:18", "sender": "Machine", "sender_name": "AI", "session_id": "chat-123", "text": "", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-d1wOZ", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "27b66789-e673-4c65-9e81-021752925161", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
 
-{"event": "token", "data": {"chunk": "", "id": "be9db128-eaac-49db-bfd7-ed63406ebbcf", "timestamp": "2025-02-05 14:46:25 UTC"}}
+{"event": "token", "data": {"chunk": " Have", "id": "27b66789-e673-4c65-9e81-021752925161", "timestamp": "2025-03-03 17:20:18 UTC"}}
 
-{"event": "token", "data": {"chunk": "Hello", "id": "be9db128-eaac-49db-bfd7-ed63406ebbcf", "timestamp": "2025-02-05 14:46:25 UTC"}}
+{"event": "token", "data": {"chunk": " you", "id": "27b66789-e673-4c65-9e81-021752925161", "timestamp": "2025-03-03 17:20:18 UTC"}}
 
-{"event": "token", "data": {"chunk": "!", "id": "be9db128-eaac-49db-bfd7-ed63406ebbcf", "timestamp": "2025-02-05 14:46:25 UTC"}}
+{"event": "token", "data": {"chunk": " ever", "id": "27b66789-e673-4c65-9e81-021752925161", "timestamp": "2025-03-03 17:20:18 UTC"}}
 
-{"event": "token", "data": {"chunk": " \ud83c\udf1f", "id": "be9db128-eaac-49db-bfd7-ed63406ebbcf", "timestamp": "2025-02-05 14:46:25 UTC"}}
+{"event": "token", "data": {"chunk": " heard", "id": "27b66789-e673-4c65-9e81-021752925161", "timestamp": "2025-03-03 17:20:18 UTC"}}
 
-{"event": "end", "data": {"result": {"session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "outputs": [{"inputs": {}, "outputs": [{"results": {"message": {"text_key": "text", "data": {"timestamp": "2025-02-05T14:46:24+00:00", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "be9db128-eaac-49db-bfd7-ed63406ebbcf", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "default_value": "", "text": "", "sender": "Machine", "sender_name": "AI", "files": [], "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "timestamp": "2025-02-05T14:46:24+00:00", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": []}, "text": ""}, "artifacts": {"message": "", "sender": "Machine", "sender_name": "AI", "stream_url": "/api/v1/build/947eaf64-bc35-4431-ae52-8b30d819915b/ChatOutput-HnFx1/stream", "files": [], "type": "stream"}, "outputs": {"message": {"message": {"timestamp": "2025-02-05T14:46:24", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "be9db128-eaac-49db-bfd7-ed63406ebbcf", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "type": "message"}}, "logs": {"message": []}, "messages": [], "timedelta": null, "duration": null, "component_display_name": "Chat Output", "component_id": "ChatOutput-HnFx1", "used_frozen_result": false}]}]}}}
+{"event": "token", "data": {"chunk": " of", "id": "27b66789-e673-4c65-9e81-021752925161", "timestamp": "2025-03-03 17:20:18 UTC"}}
+
+{"event": "token", "data": {"chunk": " the", "id": "27b66789-e673-4c65-9e81-021752925161", "timestamp": "2025-03-03 17:20:18 UTC"}}
+
+{"event": "token", "data": {"chunk": " phenomenon", "id": "27b66789-e673-4c65-9e81-021752925161", "timestamp": "2025-03-03 17:20:18 UTC"}}
+
+{"event": "end", "data": {"result": {"session_id": "chat-123", "message": "Sure! Have you ever heard of the phenomenon known as \"bioluminescence\"?..."}}}
 ```
 
   </TabItem>
 </Tabs>
 
 This result is abbreviated, but illustrates where the `end` event completes the LLM's token streaming response.
+
+#### Run endpoint headers and parameters
+
+Parameters can be passed to the `/run` endpoint in three ways:
+- URL path: `flow_id` as part of the endpoint path
+- Query string: `stream` parameter in the URL
+- Request body: JSON object containing the remaining parameters
+
+**Headers**
+| Header | Info | Example |
+|--------|------|---------|
+| Content-Type | Required. Specifies the JSON format. | "application/json" |
+| accept | Required. Specifies the response format. | "application/json" |
+| x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
+
+**Parameters**
+| Parameter | Type | Info |
+|-----------|------|------|
+| flow_id | UUID/string | Required. Part of URL: `/run/{flow_id}` |
+| stream | boolean | Optional. Query parameter: `/run/{flow_id}?stream=true` |
+| input_value | string | Optional. JSON body field. Main input text/prompt. Default: `null` |
+| input_type | string | Optional. JSON body field. Input type ("chat" or "text"). Default: `"chat"` |
+| output_type | string | Optional. JSON body field. Output type ("chat", "any", "debug"). Default: `"chat"` |
+| output_component | string | Optional. JSON body field. Target component for output. Default: `""` |
+| tweaks | object | Optional. JSON body field. Component adjustments. Default: `null` |
+| session_id | string | Optional. JSON body field. Conversation context ID. Default: `null` |
+
+**Example request**
+```bash
+curl -X POST \
+  "http://$LANGFLOW_URL/api/v1/run/$FLOW_ID?stream=true" \
+  -H "Content-Type: application/json" \
+  -H "accept: application/json" \
+  -H "x-api-key: sk-..." \
+  -d '{
+    "input_value": "Tell me a story",
+    "input_type": "chat",
+    "output_type": "chat",
+    "output_component": "chat_output",
+    "session_id": "chat-123",
+    "tweaks": {
+      "component_id": {
+        "parameter_name": "value"
+      }
+    }
+  }'
+```
 
 ### Webhook run flow
 
@@ -178,7 +270,7 @@ To test the **Webhook** component in your flow, see the [Webhook component](/com
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/webhook/$FLOW_ID" \
   -H "Content-Type: application/json" \
@@ -188,7 +280,7 @@ curl -X POST \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```result
+```text
 {
   {"message":"Task started in the background","status":"in progress"}
 }
@@ -216,7 +308,7 @@ Get the status of a task.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/task/TASK_ID" \
   -H "accept: application/json"
@@ -225,7 +317,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```result
+```text
 {
   "status": "Task status",
   "result": "Task result if completed"
@@ -248,7 +340,7 @@ Get the version of the Langflow API.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/version" \
   -H "accept: application/json"
@@ -257,7 +349,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```result
+```text
 {
     "version": "1.1.1",
     "main_version": "1.1.1",
@@ -275,7 +367,7 @@ Retrieve the Langflow configuration information.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/config" \
   -H "accept: application/json"
@@ -284,7 +376,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 {
     "feature_flags": {
         "mvp_components": false
@@ -311,37 +403,61 @@ For a simpler execution of your flows, use the [`/run` endpoint](/api-reference-
 
 ### Build flow
 
-This example builds a flow with a given `flow_id`.
+:::important
+This endpoint is meant to be used by the frontend and is not optimized for external use.
+To run your flow, use the [`/run` endpoint](/api-reference-api-examples#run-flow) instead.
+:::
 
+This endpoint builds and executes a flow, returning a job ID that can be used to stream execution events.
+
+1. Send a POST request to the `/build/{flow_id}/flow` endpoint.
 <Tabs>
    <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY" \
-  -d '{"input_value": "hello, how are you doing?"}'
+  -d '{
+    "inputs": {
+      "input_value": "Tell me a story"
+    }
+  }'
 ```
 
    </TabItem>
    <TabItem value="result" label="Result">
 
-```plain
-{"event": "vertices_sorted", "data": {"ids": ["ChatInput-TAEvF"], "to_run": ["Prompt-2gtLN", "ChatInput-TAEvF", "ChatOutput-HnFx1", "OpenAIModel-g7uMN"]}}
+```json
+{
+    "job_id": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
 
-{"event": "add_message", "data": {"timestamp": "2025-02-05T14:45:33", "sender": "User", "sender_name": "User", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "12be981b-9816-4361-b0f9-ce65d0ba6cc1", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}}
+   </TabItem>
+</Tabs>
 
-{"event": "end_vertex", "data": {"build_data": {"id": "ChatInput-TAEvF", "inactivated_vertices": [], "next_vertices_ids": ["Prompt-2gtLN"], "top_level_vertices": ["Prompt-2gtLN"], "valid": true, "params": "- Files: []\n  Message: Hello\n  Sender: User\n  Sender Name: User\n  Type: object\n", "data": {"results": {"message": {"text_key": "text", "data": {"timestamp": "2025-02-05T14:45:33+00:00", "sender": "User", "sender_name": "User", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "12be981b-9816-4361-b0f9-ce65d0ba6cc1", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "default_value": "", "text": "Hello", "sender": "User", "sender_name": "User", "files": [], "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "timestamp": "2025-02-05T14:45:33+00:00", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": []}}, "outputs": {"message": {"message": {"timestamp": "2025-02-05T14:45:33+00:00", "sender": "User", "sender_name": "User", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "12be981b-9816-4361-b0f9-ce65d0ba6cc1", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "type": "message"}}, "logs": {"message": []}, "message": {"message": "Hello", "sender": "User", "sender_name": "User", "files": [], "type": "object"}, "artifacts": {"message": "Hello", "sender": "User", "sender_name": "User", "files": [], "type": "object"}, "timedelta": 0.01409304200205952, "duration": "14 ms", "used_frozen_result": false}, "timestamp": "2025-02-05T14:45:33.486696Z"}}}
+2. After receiving a job ID from the build endpoint, use the `/build/{job_id}/events` endpoint to stream the execution results:
 
-{"event": "end_vertex", "data": {"build_data": {"id": "Prompt-2gtLN", "inactivated_vertices": [], "next_vertices_ids": ["OpenAIModel-g7uMN"], "top_level_vertices": ["OpenAIModel-g7uMN"], "valid": true, "params": "None", "data": {"results": {}, "outputs": {"prompt": {"message": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "logs": {"prompt": []}, "message": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "artifacts": {"prompt": {"repr": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "raw": "Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.", "type": "text"}}, "timedelta": 0.005742790992371738, "duration": "6 ms", "used_frozen_result": false}, "timestamp": "2025-02-05T14:45:33.503829Z"}}}
+<Tabs>
+   <TabItem value="curl" label="curl" default>
 
-{"event": "end_vertex", "data": {"build_data": {"id": "OpenAIModel-g7uMN", "inactivated_vertices": [], "next_vertices_ids": ["ChatOutput-HnFx1"], "top_level_vertices": ["ChatOutput-HnFx1"], "valid": true, "params": "None", "data": {"results": {}, "outputs": {"text_output": {"message": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "type": "text"}, "model_output": {"message": "", "type": "unknown"}}, "logs": {"text_output": []}, "message": {"text_output": {"repr": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "raw": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "type": "text"}}, "artifacts": {"text_output": {"repr": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "raw": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "type": "text"}}, "timedelta": 1.8065362079942133, "duration": "1.81 seconds", "used_frozen_result": false}, "timestamp": "2025-02-05T14:45:35.310876Z"}}}
+```curl
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events" \
+  -H "accept: application/json"
+```
 
-{"event": "add_message", "data": {"timestamp": "2025-02-05T14:45:35", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "56db271c-1dab-4a47-8464-d0058ac0943b", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}}
+   </TabItem>
+   <TabItem value="result" label="Result">
 
-{"event": "end_vertex", "data": {"build_data": {"id": "ChatOutput-HnFx1", "inactivated_vertices": [], "next_vertices_ids": [], "top_level_vertices": [], "valid": true, "params": "- Files: []\n  Message: Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building\n    something fresh! What do you have in mind? Whether it's a project, an idea, or\n    a concept, let's dive in and make it happen!\n  Sender: Machine\n  Sender Name: AI\n  Type: object\n", "data": {"results": {"message": {"text_key": "text", "data": {"timestamp": "2025-02-05T14:45:35+00:00", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "56db271c-1dab-4a47-8464-d0058ac0943b", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "default_value": "", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "sender": "Machine", "sender_name": "AI", "files": [], "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "timestamp": "2025-02-05T14:45:35+00:00", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": []}}, "outputs": {"message": {"message": {"timestamp": "2025-02-05T14:45:35+00:00", "sender": "Machine", "sender_name": "AI", "session_id": "947eaf64-bc35-4431-ae52-8b30d819915b", "text": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": "OpenAIModel-g7uMN", "display_name": "OpenAI", "source": "gpt-4o-mini"}, "icon": "OpenAI", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "56db271c-1dab-4a47-8464-d0058ac0943b", "flow_id": "947eaf64-bc35-4431-ae52-8b30d819915b"}, "type": "message"}}, "logs": {"message": []}, "message": {"message": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "sender": "Machine", "sender_name": "AI", "files": [], "type": "object"}, "artifacts": {"message": "Hello! \ud83c\udf1f I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!", "sender": "Machine", "sender_name": "AI", "files": [], "type": "object"}, "timedelta": 0.02948787499917671, "duration": "29 ms", "used_frozen_result": false}, "timestamp": "2025-02-05T14:45:35.345598Z"}}}
+```json
+{"event": "vertices_sorted", "data": {"ids": ["ChatInput-XtBLx"], "to_run": ["Prompt-x74Ze", "ChatOutput-ylMzN", "ChatInput-XtBLx", "OpenAIModel-d1wOZ"]}}
+
+{"event": "add_message", "data": {"timestamp": "2025-03-03T17:42:23", "sender": "User", "sender_name": "User", "session_id": "d2bbd92b-187e-4c84-b2d4-5df365704201", "text": "Tell me a story", "files": [], "error": false, "edit": false, "properties": {"text_color": "", "background_color": "", "edited": false, "source": {"id": null, "display_name": null, "source": null}, "icon": "", "allow_markdown": false, "positive_feedback": null, "state": "complete", "targets": []}, "category": "message", "content_blocks": [], "id": "28879bd8-6a68-4dd5-b658-74d643a4dd92", "flow_id": "d2bbd92b-187e-4c84-b2d4-5df365704201"}}
+
+// ... Additional events as the flow executes ...
 
 {"event": "end", "data": {}}
 ```
@@ -349,26 +465,43 @@ curl -X POST \
    </TabItem>
 </Tabs>
 
-This output is abbreviated, but the order of events illustrates how Langflow runs components.
+The events endpoint accepts an optional `stream` query parameter which defaults to `true`.
+To disable streaming and get all events at once, set `stream` to `false`.
+```curl
+curl -X GET \
+  "$LANGFLOW_URL/api/v1/build/123e4567-e89b-12d3-a456-426614174000/events?stream=false" \
+  -H "accept: application/json"
+```
 
-1. Langflow first sorts the vertices by dependencies (edges) in the `vertices_sorted` event:
-```
-ChatInput → Prompt → OpenAIModel → ChatOutput
-```
-2. The Chat Input component receives user input in the `add_message` event.
-3. The Prompt component is built and executed with the received input in the `end_vertex` event.
-4. The Open AI model's responses stream as `token` events.
-The `token` event represents individual pieces of text as they're generated by an LLM.
-5. The clean `end` event tells you the flow executed with no errors.
-If your flow executes with errors, the `error` event handler prints the errors to the playground.
+### Build endpoint headers and parameters
+
+**Headers**
+| Header | Info | Example |
+|--------|------|---------|
+| Content-Type | Required. Specifies the JSON format. | "application/json" |
+| accept | Required. Specifies the response format. | "application/json" |
+| x-api-key | Optional. Required only if authentication is enabled. | "sk-..." |
+
+The `/build/{flow_id}/flow` endpoint accepts the following parameters in its request body:
+
+**Parameters**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| inputs | object | Optional. Input values for flow components. |
+| data | object | Optional. Flow data to override stored configuration. |
+| files | array[string] | Optional. List of file paths to use. |
+| stop_component_id | string | Optional. ID of the component where the execution should stop. |
+| start_component_id | string | Optional. ID of the component where the execution should start. |
+| log_builds | boolean | Optional. Control build logging. Default: `true`. |
+
 
 ### Configure the build endpoint
 
-The `/build` endpoint accepts values for `start_component_id` and `stop_component_id` to control where the flow run will start and stop.
+The `/build` endpoint accepts optional values for `start_component_id` and `stop_component_id` to control where the flow run will start and stop.
 Setting `stop_component_id` for a component triggers the same behavior as clicking the **Play** button on that component, where all dependent components leading up to that component are also run.
 For example, to stop flow execution at the Open AI model component, run the following command:
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
@@ -383,7 +516,7 @@ This is useful for running flows without having to pass custom values through th
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/build/$FLOW_ID/flow" \
   -H "accept: application/json" \
@@ -404,9 +537,7 @@ curl -X POST \
   <TabItem value="result" label="Result">
 
 ```json
-{"event": "vertices_sorted", "data": {"ids": [], "to_run": []}}
-
-{"event": "end", "data": {}}
+{"job_id":"0bcc7f23-40b4-4bfa-9b8a-a44181fd1175"}
 ```
 
   </TabItem>
@@ -425,7 +556,7 @@ This example uploads `the_oscar_award.csv`.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/files/upload/$FLOW_ID" \
   -H "accept: application/json" \
@@ -455,7 +586,7 @@ For more information, see [Supported environment variables](/environment-variabl
 
 1. To send an image to your flow with the API, POST the image file to the `v1/files/upload/<YOUR-FLOW-ID>` endpoint of your flow.
 
-```curl
+```bash
 curl -X POST "$LANGFLOW_URL/api/v1/files/upload/a430cc57-06bb-4c11-be39-d3d4de68d2c4" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@image-file.png"
@@ -470,7 +601,7 @@ The API returns the image file path in the format `"file_path":"<YOUR-FLOW-ID>/<
 2. Post the image file to the **Chat Input** component of a **Basic prompting** flow.
 Pass the file path value as an input in the **Tweaks** section of the curl call to Langflow.
 
-```curl
+```bash
 curl -X POST \
     "$LANGFLOW_URL/api/v1/run/a430cc57-06bb-4c11-be39-d3d4de68d2c4?stream=false" \
     -H 'Content-Type: application/json'\
@@ -487,7 +618,7 @@ curl -X POST \
 
 Your chatbot describes the image file you sent.
 
-```plain
+```text
 "text": "This flowchart appears to represent a complex system for processing financial inquiries using various AI agents and tools. Here's a breakdown of its components and how they might work together..."
 ```
 
@@ -499,7 +630,7 @@ List all files associated with a specific flow.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/list/$FLOW_ID" \
   -H "accept: application/json"
@@ -532,7 +663,7 @@ The `--output` flag is optional.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/download/$FLOW_ID/2024-12-30_15-19-43_the_oscar_award.csv" \
   -H "accept: application/json" \
@@ -542,7 +673,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 The file contents.
 ```
 
@@ -562,7 +693,7 @@ The `--output` flag is optional.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/files/images/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
   -H "accept: application/json" \
@@ -572,7 +703,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 Image file content.
 ```
 
@@ -589,7 +720,7 @@ This example deletes the `2024-12-30_15-42-44_image-file.png` file from Langflow
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/files/delete/$FLOW_ID/2024-12-30_15-42-44_image-file.png" \
   -H "accept: application/json"
@@ -598,7 +729,7 @@ curl -X DELETE \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 {
   "message": "File 2024-12-30_15-42-44_image-file.png deleted successfully"
 }
@@ -618,7 +749,7 @@ Create a new flow.
 <Tabs>
    <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/" \
   -H "accept: application/json" \
@@ -642,7 +773,7 @@ curl -X POST \
    </TabItem>
    <TabItem value="result" label="Result">
 
-```plain
+```json
 {"name":"string2","description":"string","icon":"string","icon_bg_color":"#FF0000","gradient":"string","data":{},"is_component":false,"updated_at":"2025-02-04T21:07:36+00:00","webhook":false,"endpoint_name":"string","tags":["string"],"locked":false,"id":"e8d81c37-714b-49ae-ba82-e61141f020ee","user_id":"f58396d4-a387-4bb8-b749-f40825c3d9f3","folder_id":"1415de42-8f01-4f36-bf34-539f23e47466"}
 ```
 
@@ -666,7 +797,7 @@ curl -X GET \
 
 <TabItem value="result" label="Result">
 
-```plain
+```text
 A JSON object containing a list of flows.
 ```
    </TabItem>
@@ -688,7 +819,7 @@ curl -X GET \
 
 <TabItem value="result" label="Result">
 
-```plain
+```text
 A JSON object containing a list of flows.
 ```
 
@@ -813,7 +944,7 @@ Create multiple new flows.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/batch/" \
   -H "accept: application/json" \
@@ -883,7 +1014,7 @@ This example uploads a local file named `agent-with-astra-db-tool.json`.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
   -H "accept: application/json" \
@@ -913,7 +1044,7 @@ curl -X POST \
 To specify a target folder for the flow, include the query parameter `folder_id`.
 The target `folder_id` must already exist before uploading a flow. Call the [/api/v1/folders/](#read-folders) endpoint for a list of available folders.
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/upload/?folder_id=$FOLDER_ID" \
   -H "accept: application/json" \
@@ -930,7 +1061,7 @@ This endpoint downloads a ZIP file containing flows for all `flow-id` values lis
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/flows/download/" \
   -H "accept: application/json" \
@@ -945,7 +1076,7 @@ curl -X POST \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100 76437    0 76353  100    84  4516k   5088 --:--:-- --:--:-- --:--:-- 4665k
@@ -960,7 +1091,7 @@ Retrieve a list of basic example flows.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/flows/basic_examples/" \
   -H "accept: application/json"
@@ -969,7 +1100,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 A list of example flows.
 ```
 
@@ -990,7 +1121,7 @@ Get a list of Langflow folders.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/folders/" \
   -H "accept: application/json"
@@ -999,7 +1130,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 [
   {
     "name": "My Projects",
@@ -1020,7 +1151,7 @@ Create a new folder.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/folders/" \
   -H "accept: application/json" \
@@ -1036,7 +1167,7 @@ curl -X POST \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 {
   "name": "new_folder_name",
   "description": "string",
@@ -1052,7 +1183,7 @@ To add flows and components at folder creation, retrieve the `components_list` a
 
 Adding a flow to a folder moves the flow from its previous location. The flow is not copied.
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/folders/" \
   -H "accept: application/json" \
@@ -1078,7 +1209,7 @@ To find the UUID of your folder, call the [read folders](#read-folders) endpoint
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/folders/$FOLDER_ID" \
   -H "accept: application/json"
@@ -1087,7 +1218,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 [
     {
         "name": "My Projects",
@@ -1112,7 +1243,7 @@ If you send the same values multiple times, the update is still processed, even 
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X PATCH \
   "$LANGFLOW_URL/api/v1/folders/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
@@ -1133,7 +1264,7 @@ curl -X PATCH \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 {
   "name": "string",
   "description": "string",
@@ -1152,7 +1283,7 @@ Delete a specific folder.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/folders/$FOLDER_ID" \
   -H "accept: */*"
@@ -1161,7 +1292,7 @@ curl -X DELETE \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 204 No Content
 ```
 
@@ -1177,7 +1308,7 @@ The `--output` flag is optional.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/folders/download/b408ddb9-6266-4431-9be8-e04a62758331" \
   -H "accept: application/json" \
@@ -1187,7 +1318,7 @@ curl -X GET \
   </TabItem>
     <TabItem value="result" label="Result">
 
-```plain
+```text
 The folder contents.
 ```
 
@@ -1201,7 +1332,7 @@ Upload a folder to Langflow.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X POST \
   "$LANGFLOW_URL/api/v1/folders/upload/" \
   -H "accept: application/json" \
@@ -1213,7 +1344,7 @@ curl -X POST \
 
   <TabItem value="result" label="Result">
 
-```plain
+```text
 The folder contents are uploaded to Langflow.
 ```
 
@@ -1229,7 +1360,7 @@ This endpoint requires log retrieval to be enabled in your Langflow application.
 
 To enable log retrieval, include these values in your `.env` file:
 
-```plain
+```text
 LANGFLOW_ENABLE_LOG_RETRIEVAL=true
 LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE=10000
 LANGFLOW_LOG_LEVEL=DEBUG
@@ -1239,7 +1370,7 @@ For log retrieval to function, `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` needs to be 
 
 Start Langflow with this `.env`:
 
-```plain
+```text
 uv run langflow run --env-file .env
 ```
 
@@ -1250,7 +1381,7 @@ Stream logs in real-time using Server-Sent Events (SSE).
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/logs-stream" \
   -H "accept: text/event-stream"
@@ -1259,7 +1390,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 keepalive
 
 {"1736355791151": "2025-01-08T12:03:11.151218-0500 DEBUG Building Chat Input\n"}
@@ -1296,7 +1427,7 @@ With these values, the endpoint returns the last 10 lines of logs.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/logs?lines_before=0&lines_after=0&timestamp=0" \
   -H "accept: application/json"
@@ -1305,7 +1436,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 {
   "1736354770500": "2025-01-08T11:46:10.500363-0500 DEBUG Creating starter project Document Q&A\n",
   "1736354770511": "2025-01-08T11:46:10.511146-0500 DEBUG Creating starter project Image Sentiment Analysis\n",
@@ -1334,7 +1465,7 @@ Retrieve Vertex builds for a specific flow.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
   -H "accept: application/json"
@@ -1343,7 +1474,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 {"vertex_builds":{"ChatInput-NCmix":[{"data":{"results":{"message":{"text_key":"text","data":{"timestamp":"2024-12-23 19:10:57","sender":"User","sender_name":"User","session_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","text":"Hello","files":[],"error":"False","edit":"False","properties":{"text_color":"","background_color":"","edited":"False","source":{"id":"None","display_name":"None","source":"None"},"icon":"","allow_markdown":"False","positive_feedback":"None","state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"c95bed34-f906-4aa6-84e4-68553f6db772","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"},"default_value":"","text":"Hello","sender":"User","sender_name":"User","files":[],"session_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","timestamp":"2024-12-23 19:10:57+00:00","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","error":"False","edit":"False","properties":{"text_color":"","background_color":"","edited":"False","source":{"id":"None","display_name":"None","source":"None"},"icon":"","allow_markdown":"False","positive_feedback":"None","state":"complete","targets":[]},"category":"message","content_blocks":[]}},"outputs":{"message":{"message":{"timestamp":"2024-12-23T19:10:57","sender":"User","sender_name":"User","session_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","text":"Hello","files":[],"error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":null,"display_name":null,"source":null},"icon":"","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"c95bed34-f906-4aa6-84e4-68553f6db772","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"},"type":"object"}},"logs":{"message":[]},"message":{"message":"Hello","sender":"User","sender_name":"User","files":[],"type":"object"},"artifacts":{"message":"Hello","sender":"User","sender_name":"User","files":[],"type":"object"},"timedelta":0.015060124918818474,"duration":"15 ms","used_frozen_result":false},"artifacts":{"message":"Hello","sender":"User","sender_name":"User","files":[],"type":"object"},"params":"- Files: []\n  Message: Hello\n  Sender: User\n  Sender Name: User\n  Type: object\n","valid":true,"build_id":"40aa200e-74db-4651-b698-f80301d2b26b","id":"ChatInput-NCmix","timestamp":"2024-12-23T19:10:58.772766Z","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"}],"Prompt-BEn9c":[{"data":{"results":{},"outputs":{"prompt":{"message":"Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.","type":"text"}},"logs":{"prompt":[]},"message":{"prompt":{"repr":"Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.","raw":"Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.","type":"text"}},"artifacts":{"prompt":{"repr":"Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.","raw":"Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.","type":"text"}},"timedelta":0.0057758750626817346,"duration":"6 ms","used_frozen_result":false},"artifacts":{"prompt":{"repr":"Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.","raw":"Answer the user as if you were a GenAI expert, enthusiastic about helping them get started building something fresh.","type":"text"}},"params":"None","valid":true,"build_id":"39bbbfde-97fd-42a5-a9ed-d42a5c5d532b","id":"Prompt-BEn9c","timestamp":"2024-12-23T19:10:58.781019Z","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"}],"OpenAIModel-7AjrN":[{"data":{"results":{},"outputs":{"text_output":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","type":"text"},"model_output":{"message":"","type":"unknown"}},"logs":{"text_output":[]},"message":{"text_output":{"repr":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","raw":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","type":"text"}},"artifacts":{"text_output":{"repr":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","raw":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","type":"text"}},"timedelta":1.034765167045407,"duration":"1.03 seconds","used_frozen_result":false},"artifacts":{"text_output":{"repr":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","raw":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","type":"text"}},"params":"None","valid":true,"build_id":"4f0ae730-a266-4d35-b89f-7b825c620a0f","id":"OpenAIModel-7AjrN","timestamp":"2024-12-23T19:10:58.790484Z","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"}],"ChatOutput-sfUhT":[{"data":{"results":{"message":{"text_key":"text","data":{"timestamp":"2024-12-23 19:10:58","sender":"Machine","sender_name":"AI","session_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","files":[],"error":"False","edit":"False","properties":{"text_color":"","background_color":"","edited":"False","source":{"id":"OpenAIModel-7AjrN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":"False","positive_feedback":"None","state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"5688356d-9f30-40ca-9907-79a7a2fc16fd","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"},"default_value":"","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"session_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","timestamp":"2024-12-23 19:10:58+00:00","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","error":"False","edit":"False","properties":{"text_color":"","background_color":"","edited":"False","source":{"id":"OpenAIModel-7AjrN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":"False","positive_feedback":"None","state":"complete","targets":[]},"category":"message","content_blocks":[]}},"outputs":{"message":{"message":{"timestamp":"2024-12-23T19:10:58","sender":"Machine","sender_name":"AI","session_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","text":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","files":[],"error":false,"edit":false,"properties":{"text_color":"","background_color":"","edited":false,"source":{"id":"OpenAIModel-7AjrN","display_name":"OpenAI","source":"gpt-4o-mini"},"icon":"OpenAI","allow_markdown":false,"positive_feedback":null,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"5688356d-9f30-40ca-9907-79a7a2fc16fd","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"},"type":"object"}},"logs":{"message":[]},"message":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"artifacts":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"timedelta":0.017838125000707805,"duration":"18 ms","used_frozen_result":false},"artifacts":{"message":"Hello! 🌟 I'm excited to help you get started on your journey to building something fresh! What do you have in mind? Whether it's a project, an idea, or a concept, let's dive in and make it happen!","sender":"Machine","sender_name":"AI","files":[],"type":"object"},"params":"- Files: []\n  Message: Hello! 🌟 I'm excited to help you get started on your journey to building\n    something fresh! What do you have in mind? Whether it's a project, an idea, or\n    a concept, let's dive in and make it happen!\n  Sender: Machine\n  Sender Name: AI\n  Type: object\n","valid":true,"build_id":"1e8b908b-aba7-403b-9e9b-eca92bb78668","id":"ChatOutput-sfUhT","timestamp":"2024-12-23T19:10:58.813268Z","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"}]}}
 ```
 
@@ -1357,7 +1488,7 @@ Delete Vertex builds for a specific flow.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/monitor/builds?flow_id=$FLOW_ID" \
   -H "accept: */*"
@@ -1366,7 +1497,7 @@ curl -X DELETE \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 204 No Content
 ```
 
@@ -1380,7 +1511,7 @@ Retrieve messages with optional filters.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/messages" \
   -H "accept: application/json"
@@ -1389,7 +1520,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 A list of all messages.
 ```
 
@@ -1404,7 +1535,7 @@ This example retrieves messages sent by `Machine` and `AI` in a given chat sessi
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/messages?flow_id=$FLOW_ID&session_id=01ce083d-748b-4b8d-97b6-33adbb6a528a&sender=Machine&sender_name=AI&order_by=timestamp" \
   -H "accept: application/json"
@@ -1413,7 +1544,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 [
   {
     "id": "1c1d6134-9b8b-4079-931c-84dcaddf19ba",
@@ -1458,7 +1589,7 @@ This example deletes the message retrieved in the previous Get messages example.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -v -X DELETE \
   "$LANGFLOW_URL/api/v1/monitor/messages" \
   -H "accept: */*" \
@@ -1468,7 +1599,7 @@ curl -v -X DELETE \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 204 No Content
 ```
 
@@ -1484,7 +1615,7 @@ This example updates the `text` value of message `3ab66cc6-c048-48f8-ab07-570f5a
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X PUT \
   "$LANGFLOW_URL/api/v1/monitor/messages/3ab66cc6-c048-48f8-ab07-570f5af7b160" \
   -H "accept: application/json" \
@@ -1497,7 +1628,7 @@ curl -X PUT \
 </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 {"timestamp":"2024-12-23T18:49:06","sender":"string","sender_name":"string","session_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a","text":"testing 1234","files":["string"],"error":true,"edit":true,"properties":{"text_color":"string","background_color":"string","edited":false,"source":{"id":"string","display_name":"string","source":"string"},"icon":"string","allow_markdown":false,"positive_feedback":true,"state":"complete","targets":[]},"category":"message","content_blocks":[],"id":"3ab66cc6-c048-48f8-ab07-570f5af7b160","flow_id":"01ce083d-748b-4b8d-97b6-33adbb6a528a"}
 ```
 
@@ -1514,7 +1645,7 @@ This example updates the `session_ID` value `01ce083d-748b-4b8d-97b6-33adbb6a528
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X PATCH \
   "$LANGFLOW_URL/api/v1/monitor/messages/session/01ce083d-748b-4b8d-97b6-33adbb6a528a?new_session_id=different_session_id" \
   -H "accept: application/json"
@@ -1523,7 +1654,7 @@ curl -X PATCH \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 [
   {
     "id": "8dd7f064-e63a-4773-b472-ca0475249dfd",
@@ -1566,7 +1697,7 @@ Delete all messages for a specific session.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X DELETE \
   "$LANGFLOW_URL/api/v1/monitor/messages/session/different_session_id_2" \
   -H "accept: */*"
@@ -1575,7 +1706,7 @@ curl -X DELETE \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```text
 HTTP/1.1 204 No Content
 ```
 
@@ -1589,7 +1720,7 @@ Retrieve all transactions (interactions between components) for a specific flow.
 <Tabs>
   <TabItem value="curl" label="curl" default>
 
-```curl
+```bash
 curl -X GET \
   "$LANGFLOW_URL/api/v1/monitor/transactions?flow_id=$FLOW_ID&page=1&size=50" \
   -H "accept: application/json"
@@ -1598,7 +1729,7 @@ curl -X GET \
   </TabItem>
   <TabItem value="result" label="Result">
 
-```plain
+```json
 {
   "items": [
     {
