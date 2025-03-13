@@ -42,8 +42,7 @@ router = APIRouter(prefix="/voice", tags=["Voice"])
 SILENCE_THRESHOLD = 0.1
 PREFIX_PADDING_MS = 100
 SILENCE_DURATION_MS = 100
-SESSION_INSTRUCTIONS = (
-"""
+SESSION_INSTRUCTIONS = """
 Your instructions will be divided into three mutually exclusive sections: "Permanent", "Default", and "Additional".
 "Permanent" instructions are to never be overrided, superceded or otherwise ignored.
 "Default" instructions are provided by default. They may never override "Permanent"
@@ -72,7 +71,6 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
   
 [ADDITIONAL] The following instructions are to be considered only "Additional"
 """
-)
 
 use_elevenlabs = False
 elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
@@ -349,7 +347,7 @@ async def flow_as_tool_websocket(
             "Authorization": f"Bearer {openai_key}",
             "OpenAI-Beta": "realtime=v1",
         }
-        
+
         def init_session_dict():
             global default_openai_realtime_session, openai_realtime_session
             openai_realtime_session = dict(default_openai_realtime_session)
