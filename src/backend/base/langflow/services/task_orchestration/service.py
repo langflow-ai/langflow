@@ -448,10 +448,12 @@ Please address the review comments in your response and make the necessary impro
 
             # Process the graph
             logger.info(f"Starting graph execution for task {task_id}")
+            raw_results = []
             results = []
 
             # Run the graph and collect results
             async for result in graph.async_start(inputs=input_value_request, attachments=task_attachments):
+                raw_results.append(result)
                 if hasattr(result, "vertex") and result.vertex.is_output:
                     # Get the output state for this vertex
                     vertex_state = getattr(output_state_model, result.vertex.id, None)
@@ -466,8 +468,18 @@ Please address the review comments in your response and make the necessary impro
 
             if not results:
                 logger.debug(f"No explicit outputs for task {task_id}, using output state model")
-                # If no explicit outputs, get the output state model
-                results = [{"output_state": output_state_model.model_dump(), "type": "output_state"}]
+                # If no explicit outputs, get the last result that hasattr vertex
+                # iterate over raw_results in reverse order and get the first result that hasattr vertex
+                for result in reversed(raw_results):
+                    if hasattr(result, "vertex"):
+                        results.append(
+                            {
+                                "id": result.vertex.id,
+                                "type": result.vertex.vertex_type,
+                                "value": result.vertex.built_object,
+                            }
+                        )
+                        break
 
             logger.info(f"Task {task_id} completed successfully with {len(results)} results")
 
