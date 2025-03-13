@@ -481,10 +481,14 @@ class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
 
     @field_validator("value")
     @classmethod
-    def validate_value(cls, v: Any, _info):
+    def validate_value(cls, v: str, info) -> str:
         """Validates the value to ensure it's one of the tab values."""
         if v and not isinstance(v, str):
             msg = f"TabInput value must be a string. Got {type(v).__name__}."
+            raise ValueError(msg)
+        # Check if value is one of the options
+        if v not in info.data["options"]:
+            msg = f"TabInput value must be one of the following: {info.data['options']}. Got: '{v}'"
             raise ValueError(msg)
         return v
 
