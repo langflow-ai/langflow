@@ -16,7 +16,7 @@ import { cn } from "@/utils/utils";
 import { AxiosError } from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import IconComponent from "../../../../../../../components/common/genericIconComponent";
-import AudioSettingsDialog from "./components/audio-settings/audio-settings-dialog";
+import SettingsVoiceModal from "./components/audio-settings/audio-settings-dialog";
 import { checkProvider } from "./helpers/check-provider";
 import { formatTime } from "./helpers/format-time";
 import { workletCode } from "./helpers/streamProcessor";
@@ -109,6 +109,15 @@ export function VoiceAssistant({
     return Boolean(process.env?.ELEVENLABS_API_KEY);
   }, [variables, addKey]);
 
+  useEffect(() => {
+    if (!isRecording && hasOpenAIAPIKey && !showSettingsModal) {
+      setIsRecording(true);
+      initializeAudio();
+    } else {
+      stopRecording();
+    }
+  }, []);
+
   const getMessagesMutation = useGetMessagesPollingMutation();
 
   const initializeAudio = async () => {
@@ -200,14 +209,6 @@ export function VoiceAssistant({
     });
   };
 
-  useEffect(() => {
-    if (!isRecording && hasOpenAIAPIKey && !showSettingsModal) {
-      initializeAudio();
-    } else {
-      stopRecording();
-    }
-  }, [hasOpenAIAPIKey, showSettingsModal]);
-
   const showErrorAlert = (title: string, list: string[]) => {
     setErrorData({
       title,
@@ -253,6 +254,7 @@ export function VoiceAssistant({
   }, []);
 
   const handleCloseAudioInput = () => {
+    setIsRecording;
     stopRecording();
     setShowAudioInput(false);
   };
@@ -271,6 +273,19 @@ export function VoiceAssistant({
       hasElevenLabsApiKey &&
       elevenLabsApiKey &&
       elevenLabsApiKey !== "ELEVENLABS_API_KEY";
+
+    if (open) {
+      stopRecording();
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      setIsRecording(false);
+    } else {
+      if (hasOpenAIAPIKey) {
+        initializeAudio();
+      }
+    }
 
     if (!open) {
       setRecordingTime(0);
@@ -299,10 +314,6 @@ export function VoiceAssistant({
 
     if (saveElevenLabsApiKey) {
       await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY");
-    }
-
-    if (!open && hasOpenAIAPIKey) {
-      startConversation();
     }
   };
 
@@ -374,8 +385,7 @@ export function VoiceAssistant({
           </div>
 
           <div>
-            <AudioSettingsDialog
-              open={showSettingsModal}
+            <SettingsVoiceModal
               userOpenaiApiKey={openaiApiKey}
               userElevenLabsApiKey={elevenLabsApiKeyGlobalVariable}
               hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}
@@ -404,9 +414,6 @@ export function VoiceAssistant({
                     size={"icon"}
                     data-testid="voice-assistant-settings-icon-without-openai"
                     className="group h-8 w-8"
-                    onClick={() => {
-                      setShowAudioInput(false);
-                    }}
                   >
                     <IconComponent
                       name="Settings"
@@ -418,7 +425,7 @@ export function VoiceAssistant({
                   </Button>
                 </>
               )}
-            </AudioSettingsDialog>
+            </SettingsVoiceModal>
           </div>
 
           <Button

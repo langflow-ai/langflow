@@ -38,7 +38,6 @@ const ALL_LANGUAGES = [
 
 interface SettingsVoiceModalProps {
   children?: React.ReactNode;
-  open?: boolean;
   userOpenaiApiKey?: string;
   userElevenLabsApiKey?: string;
   hasElevenLabsApiKeyEnv?: boolean;
@@ -55,7 +54,6 @@ interface SettingsVoiceModalProps {
 
 const SettingsVoiceModal = ({
   children,
-  open: initialOpen = false,
   userOpenaiApiKey,
   userElevenLabsApiKey,
   setShowSettingsModal,
@@ -66,7 +64,7 @@ const SettingsVoiceModal = ({
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
-  const [open, setOpen] = useState<boolean>(initialOpen);
+  const [open, setOpen] = useState<boolean>(false);
   const voices = useVoiceStore((state) => state.voices);
   const shouldFetchVoices = voices.length === 0;
   const [openaiApiKey, setOpenaiApiKey] = useState<string>(
@@ -138,7 +136,7 @@ const SettingsVoiceModal = ({
     } else {
       setVoice(openaiVoices[0].value);
     }
-  }, [initialOpen, isFetched]);
+  }, [isFetched]);
 
   const handleSetVoice = (value: string) => {
     setVoice(value);
@@ -163,7 +161,6 @@ const SettingsVoiceModal = ({
   };
 
   const onOpenChangeDropdownMenu = (open: boolean) => {
-    if (!saveButtonClicked.current && !hasOpenAIAPIKey) return;
     setOpen(open);
     setShowSettingsModal(open, openaiApiKey, elevenLabsApiKey);
   };
@@ -197,7 +194,7 @@ const SettingsVoiceModal = ({
     if (!hasOpenAIAPIKey) {
       setOpen(true);
     }
-  }, [initialOpen, hasOpenAIAPIKey]);
+  }, [hasOpenAIAPIKey]);
 
   const handleSetLanguage = (value: string) => {
     setCurrentLanguage(value);
@@ -240,14 +237,40 @@ const SettingsVoiceModal = ({
     };
   }, []);
 
+  // Add a click outside handler
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        open &&
+        popupRef.current &&
+        !popupRef.current.contains(event.target as Node) &&
+        // Make sure we're not clicking on the trigger element
+        !(event.target as Element).closest('[data-dropdown-trigger="true"]')
+      ) {
+        setOpen(false);
+        setShowSettingsModal(false, openaiApiKey, elevenLabsApiKey);
+      }
+    };
+
+    // Add the event listener
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Clean up
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open, openaiApiKey, elevenLabsApiKey, setShowSettingsModal]);
+
   return (
     <>
       <DropdownMenu open={open} onOpenChange={onOpenChangeDropdownMenu}>
-        <DropdownMenuTrigger>{children}</DropdownMenuTrigger>
+        <DropdownMenuTrigger data-dropdown-trigger="true">
+          {children}
+        </DropdownMenuTrigger>
         <DropdownMenuContent
           className="w-[324px] rounded-xl shadow-lg"
           sideOffset={18}
-          alignOffset={-55}
+          alignOffset={-50}
           align="end"
         >
           <div ref={popupRef} className="rounded-3xl">
