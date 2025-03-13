@@ -9,7 +9,7 @@ from langflow.custom import Component
 from langflow.io import BoolInput, FileInput, HandleInput, Output
 from langflow.schema import Data
 from langflow.schema.message import Message
-
+import os
 
 class BaseFileComponent(Component, ABC):
     """Base class for handling file processing components.
@@ -444,6 +444,9 @@ class BaseFileComponent(Component, ABC):
         def _safe_extract_zip(bundle: ZipFile, output_dir: Path):
             """Safely extract ZIP files."""
             for member in bundle.namelist():
+                # Filter out resource fork information for automatic production of mac
+                if os.path.basename(member).startswith('._'):
+                    continue
                 member_path = output_dir / member
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):
@@ -454,6 +457,9 @@ class BaseFileComponent(Component, ABC):
         def _safe_extract_tar(bundle: tarfile.TarFile, output_dir: Path):
             """Safely extract TAR files."""
             for member in bundle.getmembers():
+                # Filter out resource fork information for automatic production of mac
+                if os.path.basename(member.name).startswith('._'):
+                    continue
                 member_path = output_dir / member.name
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):
