@@ -235,34 +235,42 @@ def test_tab_input_valid():
     assert data.value == ""
 
 
-def test_tab_input_invalid():
-    # Test with more than 3 tab values
-    with pytest.raises(ValidationError):
-        TabInput(
-            name="invalid_tab_too_many",
-            options=["Tab1", "Tab2", "Tab3", "Tab4"],
-            value="Tab1",
-        )
-
-    # Test with tab value exceeding 20 characters
-    with pytest.raises(ValidationError):
-        TabInput(
-            name="invalid_tab_too_long",
-            options=[
+@pytest.mark.parametrize(
+    ("test_id", "options", "value", "error_expected"),
+    [
+        (
+            "too_many_options",
+            ["Tab1", "Tab2", "Tab3", "Tab4"],
+            "Tab1",
+            True,
+        ),
+        (
+            "option_too_long",
+            [
                 "Tab1",
                 "ThisTabValueIsTooLongAndExceedsTwentyCharacters",
                 "Tab3",
             ],
-            value="Tab1",
-        )
-
-    # Test with non-string value
-    with pytest.raises(ValidationError):
-        TabInput(
-            name="invalid_tab_value_type",
-            options=["Tab1", "Tab2", "Tab3"],
-            value=123,
-        )
+            "Tab1",
+            True,
+        ),
+        (
+            "non_string_value",
+            ["Tab1", "Tab2", "Tab3"],
+            123,
+            True,
+        ),
+    ],
+)
+def test_tab_input_invalid(test_id, options, value, error_expected):
+    """Test TabInput validation with invalid inputs."""
+    if error_expected:
+        with pytest.raises(ValidationError):
+            TabInput(
+                name=f"invalid_tab_{test_id}",
+                options=options,
+                value=value,
+            )
 
 
 def test_instantiate_input_comprehensive():
