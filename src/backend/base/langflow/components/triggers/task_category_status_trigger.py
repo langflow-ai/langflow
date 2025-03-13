@@ -68,54 +68,57 @@ class TaskCategoryStatusTrigger(BaseTrigger):
 
             now = datetime.now(timezone.utc)
 
-            # Get the task orchestration service to access in-memory tasks
-            task_orchestration_service = get_task_orchestration_service()
+            # Get the task orchestration service
+            get_task_orchestration_service()
 
-            # Get all tasks from the in-memory storage
-            tasks = task_orchestration_service._tasks.values()
+            # Use database session to get tasks
+            from langflow.services.database.utils import session_scope
 
-            # Generate events for new tasks
-            for task in tasks:
-                if task["category"] != task_category or task["status"] != task_status:
-                    continue
+            async with session_scope() as session:
+                # Query tasks from the database with matching category and status
+                from sqlmodel import select
 
-                # Check if the task was updated after the last check
-                task_updated_at = (
-                    datetime.fromisoformat(task["updated_at"])
-                    if isinstance(task["updated_at"], str)
-                    else task["updated_at"]
+                from langflow.schema.models.task import Task
+
+                query = select(Task).where(
+                    Task.category == task_category, Task.status == task_status, Task.updated_at > last_checked
                 )
-                if task_updated_at <= last_checked:
-                    continue
+                result = await session.exec(query)
+                tasks = result.all()
 
-                # Skip tasks we've already seen
-                task_id = str(task["id"])
-                if task_id in last_seen_task_ids:
-                    continue
+                # Generate events for new tasks
+                for task in tasks:
+                    # Skip tasks we've already seen
+                    task_id = str(task.id)
+                    if task_id in last_seen_task_ids:
+                        continue
 
-                # Add task ID to last seen list
-                last_seen_task_ids.append(task_id)
+                    # Add task ID to last seen list
+                    last_seen_task_ids.append(task_id)
 
-                # Create the input value similar to TaskOrchestrationService
-                input_value = f"""You are a task processing agent. Your job is to complete the following task:
+                    # Create the input value similar to TaskOrchestrationService
+                    input_value = f"""You are a task processing agent. Your job is to complete the following task:
 
-Task Title: {task.get("title")}
-Task Description: {task.get("description")}
-Task Author: {task.get("author_id")}
-Task Attachments: {task.get("attachments")}
-Your ID: {task.get("assignee_id")}
+Task Title: {task.title}
+Task Description: {task.description}
+Task Author: {task.author_id}
+Task Attachments: {task.attachments}
+Your ID: {task.assignee_id}
 
 Please process this task according to the description and provide a complete response.
 Focus on addressing all requirements in the task description."""
 
-                events.append(
-                    {
-                        "trigger_data": {
-                            "task": task,
-                            "input_value": input_value,
+                    # Convert task to dict for the event
+                    task_dict = task.model_dump()
+
+                    events.append(
+                        {
+                            "trigger_data": {
+                                "task": task_dict,
+                                "input_value": input_value,
+                            }
                         }
-                    }
-                )
+                    )
 
             # Update state with new last checked time and last seen task IDs
             state["last_checked"] = now.isoformat()
