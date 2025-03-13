@@ -66,22 +66,20 @@ export const useStartRecording = async (
       processorRef.current.port.onmessage = (event) => {
         if (event.data.type === "input" && event.data.audio && wsRef.current) {
           // Only send audio if it's not detected as silence
-          if (!event.data.isSilent) {
-            const base64Audio = btoa(
-              String.fromCharCode.apply(
-                null,
-                Array.from(new Uint8Array(event.data.audio.buffer)),
-              ),
-            );
+          const base64Audio = btoa(
+            String.fromCharCode.apply(
+              null,
+              Array.from(new Uint8Array(event.data.audio.buffer)),
+            ),
+          );
 
-            wsRef.current.send(
-              JSON.stringify({
-                type: "input_audio_buffer.append",
-                audio: base64Audio,
-                language: preferredLanguage,
-              }),
-            );
-          }
+          wsRef.current.send(
+            JSON.stringify({
+              type: "input_audio_buffer.append",
+              audio: base64Audio,
+              language: preferredLanguage,
+            }),
+          );
         } else if (event.data.type === "done") {
           if (audioQueueRef.current.length > 0) {
             playNextAudioChunk();
