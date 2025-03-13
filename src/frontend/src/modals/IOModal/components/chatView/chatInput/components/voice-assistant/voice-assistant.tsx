@@ -206,7 +206,7 @@ export function VoiceAssistant({
     } else {
       stopRecording();
     }
-  }, [hasOpenAIAPIKey]);
+  }, [hasOpenAIAPIKey, showSettingsModal]);
 
   const showErrorAlert = (title: string, list: string[]) => {
     setErrorData({
@@ -387,11 +387,7 @@ export function VoiceAssistant({
             >
               {hasOpenAIAPIKey ? (
                 <>
-                  <Button
-                    data-testid="voice-assistant-settings-icon"
-                    onClick={() => setShowSettingsModal(true)}
-                    unstyled
-                  >
+                  <Button data-testid="voice-assistant-settings-icon" unstyled>
                     <IconComponent
                       name="Settings"
                       strokeWidth={ICON_STROKE_WIDTH}
@@ -406,7 +402,6 @@ export function VoiceAssistant({
                   <Button
                     variant={"outlineAmber"}
                     size={"icon"}
-                    onClick={() => setShowSettingsModal(true)}
                     data-testid="voice-assistant-settings-icon"
                     className="group h-8 w-8"
                   >
