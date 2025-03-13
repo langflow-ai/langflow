@@ -201,7 +201,7 @@ export function VoiceAssistant({
   };
 
   useEffect(() => {
-    if (!isRecording && hasOpenAIAPIKey) {
+    if (!isRecording && hasOpenAIAPIKey && !showSettingsModal) {
       initializeAudio();
     } else {
       stopRecording();
