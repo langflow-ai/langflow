@@ -25,7 +25,9 @@ test(
     await page.getByTitle("fit view").click();
 
     await page.getByTestId("sidebar-search-input").click();
+    await page.waitForTimeout(500);
     await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="outputsChat Output"]', {
       timeout: 3000,
