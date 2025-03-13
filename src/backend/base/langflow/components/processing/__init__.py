@@ -4,6 +4,7 @@ from .create_data import CreateDataComponent
 from .extract_key import ExtractDataKeyComponent
 from .filter_data_values import DataFilterComponent
 from .json_cleaner import JSONCleaner
+from .lambda_filter import LambdaFilterComponent
 from .llm_router import LLMRouterComponent
 from .merge_data import MergeDataComponent
 from .message_to_data import MessageToDataComponent
@@ -20,6 +21,7 @@ __all__ = [
     "DataFilterComponent",
     "ExtractDataKeyComponent",
     "JSONCleaner",
+    "LambdaFilterComponent",
     "LLMRouterComponent",
     "MergeDataComponent",
     "MessageToDataComponent",
