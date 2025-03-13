@@ -15,7 +15,7 @@ class StreamProcessor extends AudioWorkletProcessor {
   }
 
   handleMessage(event) {
-    if (event.data.type === 'updateNoiseGate') {
+    if (event.data.type === "updateNoiseGate") {
       this.noiseThreshold = event.data.threshold;
     }
   }
@@ -31,19 +31,19 @@ class StreamProcessor extends AudioWorkletProcessor {
   process(inputs, outputs) {
     const input = inputs[0];
     if (!input || !input.length) return true;
-    
+
     const channel = input[0];
-    
+
     // Calculate RMS volume
     const rms = this.calculateRMS(channel);
-    
+
     // Scale the RMS value to match the scale used in use-bar-controls.ts
     // This makes the threshold more comparable to the "3" value
     const scaledRMS = rms * 10;
-    
+
     // Use scaled value for detection
     const isSilent = scaledRMS < 3;
-    
+
     // Voice activity detection logic with stricter requirements
     if (isSilent) {
       this.activationCount = 0;
@@ -62,7 +62,7 @@ class StreamProcessor extends AudioWorkletProcessor {
         }
       }
     }
-    
+
     // Fill buffer with audio data
     for (let i = 0; i < channel.length; i++) {
       if (this.bufferIndex < this.bufferSize) {
@@ -70,21 +70,21 @@ class StreamProcessor extends AudioWorkletProcessor {
         this.buffer[this.bufferIndex++] = !this.isSpeaking ? 0 : channel[i];
       }
     }
-    
+
     // When buffer is full, send it to the main thread
     if (this.bufferIndex >= this.bufferSize) {
       const audioData = this.buffer.slice(0);
       this.port.postMessage({
-        type: 'input',
+        type: "input",
         audio: audioData,
         isSilent: !this.isSpeaking,
-        volume: scaledRMS  // Send scaled volume for consistency
+        volume: scaledRMS, // Send scaled volume for consistency
       });
       this.bufferIndex = 0;
     }
-    
+
     return true;
   }
 }
 
-registerProcessor('stream_processor', StreamProcessor); 
+registerProcessor("stream_processor", StreamProcessor);
