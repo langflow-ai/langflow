@@ -214,25 +214,41 @@ def test_file_input_valid():
     assert file_input.value == ["/path/to/file"]
 
 
-def test_tab_input_valid():
-    # Test with valid tab values (3 values, each <= 20 chars)
+@pytest.mark.parametrize(
+    ("test_id", "options", "value", "expected_options", "expected_value"),
+    [
+        (
+            "standard_valid",
+            ["Tab1", "Tab2", "Tab3"],
+            "Tab1",
+            ["Tab1", "Tab2", "Tab3"],
+            "Tab1",
+        ),
+        (
+            "fewer_options",
+            ["Tab1", "Tab2"],
+            "Tab2",
+            ["Tab1", "Tab2"],
+            "Tab2",
+        ),
+        (
+            "empty_options",
+            [],
+            "",
+            [],
+            "",
+        ),
+    ],
+)
+def test_tab_input_valid(test_id, options, value, expected_options, expected_value):
+    """Test TabInput validation with valid inputs."""
     data = TabInput(
-        name="valid_tab",
-        options=["Tab1", "Tab2", "Tab3"],
-        value="Tab1",
+        name=f"valid_tab_{test_id}",
+        options=options,
+        value=value,
     )
-    assert data.options == ["Tab1", "Tab2", "Tab3"]
-    assert data.value == "Tab1"
-
-    # Test with fewer than 3 values
-    data = TabInput(name="valid_tab_fewer", options=["Tab1", "Tab2"], value="Tab2")
-    assert data.options == ["Tab1", "Tab2"]
-    assert data.value == "Tab2"
-
-    # Test with empty options
-    data = TabInput(name="valid_tab_empty", options=[], value="")
-    assert data.options == []
-    assert data.value == ""
+    assert data.options == expected_options
+    assert data.value == expected_value
 
 
 @pytest.mark.parametrize(
