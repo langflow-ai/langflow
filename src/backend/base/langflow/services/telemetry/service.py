@@ -45,6 +45,7 @@ class TelemetryService(Service):
         self.do_not_track = (
             os.getenv("DO_NOT_TRACK", "False").lower() == "true" or settings_service.settings.do_not_track
         )
+        self.log_package_version_task: asyncio.Task | None = None
 
     async def telemetry_worker(self) -> None:
         while self.running:
@@ -92,7 +93,7 @@ class TelemetryService(Service):
 
     def _get_langflow_desktop(self) -> bool:
         # Coerce to bool, could be 1, 0, True, False, "1", "0", "True", "False"
-        return str(os.getenv("LANGFLOW_DESKTOP", "False")).lower() in ("1", "true")
+        return str(os.getenv("LANGFLOW_DESKTOP", "False")).lower() in {"1", "true"}
 
     async def log_package_version(self) -> None:
         python_version = ".".join(platform.python_version().split(".")[:2])

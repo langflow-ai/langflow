@@ -14,6 +14,7 @@ export enum FormatterType {
   text = "text",
   number = "number",
   json = "json",
+  boolean = "boolean",
 }
 
 export interface ColumnField {
@@ -27,4 +28,5 @@ export interface ColumnField {
   default?: any;
   edit_mode?: "modal" | "inline" | "popover";
   hidden?: boolean;
+  options?: string[];
 }
