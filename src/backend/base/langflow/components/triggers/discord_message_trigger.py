@@ -42,6 +42,7 @@ class DiscordMessageTriggerComponent(BaseTriggerComponent):
         Returns:
             Data: A data object containing trigger configuration and parameters.
         """
+        self.validate_user_and_id()
         trigger_info = {
             "type": "discord_message",
         }
@@ -61,6 +62,20 @@ class DiscordMessageTriggerComponent(BaseTriggerComponent):
             self.update_ctx({"discord_trigger_data": trigger_data})
 
         return Data(data=trigger_info)
+
+    def validate_user_and_id(self) -> None:
+        """Validate the Discord username and user ID."""
+        # Check if a custom username was provided (not the default)
+        discord_username = getattr(self, "discord_username", "Any Discord User")
+        if discord_username != "Any Discord User" and not discord_username.strip():
+            msg = "Discord username cannot be empty when provided"
+            raise ValueError(msg)
+
+        # Check if a custom user ID was provided (not the default wildcard)
+        discord_user_id = getattr(self, "discord_user_id", "*")
+        if discord_user_id != "*" and not discord_user_id.strip():
+            msg = "Discord user ID cannot be empty when provided"
+            raise ValueError(msg)
 
     def get_trigger_instance(self) -> DiscordTrigger:
         """Return a Discord trigger instance."""
