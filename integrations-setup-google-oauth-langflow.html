@@ -16,7 +16,7 @@
 
 
 <link rel="search" type="application/opensearchdescription+xml" title="Langflow Documentation" href="/opensearch.xml"><link rel="stylesheet" href="/assets/css/styles.e5a88218.css">
-<script src="/assets/js/runtime~main.c2ae4cde.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.33138d79.js" defer="defer"></script>
 <script src="/assets/js/main.44ce49e8.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -40,25 +40,37 @@
 <ol start="3">
 <li>To enable APIs for the project, select <strong>APIs &amp; Services</strong>, and then click <strong>Library</strong>. Enable the APIs you need for your project. For example, if your flow uses the Google Drive component, enable the Google Drive API.</li>
 <li>To navigate to the OAuth consent screen, click <strong>APIs &amp; Services</strong>, and then click <strong>OAuth consent screen</strong>.</li>
-<li>Populate your OAuth consent screen with the application name, user support email, required <a href="https://developers.google.com/identity/protocols/oauth2/scopes" target="_blank" rel="noopener noreferrer">scopes</a>, and authorized domains.</li>
+<li>Populate your OAuth consent screen with the application name, audience, and user support email.
+For audience, select <strong>External</strong>.
+This creates a testing application environment that you can add users to.</li>
+<li>To add users to your OAuth audience, click <strong>Audience</strong>.
+Under <strong>Test users</strong>, click <strong>Add users</strong>.
+Enter any email addresses you intend to use to authenticate Langflow with OAuth.
+These email addresses have access to the application while it&#x27;s in a <strong>Testing</strong> publishing state.
+For more information, see the <a href="https://support.google.com/cloud/answer/13461325?hl=en" target="_blank" rel="noopener noreferrer">Google documentation</a>.</li>
 <li>To create an <strong>OAuth Client ID</strong>, navigate to <strong>Clients</strong>, and then click <strong>Create Client</strong>.</li>
 <li>Choose <strong>Desktop app</strong> as the application type, and then name your client ID.</li>
-<li>Click <strong>Create</strong>. A Client ID and Client Secret are created. Download the credentials as a JSON file to your local machine and save it securely.</li>
+<li>Click <strong>Create</strong>.
+A Client ID and Client Secret are created.
+Download the credentials as a JSON file to your local machine and save it securely.</li>
 </ol>
 <p><img decoding="async" loading="lazy" alt="OAuth Client ID and Secret" src="/assets/images/create-oauth-client-id-57b94aad2bf2859ae9011f6f2a0d52d3.gif" width="3450" height="1756" class="img_ev3q"></p>
-<hr>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="retrieve-access-and-refresh-tokens">Retrieve Access and Refresh Tokens<a href="#retrieve-access-and-refresh-tokens" class="hash-link" aria-label="Direct link to Retrieve Access and Refresh Tokens" title="Direct link to Retrieve Access and Refresh Tokens">​</a></h2>
 <p>With your OAuth application configured and your credentials JSON file created, follow these steps to authenticate the Langflow application.</p>
 <ol>
 <li>Create a new project in Langflow.</li>
 <li>Add a <strong>Google OAuth Token</strong> component to your flow.</li>
 <li>In the <strong>Credentials File</strong> field of the Google OAuth Token component, enter the path to your <strong>Credentials File</strong>, the JSON file containing the Client ID credentials you downloaded from Google in the previous steps.</li>
+<li>In the <strong>Scopes</strong> field of the Google Oauth Token component, enter the scope required to access your resources.
+For example, to allow your Langflow application to access a user&#x27;s Google Drive, the scope is <code>https://www.googleapis.com/auth/drive</code>.
+For more information, see the <a href="https://developers.google.com/identity/protocols/oauth2/scopes" target="_blank" rel="noopener noreferrer">Google documentation</a>.</li>
 <li>To authenticate your application, in the <strong>Google OAuth Token</strong> component, click <strong>Play</strong>.
 A new tab opens in the browser to authenticate your application using your Google Cloud account. You must authenticate the application with the same Google account that created the OAuth credentials.</li>
 </ol>
 <div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>If a new tab does not open automatically, check the Langflow <strong>Logs</strong> for the Google authentication URL. Open this URL in your browser to complete the authentication.</p></div></div>
-<ol start="5">
-<li>After successful authentication, your Langflow application can now request and refresh tokens. These tokens enable Langflow to interact with Google services on your behalf and execute the requests you’ve specified.</li>
+<ol start="6">
+<li>After successful authentication, your Langflow application can request and refresh tokens.
+These tokens enable Langflow to interact with Google services on your behalf and execute your specified requests.</li>
 </ol>
 <h2 class="anchor anchorWithHideOnScrollNavbar_WYt5" id="create-a-flow-with-google-drive-loader">Create a flow with Google Drive loader<a href="#create-a-flow-with-google-drive-loader" class="hash-link" aria-label="Direct link to Create a flow with Google Drive loader" title="Direct link to Create a flow with Google Drive loader">​</a></h2>
 <p>For a pre-built JSON file of a flow that uses the Google Drive loader component, download the <a href="./files/Google_Drive_Docs_Translations_Example.json" download="">Google Drive Document Translation Example Flow JSON</a> to your local machine.</p>
@@ -67,18 +79,17 @@ A new tab opens in the browser to authenticate your application using your Googl
 <li>Download the <a href="./files/Google_Drive_Docs_Translations_Example.json" download="">Google Drive Document Translation Example Flow JSON</a> to your local machine.</li>
 <li>To import the downloaded JSON to Langflow, click <strong>Options</strong>, and then select <strong>Import</strong>.</li>
 <li>In the <strong>Credentials File</strong> field of the Google OAuth Token component, enter the path to your <strong>Credentials File</strong>, the JSON file containing the Client ID credentials you downloaded from Google in the previous steps.</li>
-<li>In the Google Drive loader component, in the <code>JSON String of the Service Account Token</code> field, enter the JSON string containing the token returned in the output of the Google OAuth Token component.</li>
+<li>In the <strong>Scopes</strong> field of the Google Oauth Token component, enter the scope required to access your resources.
+For example, to allow your Langflow application to access a user&#x27;s Google Drive, the scope is <code>https://www.googleapis.com/auth/drive</code>.
+For more information, see the <a href="https://developers.google.com/identity/protocols/oauth2/scopes" target="_blank" rel="noopener noreferrer">Google documentation</a>.
+The example flow includes a <strong>Parse data</strong> component to convert the <code>data</code> output of the Google OAuth Token component to the <code>text</code> input of the JSON Cleaner component.</li>
+<li>To allow the Langflow component to access the document in Google Drive, copy the Google Drive <code>documentID</code> from the document&#x27;s URL.</li>
 </ol>
-<p>The example flow includes a <strong>Parse data</strong> component to convert the <code>data</code> output of the Google OAuth Token component to the <code>text</code> input of the JSON Cleaner component.</p>
-<ol start="5">
-<li>To allow the Langflow component to access the file in Google Drive, copy the Google Drive File ID from the document&#x27;s URL.</li>
-</ol>
-<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>The file ID is located between <code>/d/</code> and <code>/edit</code> in a Google Drive document&#x27;s URL.
-For example, in the URL <code>https://drive.google.com/file/d/1a2b3c4D5E6F7gHI8J9klmnopQ/edit</code>, the File ID is <code>1a2b3c4D5E6F7gHI8J9klmnopQ</code>.</p></div></div>
+<div class="theme-admonition theme-admonition-info admonition_xJq3 alert alert--info"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M7 2.3c3.14 0 5.7 2.56 5.7 5.7s-2.56 5.7-5.7 5.7A5.71 5.71 0 0 1 1.3 8c0-3.14 2.56-5.7 5.7-5.7zM7 1C3.14 1 0 4.14 0 8s3.14 7 7 7 7-3.14 7-7-3.14-7-7-7zm1 3H6v5h2V4zm0 6H6v2h2v-2z"></path></svg></span>info</div><div class="admonitionContent_BuS1"><p>The <code>documentID</code> is located between <code>/d/</code> and <code>/edit</code> in a Google Drive document&#x27;s URL.
+For example, in the URL <code>https://drive.google.com/file/d/1a2b3c4D5E6F7gHI8J9klmnopQ/edit</code>, the <code>documentID</code> is <code>1a2b3c4D5E6F7gHI8J9klmnopQ</code>.</p></div></div>
 <ol start="6">
 <li>In the Google Drive loader component, in the <strong>Document ID</strong> field, paste the document URL.</li>
-<li>Click the <strong>Chat output</strong> component, and then click <strong>Play</strong>.
-The chat output should display a translated document.</li>
+<li>To view the translated document, open the <strong>Playground</strong>.</li>
 </ol></div></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/integrations-mcp"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">MCP (Model context protocol)</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/integrations-setup-google-cloud-vertex-ai-langflow"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Integrate Google Cloud Vertex AI with Langflow</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#5b8981b15d86192d17b0e5725c1f95e7" class="table-of-contents__link toc-highlight">Create an OAuth Application in Google Cloud</a></li><li><a href="#retrieve-access-and-refresh-tokens" class="table-of-contents__link toc-highlight">Retrieve Access and Refresh Tokens</a></li><li><a href="#create-a-flow-with-google-drive-loader" class="table-of-contents__link toc-highlight">Create a flow with Google Drive loader</a></li></ul></div></div></div></div></main></div></div></div><div style="position:fixed;right:20px;bottom:20px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>
 </body>
 </html>
