@@ -10,8 +10,8 @@ This guide demonstrates deploying Langflow on a Kubernetes cluster.
 
 Two charts are available at the [Langflow Helm Charts repository](https://github.com/langflow-ai/langflow-helm-charts):
 
-- Deploy the [Langflow IDE](deployment-kubernetes#langflow-ide-deployment) for the complete Langflow development environment.
-- Deploy the [Langflow runtime](/deployment-kubernetes#langflow-runtime-deployment) to deploy a standalone Langflow application in a more secure and stable environment.
+- Deploy the [Langflow IDE](#deploy-the-langflow-ide) for the complete Langflow development environment.
+- Deploy the [Langflow runtime](#deploy-the-langflow-runtime) to deploy a standalone Langflow application in a more secure and stable environment.
 
 ## Deploy the Langflow IDE
 
