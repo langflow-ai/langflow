@@ -19,8 +19,8 @@ from langflow.inputs.inputs import (
     SecretStrInput,
     SliderInput,
     StrInput,
-    TableInput,
     TabInput,
+    TableInput,
 )
 from langflow.inputs.utils import instantiate_input
 from langflow.schema.message import Message
@@ -78,9 +78,7 @@ def test_instantiate_input_valid():
 
 def test_instantiate_input_invalid():
     with pytest.raises(ValueError, match="Invalid input type: InvalidInput"):
-        instantiate_input(
-            "InvalidInput", {"name": "invalid_input", "value": "This is a string"}
-        )
+        instantiate_input("InvalidInput", {"name": "invalid_input", "value": "This is a string"})
 
 
 def test_handle_input_valid():
@@ -104,16 +102,12 @@ def test_prompt_input_valid():
 
 
 def test_code_input_valid():
-    code_input = CodeInput(
-        name="valid_code", value="def hello():\n    print('Hello, World!')"
-    )
+    code_input = CodeInput(name="valid_code", value="def hello():\n    print('Hello, World!')")
     assert code_input.value == "def hello():\n    print('Hello, World!')"
 
 
 def test_multiline_input_valid():
-    multiline_input = MultilineInput(
-        name="valid_multiline", value="This is a\nmultiline input"
-    )
+    multiline_input = MultilineInput(name="valid_multiline", value="This is a\nmultiline input")
     assert multiline_input.value == "This is a\nmultiline input"
     assert multiline_input.multiline is True
 
@@ -124,9 +118,7 @@ def test_multiline_input_invalid():
 
 
 def test_multiline_secret_input_valid():
-    multiline_secret_input = MultilineSecretInput(
-        name="valid_multiline_secret", value="secret"
-    )
+    multiline_secret_input = MultilineSecretInput(name="valid_multiline_secret", value="secret")
     assert multiline_secret_input.value == "secret"
     assert multiline_secret_input.password is True
 
@@ -178,9 +170,7 @@ def test_bool_input_invalid():
 
 
 def test_nested_dict_input_valid():
-    nested_dict_input = NestedDictInput(
-        name="valid_nested_dict", value={"key": "value"}
-    )
+    nested_dict_input = NestedDictInput(name="valid_nested_dict", value={"key": "value"})
     assert nested_dict_input.value == {"key": "value"}
 
 
@@ -200,9 +190,7 @@ def test_dict_input_invalid():
 
 
 def test_dropdown_input_valid():
-    dropdown_input = DropdownInput(
-        name="valid_dropdown", options=["option1", "option2"]
-    )
+    dropdown_input = DropdownInput(name="valid_dropdown", options=["option1", "option2"])
     assert dropdown_input.options == ["option1", "option2"]
 
 
@@ -212,9 +200,7 @@ def test_dropdown_input_invalid():
 
 
 def test_multiselect_input_valid():
-    multiselect_input = MultiselectInput(
-        name="valid_multiselect", value=["option1", "option2"]
-    )
+    multiselect_input = MultiselectInput(name="valid_multiselect", value=["option1", "option2"])
     assert multiselect_input.value == ["option1", "option2"]
 
 
