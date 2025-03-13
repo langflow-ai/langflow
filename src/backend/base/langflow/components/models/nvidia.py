@@ -6,7 +6,6 @@ from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
-
 class NVIDIAModelComponent(LCModelComponent):
     display_name = "NVIDIA"
     description = "Generates text using NVIDIA LLMs."
@@ -85,17 +84,13 @@ class NVIDIAModelComponent(LCModelComponent):
     ]
 
     def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:
-        # HACK FOR NEMOTRON
-        if self.base_url == "https://6bd8b807-a2ad-4cab-a6b1-3569cd2213c2.invocation.api.nvcf.nvidia.com/":
-            return ["nemotron"]
-        
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
  
-        # Note: don't use the previous model, as it may not exist in available models from the new base url
+        # Note: don't include the previous model, as it may not exist in available models from the new base url
         model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
         if tool_model_enabled:
             tool_models = [m for m in model.get_available_models() if m.supports_tools]
@@ -108,12 +103,11 @@ class NVIDIAModelComponent(LCModelComponent):
                 ids = self.get_models(self.tool_model_enabled)
                 build_config["model_name"]["options"] = ids
 
-                if build_config["model_name"]["value"] not in ids:
-                    build_config["model_name"]["value"] = None
-                elif build_config["model_name"]["value"] is None:
+                if "value" not in build_config["model_name"] or build_config["model_name"]["value"] is None:
                     build_config["model_name"]["value"] = ids[0]
+                elif build_config["model_name"]["value"] not in ids:
+                    build_config["model_name"]["value"] = None
 
-            
                 # TODO: have a better way to determine if a model is reasoning
                 if build_config["model_name"]["value"] == "nemotron":
                     build_config["detailed_thinking"]["show"] = True

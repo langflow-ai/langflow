@@ -163,6 +163,24 @@ class LCModelComponent(Component):
         input_value: str | Message,
         system_message: str | None = None,
     ):
+        if getattr(self, 'detailed_thinking', False):
+            system_message = "detailed thinking on\n\n" + (system_message or "")
+
+        return self._get_chat_result(
+            runnable=runnable,
+            stream=stream,
+            input_value=input_value,
+            system_message=system_message,
+        )
+
+    def _get_chat_result(
+        self,
+        *,
+        runnable: LanguageModel,
+        stream: bool,
+        input_value: str | Message,
+        system_message: str | None = None,
+    ):
         messages: list[BaseMessage] = []
         if not input_value and not system_message:
             msg = "The message you want to send to the model is empty."
