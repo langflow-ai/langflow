@@ -163,7 +163,7 @@ class LCModelComponent(Component):
         input_value: str | Message,
         system_message: str | None = None,
     ):
-        if getattr(self, 'detailed_thinking', False):
+        if getattr(self, "detailed_thinking", False):
             system_message = "detailed thinking on\n\n" + (system_message or "")
 
         return self._get_chat_result(
