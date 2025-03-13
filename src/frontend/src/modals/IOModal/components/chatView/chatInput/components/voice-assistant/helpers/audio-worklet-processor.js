@@ -4,10 +4,10 @@ class StreamProcessor extends AudioWorkletProcessor {
     this.bufferSize = 4096;
     this.buffer = new Float32Array(this.bufferSize);
     this.bufferIndex = 0;
-    // Significantly higher threshold for much less sensitivity
-    this.noiseThreshold = 0.05;
+    // Increase threshold for much less sensitivity
+    this.noiseThreshold = 0.15;
     // Require more consecutive frames above threshold to trigger speech detection
-    this.activationThreshold = 5;
+    this.activationThreshold = 8;
     this.silenceFrameCount = 0;
     this.activationCount = 0;
     this.isSpeaking = false;
@@ -36,7 +36,13 @@ class StreamProcessor extends AudioWorkletProcessor {
     
     // Calculate RMS volume
     const rms = this.calculateRMS(channel);
-    const isSilent = rms < this.noiseThreshold;
+    
+    // Scale the RMS value to match the scale used in use-bar-controls.ts
+    // This makes the threshold more comparable to the "3" value
+    const scaledRMS = rms * 10;
+    
+    // Use scaled value for detection
+    const isSilent = scaledRMS < 3;
     
     // Voice activity detection logic with stricter requirements
     if (isSilent) {
@@ -72,7 +78,7 @@ class StreamProcessor extends AudioWorkletProcessor {
         type: 'input',
         audio: audioData,
         isSilent: !this.isSpeaking,
-        volume: rms
+        volume: scaledRMS  // Send scaled volume for consistency
       });
       this.bufferIndex = 0;
     }
