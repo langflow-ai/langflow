@@ -1767,5 +1767,9 @@
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "News Aggregator",
-  "tags": null
+  "icon": "Newspaper",
+  "tags": [
+    "web-scraping",
+    "agents"
+  ]
 }
