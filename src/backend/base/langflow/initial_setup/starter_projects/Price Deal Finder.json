@@ -2172,5 +2172,9 @@
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Price Deal Finder",
-  "tags": null
+  "icon": "DollarSign",
+  "tags": [
+    "web-scraping",
+    "agents"
+  ]
 }
