@@ -13,6 +13,7 @@ from langflow.template.field.base import Input
 
 from .input_mixin import (
     BaseInputMixin,
+    ConnectionMixin,
     DatabaseLoadMixin,
     DropDownMixin,
     FieldTypes,
@@ -20,13 +21,12 @@ from .input_mixin import (
     InputTraceMixin,
     LinkMixin,
     ListableInputMixin,
-    SortableListMixin,
-    ConnectionMixin,
     MetadataTraceMixin,
     MultilineMixin,
     RangeMixin,
     SerializableFieldTypes,
     SliderMixin,
+    SortableListMixin,
     TableMixin,
     ToolModeMixin,
 )
@@ -452,14 +452,17 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
 
+
 class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a connection input field.
 
     This class represents a connection input field and provides functionality for handling connection values.
     It inherits from the `BaseInputMixin` and `ConnectionMixin` classes.
-    
+
     """
+
     field_type: SerializableFieldTypes = FieldTypes.CONNECTION
+
 
 class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a list selection input field.
@@ -470,7 +473,7 @@ class SortableListInput(BaseInputMixin, SortableListMixin, MetadataTraceMixin, T
     Attributes:
         field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.BUTTON.
     """
-    
+
     field_type: SerializableFieldTypes = FieldTypes.SORTABLE_LIST
 
 

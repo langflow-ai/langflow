@@ -14,14 +14,14 @@ from loguru import logger
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import (
+    ConnectionInput,
     DropdownInput,
     LinkInput,
-    SortableListInput,
     MessageTextInput,
     MultiselectInput,
     SecretStrInput,
+    SortableListInput,
     StrInput,
-    ConnectionInput,
 )
 from langflow.io import Output
 
@@ -70,7 +70,7 @@ class ComposioAPIComponent(LCToolComponent):
                     "icon": "dropbox",
                 },
             ],
-            search_category=["all", "analytics & data", "collaboration"], # TODO: Add more categories
+            search_category=["all", "analytics & data", "collaboration"],  # TODO: Add more categories
             value="",
             connection_link="",
             info="The name of the tool to use",

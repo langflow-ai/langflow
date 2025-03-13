@@ -196,7 +196,8 @@ class SortableListMixin(BaseModel):
     """Specifies the category of the field. Defaults to an empty list."""
     options: list[dict[str, Any]] = Field(default_factory=list)
     """List of dictionaries with metadata for each option."""
-    
+
+
 class ConnectionMixin(BaseModel):
     helper_text: str | None = None
     """Adds a helper text to the field. Defaults to an empty string."""
