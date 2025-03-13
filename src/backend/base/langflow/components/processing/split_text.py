@@ -29,13 +29,20 @@ class SplitTextComponent(Component):
         IntInput(
             name="chunk_size",
             display_name="Chunk Size",
-            info="The maximum length of each chunk. Text is first split by separator, then chunks are merged up to this size. Individual splits larger than this won't be further divided.",
+            info=(
+                "The maximum length of each chunk. Text is first split by separator, "
+                "then chunks are merged up to this size. "
+                "Individual splits larger than this won't be further divided."
+            ),
             value=1000,
         ),
         MessageTextInput(
             name="separator",
             display_name="Separator",
-            info="The character to split on. Use \\n for newline. Examples: \\n\\n for paragraphs, \\n for lines, . for sentences",
+            info=(
+                "The character to split on. Use \\n for newline. "
+                "Examples: \\n\\n for paragraphs, \\n for lines, . for sentences"
+            ),
             value="\n",
         ),
         MessageTextInput(
