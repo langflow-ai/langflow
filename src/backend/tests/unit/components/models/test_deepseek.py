@@ -40,6 +40,11 @@ def test_deepseek_template():
         assert input_name in input_names
 
 
+@pytest.fixture
+def mock_chat_openai(mocker):
+    return mocker.patch("langchain_openai.ChatOpenAI")
+
+
 @pytest.mark.parametrize(
     ("temperature", "max_tokens"),
     [
@@ -48,15 +53,10 @@ def test_deepseek_template():
         (1.5, 1000),
     ],
 )
-@pytest.fixture
-def mock_chat_openai(mocker):
-    return mocker.patch("langchain_openai.ChatOpenAI")
-
-
-def test_deepseek_build_model(mock_chat_openai):
+def test_deepseek_build_model(mock_chat_openai, temperature, max_tokens):
     component = DeepSeekModelComponent()
-    component.temperature = 0.7
-    component.max_tokens = 100
+    component.temperature = temperature
+    component.max_tokens = max_tokens
     component.api_key = "test-key"
 
     # Mock the ChatOpenAI instance
@@ -67,12 +67,12 @@ def test_deepseek_build_model(mock_chat_openai):
 
     # Verify ChatOpenAI was called with correct params
     mock_chat_openai.assert_called_once_with(
-        max_tokens=100,
+        max_tokens=max_tokens,
         model_kwargs={},
         model="deepseek-chat",
         base_url="https://api.deepseek.com",
         api_key="test-key",
-        temperature=0.7,
+        temperature=temperature,
         seed=1,
         streaming=False,
     )
