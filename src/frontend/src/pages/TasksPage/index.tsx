@@ -1275,22 +1275,24 @@ export default function TaskPage() {
       </>
     );
   };
-
   // Function to check if the result contains markdown content
   const hasMarkdownContent = (result: any): boolean => {
     // Skip if result is null or undefined
     if (!result) return false;
 
-    // Check if result has the structure with message.data.text (task output)
-    if (
-      result.outputs &&
-      result.outputs.length > 0 &&
-      result.outputs[0].value &&
-      result.outputs[0].value.message &&
-      result.outputs[0].value.message.data &&
-      typeof result.outputs[0].value.message.data.text === "string"
-    ) {
-      return true;
+    // Define paths to check for text content
+    const textPaths = [
+      (r) => r?.outputs?.[0]?.value?.message?.data?.text,
+      (r) => r?.outputs?.[0]?.value?.result?.data?.text,
+      (r) => r?.outputs?.[0]?.value?.response?.data?.text,
+    ];
+
+    // Check if any path resolves to a string
+    for (const pathFn of textPaths) {
+      const content = pathFn(result);
+      if (typeof content === "string") {
+        return true;
+      }
     }
 
     // For subscription state or other data, check if it contains markdown-like content
@@ -1306,16 +1308,19 @@ export default function TaskPage() {
   const getMarkdownContent = (result: any): string => {
     if (!result) return "";
 
-    // For task outputs with message.data.text
-    if (
-      result.outputs &&
-      result.outputs.length > 0 &&
-      result.outputs[0].value &&
-      result.outputs[0].value.message &&
-      result.outputs[0].value.message.data &&
-      typeof result.outputs[0].value.message.data.text === "string"
-    ) {
-      return result.outputs[0].value.message.data.text;
+    // Define paths to check for text content
+    const textPaths = [
+      (r) => r?.outputs?.[0]?.value?.message?.data?.text,
+      (r) => r?.outputs?.[0]?.value?.result?.data?.text,
+      (r) => r?.outputs?.[0]?.value?.response?.data?.text,
+    ];
+
+    // Return the first valid text content found
+    for (const pathFn of textPaths) {
+      const content = pathFn(result);
+      if (typeof content === "string") {
+        return content;
+      }
     }
 
     // For subscription state or other string data
