@@ -1,3 +1,4 @@
+import json
 import urllib
 from http import HTTPStatus
 from typing import Any
@@ -8,6 +9,7 @@ from langchain_core.tools import StructuredTool, Tool
 
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.io import DictInput, IntInput, SecretStrInput, StrInput
+from langflow.logging import logger
 from langflow.schema import Data
 
 
@@ -94,18 +96,25 @@ class AstraDBCQLToolComponent(LCToolComponent):
         headers = {"Accept": "application/json", "X-Cassandra-Token": f"{self.token}"}
         astra_url = f"{self.api_endpoint}/api/rest/v2/keyspaces/{self.keyspace}/{self.table_name}/"
         key = []
+        where = {}
 
         # Partition keys are mandatory
         key = [self.partition_keys[k] for k in self.partition_keys]
+        for k in self.partition_keys:
+            where[k] = {"$eq": args[k]}
+
 
         # Clustering keys are optional
         for k in self.clustering_keys:
             if k in args:
+                where[k] = {"$eq": args[k]}
                 key.append(args[k])
             elif self.static_filters[k] is not None:
+                where[k] = {"$eq": self.static_filters[k]}
                 key.append(self.static_filters[k])
 
-        url = f"{astra_url}{'/'.join(key)}?page-size={self.number_of_results}"
+        url = f"{astra_url}?page-size={self.number_of_results}"
+        url += f"&where={json.dumps(where)}"
 
         if self.projection_fields != "*":
             url += f"&fields={urllib.parse.quote(self.projection_fields.replace(' ', ''))}"
@@ -113,7 +122,9 @@ class AstraDBCQLToolComponent(LCToolComponent):
         res = requests.request("GET", url=url, headers=headers, timeout=10)
 
         if int(res.status_code) >= HTTPStatus.BAD_REQUEST:
-            return res.text
+            msg = f"Error on Astra DB CQL request: {res.text}"
+            logger.error(msg)
+            raise ValueError(msg)
 
         try:
             res_data = res.json()
@@ -172,6 +183,13 @@ class AstraDBCQLToolComponent(LCToolComponent):
 
     def run_model(self, **args) -> Data | list[Data]:
         results = self.astra_rest(args)
-        data: list[Data] = [Data(data=doc) for doc in results]
+        data: list[Data] = []
+
+        if isinstance(results, list):
+            data = [Data(data=doc) for doc in results]
+        else:
+            self.status = results
+            return []
+
         self.status = data
-        return results
+        return data
