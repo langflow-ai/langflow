@@ -30,7 +30,6 @@ class TestLanguageModelComponent(ComponentTestBaseWithClient):
     def file_names_mapping(self):
         """Return the file names mapping for version-specific files."""
 
-
     async def test_update_build_config_openai(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         build_config = {
