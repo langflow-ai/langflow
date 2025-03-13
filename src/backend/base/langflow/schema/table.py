@@ -34,6 +34,7 @@ class Column(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     name: str
     display_name: str = Field(default="")
+    options: list[str] | None = Field(default=None)
     sortable: bool = Field(default=True)
     filterable: bool = Field(default=True)
     formatter: FormatterType | str | None = Field(default=None)
