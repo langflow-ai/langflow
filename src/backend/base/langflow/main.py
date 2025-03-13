@@ -35,6 +35,7 @@ from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.services.deps import (
+    get_discord_service,
     get_event_bus_service,
     get_queue_service,
     get_settings_service,
@@ -128,6 +129,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             setup_llm_caching()
             await initialize_super_user_if_needed()
+
+            discord_service = get_discord_service()
+            if not discord_service.is_started() and os.environ.get(
+                "LANGFLOW_DISCORD_TOKEN"
+            ):  # Start if not already started
+                await discord_service.start(os.environ.get("LANGFLOW_DISCORD_TOKEN"))
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
@@ -155,6 +162,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Clean shutdown
             logger.info("Cleaning up resources...")
             await get_event_bus_service().disconnect()
+            discord_service = get_discord_service()
+            if discord_service.is_started():
+                await discord_service.stop()
+                logger.info("Discord service stopped")
 
             # Stop the trigger service worker
             trigger_service = get_trigger_service()
