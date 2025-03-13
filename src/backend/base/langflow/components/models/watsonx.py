@@ -64,7 +64,6 @@ class WatsonxAIComponent(LCModelComponent):
             value=None,
             dynamic=True,
             required=True,
-            refresh_button=True
         ),
         IntInput(
             name="max_tokens",
