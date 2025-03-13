@@ -116,6 +116,7 @@ dependencies = [
     "pylint>=3.3.4",
     "ruff>=0.9.7",
     "croniter>=6.0.0",
+    "discord-py>=2.5.2",
 ]
 
 [dependency-groups]
