@@ -4,7 +4,7 @@ from pydantic.v1 import SecretStr
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.inputs.inputs import HandleInput
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
+from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
 class MacrocosmosComponent(LCModelComponent):
@@ -16,7 +16,7 @@ class MacrocosmosComponent(LCModelComponent):
 
     inputs = [
         *LCModelComponent._base_inputs,
-        StrInput(
+        MessageTextInput(
             name="macrocosmos_url",
             display_name="Macrocosmos Base Url",
             advanced=True,
@@ -61,6 +61,7 @@ class MacrocosmosComponent(LCModelComponent):
             advanced=True,
             input_types=["OutputParser"],
         ),
+        IntInput(name="seed", display_name="Seed", advanced=True, value=42),
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
