@@ -279,6 +279,7 @@ import { IFixIcon } from "../icons/IFixIt";
 import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
 import { LangChainIcon } from "../icons/LangChain";
+import { MacrocosmosIcon } from "../icons/Macrocosmos";
 import { MaritalkIcon } from "../icons/Maritalk";
 import { Mem0 } from "../icons/Mem0";
 import { MetaIcon } from "../icons/Meta";
@@ -608,6 +609,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Macrocosmos: MacrocosmosIcon,
   LMStudio: LMStudioIcon,
   Notify: Bell,
   ListFlows: Group,
