@@ -82,7 +82,8 @@ class DynamicModelComponent(LCModelComponent):
 
         if provider == "OpenAI":
             if not self.openai_api_key:
-                raise ValueError("OpenAI API key is required when using OpenAI provider")
+                msg = "OpenAI API key is required when using OpenAI provider"
+                raise ValueError(msg)
             return ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
@@ -91,14 +92,16 @@ class DynamicModelComponent(LCModelComponent):
             )
         if provider == "Anthropic":
             if not self.anthropic_api_key:
-                raise ValueError("Anthropic API key is required when using Anthropic provider")
+                msg = "Anthropic API key is required when using Anthropic provider"
+                raise ValueError(msg)
             return ChatAnthropic(
                 model=model_name,
                 temperature=temperature,
                 streaming=stream,
                 anthropic_api_key=self.anthropic_api_key,
             )
-        raise ValueError(f"Unknown provider: {provider}")
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "provider":
