@@ -643,7 +643,7 @@ class APIRequestComponent(Component):
             return processed_headers
         return {}
 
-    def as_dataframe(self) -> DataFrame:
+    async def as_dataframe(self) -> DataFrame:
         """Convert the API response data into a DataFrame.
 
         Returns:
