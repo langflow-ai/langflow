@@ -5,8 +5,8 @@ from faker import Faker
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from langchain_core.documents import Document
 from langchain_core.vectorstores.in_memory import InMemoryVectorStore
-from langflow.components.vectorstores.graph_rag import GraphRAGComponent
 
+from langflow.components.vectorstores.graph_rag import GraphRAGComponent
 from tests.base import ComponentTestBaseWithoutClient
 
 
@@ -59,14 +59,14 @@ class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
 
         def update_metadata(meta: dict) -> dict:
             """Modify metadata based on predefined conditions and probability."""
-            if random.random() < match_prob:
+            if random.random() < match_prob:  # noqa: S311
                 meta.update(shared_metadata)  # Apply shared metadata
             elif meta["type"] == "mammal":
-                meta["habitat"] = random.choice(habitats)
+                meta["habitat"] = random.choice(habitats)  # noqa: S311
             elif meta["type"] == "reptile":
-                meta["diet"] = random.choice(diets)
+                meta["diet"] = random.choice(diets)  # noqa: S311
             elif meta["type"] == "insect":
-                meta["origin"] = random.choice(origins)
+                meta["origin"] = random.choice(origins)  # noqa: S311
             return meta
 
         # Generate and return a list of documents
@@ -76,22 +76,22 @@ class TestGraphRAGComponent(ComponentTestBaseWithoutClient):
                 page_content=fake.sentence(),
                 metadata=update_metadata(
                     {
-                        "type": random.choice(animal_types),
-                        "number_of_legs": random.choice([0, 2, 4, 6, 8]),
-                        "keywords": fake.words(random.randint(2, 5)),
+                        "type": random.choice(animal_types),  # noqa: S311
+                        "number_of_legs": random.choice([0, 2, 4, 6, 8]),  # noqa: S311
+                        "keywords": fake.words(random.randint(2, 5)),  # noqa: S311
                         # Add optional tags with 30% probability
                         **(
                             {
                                 "tags": [
-                                    {"a": random.randint(1, 10), "b": random.randint(1, 10)}
-                                    for _ in range(random.randint(1, 2))
+                                    {"a": random.randint(1, 10), "b": random.randint(1, 10)}  # noqa: S311
+                                    for _ in range(random.randint(1, 2))  # noqa: S311
                                 ]
                             }
-                            if random.random() < 0.3
+                            if random.random() < 0.3  # noqa: S311
                             else {}
                         ),
                         # Add nested metadata with 20% probability
-                        **({"nested": {"a": random.randint(1, 10)}} if random.random() < 0.2 else {}),
+                        **({"nested": {"a": random.randint(1, 10)}} if random.random() < 0.2 else {}),  # noqa: S311
                     }
                 ),
             )
