@@ -140,7 +140,8 @@ def mock_tracers():
 
 
 @pytest.mark.asyncio
-async def test_start_end_tracers(tracing_service, mock_tracers):  # noqa: ARG001
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_end_tracers(tracing_service):
     """Test starting and ending tracers."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -180,7 +181,8 @@ async def test_start_end_tracers(tracing_service, mock_tracers):  # noqa: ARG001
 
 
 @pytest.mark.asyncio
-async def test_trace_component(tracing_service, mock_component, mock_tracers):  # noqa: ARG001
+@pytest.mark.usefixtures("mock_tracers")
+async def test_trace_component(tracing_service, mock_component):
     """Test component tracing context manager."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -242,7 +244,8 @@ async def test_trace_component(tracing_service, mock_component, mock_tracers):  
 
 
 @pytest.mark.asyncio
-async def test_trace_component_with_exception(tracing_service, mock_component, mock_tracers):  # noqa: ARG001
+@pytest.mark.usefixtures("mock_tracers")
+async def test_trace_component_with_exception(tracing_service, mock_component):
     """Test component tracing context manager with exception handling."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -272,7 +275,8 @@ async def test_trace_component_with_exception(tracing_service, mock_component, m
 
 
 @pytest.mark.asyncio
-async def test_get_langchain_callbacks(tracing_service, mock_tracers):  # noqa: ARG001
+@pytest.mark.usefixtures("mock_tracers")
+async def test_get_langchain_callbacks(tracing_service):
     """Test getting LangChain callback handlers."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -393,7 +397,8 @@ async def test_start_tracers_with_exception(tracing_service):
 
 
 @pytest.mark.asyncio
-async def test_trace_worker_with_exception(tracing_service, mock_tracers):  # noqa: ARG001
+@pytest.mark.usefixtures("mock_tracers")
+async def test_trace_worker_with_exception(tracing_service):
     """Test trace worker exception handling."""
     run_id = uuid.uuid4()
     run_name = "test_run"
@@ -425,7 +430,8 @@ async def test_trace_worker_with_exception(tracing_service, mock_tracers):  # no
 
 
 @pytest.mark.asyncio
-async def test_concurrent_tracing(tracing_service, mock_component, mock_tracers):  # noqa: ARG001
+@pytest.mark.usefixtures("mock_tracers")
+async def test_concurrent_tracing(tracing_service, mock_component):
     """Test two tasks running start_tracers concurrently, with each task running 2 concurrent trace_component tasks."""
 
     # Define common task function: start tracers and run two component traces

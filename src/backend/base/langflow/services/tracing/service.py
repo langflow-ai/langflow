@@ -256,38 +256,45 @@ class TracingService(Service):
 
     def _start_component_traces(
         self,
-        ctc: ComponentTraceContext,
-        ct: TraceContext,
+        component_trace_context: ComponentTraceContext,
+        trace_context: TraceContext,
     ) -> None:
-        inputs = self._cleanup_inputs(ctc.inputs)
-        ctc.inputs = inputs
-        ctc.inputs_metadata = ctc.inputs_metadata or {}
-        for tracer in ct.tracers.values():
+        inputs = self._cleanup_inputs(component_trace_context.inputs)
+        component_trace_context.inputs = inputs
+        component_trace_context.inputs_metadata = component_trace_context.inputs_metadata or {}
+        for tracer in trace_context.tracers.values():
             if not tracer.ready:
                 continue
             try:
-                tracer.add_trace(ctc.trace_id, ctc.trace_name, ctc.trace_type, inputs, ctc.inputs_metadata, ctc.vertex)
+                tracer.add_trace(
+                    component_trace_context.trace_id,
+                    component_trace_context.trace_name,
+                    component_trace_context.trace_type,
+                    inputs,
+                    component_trace_context.inputs_metadata,
+                    component_trace_context.vertex,
+                )
             except Exception:  # noqa: BLE001
-                logger.exception(f"Error starting trace {ctc.trace_name}")
+                logger.exception(f"Error starting trace {component_trace_context.trace_name}")
 
     def _end_component_traces(
         self,
-        ctc: ComponentTraceContext,
-        ct: TraceContext,
+        component_trace_context: ComponentTraceContext,
+        trace_context: TraceContext,
         error: Exception | None = None,
     ) -> None:
-        for tracer in ct.tracers.values():
+        for tracer in trace_context.tracers.values():
             if tracer.ready:
                 try:
                     tracer.end_trace(
-                        trace_id=ctc.trace_id,
-                        trace_name=ctc.trace_name,
-                        outputs=ct.all_outputs[ctc.trace_name],
+                        trace_id=component_trace_context.trace_id,
+                        trace_name=component_trace_context.trace_name,
+                        outputs=trace_context.all_outputs[component_trace_context.trace_name],
                         error=error,
-                        logs=ctc.logs[ctc.trace_name],
+                        logs=component_trace_context.logs[component_trace_context.trace_name],
                     )
                 except Exception:  # noqa: BLE001
-                    logger.exception(f"Error ending trace {ctc.trace_name}")
+                    logger.exception(f"Error ending trace {component_trace_context.trace_name}")
 
     @asynccontextmanager
     async def trace_component(
@@ -311,21 +318,27 @@ class TracingService(Service):
         if component._vertex:
             trace_id = component._vertex.id
         trace_type = component.trace_type
-        ctc = ComponentTraceContext(trace_id, trace_name, trace_type, component._vertex, inputs, metadata)
-        component_context_var.set(ctc)
+        component_trace_context = ComponentTraceContext(
+            trace_id, trace_name, trace_type, component._vertex, inputs, metadata
+        )
+        component_context_var.set(component_trace_context)
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called trace_component but no trace context found"
             raise RuntimeError(msg)
         trace_context.all_inputs[trace_name] |= inputs or {}
-        await trace_context.traces_queue.put((self._start_component_traces, (ctc, trace_context)))
+        await trace_context.traces_queue.put((self._start_component_traces, (component_trace_context, trace_context)))
         try:
             yield self
         except Exception as e:
-            await trace_context.traces_queue.put((self._end_component_traces, (ctc, trace_context, e)))
+            await trace_context.traces_queue.put(
+                (self._end_component_traces, (component_trace_context, trace_context, e))
+            )
             raise
         else:
-            await trace_context.traces_queue.put((self._end_component_traces, (ctc, trace_context, None)))
+            await trace_context.traces_queue.put(
+                (self._end_component_traces, (component_trace_context, trace_context, None))
+            )
 
     @property
     def project_name(self):
