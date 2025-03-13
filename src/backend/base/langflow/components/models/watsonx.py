@@ -162,4 +162,4 @@ class WatsonxAIComponent(LCModelComponent):
             project_id=self.project_id,
         )
 
-        return WatsonxLLM(watsonx_model=model)
+        return WatsonxLLM(watsonx_model=model, streaming=self.stream)
