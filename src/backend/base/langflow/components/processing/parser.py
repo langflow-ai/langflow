@@ -89,7 +89,7 @@ class ParserComponent(Component):
 
         return build_config
 
-   def _clean_args(self):
+    def _clean_args(self):
         """Prepare arguments based on input type."""
         input_data = self.input_data
 
@@ -163,7 +163,6 @@ class ParserComponent(Component):
 
     def convert_to_string(self) -> Message:
         """Convert input data to string with proper error handling."""
-        self._validate_input()
         result = ""
         if isinstance(self.input_data, list):
             result = "\n".join([self._safe_convert(item) for item in self.input_data])
