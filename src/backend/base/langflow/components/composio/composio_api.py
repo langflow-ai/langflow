@@ -16,11 +16,12 @@ from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import (
     DropdownInput,
     LinkInput,
-    ListSelectionInput,
+    SortableListInput,
     MessageTextInput,
     MultiselectInput,
     SecretStrInput,
     StrInput,
+    ConnectionInput,
 )
 from langflow.io import Output
 
@@ -42,11 +43,11 @@ class ComposioAPIComponent(LCToolComponent):
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
         ),
-        ListSelectionInput(
-            auth=True,  # TODO: Add some type of auth link to this
+        ConnectionInput(
             name="tool_name",
             display_name="Tool Name",
             placeholder="Select a tool...",
+            button_metadata={"icon": "unplug", "variant": "destructive"},
             options=[
                 {
                     "name": "Github",
@@ -69,18 +70,17 @@ class ComposioAPIComponent(LCToolComponent):
                     "icon": "dropbox",
                 },
             ],
-            selection_type="single",
-            search_category=["all", "analytics & data", "collaboration"],
+            search_category=["all", "analytics & data", "collaboration"], # TODO: Add more categories
             value="",
+            connection_link="",
             info="The name of the tool to use",
         ),
-        ListSelectionInput(
+        SortableListInput(
             name="actions",
             display_name="Actions",
             placeholder="Select action",
-            selection_type="multiple",
             helper_text="Please connect before selecting tools",
-            helper_metadata={"icon": "OctagonAlert", "variant": "destructive"},
+            helper_text_metadata={"icon": "OctagonAlert", "variant": "destructive"},
             options=[
                 {
                     "name": "Accept a repository invitation",
@@ -123,7 +123,6 @@ class ComposioAPIComponent(LCToolComponent):
                     "metaData": "13 actions",
                 },
             ],
-            show_sortable=True,
             value="",
             info="The actions to use",
         ),

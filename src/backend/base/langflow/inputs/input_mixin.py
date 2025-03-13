@@ -23,7 +23,8 @@ class FieldTypes(str, Enum):
     BOOLEAN = "bool"
     DICT = "dict"
     NESTED_DICT = "NestedDict"
-    LIST = "list"
+    SORTABLE_LIST = "sortableList"
+    CONNECTION = "connect"
     FILE = "file"
     PROMPT = "prompt"
     CODE = "code"
@@ -186,19 +187,27 @@ class DropDownMixin(BaseModel):
     """Dictionary of dialog inputs for the field. Default is an empty object."""
 
 
-class ListSelectionMixin(BaseModel):
+class SortableListMixin(BaseModel):
     helper_text: str | None = None
     """Adds a helper text to the field. Defaults to an empty string."""
-    helper_metadata: dict[str, Any] | None = None
+    helper_text_metadata: dict[str, Any] | None = None
     """Dictionary of metadata for the helper text."""
-    auth: bool = False
-    """Specifies if the field should have authentication. Defaults to False."""
-    selection_type: str = Field(default="multiple")
-    """Specifies the type of selection for the field. Defaults to "multiple"."""
     search_category: list[str] = Field(default=[])
     """Specifies the category of the field. Defaults to an empty list."""
-    show_sortable: bool = Field(default=False)
-    """Specifies if the field should have a sortable option. Defaults to False."""
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    """List of dictionaries with metadata for each option."""
+    
+class ConnectionMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    helper_text_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the helper text."""
+    connection_link: str | None = None
+    """Specifies the link of the connection. Defaults to an empty string."""
+    button_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the button."""
+    search_category: list[str] = Field(default=[])
+    """Specifies the category of the field. Defaults to an empty list."""
     options: list[dict[str, Any]] = Field(default_factory=list)
     """List of dictionaries with metadata for each option."""
 

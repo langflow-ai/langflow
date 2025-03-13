@@ -12,11 +12,10 @@ interface ListSelectionComponentProps {
   open: boolean;
   options: any[];
   onClose: () => void;
-  hasSearch?: boolean;
   setSelectedList: (action: any[]) => void;
   selectedList: any[];
   type: SelectionMode;
-  searchCategory?: string[];
+  searchCategories?: string[];
 }
 
 const ListItem = ({
@@ -53,7 +52,7 @@ const ListItem = ({
 const ListSelectionComponent = ({
   open,
   onClose,
-  hasSearch = true,
+  searchCategories = [],
   setSelectedList = () => {},
   selectedList = [],
   type,
@@ -111,7 +110,7 @@ const ListSelectionComponent = ({
       <DialogContent>
         <div className="flex items-center justify-between">
           <div className="mr-10 flex w-full items-center rounded-md border">
-            {hasSearch && (
+            {searchCategories.length > 0 && (
               <button className="flex items-center gap-2 pl-4 text-sm">
                 All
                 <ForwardedIconComponent
