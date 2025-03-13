@@ -1265,7 +1265,7 @@
       "zoom": 0.6262838194250431
     }
   },
-  "description": "A robot that analyzes and scores dietary health",
+  "description": "Enter your daily food intake (food/grams) to receive professional dietary advice!",
   "endpoint_name": null,
   "gradient": null,
   "icon": "cup-soda",
