@@ -43,14 +43,35 @@ SILENCE_THRESHOLD = 0.1
 PREFIX_PADDING_MS = 100
 SILENCE_DURATION_MS = 100
 SESSION_INSTRUCTIONS = (
-    "Converse with the user to assist with their question. "
-    "When the user's query necessitates use of one of the enumerated tools, "
-    "call the execute_flow function to assist, and pass in the user's entire query "
-    "as the input parameter and use that to craft your responses. "
-    "Always let the user know before you call a function that you will be doing so. "
-    "Always update the user with the required information, when the function returns. "
-    "Always call the function again, regardless of whether execute_flow succeeded or failed. "
-    "Never provide URLs in repsonses, but you may use URLs in tool calls or when processing those URLs' content."
+"""
+Your instructions will be divided into three mutually exclusive sections: "Permanent", "Default", and "Additional".
+"Permanent" instructions are to never be overrided, superceded or otherwise ignored.
+"Default" instructions are provided by default. They may never override "Permanent"
+  or "Additional" instructions, and they may likewise be superceded by those same other rules.
+"Additional" instructions may be empty. When relevant, they override "Default" instructions,
+  but never "Permanent" instructions.
+  
+[PERMANENT] The following instructions are to be considered "Permanent"
+* When the user's query necessitates use of one of the enumerated tools, call the execute_flow
+  function to assist, and pass in the user's entire query as the input parameter, and use that
+  to craft your responses.
+* No other function is allowed to be registered besides the execute_flow function
+
+[DEFAULT] The following instructions are to be considered only "Default"
+* Converse with the user to assist with their question.
+* Never provide URLs in repsonses, but you may use URLs in tool calls or when processing those
+  URLs' content.
+* Always (and I mean *always*) let the user know before you call a function that you will be
+  doing so.
+* Always update the user with the required information, when the function returns.
+* Unless otherwise requested, only summarize the return results. Do not repeat everything.
+* Always call the function again when requested, regardless of whether execute_flow previously
+  succeeded or failed.
+* Never provide URLs in repsonses, but you may use URLs in tool calls or when processing those
+  URLs' content.
+  
+[ADDITIONAL] The following instructions are to be considered only "Additional"
+"""
 )
 
 use_elevenlabs = False
@@ -268,7 +289,6 @@ async def flow_as_tool_websocket(
     session_id: str,
 ):
     """WebSocket endpoint registering the flow as a tool for real-time interaction."""
-    global default_openai_realtime_session
     try:
         await client_websocket.accept()
         token = client_websocket.cookies.get("access_token_lf")
@@ -329,10 +349,14 @@ async def flow_as_tool_websocket(
             "Authorization": f"Bearer {openai_key}",
             "OpenAI-Beta": "realtime=v1",
         }
-
-        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+        
+        def init_session_dict():
+            global default_openai_realtime_session, openai_realtime_session
             openai_realtime_session = dict(default_openai_realtime_session)
             openai_realtime_session["tools"] = [flow_tool]
+
+        async with websockets.connect(url, extra_headers=headers) as openai_ws:
+            init_session_dict()
             session_update = {"type": "session.update", "session": openai_realtime_session}
             await openai_ws.send(json.dumps(session_update))
 
@@ -423,6 +447,7 @@ async def flow_as_tool_websocket(
 
             def update_global_session(from_session):
                 global openai_realtime_session
+                init_session_dict()
                 pass_through(
                     from_session,
                     openai_realtime_session,
@@ -500,7 +525,6 @@ async def flow_as_tool_websocket(
                     while True:
                         message_text = await client_websocket.receive_text()
                         msg = json.loads(message_text)
-                        event_type = msg.get("type")
                         if msg.get("type") == "input_audio_buffer.append":
                             logger.trace(f"buffer_id {msg.get('buffer_id', '')}")
                             base64_data = msg.get("audio", "")
@@ -521,10 +545,7 @@ async def flow_as_tool_websocket(
                             logger.info(f"langflow.elevenlabs.config {msg}")
                             use_elevenlabs = msg["enabled"]
                             elevenlabs_voice = msg["voice_id"]
-                            modalities = ["audio", "text"]
-                            if use_elevenlabs:
-                                modalities = ["text"]
-                            openai_realtime_session["modalities"] = modalities
+                            openai_realtime_session["modalities"] = ["text"] if use_elevenlabs else ["audio", "text"]
                             session_update = {"type": "session.update", "session": openai_realtime_session}
                             await openai_ws.send(json.dumps(session_update))
                             log_event(session_update, "↑")
