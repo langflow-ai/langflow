@@ -8,13 +8,14 @@ from .deepseek import DeepSeekModelComponent
 from .google_generative_ai import GoogleGenerativeAIComponent
 from .groq import GroqModel
 from .huggingface import HuggingFaceEndpointsComponent
+from .language_model import LanguageModelComponent
 from .lmstudiomodel import LMStudioModelComponent
 from .maritalk import MaritalkModelComponent
 from .mistral import MistralAIModelComponent
 from .novita import NovitaModelComponent
 from .nvidia import NVIDIAModelComponent
 from .ollama import ChatOllamaComponent
-from .openai import OpenAIModelComponent
+from .openai_chat_model import OpenAIModelComponent
 from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
@@ -34,6 +35,7 @@ __all__ = [
     "GroqModel",
     "HuggingFaceEndpointsComponent",
     "LMStudioModelComponent",
+    "LanguageModelComponent",
     "MaritalkModelComponent",
     "MistralAIModelComponent",
     "NVIDIAModelComponent",

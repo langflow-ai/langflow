@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { memo } from "react";
+import { BundleItemProps } from "../../types";
 import SidebarItemsList from "../sidebarItemsList";
 
 export const BundleItem = memo(
@@ -15,21 +16,11 @@ export const BundleItem = memo(
     onOpenChange,
     dataFilter,
     nodeColors,
-    chatInputAdded,
+    uniqueInputsComponents,
     onDragStart,
     sensitiveSort,
     handleKeyDownInput,
-  }: {
-    item: any;
-    isOpen: boolean;
-    onOpenChange: (isOpen: boolean) => void;
-    dataFilter: any;
-    nodeColors: any;
-    chatInputAdded: any;
-    onDragStart: any;
-    sensitiveSort: any;
-    handleKeyDownInput: any;
-  }) => {
+  }: BundleItemProps) => {
     if (
       !dataFilter[item.name] ||
       Object.keys(dataFilter[item.name]).length === 0
@@ -68,7 +59,7 @@ export const BundleItem = memo(
                 item={item}
                 dataFilter={dataFilter}
                 nodeColors={nodeColors}
-                chatInputAdded={chatInputAdded}
+                uniqueInputsComponents={uniqueInputsComponents}
                 onDragStart={onDragStart}
                 sensitiveSort={sensitiveSort}
               />
