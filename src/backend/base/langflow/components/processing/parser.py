@@ -89,58 +89,51 @@ class ParserComponent(Component):
 
         return build_config
 
-    def _clean_args(self):
+   def _clean_args(self):
         """Prepare arguments based on input type."""
         input_data = self.input_data
-        if isinstance(input_data, list) and all(isinstance(item, Data) for item in input_data):
-            msg = "List of Data objects is not supported."
-            raise ValueError(msg)
-        if isinstance(input_data, DataFrame):
-            return input_data, None, self.template, self.sep, self.stringify
-        if isinstance(input_data, Data):
-            return None, input_data, self.template, self.sep, self.stringify
-        if isinstance(input_data, dict) and "data" in input_data:
-            try:
-                if "columns" in input_data:  # Likely a DataFrame
-                    return DataFrame.from_dict(input_data), None, self.template, self.sep, self.stringify
-                # Likely a Data object
-                return None, Data(**input_data), self.template, self.sep, self.stringify
-            except (TypeError, ValueError, KeyError) as e:
-                msg = f"Invalid structured input provided: {e!s}"
-                raise ValueError(msg) from e
-        else:
-            msg = f"Unsupported input type: {type(input_data)}. Expected DataFrame or Data."
-            raise ValueError(msg)
+
+        match input_data:
+            case list() if all(isinstance(item, Data) for item in input_data):
+                msg = "List of Data objects is not supported."
+                raise ValueError(msg)
+            case DataFrame():
+                return input_data, None
+            case Data():
+                return None, input_data
+            case dict() if "data" in input_data:
+                try:
+                    if "columns" in input_data:  # Likely a DataFrame
+                        return DataFrame.from_dict(input_data), None
+                    # Likely a Data object
+                    return None, Data(**input_data)
+                except (TypeError, ValueError, KeyError) as e:
+                    msg = f"Invalid structured input provided: {e!s}"
+                    raise ValueError(msg) from e
+            case _:
+                msg = f"Unsupported input type: {type(input_data)}. Expected DataFrame or Data."
+                raise ValueError(msg)
 
     def parse_combined_text(self) -> Message:
         """Parse all rows/items into a single text or convert input to string if `stringify` is enabled."""
-        df, data, template, sep, stringify = self._clean_args()
-
-        if stringify:
+        # Early return for stringify option
+        if self.stringify:
             return self.convert_to_string()
 
-        lines = []
+        df, data = self._clean_args()
 
+        lines = []
         if df is not None:
             for _, row in df.iterrows():
-                formatted_text = template.format(**row.to_dict())
+                formatted_text = self.template.format(**row.to_dict())
                 lines.append(formatted_text)
         elif data is not None:
-            formatted_text = template.format(text=data.get_text())
+            formatted_text = self.template.format(text=data.get_text())
             lines.append(formatted_text)
 
-        combined_text = sep.join(lines)
+        combined_text = self.sep.join(lines)
         self.status = combined_text
         return Message(text=combined_text)
-
-    def _validate_input(self) -> None:
-        """Validate the input data and raise ValueError if invalid."""
-        if self.input_data is None:
-            msg = "Input data cannot be None"
-            raise ValueError(msg)
-        if not isinstance(self.input_data, Data | DataFrame | Message | str | list):
-            msg = f"Expected Data or DataFrame or Message or str, got {type(self.input_data).__name__}"
-            raise TypeError(msg)
 
     def _safe_convert(self, data: Any) -> str:
         """Safely convert input data to string."""
