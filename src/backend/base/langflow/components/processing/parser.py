@@ -19,6 +19,7 @@ class ParserComponent(Component):
         "Enable 'Stringify' to convert input into a readable string instead."
     )
     icon = "braces"
+    beta = True
 
     inputs = [
         BoolInput(
