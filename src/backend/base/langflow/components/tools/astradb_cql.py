@@ -103,7 +103,6 @@ class AstraDBCQLToolComponent(LCToolComponent):
         for k in self.partition_keys:
             where[k] = {"$eq": args[k]}
 
-
         # Clustering keys are optional
         for k in self.clustering_keys:
             if k in args:
