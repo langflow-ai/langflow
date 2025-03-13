@@ -8,6 +8,7 @@ from langflow.base.models.model import LCModelComponent
 from langflow.base.models.openai_constants import OPENAI_MODEL_NAMES
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs.inputs import BoolInput
 from langflow.io import DropdownInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
@@ -27,6 +28,7 @@ class LanguageModelComponent(LCModelComponent):
             value="OpenAI",
             info="Select the model provider",
             real_time_refresh=True,
+            options_metadata=[{"icon": "OpenAI"}, {"icon": "Anthropic"}],
         ),
         DropdownInput(
             name="model_name",
@@ -34,34 +36,31 @@ class LanguageModelComponent(LCModelComponent):
             options=OPENAI_MODEL_NAMES,
             value=OPENAI_MODEL_NAMES[0],
             info="Select the model to use",
-            real_time_refresh=True,
         ),
         SecretStrInput(
-            name="openai_api_key",
+            name="api_key",
             display_name="OpenAI API Key",
-            info="Your OpenAI API key",
+            info="Model Provider API key",
             required=False,
             show=True,
             real_time_refresh=True,
         ),
-        SecretStrInput(
-            name="anthropic_api_key",
-            display_name="Anthropic API Key",
-            info="Your Anthropic API key",
-            required=False,
-            show=False,
-            real_time_refresh=True,
-        ),
         MessageTextInput(
-            name="input",
+            name="input_value",
             display_name="Input",
             info="The input text to send to the model",
-            required=True,
         ),
         MessageTextInput(
             name="system_message",
             display_name="System Message",
             info="A system message that helps set the behavior of the assistant",
+            advanced=True,
+        ),
+        BoolInput(
+            name="stream",
+            display_name="Stream",
+            info="Whether to stream the response",
+            value=False,
             advanced=True,
         ),
         SliderInput(
@@ -81,36 +80,36 @@ class LanguageModelComponent(LCModelComponent):
         stream = self.stream
 
         if provider == "OpenAI":
-            if not self.openai_api_key:
-                raise ValueError("OpenAI API key is required when using OpenAI provider")
+            if not self.api_key:
+                msg = "OpenAI API key is required when using OpenAI provider"
+                raise ValueError(msg)
             return ChatOpenAI(
-                model=model_name,
+                model_name=model_name,
                 temperature=temperature,
                 streaming=stream,
-                api_key=self.openai_api_key,
+                openai_api_key=self.api_key,
             )
         if provider == "Anthropic":
-            if not self.anthropic_api_key:
-                raise ValueError("Anthropic API key is required when using Anthropic provider")
+            if not self.api_key:
+                msg = "Anthropic API key is required when using Anthropic provider"
+                raise ValueError(msg)
             return ChatAnthropic(
                 model=model_name,
                 temperature=temperature,
                 streaming=stream,
-                anthropic_api_key=self.anthropic_api_key,
+                anthropic_api_key=self.api_key,
             )
-        raise ValueError(f"Unknown provider: {provider}")
+        msg = f"Unknown provider: {provider}"
+        raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "provider":
             if field_value == "OpenAI":
                 build_config["model_name"]["options"] = OPENAI_MODEL_NAMES
                 build_config["model_name"]["value"] = OPENAI_MODEL_NAMES[0]
-                build_config["openai_api_key"]["show"] = True
-                build_config["anthropic_api_key"]["show"] = False
+                build_config["api_key"]["display_name"] = "OpenAI API Key"
             elif field_value == "Anthropic":
                 build_config["model_name"]["options"] = ANTHROPIC_MODELS
                 build_config["model_name"]["value"] = ANTHROPIC_MODELS[0]
-                build_config["openai_api_key"]["show"] = False
-                build_config["anthropic_api_key"]["show"] = True
-
+                build_config["api_key"]["display_name"] = "Anthropic API Key"
         return build_config
