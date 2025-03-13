@@ -183,7 +183,6 @@ export default function ChatView({
             </>
           ) : (
             <>
-              (
               <div className="flex h-full w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
                   <LangflowLogo
@@ -205,7 +204,6 @@ export default function ChatView({
                   </div>
                 </div>
               </div>
-              )
             </>
           ))}
         <div
