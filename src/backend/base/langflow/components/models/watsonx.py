@@ -1,15 +1,22 @@
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
-from langchain_ibm import WatsonxLLM
-from pydantic.v1 import SecretStr
+from langflow.inputs import DropdownInput, IntInput, SecretStrInput, StrInput, FloatInput, SliderInput
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.schema.dotdict import dotdict
 
+from pydantic.v1 import SecretStr
+from typing import List, Any
 
 from ibm_watsonx_ai.foundation_models import ModelInference
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames
 from ibm_watsonx_ai import Credentials
-from langflow.inputs import DropdownInput, IntInput, SecretStrInput, StrInput, FloatInput, SliderInput
-from langflow.field_typing.range_spec import RangeSpec
+from langchain_ibm import WatsonxLLM
 
+import logging
+import requests
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class WatsonxAIComponent(LCModelComponent):
@@ -18,50 +25,46 @@ class WatsonxAIComponent(LCModelComponent):
     icon = "WatsonxAI"
     name = "IBMwatsonxModel"
     beta = False
+    _previous_url = ""
+
+    _default_models = ["ibm/granite-3-2b-instruct",
+                       "ibm/granite-3-8b-instruct",
+                       "ibm/granite-13b-instruct-v2"]
+
     inputs = [
         *LCModelComponent._base_inputs,
         DropdownInput(
-            name="model_name",
-            display_name="Model Name",
-            advanced=False,
-            options=[
-                "codellama/codellama-34b-instruct-hf",
-                "google/flan-ul2",
-                "ibm/granite-13b-instruct-v2",
-                "ibm/granite-20b-code-instruct",
-                "ibm/granite-20b-multilingual",
-                "ibm/granite-3-2-8b-instruct",
-                "ibm/granite-3-2b-instruct",
-                "ibm/granite-3-8b-instruct",
-                "ibm/granite-34b-code-instruct",
-                "ibm/granite-3b-code-instruct",
-                "meta-llama/llama-3-2-11b-vision-instruct",
-                "meta-llama/llama-3-2-1b-instruct",
-                "meta-llama/llama-3-2-3b-instruct",
-                "meta-llama/llama-3-2-90b-vision-instruct",
-                "meta-llama/llama-3-3-70b-instruct",
-                "meta-llama/llama-3-405b-instruct",
-            ],
-            value="meta-llama/llama-3-3-70b-instruct",
-        ),
-        StrInput(
             name="url",
             display_name="watsonx API Endpoint",
-            advanced=True,
             info="The base URL of the API.",
-            value="https://us-south.ml.cloud.ibm.com",
+            value=None,
+            options=["https://us-south.ml.cloud.ibm.com",
+                     "https://eu-de.ml.cloud.ibm.com",
+                     "https://eu-gb.ml.cloud.ibm.com",
+                     "https://au-syd.ml.cloud.ibm.com",
+                     "https://jp-tok.ml.cloud.ibm.com",
+                     "https://ca-tor.ml.cloud.ibm.com"
+                     ],
+            real_time_refresh=True
         ),
         StrInput(
             name="project_id",
             display_name="watsonx project id",
-            advanced=False,
         ),
         SecretStrInput(
             name="api_key",
             display_name="API Key",
             info="The API Key to use for the model.",
-            advanced=False,
             required=True,
+        ),
+        DropdownInput(
+            name="model_name",
+            display_name="Model Name",
+            options=[],
+            value=None,
+            dynamic=True,
+            required=True,
+            refresh_button=True
         ),
         IntInput(
             name="max_tokens",
@@ -129,6 +132,43 @@ class WatsonxAIComponent(LCModelComponent):
             field_type="str",
         ),
     ]
+
+    @staticmethod
+    def fetch_models(base_url: str) -> List[str]:
+        """Fetch available models from the watsonx.ai API"""
+        try:
+            endpoint = f"{base_url}/ml/v1/foundation_model_specs"
+            params = {
+                "version": "2024-09-16",
+                "filters": "function_text_generation,!lifecycle_withdrawn:and"
+            }
+
+            response = requests.get(endpoint, params=params, timeout=10)
+
+            if response.status_code == 200:
+                data = response.json()
+                models = [model['model_id']
+                          for model in data.get('resources', [])]
+                return sorted(models) if models else WatsonxAIComponent._default_models
+            else:
+                return WatsonxAIComponent._default_models
+        except Exception as e:
+            print(f"Error fetching models: {e}")
+            return WatsonxAIComponent._default_models
+
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+        """Update model options when URL or API key changes."""
+        logger.info(
+            "Updating build config. Field name: %s, Field value: %s", field_name, field_value)
+
+        if field_name == "url" and field_value:
+            try:
+                models = self.fetch_models(base_url=build_config.url.value)
+                build_config.model_name.options = models
+                logger.info(
+                    f"Updated model options: {len(models)} models found in {build_config.url.value}")
+            except Exception as e:
+                logger.error(f"Error updating model options: {e}")
 
     def build_model(self) -> LanguageModel:
         creds = Credentials(
