@@ -357,7 +357,7 @@ class TriggerService(Service):
                     state="initial",
                     author_id=user_actor.id,
                     assignee_id=flow_actor.id,
-                    category="trigger",
+                    category=trigger_data.get("source", "trigger"),
                     attachments=[json.dumps(event, default=str)],
                 )
                 task = await self.task_orchestration_service.create_task(task_create, session)
@@ -439,9 +439,6 @@ class TriggerService(Service):
                         # Check if it ends with "Component" or contains "Trigger"
                         if potential_type.endswith("Component") or "Trigger" in potential_type:
                             node_type = potential_type
-
-                # Log the node type for debugging
-                logger.debug(f"Node type: {node_type}, Node ID: {node_id}")
 
                 if not node_type:
                     continue
