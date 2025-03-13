@@ -82,7 +82,7 @@ export const useBarControls = (
 
           scaledVolume = volumeLevel * 10;
 
-          soundDetected = scaledVolume > 2;
+          soundDetected = scaledVolume > 0.3;
 
           if (setSoundDetected) {
             setSoundDetected(soundDetected);
