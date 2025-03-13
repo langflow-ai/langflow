@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from sqlalchemy import delete
 from sqlalchemy import exc as sqlalchemy_exc
-from sqlmodel import col, select
+from sqlmodel import select
 
 from langflow.services.auth.utils import create_super_user, verify_password
 from langflow.services.cache.factory import CacheServiceFactory
@@ -179,14 +179,19 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         session: The database session to use for the deletion
     """
     try:
-        # Delete transactions using bulk delete
-        delete_stmt = delete(TransactionTable).where(
-            col(TransactionTable.id).in_(
-                select(TransactionTable.id)
-                .order_by(col(TransactionTable.timestamp).desc())
-                .offset(settings_service.settings.max_transactions_to_keep)
-            )
+        # Create a subquery to select the IDs of transactions that need to be deleted
+        subquery = (
+            select(TransactionTable.id)
+            .order_by(TransactionTable.timestamp.desc())
+            .offset(settings_service.settings.max_transactions_to_keep)
         )
+
+        # Execute the subquery and fetch the result
+        result = await session.exec(subquery)
+        ids_to_delete = [row[0] for row in result]
+
+        # Build the delete statement using the IDs obtained from the previous step
+        delete_stmt = delete(TransactionTable).where(TransactionTable.id.in_(ids_to_delete))
 
         await session.exec(delete_stmt)
         await session.commit()
@@ -208,14 +213,19 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         session: The database session to use for the deletion
     """
     try:
-        # Delete vertex builds using bulk delete
-        delete_stmt = delete(VertexBuildTable).where(
-            col(VertexBuildTable.id).in_(
-                select(VertexBuildTable.id)
-                .order_by(col(VertexBuildTable.timestamp).desc())
-                .offset(settings_service.settings.max_vertex_builds_to_keep)
-            )
+        # Create a subquery to select the IDs of vertex builds that need to be deleted
+        subquery = (
+            select(VertexBuildTable.id)
+            .order_by(VertexBuildTable.timestamp.desc())
+            .offset(settings_service.settings.max_transactions_to_keep)
         )
+
+        # Execute the subquery and fetch the result
+        result = await session.exec(subquery)
+        ids_to_delete = [row[0] for row in result]
+
+        # Build the delete statement using the IDs obtained from the previous step
+        delete_stmt = delete(VertexBuildTable).where(VertexBuildTable.id.in_(ids_to_delete))
 
         await session.exec(delete_stmt)
         await session.commit()
