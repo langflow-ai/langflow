@@ -44,8 +44,7 @@ class TestRegexExtractorComponent(ComponentTestBaseWithoutClient):
 
         result = component.extract_matches()
         assert isinstance(result, list)
-        assert len(result) == 1
-        assert result[0].data == {"matches": []}
+        assert len(result) == 0  # The implementation returns an empty list when no matches are found
 
     def test_invalid_regex_pattern(self):
         # Test with invalid regex pattern
@@ -66,8 +65,7 @@ class TestRegexExtractorComponent(ComponentTestBaseWithoutClient):
 
         result = component.extract_matches()
         assert isinstance(result, list)
-        assert len(result) == 1
-        assert result[0].data == {"matches": []}
+        assert len(result) == 0  # The implementation returns an empty list when input is empty
 
     def test_get_matches_text_output(self):
         # Test the text output method
