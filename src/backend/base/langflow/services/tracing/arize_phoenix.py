@@ -39,7 +39,9 @@ class ArizePhoenixTracer(BaseTracer):
     chat_input_value: str
     chat_output_value: str
 
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    def __init__(
+        self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID, session_id: str | None = None
+    ):
         """Initializes the ArizePhoenixTracer instance and sets up a root span."""
         self.trace_name = trace_name
         self.trace_type = trace_type
@@ -49,6 +51,7 @@ class ArizePhoenixTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
         self.chat_input_value = ""
         self.chat_output_value = ""
+        self.session_id = session_id
 
         try:
             self._ready = self.setup_arize_phoenix()
@@ -63,7 +66,7 @@ class ArizePhoenixTracer(BaseTracer):
                 name=self.flow_id,
                 start_time=self._get_current_timestamp(),
             )
-            self.root_span.set_attribute(SpanAttributes.SESSION_ID, self.flow_id)
+            self.root_span.set_attribute(SpanAttributes.SESSION_ID, self.session_id or self.flow_id)
             self.root_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, self.trace_type)
             self.root_span.set_attribute("langflow.project.name", self.project_name)
             self.root_span.set_attribute("langflow.flow.name", self.flow_name)

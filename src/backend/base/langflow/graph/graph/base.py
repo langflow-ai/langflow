@@ -31,6 +31,7 @@ from langflow.graph.graph.utils import (
     should_continue,
 )
 from langflow.graph.schema import InterfaceComponentTypes, RunOutputs
+from langflow.graph.utils import log_vertex_build
 from langflow.graph.vertex.base import Vertex, VertexStates
 from langflow.graph.vertex.schema import NodeData, NodeTypeEnum
 from langflow.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
@@ -635,6 +636,15 @@ class Graph:
             raise ValueError(msg)
         return self._run_id
 
+    def set_tracing_session_id(self) -> None:
+        """Sets the ID of the current session.
+
+        Args:
+            session_id (str): The session ID.
+        """
+        if self.tracing_service:
+            self.tracing_service.set_session_id(self._session_id)
+
     def set_run_id(self, run_id: uuid.UUID | None = None) -> None:
         """Sets the ID of the current run.
 
@@ -647,6 +657,8 @@ class Graph:
         self._run_id = str(run_id)
         if self.tracing_service:
             self.tracing_service.set_run_id(run_id)
+        if self._session_id and self.tracing_service is not None:
+            self.tracing_service.set_session_id(self.session_id)
 
     def set_run_name(self) -> None:
         # Given a flow name, flow_id
@@ -1596,6 +1608,15 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
+                await log_vertex_build(
+                    flow_id=self.flow_id or "",
+                    vertex_id=result.vertex.id,
+                    valid=result.valid,
+                    params=result.params,
+                    data=result.result_dict,
+                    artifacts=result.artifacts,
+                )
+
                 vertices.append(result.vertex)
             else:
                 msg = f"Invalid result from task {task_name}: {result}"

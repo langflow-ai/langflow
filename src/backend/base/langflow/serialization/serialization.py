@@ -145,7 +145,7 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
     if np.issubdtype(obj.dtype, np.bool_):
         return bool(obj)
     if np.issubdtype(obj.dtype, np.complexfloating):
-        return complex(cast(complex, obj))
+        return complex(cast("complex", obj))
     if np.issubdtype(obj.dtype, np.str_):
         return _serialize_str(str(obj), max_length, max_items)
     if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
@@ -209,7 +209,7 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
                 if np.issubdtype(obj.dtype, np.bool_):
                     return bool(obj)
                 if np.issubdtype(obj.dtype, np.complexfloating):
-                    return complex(cast(complex, obj))
+                    return complex(cast("complex", obj))
                 if np.issubdtype(obj.dtype, np.str_):
                     return str(obj)
                 if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
@@ -221,8 +221,8 @@ def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | Non
 
 def serialize(
     obj: Any,
-    max_length: int | None = MAX_TEXT_LENGTH,
-    max_items: int | None = MAX_ITEMS_LENGTH,
+    max_length: int | None = None,
+    max_items: int | None = None,
     *,
     to_str: bool = False,
 ) -> Any:
@@ -275,7 +275,9 @@ def serialize(
 
 
 def serialize_or_str(
-    obj: Any, max_length: int | None = MAX_TEXT_LENGTH, max_items: int | None = MAX_ITEMS_LENGTH
+    obj: Any,
+    max_length: int | None = MAX_TEXT_LENGTH,
+    max_items: int | None = MAX_ITEMS_LENGTH,
 ) -> Any:
     """Calls serialize() and if it fails, returns a string representation of the object.
 
