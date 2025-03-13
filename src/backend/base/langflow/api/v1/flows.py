@@ -139,7 +139,12 @@ async def _new_flow(
 
 def flow_has_chat_input_component(flow: Flow) -> bool:
     """Check if a flow has a Chat Input component."""
-    return any(component.get("data", {}).get("type") == "ChatInput" for component in flow.data.get("nodes", []))
+    return any(component.get("id", "") == "ChatInput" for component in flow.data.get("nodes", []))
+
+
+def flow_has_trigger_component(flow: Flow) -> bool:
+    """Check if a flow has a Trigger component."""
+    return any("Trigger" in component.get("id", "") for component in flow.data.get("nodes", []))
 
 
 @router.post("/", response_model=FlowRead, status_code=201)
@@ -161,7 +166,7 @@ async def create_flow(
 
         # Create an actor for this flow
         try:
-            if flow_has_chat_input_component(db_flow):
+            if flow_has_chat_input_component(db_flow) or flow_has_trigger_component(db_flow):
                 await Actor.create_from_flow(session=session, flow_id=db_flow.id)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Error creating actor for flow: {e}")
@@ -349,7 +354,7 @@ async def update_flow(
         session.add(db_flow)
         await session.commit()
         await session.refresh(db_flow)
-        if flow_has_chat_input_component(db_flow) and not db_flow.actor_id:
+        if (flow_has_chat_input_component(db_flow) or flow_has_trigger_component(db_flow)) and not db_flow.actor_id:
             await Actor.create_from_flow(session=session, flow_id=db_flow.id)
         try:
             trigger_service = get_trigger_service()
