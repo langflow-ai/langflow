@@ -11,6 +11,7 @@ from pydantic import (
 )
 
 from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs.constants import MAX_TAB_OPTION_LENGTH, MAX_TAB_OPTIONS
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.table import Column, TableOptions, TableSchema
 
@@ -33,9 +34,7 @@ class FieldTypes(str, Enum):
     TAB = "tab"
 
 
-SerializableFieldTypes = Annotated[
-    FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)
-]
+SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
 
 
 # Base mixin for common input field attributes and methods
@@ -198,13 +197,16 @@ class TabMixin(BaseModel):
     @classmethod
     def validate_options(cls, v):
         """Validate that there are at most 3 tab values and each value has at most 20 characters."""
-        if len(v) > 3:
-            msg = f"Maximum of 3 tab values allowed. Got {len(v)} values."
+        if len(v) > MAX_TAB_OPTIONS:
+            msg = f"Maximum of {MAX_TAB_OPTIONS} tab values allowed. Got {len(v)} values."
             raise ValueError(msg)
 
         for i, value in enumerate(v):
-            if len(value) > 20:
-                msg = f"Tab value at index {i} exceeds maximum length of 20 characters. Got {len(value)} characters."
+            if len(value) > MAX_TAB_OPTION_LENGTH:
+                msg = (
+                    f"Tab value at index {i} exceeds maximum length of {MAX_TAB_OPTION_LENGTH} "
+                    f"characters. Got {len(value)} characters."
+                )
                 raise ValueError(msg)
 
         return v
