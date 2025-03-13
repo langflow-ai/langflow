@@ -277,5 +277,3 @@ src/frontend/temp
 
 .dspy_cache/
 *.db
-
-.vscode
