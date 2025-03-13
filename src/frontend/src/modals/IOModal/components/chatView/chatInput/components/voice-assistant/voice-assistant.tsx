@@ -402,8 +402,11 @@ export function VoiceAssistant({
                   <Button
                     variant={"outlineAmber"}
                     size={"icon"}
-                    data-testid="voice-assistant-settings-icon"
+                    data-testid="voice-assistant-settings-icon-without-openai"
                     className="group h-8 w-8"
+                    onClick={() => {
+                      setShowAudioInput(false);
+                    }}
                   >
                     <IconComponent
                       name="Settings"
