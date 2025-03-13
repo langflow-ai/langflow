@@ -23,3 +23,4 @@ class ServiceType(str, Enum):
     EVENT_BUS_SERVICE = "event_bus_service"
     JOB_QUEUE_SERVICE = "job_queue_service"
     TRIGGER_SERVICE = "triggers_service"
+    DISCORD_SERVICE = "discord_service"
