@@ -27,7 +27,7 @@
 
 ## ⚡️ Quickstart
 
-Langflow works with Python 3.10 to 3.12.
+Langflow works with Python 3.10 to 3.13.
 
 Install with uv **(recommended)** 
 
