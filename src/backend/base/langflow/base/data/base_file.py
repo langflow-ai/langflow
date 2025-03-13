@@ -8,7 +8,7 @@ from zipfile import ZipFile, is_zipfile
 import pandas as pd
 
 from langflow.custom import Component
-from langflow.io import BoolInput, FileInput, HandleInput, Output
+from langflow.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
@@ -135,6 +135,14 @@ class BaseFileComponent(Component, ABC):
             is_list=True,
             advanced=True,
         ),
+        StrInput(
+            name="separator",
+            display_name="Separator",
+            value="\n\n",
+            show=True,
+            info="Specify the separator to use between multiple outputs in Message format.",
+            advanced=True,
+        ),
         BoolInput(
             name="silent_errors",
             display_name="Silent Errors",
@@ -165,9 +173,9 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="CSV", name="data_csv", method="load_csv"),
-        Output(display_name="JSON", name="data_json", method="load_json"),
-        Output(display_name="Others", name="data_others", method="load_others"),
+        Output(display_name="Data", name="data", method="load_data"),
+        Output(display_name="DataFrame", name="dataframe", method="load_dataframe"),
+        Output(display_name="Message", name="message", method="load_message"),
     ]
 
     @abstractmethod
@@ -218,51 +226,79 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_csv(self) -> DataFrame:
-        """Loads CSV files by calling load_files().
+    def load_data(self) -> list[Data]:
+        """Load files and return as Data objects.
 
         Returns:
-            DataFrame: List of DataFrames from CSV files
+            list[Data]: List of Data objects from all files
         """
-        # Explicitly call load_files() from your original code
-        all_processed_data = self.load_files()
+        data_list = self.load_files()
+        if not data_list:
+            return [Data()]
+        return data_list
 
-        # Filter for CSV data and convert to DataFrames
+    def load_dataframe(self) -> DataFrame:
+        """Load files and return as DataFrame.
+
+        Returns:
+            DataFrame: DataFrame containing all file data
+        """
+        data_list = self.load_files()
+        if not data_list:
+            return DataFrame()
+
+        # First handle CSV files specially
         csv_data = []
-        for data in all_processed_data:
-            # Assuming data might be a Path object or string from your BaseFile
-            if data.file_path.lower().endswith(".csv"):
+        non_csv_rows = []
+
+        for data in data_list:
+            file_path = data.data.get(self.SERVER_FILE_PATH_FIELDNAME)
+            if file_path and str(file_path).lower().endswith(".csv"):
                 try:
-                    csv_data.extend(pd.read_csv(data.file_path).to_dict("records"))
-                except Exception as e:  # noqa: BLE001
-                    self.log(f"Error processing CSV file {data.path}: {e}")
+                    csv_data.extend(pd.read_csv(file_path).to_dict("records"))
+                except Exception as e:
+                    self.log(f"Error processing CSV file {file_path}: {e}")
+                    if not self.silent_errors:
+                        raise
+            else:
+                # Handle non-CSV files as before
+                row = dict(data.data) if data.data else {}
+                if data.text:
+                    row["text"] = data.text
+                if file_path:
+                    row["file_path"] = file_path
+                non_csv_rows.append(row)
 
-        return DataFrame(csv_data)
+        # Combine CSV and non-CSV data
+        all_rows = csv_data + non_csv_rows
+        return DataFrame(all_rows)
 
-    def load_json(self) -> list[Data]:
-        """Loads json file types.
+    def load_message(self) -> Message:
+        """Load files and return as Message with concatenated content.
 
         Returns:
-            list[Data]: List of Data JSON files.
+            Message: Message containing concatenated file content
         """
-        # Filter for JSON data and convert to Data objects
-        return [data for data in self.load_files() if data.file_path.lower().endswith(".json")]
+        data_list = self.load_files()
+        if not data_list:
+            return Message(text="")
 
-    def load_others(self) -> list[Message]:
-        """Loads other file types by calling load_files().
+        # Concatenate all text content
+        text_content = []
+        for data in data_list:
+            content = data.text if data.text else ""
+            text_content.append(content)
 
-        Returns:
-            list[Message]: List of raw file contents for non-CSV/JSON files
-        """
-        # Explicitly call load_files() from your original code
-        all_processed_data = self.load_files()
+        # Join with separator
+        final_text = self.separator.join(text_content)
 
-        # Filter for non-CSV and non-JSON files
-        return [
-            Message(data=data.data)
-            for data in all_processed_data
-            if not data.file_path.lower().endswith((".csv", ".json"))
-        ]
+        # Create message with all metadata
+        all_data = {}
+        for data in data_list:
+            if data.data:
+                all_data.update(data.data)
+
+        return Message(text=final_text, data=all_data)
 
     @property
     def valid_extensions(self) -> list[str]:

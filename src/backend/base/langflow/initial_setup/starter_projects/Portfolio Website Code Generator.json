@@ -9,16 +9,12 @@
             "dataType": "ParseData",
             "id": "ParseData-qN4UL",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "AnthropicModel-3QKQF",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -36,16 +32,12 @@
             "dataType": "TextInput",
             "id": "TextInput-2kYku",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "system_message",
             "id": "AnthropicModel-3QKQF",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -63,18 +55,12 @@
             "dataType": "AnthropicModel",
             "id": "AnthropicModel-3QKQF",
             "name": "text_output",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "ChatOutput-Anz6s",
-            "inputTypes": [
-              "Data",
-              "DataFrame",
-              "Message"
-            ],
+            "inputTypes": ["Data", "DataFrame", "Message"],
             "type": "str"
           }
         },
@@ -92,16 +78,12 @@
             "dataType": "AnthropicModel",
             "id": "AnthropicModel-hy2sm",
             "name": "model_output",
-            "output_types": [
-              "LanguageModel"
-            ]
+            "output_types": ["LanguageModel"]
           },
           "targetHandle": {
             "fieldName": "llm",
             "id": "StructuredOutputv2-ZQldd",
-            "inputTypes": [
-              "LanguageModel"
-            ],
+            "inputTypes": ["LanguageModel"],
             "type": "other"
           }
         },
@@ -119,16 +101,12 @@
             "dataType": "ParseData",
             "id": "ParseData-idUvo",
             "name": "text",
-            "output_types": [
-              "Message"
-            ]
+            "output_types": ["Message"]
           },
           "targetHandle": {
             "fieldName": "input_value",
             "id": "StructuredOutputv2-ZQldd",
-            "inputTypes": [
-              "Message"
-            ],
+            "inputTypes": ["Message"],
             "type": "str"
           }
         },
@@ -145,20 +123,18 @@
             "dataType": "File",
             "id": "File-GICjp",
             "name": "data",
-            "output_types": []
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "fieldName": "data",
             "id": "ParseData-idUvo",
-            "inputTypes": [
-              "Data"
-            ],
+            "inputTypes": ["Data"],
             "type": "other"
           }
         },
         "id": "reactflow__edge-File-GICjp{œdataTypeœ:œFileœ,œidœ:œFile-GICjpœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-ParseData-idUvo{œfieldNameœ:œdataœ,œidœ:œParseData-idUvoœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
         "source": "File-GICjp",
-        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-GICjpœ, œnameœ: œdataœ, œoutput_typesœ: []}",
+        "sourceHandle": "{œdataTypeœ: œFileœ, œidœ: œFile-GICjpœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-idUvo",
         "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-idUvoœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
@@ -168,16 +144,12 @@
             "dataType": "StructuredOutput",
             "id": "StructuredOutputv2-ZQldd",
             "name": "structured_output",
-            "output_types": [
-              "Data"
-            ]
+            "output_types": ["Data"]
           },
           "targetHandle": {
             "fieldName": "data",
             "id": "ParseData-qN4UL",
-            "inputTypes": [
-              "Data"
-            ],
+            "inputTypes": ["Data"],
             "type": "other"
           }
         },
@@ -193,10 +165,7 @@
         "data": {
           "id": "ParseData-idUvo",
           "node": {
-            "base_classes": [
-              "Data",
-              "Message"
-            ],
+            "base_classes": ["Data", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -204,11 +173,7 @@
             "display_name": "Data to Message",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "data",
-              "template",
-              "sep"
-            ],
+            "field_order": ["data", "template", "sep"],
             "frozen": false,
             "icon": "message-square",
             "legacy": false,
@@ -227,9 +192,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -240,9 +203,7 @@
                 "name": "data_list",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -273,9 +234,7 @@
                 "display_name": "Data",
                 "dynamic": false,
                 "info": "The data to convert to text.",
-                "input_types": [
-                  "Data"
-                ],
+                "input_types": ["Data"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "data",
@@ -314,9 +273,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -355,10 +312,7 @@
         "data": {
           "id": "ParseData-qN4UL",
           "node": {
-            "base_classes": [
-              "Data",
-              "Message"
-            ],
+            "base_classes": ["Data", "Message"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -366,11 +320,7 @@
             "display_name": "Data to Message",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "data",
-              "template",
-              "sep"
-            ],
+            "field_order": ["data", "template", "sep"],
             "frozen": false,
             "icon": "message-square",
             "legacy": false,
@@ -389,9 +339,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -402,9 +350,7 @@
                 "name": "data_list",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -435,9 +381,7 @@
                 "display_name": "Data",
                 "dynamic": false,
                 "info": "The data to convert to text.",
-                "input_types": [
-                  "Data"
-                ],
+                "input_types": ["Data"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "data",
@@ -476,9 +420,7 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -517,9 +459,7 @@
         "data": {
           "id": "TextInput-2kYku",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -528,9 +468,7 @@
             "display_name": "Text Input",
             "documentation": "",
             "edited": false,
-            "field_order": [
-              "input_value"
-            ],
+            "field_order": ["input_value"],
             "frozen": false,
             "icon": "type",
             "key": "TextInput",
@@ -548,9 +486,7 @@
                 "name": "text",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -582,9 +518,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -623,10 +557,7 @@
         "data": {
           "id": "AnthropicModel-hy2sm",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -665,9 +596,7 @@
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -676,14 +605,10 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -697,9 +622,7 @@
                 "display_name": "Anthropic API Key",
                 "dynamic": false,
                 "info": "Your Anthropic API key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": false,
                 "name": "api_key",
                 "password": true,
@@ -717,9 +640,7 @@
                 "display_name": "Anthropic API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -759,9 +680,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -830,9 +749,7 @@
                 "display_name": "Prefill",
                 "dynamic": false,
                 "info": "Prefill text to guide the model's response.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -871,9 +788,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -959,10 +874,7 @@
         "data": {
           "id": "AnthropicModel-3QKQF",
           "node": {
-            "base_classes": [
-              "LanguageModel",
-              "Message"
-            ],
+            "base_classes": ["LanguageModel", "Message"],
             "beta": false,
             "category": "models",
             "conditional_paths": [],
@@ -1001,9 +913,7 @@
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1012,14 +922,10 @@
                 "display_name": "Language Model",
                 "method": "build_model",
                 "name": "model_output",
-                "required_inputs": [
-                  "api_key"
-                ],
+                "required_inputs": ["api_key"],
                 "selected": "LanguageModel",
                 "tool_mode": true,
-                "types": [
-                  "LanguageModel"
-                ],
+                "types": ["LanguageModel"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1033,9 +939,7 @@
                 "display_name": "Anthropic API Key",
                 "dynamic": false,
                 "info": "Your Anthropic API key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "load_from_db": false,
                 "name": "api_key",
                 "password": true,
@@ -1053,9 +957,7 @@
                 "display_name": "Anthropic API URL",
                 "dynamic": false,
                 "info": "Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1095,9 +997,7 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1166,9 +1066,7 @@
                 "display_name": "Prefill",
                 "dynamic": false,
                 "info": "Prefill text to guide the model's response.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1207,9 +1105,7 @@
                 "display_name": "System Message",
                 "dynamic": false,
                 "info": "System message to pass to the model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1295,9 +1191,7 @@
         "data": {
           "id": "ChatOutput-Anz6s",
           "node": {
-            "base_classes": [
-              "Message"
-            ],
+            "base_classes": ["Message"],
             "beta": false,
             "category": "outputs",
             "conditional_paths": [],
@@ -1334,9 +1228,7 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1350,9 +1242,7 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1373,9 +1263,7 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1432,9 +1320,7 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1455,11 +1341,7 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
+                "input_types": ["Data", "DataFrame", "Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1483,10 +1365,7 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
+                "options": ["Machine", "User"],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1503,9 +1382,7 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1526,9 +1403,7 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1567,9 +1442,7 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1750,10 +1623,7 @@
         "data": {
           "id": "StructuredOutputv2-ZQldd",
           "node": {
-            "base_classes": [
-              "Data",
-              "DataFrame"
-            ],
+            "base_classes": ["Data", "DataFrame"],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -1783,9 +1653,7 @@
                 "name": "structured_output",
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
@@ -1796,9 +1664,7 @@
                 "name": "structured_output_dataframe",
                 "selected": "DataFrame",
                 "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
+                "types": ["DataFrame"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1829,9 +1695,7 @@
                 "display_name": "Input Message",
                 "dynamic": false,
                 "info": "The input message to the language model.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1852,9 +1716,7 @@
                 "display_name": "Language Model",
                 "dynamic": false,
                 "info": "The language model to use to generate the structured output.",
-                "input_types": [
-                  "LanguageModel"
-                ],
+                "input_types": ["LanguageModel"],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "llm",
@@ -2041,9 +1903,7 @@
                 "display_name": "Schema Name",
                 "dynamic": false,
                 "info": "Provide a name for the output data schema.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2064,9 +1924,7 @@
                 "display_name": "Format Instructions",
                 "dynamic": false,
                 "info": "The instructions to the language model for formatting the output.",
-                "input_types": [
-                  "Message"
-                ],
+                "input_types": ["Message"],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -2105,9 +1963,7 @@
         "data": {
           "id": "File-GICjp",
           "node": {
-            "base_classes": [
-              "Data"
-            ],
+            "base_classes": ["Data"],
             "beta": false,
             "category": "data",
             "conditional_paths": [],
@@ -2137,43 +1993,37 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "CSV",
-                "method": "load_csv",
-                "name": "data_csv",
-                "required_inputs": [],
-                "selected": "DataFrame",
-                "tool_mode": true,
-                "types": [
-                  "DataFrame"
-                ],
-                "value": "__UNDEFINED__"
-              },
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "JSON",
-                "method": "load_json",
-                "name": "data_json",
+                "display_name": "Data",
+                "method": "load_data",
+                "name": "data",
                 "required_inputs": [],
                 "selected": "Data",
                 "tool_mode": true,
-                "types": [
-                  "Data"
-                ],
+                "types": ["Data"],
                 "value": "__UNDEFINED__"
               },
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Others",
-                "method": "load_others",
-                "name": "data_others",
+                "display_name": "DataFrame",
+                "method": "load_dataframe",
+                "name": "dataframe",
+                "required_inputs": [],
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": ["DataFrame"],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "load_message",
+                "name": "message",
                 "required_inputs": [],
                 "selected": "Message",
                 "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
+                "types": ["Message"],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -2241,10 +2091,7 @@
                 "display_name": "Server File Path",
                 "dynamic": false,
                 "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
-                "input_types": [
-                  "Data",
-                  "Message"
-                ],
+                "input_types": ["Data", "Message"],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "file_path",
@@ -2335,6 +2182,25 @@
                 "type": "file",
                 "value": ""
               },
+              "separator": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "Separator",
+                "dynamic": false,
+                "info": "Specify the separator to use between multiple outputs in Message format.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "separator",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "\n\n"
+              },
               "silent_errors": {
                 "_input_type": "BoolInput",
                 "advanced": true,
@@ -2405,8 +2271,5 @@
   "is_component": false,
   "last_tested_version": "1.1.5",
   "name": "Portfolio Website Code Generator",
-  "tags": [
-    "chatbots",
-    "coding"
-  ]
+  "tags": ["chatbots", "coding"]
 }
