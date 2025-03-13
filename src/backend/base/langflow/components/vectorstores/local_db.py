@@ -3,7 +3,6 @@ from pathlib import Path
 
 from langchain_chroma import Chroma
 from loguru import logger
-from typing_extensions import override
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.base.vectorstores.utils import chroma_collection_to_data
@@ -160,7 +159,7 @@ class LocalDBComponent(LCVectorStoreComponent):
 
         return [d.name for d in vector_stores_dir.iterdir() if d.is_dir()]
 
-    def update_build_config(self, build_config, field_value, field_name=None):
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Update the build configuration when the mode changes."""
         if field_name == "mode":
             # Hide all dynamic fields by default
@@ -231,16 +230,9 @@ class LocalDBComponent(LCVectorStoreComponent):
 
         return str(persist_dir)
 
-    @override
     @check_cached_vector_store
     def build_vector_store(self) -> Chroma:
         """Builds the vector store object."""
-        try:
-            from langchain_chroma import Chroma
-        except ImportError as e:
-            msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
-            raise ImportError(msg) from e
-
         # Only use persist_directory if persist is True
         persist_directory = None
         if getattr(self, "persist", False):
