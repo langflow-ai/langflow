@@ -22,9 +22,9 @@
         },
         "id": "xy-edge__ScrapeGraphSearchApi-vo1Yo{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-vo1Yoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-xgcha{œfieldNameœ:œtoolsœ,œidœ:œAgent-xgchaœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "source": "ScrapeGraphSearchApi-vo1Yo",
-        "sourceHandle": "{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-vo1Yoœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œScrapeGraphSearchApiœ, œidœ: œScrapeGraphSearchApi-vo1Yoœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-xgcha",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-xgchaœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-xgchaœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -47,9 +47,9 @@
         },
         "id": "xy-edge__ChatInput-v88Su{œdataTypeœ:œChatInputœ,œidœ:œChatInput-v88Suœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-xgcha{œfieldNameœ:œinput_valueœ,œidœ:œAgent-xgchaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ChatInput-v88Su",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-v88Suœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-v88Suœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-xgcha",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-xgchaœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-xgchaœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
@@ -74,9 +74,9 @@
         },
         "id": "xy-edge__Agent-xgcha{œdataTypeœ:œAgentœ,œidœ:œAgent-xgchaœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-7b1Kf{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-7b1Kfœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "source": "Agent-xgcha",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-xgchaœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-xgchaœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-7b1Kf",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-7b1Kfœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-7b1Kfœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
