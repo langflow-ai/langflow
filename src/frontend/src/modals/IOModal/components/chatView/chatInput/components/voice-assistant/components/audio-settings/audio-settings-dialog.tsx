@@ -230,6 +230,12 @@ const SettingsVoiceModal = ({
     setOpenaiApiKey("");
   }, [isEditingOpenAIKey]);
 
+  useEffect(() => {
+    if (!open) {
+      setIsEditingOpenAIKey(false);
+    }
+  }, [open]);
+
   const showAddOpenAIKeyButton = !hasOpenAIAPIKey || isEditingOpenAIKey;
   const showAllSettings = hasOpenAIAPIKey && !isEditingOpenAIKey;
 
@@ -332,7 +338,7 @@ const SettingsVoiceModal = ({
                       disabled={!openaiApiKey}
                       size="md"
                     >
-                      Save
+                      {isEditingOpenAIKey ? "Update" : "Save"}
                     </Button>
                   </div>
                 )}

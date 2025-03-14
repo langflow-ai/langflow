@@ -225,7 +225,7 @@ export function VoiceAssistant({
     });
     setIsRecording(false);
   };
-
+  11;
   const handleSaveApiKey = async (apiKey: string, variableName: string) => {
     if (isEditingOpenAIKey && openaiApiKeyGlobalVariable) {
       await updateVariable.mutateAsync(
