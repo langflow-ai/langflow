@@ -1,4 +1,3 @@
-import os
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
@@ -446,7 +445,7 @@ class BaseFileComponent(Component, ABC):
             """Safely extract ZIP files."""
             for member in bundle.namelist():
                 # Filter out resource fork information for automatic production of mac
-                if os.path.basename(member).startswith("._"):
+                if Path(member).name.startswith("._"):
                     continue
                 member_path = output_dir / member
                 # Ensure no path traversal outside `output_dir`
@@ -459,7 +458,7 @@ class BaseFileComponent(Component, ABC):
             """Safely extract TAR files."""
             for member in bundle.getmembers():
                 # Filter out resource fork information for automatic production of mac
-                if os.path.basename(member.name).startswith("._"):
+                if Path(member.name).name.startswith("._"):
                     continue
                 member_path = output_dir / member.name
                 # Ensure no path traversal outside `output_dir`
