@@ -173,7 +173,7 @@ class BaseFileComponent(Component, ABC):
     ]
 
     _base_outputs = [
-        Output(display_name="Data", name="data", method="load_data"),
+        Output(display_name="Data", name="data", method="load_files"),
         Output(display_name="DataFrame", name="dataframe", method="load_dataframe"),
         Output(display_name="Message", name="message", method="load_message"),
     ]
@@ -189,7 +189,7 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A list of BaseFile objects with updated `data`.
         """
 
-    def load_files(self) -> list[Data]:
+    def load_files_base(self) -> list[Data]:
         """Loads and parses file(s), including unpacked file bundles.
 
         Returns:
@@ -226,13 +226,13 @@ class BaseFileComponent(Component, ABC):
                     else:
                         file.path.unlink()
 
-    def load_data(self) -> list[Data]:
+    def load_files(self) -> list[Data]:
         """Load files and return as Data objects.
 
         Returns:
             list[Data]: List of Data objects from all files
         """
-        data_list = self.load_files()
+        data_list = self.load_files_base()
         if not data_list:
             return [Data()]
         return data_list
