@@ -235,7 +235,7 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
         msg = "Cache service failed to connect to external database"
         raise ConnectionError(msg)
-    
+
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()
