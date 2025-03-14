@@ -322,6 +322,16 @@ class DatabaseVariableService(VariableService, Service):
             else:
                 # For non-credentials, value is already decrypted in get_by_category
                 settings_dict[variable.name] = variable.value
+        # We need at least provider, model, and api_key
+        # This will be a user facing error so it has to be very clear
+        required_fields = {"provider", "model", "api_key"}
+        missing_fields = required_fields - set(settings_dict.keys())
+        if missing_fields:
+            msg = (
+                "Please make sure to set the following LLM "
+                f"settings: {[missing_field.capitalize() for missing_field in missing_fields]}"
+            )
+            raise ValueError(msg)
 
         return settings_dict
 
