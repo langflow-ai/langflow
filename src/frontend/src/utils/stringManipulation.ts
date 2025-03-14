@@ -1,3 +1,5 @@
+import DOMPurify from "dompurify";
+import React from "react";
 import { FieldParserType } from "../types/api";
 
 function toSnakeCase(str: string): string {
@@ -133,4 +135,14 @@ export const getStatusColor = (status: string): string => {
   }
 
   return "";
+};
+
+export const convertStringToHTML = (htmlString: string): JSX.Element => {
+  return React.createElement("span", {
+    dangerouslySetInnerHTML: { __html: sanitizeHTML(htmlString) },
+  });
+};
+
+export const sanitizeHTML = (htmlString: string): string => {
+  return DOMPurify.sanitize(htmlString);
 };

@@ -19,6 +19,7 @@ export default function IntComponent({
   disabled,
   editNode = false,
   id = "",
+  readonly,
 }: InputProps<number, IntComponentType>): JSX.Element {
   const min = -Infinity;
   // Clear component state
@@ -59,6 +60,9 @@ export default function IntComponent({
     );
   };
 
+  const DISABLED_INPUT_CLASS =
+    "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm text-input placeholder:text-input";
+
   const handleNumberChange = (newValue) => {
     handleOnNewValue({ value: Number(newValue) });
   };
@@ -87,26 +91,35 @@ export default function IntComponent({
         min={getMinValue()}
         max={getMaxValue()}
         onChange={handleNumberChange}
+        isDisabled={disabled || readonly}
         value={value ?? ""}
       >
         <NumberInputField
-          className={getInputClassName()}
+          className={
+            disabled || readonly ? DISABLED_INPUT_CLASS : getInputClassName()
+          }
           onChange={handleChangeInput}
           onKeyDown={(event) => handleKeyDown(event, value, "")}
           onInput={handleInputChange}
-          disabled={disabled}
+          disabled={disabled || readonly}
           placeholder={editNode ? "Integer number" : "Type an integer number"}
           data-testid={id}
           ref={inputRef}
         />
         <NumberInputStepper className={stepperClassName}>
-          <NumberIncrementStepper className={incrementStepperClassName}>
+          <NumberIncrementStepper
+            className={incrementStepperClassName}
+            _disabled={{ cursor: "default" }}
+          >
             <PlusIcon
               className={iconClassName}
               strokeWidth={ICON_STROKE_WIDTH}
             />
           </NumberIncrementStepper>
-          <NumberDecrementStepper className={decrementStepperClassName}>
+          <NumberDecrementStepper
+            className={decrementStepperClassName}
+            _disabled={{ cursor: "default" }}
+          >
             <MinusIcon
               className={iconClassName}
               strokeWidth={ICON_STROKE_WIDTH}
