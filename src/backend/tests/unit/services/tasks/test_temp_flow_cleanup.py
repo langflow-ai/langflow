@@ -53,7 +53,7 @@ async def test_cleanup_orphaned_records_no_orphans():
         assert message is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.usefixtures("client")
 async def test_cleanup_orphaned_records_with_orphans():
     """Test cleanup when there are orphaned records."""
     orphaned_flow_id = uuid4()
