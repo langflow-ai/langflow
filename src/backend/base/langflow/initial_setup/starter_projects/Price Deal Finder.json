@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-R0YLG",
+            "id": "AgentQL-FEfZe",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7PMCu",
+            "id": "Agent-C2lNW",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-R0YLG{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-R0YLGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-FEfZe{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-FEfZeœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-C2lNW{œfieldNameœ:œtoolsœ,œidœ:œAgent-C2lNWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-R0YLG",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-R0YLGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-FEfZe",
+        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-FEfZeœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-C2lNW",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-C2lNWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-K4joL",
+            "id": "TavilySearchComponent-ilBh2",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7PMCu",
+            "id": "Agent-C2lNW",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-K4joL{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-K4joLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-ilBh2{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ilBh2œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-C2lNW{œfieldNameœ:œtoolsœ,œidœ:œAgent-C2lNWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-K4joL",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-K4joLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-ilBh2",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-ilBh2œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-C2lNW",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-C2lNWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-M0lPa",
+            "id": "ChatInput-ikOpG",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,25 +71,54 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-7PMCu",
+            "id": "Agent-C2lNW",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-M0lPa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-M0lPaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7PMCu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-ikOpG{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ikOpGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-C2lNW{œfieldNameœ:œinput_valueœ,œidœ:œAgent-C2lNWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-M0lPa",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-M0lPaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-ikOpG",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ikOpGœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-C2lNW",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-C2lNWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-C2lNW",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-uu7cZ",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__Agent-C2lNW{œdataTypeœ:œAgentœ,œidœ:œAgent-C2lNWœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-uu7cZ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uu7cZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-C2lNW",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-C2lNWœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-uu7cZ",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-uu7cZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-M0lPa",
+          "id": "ChatInput-ikOpG",
           "node": {
             "base_classes": [
               "Message"
@@ -386,21 +415,21 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-M0lPa",
+        "id": "ChatInput-ikOpG",
         "measured": {
           "height": 66,
           "width": 192
         },
         "position": {
-          "x": 32.99622536761149,
-          "y": 367.6878380048698
+          "x": 29.709503239241485,
+          "y": 315.10028395094986
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-LyZb7",
+          "id": "ChatOutput-uu7cZ",
           "node": {
             "base_classes": [
               "Message"
@@ -692,7 +721,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-LyZb7",
+        "id": "ChatOutput-uu7cZ",
         "measured": {
           "height": 66,
           "width": 192
@@ -706,7 +735,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-K4joL",
+          "id": "TavilySearchComponent-ilBh2",
           "node": {
             "base_classes": [
               "Data",
@@ -1039,9 +1068,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-K4joL",
+        "id": "TavilySearchComponent-ilBh2",
         "measured": {
-          "height": 435,
+          "height": 437,
           "width": 320
         },
         "position": {
@@ -1055,7 +1084,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-R0YLG",
+          "id": "AgentQL-FEfZe",
           "node": {
             "base_classes": [
               "Data"
@@ -1299,6 +1328,19 @@
                       "name": "tags",
                       "sortable": false,
                       "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -1348,21 +1390,21 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-R0YLG",
+        "id": "AgentQL-FEfZe",
         "measured": {
-          "height": 599,
+          "height": 602,
           "width": 320
         },
         "position": {
-          "x": 258.9873392343597,
-          "y": -351.3788533005941
+          "x": 331.42030247682777,
+          "y": -359.7956260200852
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-7PMCu",
+          "id": "Agent-C2lNW",
           "node": {
             "base_classes": [
               "Message"
@@ -1537,7 +1579,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1545,7 +1587,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -2038,9 +2080,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-7PMCu",
+        "id": "Agent-C2lNW",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -2052,7 +2094,7 @@
       },
       {
         "data": {
-          "id": "note-1ajq3",
+          "id": "note-fxnAw",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -2064,7 +2106,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-1ajq3",
+        "id": "note-fxnAw",
         "measured": {
           "height": 324,
           "width": 324
@@ -2078,7 +2120,7 @@
       },
       {
         "data": {
-          "id": "note-9nOJ2",
+          "id": "note-zwQr5",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -2091,21 +2133,21 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-9nOJ2",
+        "id": "note-zwQr5",
         "measured": {
           "height": 346,
           "width": 324
         },
         "position": {
-          "x": 328.21954223681814,
-          "y": -160.4106577664784
+          "x": 338.27967602049426,
+          "y": -413.92602911511665
         },
         "selected": false,
         "type": "noteNode"
       },
       {
         "data": {
-          "id": "note-JxjIs",
+          "id": "note-MwIwp",
           "node": {
             "description": "# Price Deal Finder \n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
             "display_name": "",
@@ -2116,7 +2158,7 @@
         },
         "dragging": false,
         "height": 674,
-        "id": "note-JxjIs",
+        "id": "note-MwIwp",
         "measured": {
           "height": 674,
           "width": 467
@@ -2132,7 +2174,7 @@
       },
       {
         "data": {
-          "id": "note-VxmZ9",
+          "id": "note-Aa3h7",
           "node": {
             "description": "### 💡 Add your Tavily AI Search key here",
             "display_name": "",
@@ -2145,14 +2187,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-VxmZ9",
+        "id": "note-Aa3h7",
         "measured": {
           "height": 324,
           "width": 344
         },
         "position": {
-          "x": 331.0865722920669,
-          "y": 447.2225407807426
+          "x": 343.1587328324782,
+          "y": 449.2345675374778
         },
         "resizing": false,
         "selected": false,
@@ -2161,18 +2203,17 @@
       }
     ],
     "viewport": {
-      "x": 546.0173634466885,
-      "y": 279.0139837091223,
-      "zoom": 0.671291450402032
+      "x": 434.3618973589291,
+      "y": 283.7646795952994,
+      "zoom": 0.6085090013349782
     }
   },
   "description": "Searches and compares product prices across multiple e-commerce platforms. ",
   "endpoint_name": null,
-  "id": "675468b8-08ab-44b0-aef1-87d76a75570a",
+  "id": "7a42e7d2-6f97-4df6-bbbb-f90705ed52d9",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Price Deal Finder",
-  "icon": "DollarSign",
   "tags": [
     "web-scraping",
     "agents"
