@@ -169,6 +169,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     messages: list["MessageTable"] = Relationship(back_populates="flow")
     transactions: list["TransactionTable"] = Relationship(back_populates="flow")
@@ -194,12 +195,14 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
 class FlowCreate(FlowBase):
     user_id: UUID | None = None
     folder_id: UUID | None = None
+    fs_path: str | None = None
 
 
 class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+    tags: list[str] | None = Field(None, description="The tags of the flow")
 
 
 class FlowHeader(BaseModel):
@@ -215,6 +218,7 @@ class FlowHeader(BaseModel):
     endpoint_name: str | None = Field(None, description="The name of the endpoint associated with this flow")
     description: str | None = Field(None, description="A description of the flow")
     data: dict | None = Field(None, description="The data of the component, if is_component is True")
+    tags: list[str] | None = Field(None, description="The tags of the flow")
 
     @field_validator("data", mode="before")
     @classmethod
@@ -231,6 +235,7 @@ class FlowUpdate(SQLModel):
     folder_id: UUID | None = None
     endpoint_name: str | None = None
     locked: bool | None = None
+    fs_path: str | None = None
 
     @field_validator("endpoint_name")
     @classmethod

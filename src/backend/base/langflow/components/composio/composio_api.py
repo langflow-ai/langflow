@@ -158,7 +158,7 @@ class ComposioAPIComponent(LCToolComponent):
 
             for item in data.get("items", []):
                 for auth_scheme in item.get("auth_schemes", []):
-                    if auth_scheme.get("mode") in ["OAUTH1", "OAUTH2"]:
+                    if auth_scheme.get("mode") in {"OAUTH1", "OAUTH2"}:
                         oauth_apps.append(item["key"].upper())
                         break
         except requests.RequestException as e:
@@ -369,7 +369,7 @@ class ComposioAPIComponent(LCToolComponent):
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return ComposioToolSet(api_key=self.api_key)
+            return ComposioToolSet(api_key=self.api_key, entity_id=self.entity_id)
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
             msg = "Please provide a valid Composio API Key in the component settings"

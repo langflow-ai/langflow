@@ -88,53 +88,36 @@ module.exports = {
       type: "category",
       label: "Deployment",
       items: [
-        "Deployment/deployment-docker",
-        "Deployment/deployment-gcp",
-        "Deployment/deployment-hugging-face-spaces",
-        "Deployment/deployment-kubernetes",
-        "Deployment/deployment-railway",
-        "Deployment/deployment-render",
-      ],
-    },
-    {
-      type: "category",
-      label: "Integrations",
-      items: [
-        "Integrations/Apify/integrations-apify",
-        "Integrations/integrations-assemblyai",
-        "Integrations/Composio/integrations-composio",
-        "Integrations/integrations-langfuse",
-        "Integrations/integrations-langsmith",
-        "Integrations/integrations-langwatch",
         {
-          type: 'category',
-          label: 'Google',
-          items: [
-            'Integrations/Google/integrations-setup-google-oauth-langflow',
-            'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
-          ],
+          type: "doc",
+          id: "Deployment/deployment-docker",
+          label: "Docker"
         },
         {
-          type: "category",
-          label: "Notion",
-          items: [
-            "Integrations/Notion/integrations-notion",
-            "Integrations/Notion/notion-agent-conversational",
-            "Integrations/Notion/notion-agent-meeting-notes",
-          ],
+          type: "doc",
+          id: "Deployment/deployment-gcp",
+          label: "Google Cloud Platform"
         },
-      ],
-    },
-    {
-      type: "category",
-      label: "Contributing",
-      items: [
-        "Contributing/contributing-community",
-        "Contributing/contributing-components",
-        "Contributing/contributing-github-discussion-board",
-        "Contributing/contributing-github-issues",
-        "Contributing/contributing-how-to-contribute",
-        "Contributing/contributing-telemetry",
+        {
+          type: "doc",
+          id: "Deployment/deployment-hugging-face-spaces",
+          label: "Hugging Face Spaces"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-kubernetes",
+          label: "Kubernetes"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-railway",
+          label: "Railway"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-render",
+          label: "Render"
+        }
       ],
     },
     {
@@ -155,12 +138,78 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Integrations",
+      items: [
+        "Integrations/Apify/integrations-apify",
+        "Integrations/Arize/integrations-arize",
+        "Integrations/integrations-assemblyai",
+        "Integrations/Composio/integrations-composio",
+        "Integrations/integrations-langfuse",
+        "Integrations/integrations-langsmith",
+        "Integrations/integrations-langwatch",
+        {
+          type: "doc",
+          id: "Integrations/integrations-mcp",
+          label: "MCP (Model context protocol)"
+        },
+        {
+          type: 'category',
+          label: 'Google',
+          items: [
+            'Integrations/Google/integrations-setup-google-oauth-langflow',
+            'Integrations/Google/integrations-setup-google-cloud-vertex-ai-langflow',
+          ],
+        },
+        {
+          type: "category",
+          label: "Notion",
+          items: [
+            "Integrations/Notion/integrations-notion",
+            "Integrations/Notion/notion-agent-conversational",
+            "Integrations/Notion/notion-agent-meeting-notes",
+          ],
+        },
+        {
+          type: "category",
+          label: "NVIDIA",
+          items: [
+            "Integrations/Nvidia/integrations-nvidia-ingest",
+          ],
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Contributing",
+      items: [
+        "Contributing/contributing-community",
+        "Contributing/contributing-components",
+        "Contributing/contributing-component-tests",
+        "Contributing/contributing-github-discussion-board",
+        "Contributing/contributing-github-issues",
+        "Contributing/contributing-how-to-contribute",
+        "Contributing/contributing-telemetry",
+      ],
+    },
+    {
+      type: "category",
       label: "Changelog",
       items: [
         {
           type: "link",
           label: "Changelog",
           href: "https://github.com/langflow-ai/langflow/releases/latest",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Support",
+      items: [
+        {
+          type: "doc",
+          id: "Support/luna-for-langflow",
+          label: "Luna for Langflow",
         },
       ],
     },
