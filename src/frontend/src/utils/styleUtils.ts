@@ -296,6 +296,7 @@ import {
 import { GroqIcon } from "../icons/Groq";
 import { HCDIcon } from "../icons/HCD";
 import { HuggingFaceIcon } from "../icons/HuggingFace";
+import { WatsonxAiIcon } from "../icons/IBMWatsonx";
 import { IFixIcon } from "../icons/IFixIt";
 import { IcosaIcon } from "../icons/Icosa";
 import { LMStudioIcon } from "../icons/LMStudio";
@@ -333,7 +334,6 @@ import { Streamlit } from "../icons/Streamlit";
 import { UpstashSvgIcon } from "../icons/Upstash";
 import { VectaraIcon } from "../icons/VectaraIcon";
 import { VertexAIIcon } from "../icons/VertexAI";
-import { WatsonxAiIcon } from "../icons/IBMWatsonx";
 import { WeaviateIcon } from "../icons/Weaviate";
 import SvgWikipedia from "../icons/Wikipedia/Wikipedia";
 import SvgWolfram from "../icons/Wolfram/Wolfram";
