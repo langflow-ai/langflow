@@ -1,6 +1,7 @@
 {
   "name": "langflow-docs",
   "version": "0.0.0",
+  "license": "MIT",
   "private": false,
   "scripts": {
     "clear-docs": "rimraf ./docs/",
