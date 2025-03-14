@@ -1,19 +1,18 @@
-from langflow.base.models.model import LCModelComponent
-from langflow.field_typing import LanguageModel
-from langflow.inputs import DropdownInput, IntInput, SecretStrInput, StrInput, FloatInput, SliderInput
-from langflow.field_typing.range_spec import RangeSpec
-from langflow.schema.dotdict import dotdict
+import logging
+from typing import Any
 
-from pydantic.v1 import SecretStr
-from typing import List, Any
-
+import requests
+from ibm_watsonx_ai import Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames
-from ibm_watsonx_ai import Credentials
 from langchain_ibm import WatsonxLLM
+from pydantic.v1 import SecretStr
 
-import logging
-import requests
+from langflow.base.models.model import LCModelComponent
+from langflow.field_typing import LanguageModel
+from langflow.field_typing.range_spec import RangeSpec
+from langflow.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput, StrInput
+from langflow.schema.dotdict import dotdict
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,9 +26,7 @@ class WatsonxAIComponent(LCModelComponent):
     beta = False
     _previous_url = ""
 
-    _default_models = ["ibm/granite-3-2b-instruct",
-                       "ibm/granite-3-8b-instruct",
-                       "ibm/granite-13b-instruct-v2"]
+    _default_models = ["ibm/granite-3-2b-instruct", "ibm/granite-3-8b-instruct", "ibm/granite-13b-instruct-v2"]
 
     inputs = [
         *LCModelComponent._base_inputs,
@@ -38,14 +35,15 @@ class WatsonxAIComponent(LCModelComponent):
             display_name="watsonx API Endpoint",
             info="The base URL of the API.",
             value=None,
-            options=["https://us-south.ml.cloud.ibm.com",
-                     "https://eu-de.ml.cloud.ibm.com",
-                     "https://eu-gb.ml.cloud.ibm.com",
-                     "https://au-syd.ml.cloud.ibm.com",
-                     "https://jp-tok.ml.cloud.ibm.com",
-                     "https://ca-tor.ml.cloud.ibm.com"
-                     ],
-            real_time_refresh=True
+            options=[
+                "https://us-south.ml.cloud.ibm.com",
+                "https://eu-de.ml.cloud.ibm.com",
+                "https://eu-gb.ml.cloud.ibm.com",
+                "https://au-syd.ml.cloud.ibm.com",
+                "https://jp-tok.ml.cloud.ibm.com",
+                "https://ca-tor.ml.cloud.ibm.com",
+            ],
+            real_time_refresh=True,
         ),
         StrInput(
             name="project_id",
@@ -133,32 +131,26 @@ class WatsonxAIComponent(LCModelComponent):
     ]
 
     @staticmethod
-    def fetch_models(base_url: str) -> List[str]:
+    def fetch_models(base_url: str) -> list[str]:
         """Fetch available models from the watsonx.ai API"""
         try:
             endpoint = f"{base_url}/ml/v1/foundation_model_specs"
-            params = {
-                "version": "2024-09-16",
-                "filters": "function_text_generation,!lifecycle_withdrawn:and"
-            }
+            params = {"version": "2024-09-16", "filters": "function_text_generation,!lifecycle_withdrawn:and"}
 
             response = requests.get(endpoint, params=params, timeout=10)
 
             if response.status_code == 200:
                 data = response.json()
-                models = [model['model_id']
-                          for model in data.get('resources', [])]
+                models = [model["model_id"] for model in data.get("resources", [])]
                 return sorted(models) if models else WatsonxAIComponent._default_models
-            else:
-                return WatsonxAIComponent._default_models
+            return WatsonxAIComponent._default_models
         except Exception as e:
             print(f"Error fetching models: {e}")
             return WatsonxAIComponent._default_models
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
         """Update model options when URL or API key changes."""
-        logger.info(
-            "Updating build config. Field name: %s, Field value: %s", field_name, field_value)
+        logger.info("Updating build config. Field name: %s, Field value: %s", field_name, field_value)
 
         if field_name == "url" and field_value:
             try:
@@ -166,15 +158,13 @@ class WatsonxAIComponent(LCModelComponent):
                 build_config.model_name.options = models
                 if build_config.model_name.value:
                     build_config.model_name.value = models[0]
-                logger.info(
-                    f"Updated model options: {len(models)} models found in {build_config.url.value}")
+                logger.info(f"Updated model options: {len(models)} models found in {build_config.url.value}")
             except Exception as e:
                 logger.error(f"Error updating model options: {e}")
 
     def build_model(self) -> LanguageModel:
         creds = Credentials(
-            api_key=SecretStr(
-                self.api_key).get_secret_value(),
+            api_key=SecretStr(self.api_key).get_secret_value(),
             url=self.url,
         )
 
