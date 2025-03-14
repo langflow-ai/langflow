@@ -14,7 +14,6 @@ from loguru._error_interceptor import ErrorInterceptor
 from loguru._file_sink import FileSink
 from loguru._simple_sinks import AsyncSink
 from platformdirs import user_cache_dir
-from rich.logging import RichHandler
 from typing_extensions import NotRequired, override
 
 from langflow.settings import DEV
@@ -232,16 +231,7 @@ def configure(
         if log_format is None or not is_valid_log_format(log_format):
             log_format = DEFAULT_LOG_FORMAT
 
-        # Configure loguru to use RichHandler
-        logger.configure(
-            handlers=[
-                {
-                    "sink": RichHandler(rich_tracebacks=True, markup=True),
-                    "format": log_format,
-                    "level": log_level.upper(),
-                }
-            ]
-        )
+        logger.add(sys.stdout, level=log_level.upper(), format=log_format, backtrace=True, diagnose=True)
 
         if not log_file:
             cache_dir = Path(user_cache_dir("langflow"))
