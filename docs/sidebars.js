@@ -148,6 +148,11 @@ module.exports = {
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
         {
+          type: "doc",
+          id: "Integrations/integrations-mcp",
+          label: "MCP (Model context protocol)"
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
@@ -179,6 +184,7 @@ module.exports = {
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-components",
+        "Contributing/contributing-component-tests",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
