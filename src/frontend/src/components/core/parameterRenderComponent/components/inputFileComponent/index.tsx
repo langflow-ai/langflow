@@ -83,7 +83,6 @@ export default function InputFileComponent({
         }
 
         // Upload all files
-        console.log(filesToProcess);
         Promise.all(
           filesToProcess.map(
             (file) =>
