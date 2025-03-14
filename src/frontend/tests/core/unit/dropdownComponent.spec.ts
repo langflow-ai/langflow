@@ -173,6 +173,7 @@ class AmazonBedrockComponent(LCModelComponent):
                 "cohere.command-r-plus-v1:0",
                 "cohere.embed-english-v3",
                 "cohere.embed-multilingual-v3",
+                "deepseek.r1-v1:0",
                 "meta.llama2-13b-chat-v1",
                 "meta.llama2-70b-chat-v1",
                 "meta.llama3-8b-instruct-v1:0",
