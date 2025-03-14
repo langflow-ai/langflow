@@ -25,9 +25,9 @@
         "id": "reactflow__edge-CombineText-JQ8Xk{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-JQ8Xkœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-PYaIP{œfieldNameœ:œtext2œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "CombineText-JQ8Xk",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-JQ8Xkœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-JQ8Xkœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}",
         "target": "CombineText-PYaIP",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-PYaIPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œtext2œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-PYaIP{œfieldNameœ:œtext1œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-YVmBe",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
         "target": "CombineText-PYaIP",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-PYaIPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œtext1œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-CombineText-PYaIP{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-PYaIPœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-RMgoi{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-RMgoiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "CombineText-PYaIP",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-PYaIPœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-PYaIPœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}",
         "target": "SambaNovaModel-RMgoi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-RMgoiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-RMgoiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -111,9 +111,9 @@
         "id": "reactflow__edge-SambaNovaModel-RMgoi{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-RMgoiœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6rUbq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6rUbqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "SambaNovaModel-RMgoi",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-RMgoiœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-RMgoiœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
         "target": "ChatOutput-6rUbq",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6rUbqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6rUbqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -139,9 +139,9 @@
         "id": "reactflow__edge-ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-zWVIS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-YVmBe",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
         "target": "Agent-zWVIS",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-zWVISœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "reactflow__edge-Agent-zWVIS{œdataTypeœ:œAgentœ,œidœ:œAgent-zWVISœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-JQ8Xk{œfieldNameœ:œtext2œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-zWVIS",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-zWVISœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-zWVISœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
         "target": "CombineText-JQ8Xk",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-JQ8Xkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œtext2œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "reactflow__edge-TavilySearchComponent-fCjYR{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-fCjYRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-zWVIS{œfieldNameœ:œtoolsœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-fCjYR",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-fCjYRœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-fCjYRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
         "target": "Agent-zWVIS",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-zWVISœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -223,9 +223,9 @@
         "id": "reactflow__edge-URL-ZIoqz{œdataTypeœ:œURLœ,œidœ:œURL-ZIoqzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GayT6{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "URL-ZIoqz",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ZIoqzœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-ZIoqzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
         "target": "Agent-GayT6",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -251,9 +251,9 @@
         "id": "reactflow__edge-YfinanceComponent-bHO0e{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-bHO0eœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GayT6{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "YfinanceComponent-bHO0e",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-bHO0eœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "sourceHandle": "{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-bHO0eœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
         "target": "Agent-GayT6",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -279,9 +279,9 @@
         "id": "xy-edge__ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-GayT6{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-YVmBe",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
         "target": "Agent-GayT6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -307,9 +307,9 @@
         "id": "xy-edge__Agent-GayT6{œdataTypeœ:œAgentœ,œidœ:œAgent-GayT6œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-JQ8Xk{œfieldNameœ:œtext1œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-GayT6",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-GayT6œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-GayT6œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
         "target": "CombineText-JQ8Xk",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-JQ8Xkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "targetHandle": "{œfieldNameœ:œtext1œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
@@ -2773,8 +2773,10 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "hidden": null,
                 "method": "message_response",
                 "name": "response",
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2894,9 +2896,9 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "OpenAI API Key",
+                "display_name": "Sambanova API Key",
                 "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "info": "The Sambanova API Key to use for the Sambanova model.",
                 "input_types": [
                   "Message"
                 ],
@@ -2910,12 +2912,33 @@
                 "type": "str",
                 "value": ""
               },
+              "base_url": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "SambaNova Cloud Base Url",
+                "dynamic": false,
+                "info": "The base URL of the Sambanova Cloud API. Defaults to https://api.sambanova.ai/v1/chat/completions. You can change this to use other urls like Sambastudio",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "base_url",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
+                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2970,24 +2993,6 @@
                 "type": "str",
                 "value": ""
               },
-              "json_mode": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -3007,30 +3012,12 @@
                 "type": "int",
                 "value": 15
               },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "The maximum number of retries to make when generating.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 5
-              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
                 "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "info": "The maximum number of tokens to generate.",
                 "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
@@ -3064,24 +3051,6 @@
                 "type": "other",
                 "value": ""
               },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -3093,13 +3062,20 @@
                 "input_types": [],
                 "name": "model_name",
                 "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.5-preview",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo"
+                  "Meta-Llama-3.3-70B-Instruct",
+                  "Meta-Llama-3.1-8B-Instruct",
+                  "Meta-Llama-3.1-70B-Instruct",
+                  "Meta-Llama-3.1-405B-Instruct",
+                  "DeepSeek-R1-Distill-Llama-70B",
+                  "DeepSeek-R1",
+                  "Meta-Llama-3.2-1B-Instruct",
+                  "Meta-Llama-3.2-3B-Instruct",
+                  "Llama-3.2-11B-Vision-Instruct",
+                  "Llama-3.2-90B-Vision-Instruct",
+                  "Qwen2.5-Coder-32B-Instruct",
+                  "Qwen2.5-72B-Instruct",
+                  "QwQ-32B-Preview",
+                  "Qwen2-Audio-7B-Instruct"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3131,25 +3107,6 @@
                 "type": "int",
                 "value": 100
               },
-              "openai_api_base": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "order": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
@@ -3173,24 +3130,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
-              },
-              "seed": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -3342,24 +3281,6 @@
                 "type": "str",
                 "value": "{sender_name}: {text}"
               },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "The timeout for requests to OpenAI completion API.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 700
-              },
               "tools": {
                 "_input_type": "HandleInput",
                 "advanced": false,
@@ -3379,6 +3300,35 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
+              },
+              "top_p": {
+                "_input_type": "SliderInput",
+                "advanced": true,
+                "display_name": "top_p",
+                "dynamic": false,
+                "info": "Model top_p",
+                "input_types": [],
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "top_p",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 1
               },
               "verbose": {
                 "_input_type": "BoolInput",
@@ -3474,8 +3424,10 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
+                "hidden": null,
                 "method": "message_response",
                 "name": "response",
+                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3595,9 +3547,9 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "OpenAI API Key",
+                "display_name": "Sambanova API Key",
                 "dynamic": false,
-                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "info": "The Sambanova API Key to use for the Sambanova model.",
                 "input_types": [
                   "Message"
                 ],
@@ -3611,12 +3563,33 @@
                 "type": "str",
                 "value": ""
               },
+              "base_url": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "SambaNova Cloud Base Url",
+                "dynamic": false,
+                "info": "The base URL of the Sambanova Cloud API. Defaults to https://api.sambanova.ai/v1/chat/completions. You can change this to use other urls like Sambastudio",
+                "input_types": [],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "base_url",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
+                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3671,24 +3644,6 @@
                 "type": "str",
                 "value": ""
               },
-              "json_mode": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "JSON Mode",
-                "dynamic": false,
-                "info": "If True, it will output JSON regardless of passing a schema.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "json_mode",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": false
-              },
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -3708,30 +3663,12 @@
                 "type": "int",
                 "value": 15
               },
-              "max_retries": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Retries",
-                "dynamic": false,
-                "info": "The maximum number of retries to make when generating.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_retries",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 5
-              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
                 "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "info": "The maximum number of tokens to generate.",
                 "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
@@ -3765,24 +3702,6 @@
                 "type": "other",
                 "value": ""
               },
-              "model_kwargs": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Model Kwargs",
-                "dynamic": false,
-                "info": "Additional keyword arguments to pass to the model.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "model_kwargs",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {}
-              },
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -3794,13 +3713,20 @@
                 "input_types": [],
                 "name": "model_name",
                 "options": [
-                  "gpt-4o-mini",
-                  "gpt-4o",
-                  "gpt-4.5-preview",
-                  "gpt-4-turbo",
-                  "gpt-4-turbo-preview",
-                  "gpt-4",
-                  "gpt-3.5-turbo"
+                  "Meta-Llama-3.3-70B-Instruct",
+                  "Meta-Llama-3.1-8B-Instruct",
+                  "Meta-Llama-3.1-70B-Instruct",
+                  "Meta-Llama-3.1-405B-Instruct",
+                  "DeepSeek-R1-Distill-Llama-70B",
+                  "DeepSeek-R1",
+                  "Meta-Llama-3.2-1B-Instruct",
+                  "Meta-Llama-3.2-3B-Instruct",
+                  "Llama-3.2-11B-Vision-Instruct",
+                  "Llama-3.2-90B-Vision-Instruct",
+                  "Qwen2.5-Coder-32B-Instruct",
+                  "Qwen2.5-72B-Instruct",
+                  "QwQ-32B-Preview",
+                  "Qwen2-Audio-7B-Instruct"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3832,25 +3758,6 @@
                 "type": "int",
                 "value": 100
               },
-              "openai_api_base": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "OpenAI API Base",
-                "dynamic": false,
-                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "openai_api_base",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "order": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
@@ -3874,24 +3781,6 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
-              },
-              "seed": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Seed",
-                "dynamic": false,
-                "info": "The seed controls the reproducibility of the job.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "seed",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 1
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -4043,24 +3932,6 @@
                 "type": "str",
                 "value": "{sender_name}: {text}"
               },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "The timeout for requests to OpenAI completion API.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 700
-              },
               "tools": {
                 "_input_type": "HandleInput",
                 "advanced": false,
@@ -4080,6 +3951,35 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
+              },
+              "top_p": {
+                "_input_type": "SliderInput",
+                "advanced": true,
+                "display_name": "top_p",
+                "dynamic": false,
+                "info": "Model top_p",
+                "input_types": [],
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "top_p",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 1,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 1
               },
               "verbose": {
                 "_input_type": "BoolInput",
