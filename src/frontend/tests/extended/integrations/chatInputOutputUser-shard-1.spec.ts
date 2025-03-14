@@ -95,17 +95,12 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    // Connect text output to first chat output
-    const urlTextOutput = await page
-      .getByTestId("handle-url-shownode-text-right")
-      .nth(0);
-    await urlTextOutput.hover();
-    await page.mouse.down();
-    const firstChatInput = await page
+    await page.getByTestId("handle-url-shownode-text-right").nth(0).click();
+
+    await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
-      .nth(0);
-    await firstChatInput.hover();
-    await page.mouse.up();
+      .nth(0)
+      .click();
 
     // Run flow and test text output inspection
     await page.getByTestId("button_run_url").first().click();
@@ -120,16 +115,15 @@ test(
     await page.keyboard.press("Escape");
 
     // Connect dataframe output to second chat output
-    const urlDataframeOutput = await page
+    await page
       .getByTestId("handle-url-shownode-dataframe-right")
-      .nth(0);
-    await urlDataframeOutput.hover();
-    await page.mouse.down();
-    const secondChatInput = await page
+      .nth(0)
+      .click();
+    await page.waitForTimeout(600);
+    await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
-      .nth(1);
-    await secondChatInput.hover();
-    await page.mouse.up();
+      .nth(1)
+      .click();
 
     // Run and verify text output is still shown
     await page.getByTestId("button_run_url").first().click();
