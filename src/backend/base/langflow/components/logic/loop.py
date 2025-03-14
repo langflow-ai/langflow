@@ -54,7 +54,7 @@ class LoopComponent(Component):
         """Evaluate whether to stop item or done output."""
         current_index = self.ctx.get(f"{self._id}_index", 0)
         data_length = len(self.ctx.get(f"{self._id}_data", []))
-        return current_index > max(data_length - 1, 0)
+        return current_index > data_length
 
     def item_output(self) -> Data:
         """Output the next item in the list or stop if done."""
@@ -105,7 +105,7 @@ class LoopComponent(Component):
         aggregated = self.ctx.get(f"{self._id}_aggregated", [])
 
         # Check if loop input is provided and append to aggregated list
-        if self.item is not None and not isinstance(self.item, str) and len(aggregated) <= len(data_list):
-            aggregated.append(self.item)
+        if self.data is not None and not isinstance(self.data, str) and len(aggregated) <= len(data_list):
+            aggregated.append(self.data)
             self.update_ctx({f"{self._id}_aggregated": aggregated})
         return aggregated
