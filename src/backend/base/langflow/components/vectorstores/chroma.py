@@ -122,7 +122,6 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store: "Chroma") -> None:
         """Adds documents to the Vector Store."""
-
         ingest_data: list | Data | DataFrame = self.ingest_data
         if not ingest_data:
             self.status = ""
