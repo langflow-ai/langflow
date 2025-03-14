@@ -25,9 +25,9 @@
         "id": "reactflow__edge-AgentQL-mvSyT{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-mvSyTœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-0WtsM{œfieldNameœ:œtoolsœ,œidœ:œAgent-0WtsMœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "AgentQL-mvSyT",
-        "sourceHandle": "{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-mvSyTœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-mvSyTœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-0WtsM",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-0WtsMœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-0WtsMœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-ChatInput-aQctf{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aQctfœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-0WtsM{œfieldNameœ:œinput_valueœ,œidœ:œAgent-0WtsMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-aQctf",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aQctfœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aQctfœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-0WtsM",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-0WtsMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-0WtsMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
