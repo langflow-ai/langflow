@@ -39,7 +39,7 @@ export const ColorPickerButtons = memo(
         >
           <div
             className={cn(
-              "h-4 w-4 rounded-full hover:border hover:border-ring",
+              "hover:border-ring h-4 w-4 rounded-full hover:border",
               bgColor === color ? "border-2 border-blue-500" : "",
               code === null && "border",
             )}

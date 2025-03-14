@@ -24,10 +24,10 @@ export default function FilePreview({
     <div className="group relative pb-2">
       {loading ? (
         isImage ? (
-          <div className="flex h-20 w-20 items-center justify-center rounded-md border border-ring bg-background">
+          <div className="border-ring bg-background flex h-20 w-20 items-center justify-center rounded-md border">
             <svg
               aria-hidden="true"
-              className={`h-10 w-10 animate-spin fill-black text-muted`}
+              className={`text-muted h-10 w-10 animate-spin fill-black`}
               viewBox="0 0 100 101"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -46,7 +46,7 @@ export default function FilePreview({
           <div
             className={`relative ${
               isImage ? "h-20 w-20" : "h-20 w-80"
-            } cursor-wait rounded-lg border border-ring bg-background transition duration-300`}
+            } border-ring bg-background cursor-wait rounded-lg border transition duration-300`}
           >
             <div className="ml-3 flex h-full w-full items-center gap-2 text-sm">
               <Skeleton className="h-10 w-10 rounded-lg" />
@@ -63,13 +63,13 @@ export default function FilePreview({
         <div
           className={`relative mt-2 ${
             isImage ? "h-20 w-32" : "h-20 w-32"
-          } cursor-pointer rounded-lg border border-border bg-background transition duration-300 group-hover:shadow-md`}
+          } border-border bg-background cursor-pointer rounded-lg border transition duration-300 group-hover:shadow-md`}
         >
           {isImage ? (
             <img
               src={URL.createObjectURL(file)}
               alt="file"
-              className="block h-full w-full rounded-md border border-border"
+              className="border-border block h-full w-full rounded-md border"
             />
           ) : (
             <div className="ml-3 flex h-full w-full items-center gap-2 text-sm">
@@ -81,15 +81,15 @@ export default function FilePreview({
             </div>
           )}
           <div
-            className={`absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center opacity-100 transition-opacity`}
+            className={`absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center opacity-100 transition-opacity`}
           >
             <div
-              className="group flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-muted p-2 transition-all hover:bg-input"
+              className="group bg-muted hover:bg-input flex h-7 w-7 cursor-pointer items-center justify-center rounded-full p-2 transition-all"
               onClick={onDelete}
             >
               <IconComponent
                 name="X"
-                className="h-4 w-4 stroke-muted-foreground stroke-2 group-hover:stroke-primary"
+                className="stroke-muted-foreground group-hover:stroke-primary h-4 w-4 stroke-2"
               />
             </div>
           </div>

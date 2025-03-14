@@ -126,7 +126,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
       <div
         data-testid="menu_status_saved_flow_button"
         id="menu_status_saved_flow_button"
-        className="shrink-0 text-xs font-medium text-accent-emerald-foreground"
+        className="text-accent-emerald-foreground shrink-0 text-xs font-medium"
       >
         Saved
       </div>
@@ -241,7 +241,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
         {currentFolder?.name && (
           <div className="hidden truncate md:flex">
             <div
-              className="cursor-pointer truncate pr-1 text-muted-foreground hover:text-primary"
+              className="text-muted-foreground hover:text-primary cursor-pointer truncate pr-1"
               onClick={() => {
                 navigate(
                   currentFolder?.id
@@ -256,14 +256,14 @@ export const MenuBar = ({}: {}): JSX.Element => {
         )}
       </div>
       <div
-        className="hidden w-fit shrink-0 select-none font-normal text-muted-foreground md:flex"
+        className="text-muted-foreground hidden w-fit shrink-0 font-normal select-none md:flex"
         data-testid="menu_bar_separator"
       >
         /
       </div>
 
       <div
-        className="overflow-hidden truncate text-sm sm:whitespace-normal"
+        className="truncate overflow-hidden text-sm sm:whitespace-normal"
         data-testid="menu_bar_display"
       >
         <div
@@ -281,8 +281,8 @@ export const MenuBar = ({}: {}): JSX.Element => {
               <Input
                 className={cn(
                   "h-6 w-full cursor-text font-semibold",
-                  "bg-transparent pl-1 pr-0 transition-colors duration-200",
-                  "border-0 outline-none focus:border-0 focus:outline-none focus:ring-0 focus:ring-offset-0",
+                  "bg-transparent pr-0 pl-1 transition-colors duration-200",
+                  "border-0 outline-none focus:border-0 focus:ring-0 focus:ring-offset-0 focus:outline-none",
                   !editingName && "text-primary hover:opacity-80",
                   isInvalidName && "text-status-red",
                 )}
@@ -301,7 +301,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               />
               <span
                 ref={measureRef}
-                className="invisible absolute left-0 top-0 -z-10 w-fit whitespace-pre pl-1 font-semibold"
+                className="invisible absolute top-0 left-0 -z-10 w-fit pl-1 font-semibold whitespace-pre"
                 aria-hidden="true"
                 data-testid="flow_name"
               >
@@ -316,10 +316,10 @@ export const MenuBar = ({}: {}): JSX.Element => {
             >
               <IconComponent
                 name="ChevronDown"
-                className="flex h-5 w-5 text-muted-foreground hover:text-primary"
+                className="text-muted-foreground hover:text-primary flex h-5 w-5"
               />
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-44 bg-white dark:bg-background">
+            <DropdownMenuContent className="dark:bg-background w-44 bg-white">
               <DropdownMenuLabel>Options</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => {
@@ -514,7 +514,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
           side="bottom"
           styleClasses="cursor-default z-10"
         >
-          <div className="flex cursor-default items-center gap-2 truncate text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex cursor-default items-center gap-2 truncate text-sm">
             <div className="flex cursor-default items-center gap-2 truncate text-sm">
               <div className="w-full truncate text-xs">
                 {printByBuildStatus()}
@@ -530,7 +530,7 @@ export const MenuBar = ({}: {}): JSX.Element => {
               }}
               className={
                 isBuilding
-                  ? "hidden items-center gap-1.5 text-xs text-status-red sm:flex"
+                  ? "text-status-red hidden items-center gap-1.5 text-xs sm:flex"
                   : "hidden"
               }
             >

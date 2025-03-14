@@ -52,7 +52,7 @@ const HiddenOutputsButton = memo(
   }) => (
     <Button
       unstyled
-      className="group flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+      className="group bg-muted hover:text-foreground flex h-[1.75rem] w-[1.75rem] items-center justify-center rounded-full border"
       onClick={onClick}
     >
       <ForwardedIconComponent
@@ -465,7 +465,7 @@ function GenericNode({
       >
         {memoizedNodeToolbarComponent}
         {isOutdated && !isUserEdited && !dismissAll && (
-          <div className="flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] bg-warning p-2 px-4 text-warning-foreground">
+          <div className="bg-warning text-warning-foreground flex h-10 w-full items-center gap-4 rounded-t-[0.69rem] p-2 px-4">
             <ForwardedIconComponent
               name="AlertTriangle"
               strokeWidth={ICON_STROKE_WIDTH}
@@ -490,7 +490,7 @@ function GenericNode({
         <div
           data-testid={`${data.id}-main-node`}
           className={cn(
-            "grid gap-3 text-wrap p-4 leading-5",
+            "grid gap-3 p-4 leading-5 text-wrap",
             showNode ? "border-b" : "relative",
           )}
         >

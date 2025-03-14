@@ -22,13 +22,13 @@ export const SearchInput = memo(function SearchInput({
     <div className="relative w-full flex-1">
       <ForwardedIconComponent
         name="Search"
-        className="absolute inset-y-0 left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
+        className="text-primary absolute inset-y-0 top-1/2 left-2 h-4 w-4 -translate-y-1/2"
       />
       <Input
         ref={searchInputRef}
         type="search"
         data-testid="sidebar-search-input"
-        className="w-full rounded-lg bg-background pl-8 text-sm"
+        className="bg-background w-full rounded-lg pl-8 text-sm"
         placeholder=""
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
@@ -36,7 +36,7 @@ export const SearchInput = memo(function SearchInput({
         value={search}
       />
       {!isInputFocused && search === "" && (
-        <div className="pointer-events-none absolute inset-y-0 left-8 top-1/2 flex w-4/5 -translate-y-1/2 items-center justify-between gap-2 text-sm text-muted-foreground">
+        <div className="text-muted-foreground pointer-events-none absolute inset-y-0 top-1/2 left-8 flex w-4/5 -translate-y-1/2 items-center justify-between gap-2 text-sm">
           Search{" "}
           <span>
             <ShortcutDisplay sidebar shortcut="/" />

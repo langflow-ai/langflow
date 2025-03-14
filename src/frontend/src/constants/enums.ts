@@ -23,7 +23,7 @@ export enum InputOutput {
 export enum IOInputTypes {
   TEXT = "TextInput",
   FILE_LOADER = "FileLoader",
-  KEY PAIR = "KeyPairInput",
+  KEY_PAIR = "KeyPairInput",
   JSON = "JsonInput",
   STRING_LIST = "StringListInput",
 }

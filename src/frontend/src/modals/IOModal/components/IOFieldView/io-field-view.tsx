@@ -73,7 +73,7 @@ export default function IOFieldView({
           case IOInputTypes.TEXT:
             return (
               <Textarea
-                className={`w-full custom-scroll ${
+                className={`custom-scroll w-full ${
                   left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
@@ -103,7 +103,7 @@ export default function IOFieldView({
               />
             );
 
-          case IOInputTypes.KEY PAIR:
+          case IOInputTypes.KEY_PAIR:
             return (
               <IOKeyPairInput
                 value={node.data.node!.template["input_value"]?.value}
@@ -153,7 +153,7 @@ export default function IOFieldView({
           default:
             return (
               <Textarea
-                className={`w-full custom-scroll ${
+                className={`custom-scroll w-full ${
                   left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Enter text..."}
@@ -272,7 +272,7 @@ export default function IOFieldView({
           default:
             return (
               <Textarea
-                className={`w-full custom-scroll ${
+                className={`custom-scroll w-full ${
                   left ? "min-h-32" : "h-full"
                 }`}
                 placeholder={"Empty"}

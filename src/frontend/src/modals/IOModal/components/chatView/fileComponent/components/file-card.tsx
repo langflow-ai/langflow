@@ -40,11 +40,11 @@ export default function FileCard({
           onMouseLeave={handleMouseLeave}
           style={{ display: "inline-block" }}
         >
-          <div className="relative w-[50%] rounded-lg border border-border">
+          <div className="border-border relative w-[50%] rounded-lg border">
             <img
               src={imgSrc}
               alt="generated image"
-              className="m-0 h-auto w-auto rounded-lg border border-border p-0 transition-all"
+              className="border-border m-0 h-auto w-auto rounded-lg border p-0 transition-all"
             />
             <DownloadButton
               isHovered={isHovered}

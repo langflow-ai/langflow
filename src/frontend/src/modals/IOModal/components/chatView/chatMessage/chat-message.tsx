@@ -209,7 +209,7 @@ export default function ChatMessage({
   };
 
   const editedFlag = chat.edit ? (
-    <div className="text-sm text-muted-foreground">(Edited)</div>
+    <div className="text-muted-foreground text-sm">(Edited)</div>
   ) : null;
 
   if (chat.category === "error") {
@@ -229,7 +229,7 @@ export default function ChatMessage({
 
   return (
     <>
-      <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
+      <div className="word-break-break-word w-5/6 max-w-[768px] py-4">
         <div
           className={cn(
             "group relative flex w-full gap-4 rounded-md p-2",
@@ -241,7 +241,7 @@ export default function ChatMessage({
               "relative flex h-[32px] w-[32px] items-center justify-center overflow-hidden rounded-md text-2xl",
               !chat.isSend
                 ? "bg-muted"
-                : "border border-border hover:border-input",
+                : "border-border hover:border-input border",
             )}
             style={
               chat.properties?.background_color
@@ -302,7 +302,7 @@ export default function ChatMessage({
               >
                 {chat.sender_name}
                 {chat.properties?.source && (
-                  <div className="text-[13px] font-normal text-muted-foreground">
+                  <div className="text-muted-foreground text-[13px] font-normal">
                     {chat.properties?.source.source}
                   </div>
                 )}
@@ -400,7 +400,7 @@ export default function ChatMessage({
                   ) : (
                     <>
                       <div
-                        className={`w-full items-baseline whitespace-pre-wrap break-words text-[14px] font-normal ${
+                        className={`w-full items-baseline text-[14px] font-normal break-words whitespace-pre-wrap ${
                           isEmpty ? "text-muted-foreground" : "text-primary"
                         }`}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}

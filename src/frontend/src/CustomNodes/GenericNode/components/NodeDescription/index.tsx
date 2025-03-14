@@ -77,7 +77,7 @@ export default function NodeDescription({
         <MemoizedMarkdown
           linkTarget="_blank"
           className={cn(
-            "markdown prose flex w-full flex-col text-[13px] leading-5 word-break-break-word [&_pre]:whitespace-break-spaces [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background",
+            "markdown prose word-break-break-word [&_pre]:!bg-code-description-background [&_pre_code]:!bg-code-description-background flex w-full flex-col text-[13px] leading-5 [&_pre]:whitespace-break-spaces",
             mdClassName,
           )}
         >
@@ -153,7 +153,7 @@ export default function NodeDescription({
           <Textarea
             maxLength={charLimit}
             className={cn(
-              "nowheel h-full w-full focus:border-primary focus:ring-0",
+              "nowheel focus:border-primary h-full w-full focus:ring-0",
               inputClassName,
             )}
             autoFocus
@@ -183,7 +183,7 @@ export default function NodeDescription({
           data-testid="generic-node-desc"
           ref={overflowRef}
           className={cn(
-            "nodoubleclick generic-node-desc-text h-full cursor-grab text-[13px] text-muted-foreground word-break-break-word",
+            "nodoubleclick generic-node-desc-text text-muted-foreground word-break-break-word h-full cursor-grab text-[13px]",
             description === "" || !description ? "font-light italic" : "",
             placeholderClassName,
           )}

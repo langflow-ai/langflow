@@ -51,7 +51,7 @@ export default function AccordionComponent({
             }}
             disabled={disabled}
             className={cn(
-              sideBar ? "w-full bg-muted px-[0.75rem] py-[0.5rem]" : "ml-3",
+              sideBar ? "bg-muted w-full px-[0.75rem] py-[0.5rem]" : "ml-3",
               disabled ? "cursor-not-allowed" : "cursor-pointer",
             )}
           >

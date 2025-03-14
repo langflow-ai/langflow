@@ -37,7 +37,7 @@ export default function DisclosureComponent({
                     name="ChevronRight"
                     className={`${
                       open || defaultOpen ? "rotate-90 transform" : ""
-                    } h-4 w-4 text-foreground`}
+                    } text-foreground h-4 w-4`}
                   />
                 </div>
               </div>

@@ -12,7 +12,7 @@ const TextOutputView = ({
   }
   return (
     <Textarea
-      className={`w-full custom-scroll ${left ? "min-h-32" : "h-full"}`}
+      className={`custom-scroll w-full ${left ? "min-h-32" : "h-full"}`}
       placeholder={"Empty"}
       readOnly
       // update to real value on flowPool

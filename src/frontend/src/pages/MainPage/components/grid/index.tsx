@@ -84,7 +84,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
         draggable
         onDragStart={onDragStart}
         onClick={handleClick}
-        className={`my-1 flex flex-col rounded-lg border border-border bg-background p-4 hover:border-placeholder-foreground hover:shadow-sm ${
+        className={`border-border bg-background hover:border-placeholder-foreground my-1 flex flex-col rounded-lg border p-4 hover:shadow-sm ${
           isComponent ? "cursor-default" : "cursor-pointer"
         }`}
       >
@@ -101,7 +101,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
               <div className="text-md truncate font-semibold">
                 {flowData.name}
               </div>
-              <div className="truncate text-xs text-muted-foreground">
+              <div className="text-muted-foreground truncate text-xs">
                 Edited {timeElapsed(flowData.updated_at)} ago
               </div>
             </div>
@@ -116,7 +116,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
                   <ForwardedIconComponent
                     name="Ellipsis"
                     aria-hidden="true"
-                    className="h-5 w-5 text-muted-foreground group-hover:text-foreground"
+                    className="text-muted-foreground group-hover:text-foreground h-5 w-5"
                   />
                 </Button>
               </DropdownMenuTrigger>
@@ -137,7 +137,7 @@ const GridComponent = ({ flowData }: { flowData: FlowType }) => {
           </div>
         </div>
 
-        <div className="line-clamp-2 h-full pt-5 text-sm text-primary">
+        <div className="text-primary line-clamp-2 h-full pt-5 text-sm">
           {flowData.description}
         </div>
       </Card>

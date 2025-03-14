@@ -171,7 +171,7 @@ export default function ShareModal({
               current?
             </span>
             <br></br>
-            <span className="text-xs text-destructive">
+            <span className="text-destructive text-xs">
               Note: This action is irreversible.
             </span>
           </ConfirmationModal.Content>
@@ -216,14 +216,14 @@ export default function ShareModal({
           <span className="pr-2">Share</span>
           <IconComponent
             name="Share3"
-            className="-m-0.5 h-6 w-6 text-foreground"
+            className="text-foreground -m-0.5 h-6 w-6"
             aria-hidden="true"
           />
         </BaseModal.Header>
         <BaseModal.Content>
           {open && (
             <>
-              <div className="w-full rounded-lg border border-border p-4">
+              <div className="border-border w-full rounded-lg border p-4">
                 <EditFlowSettings name={name} description={description} />
               </div>
               <div className="mt-3 flex h-8 w-full">
@@ -235,7 +235,7 @@ export default function ShareModal({
                   setSelectedTags={setSelectedTags}
                 />
               </div>
-              <div className="mb-2 mt-5 flex items-center space-x-2">
+              <div className="mt-5 mb-2 flex items-center space-x-2">
                 <Checkbox
                   id="public"
                   checked={sharePublic}
@@ -251,7 +251,7 @@ export default function ShareModal({
                   Set {nameComponent} status to public
                 </label>
               </div>
-              <span className="text-xs text-destructive">
+              <span className="text-destructive text-xs">
                 <b>Attention:</b> API keys in specified fields are automatically
                 removed upon sharing.
               </span>

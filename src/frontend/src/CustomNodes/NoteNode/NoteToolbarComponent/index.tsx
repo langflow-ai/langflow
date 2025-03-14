@@ -104,7 +104,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
   );
 
   return (
-    <div className="w-26 noflow nowheel nopan nodelete nodrag h-10">
+    <div className="noflow nowheel nopan nodelete nodrag h-10 w-26">
       <span className="isolate inline-flex rounded-md shadow-sm">
         <Popover>
           <ShadTooltip content="Pick Color">
@@ -112,7 +112,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
               <div>
                 <div
                   data-testid="color_picker"
-                  className="relative inline-flex items-center rounded-l-md bg-background px-2 py-2 text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10"
+                  className="bg-background text-foreground hover:bg-muted relative inline-flex items-center rounded-l-md px-2 py-2 shadow-md transition-all duration-500 ease-in-out focus:z-10"
                 >
                   <div
                     style={colorPickerStyle}
@@ -141,7 +141,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
                 <div
                   data-testid="more-options-modal"
                   className={classNames(
-                    "relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md bg-background text-foreground shadow-md transition-all duration-500 ease-in-out hover:bg-muted focus:z-10",
+                    "bg-background text-foreground hover:bg-muted relative -ml-px inline-flex h-8 w-[2rem] items-center rounded-r-md shadow-md transition-all duration-500 ease-in-out focus:z-10",
                   )}
                 >
                   <IconComponent

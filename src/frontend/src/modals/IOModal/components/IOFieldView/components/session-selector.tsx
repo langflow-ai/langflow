@@ -116,7 +116,7 @@ export default function SessionSelector({
         else toggleVisibility();
       }}
       className={cn(
-        "file-component-accordion-div group cursor-pointer rounded-md text-left text-[13px] hover:bg-secondary-hover",
+        "file-component-accordion-div group hover:bg-secondary-hover cursor-pointer rounded-md text-left text-[13px]",
         isVisible ? "bg-secondary-hover font-semibold" : "font-normal",
       )}
     >
@@ -135,7 +135,7 @@ export default function SessionSelector({
               />
               <button
                 onClick={handleCancel}
-                className="hover:text-status-red-hover ml-2 text-status-red"
+                className="hover:text-status-red-hover text-status-red ml-2"
               >
                 <IconComponent name="X" className="h-4 w-4" />
               </button>
@@ -151,7 +151,7 @@ export default function SessionSelector({
             <ShadTooltip styleClasses="z-50" content={session}>
               <div
                 className={cn(
-                  "w-full whitespace-nowrap group-hover:truncate-secondary-hover",
+                  "group-hover:truncate-secondary-hover w-full whitespace-nowrap",
                   isVisible
                     ? "truncate-secondary-hover"
                     : "truncate-muted dark:truncate-canvas",
@@ -183,7 +183,7 @@ export default function SessionSelector({
           <SelectContent side="right" align="start" className="p-0">
             <SelectItem
               value="rename"
-              className="cursor-pointer px-3 py-2 focus:bg-muted"
+              className="focus:bg-muted cursor-pointer px-3 py-2"
             >
               <div className="flex items-center">
                 <IconComponent name="SquarePen" className="mr-2 h-4 w-4" />
@@ -192,7 +192,7 @@ export default function SessionSelector({
             </SelectItem>
             <SelectItem
               value="messageLogs"
-              className="cursor-pointer px-3 py-2 focus:bg-muted"
+              className="focus:bg-muted cursor-pointer px-3 py-2"
             >
               <div className="flex w-full items-center justify-between">
                 <div className="flex items-center">
@@ -203,9 +203,9 @@ export default function SessionSelector({
             </SelectItem>
             <SelectItem
               value="delete"
-              className="cursor-pointer px-3 py-2 focus:bg-muted"
+              className="focus:bg-muted cursor-pointer px-3 py-2"
             >
-              <div className="flex items-center text-status-red hover:text-status-red">
+              <div className="text-status-red hover:text-status-red flex items-center">
                 <IconComponent name="Trash2" className="mr-2 h-4 w-4" />
                 Delete
               </div>

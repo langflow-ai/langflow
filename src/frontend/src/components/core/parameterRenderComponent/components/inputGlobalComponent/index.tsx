@@ -105,7 +105,7 @@ export default function InputGlobalComponent({
           <CommandItem value="doNotFilter-addNewVariable">
             <ForwardedIconComponent
               name="Plus"
-              className={cn("mr-2 h-4 w-4 text-primary")}
+              className={cn("text-primary mr-2 h-4 w-4")}
               aria-hidden="true"
             />
             <span>Add New Variable</span>
@@ -131,7 +131,7 @@ export default function InputGlobalComponent({
             <ForwardedIconComponent
               name="Trash2"
               className={cn(
-                "h-4 w-4 text-primary opacity-0 hover:text-status-red group-hover:opacity-100",
+                "text-primary hover:text-status-red h-4 w-4 opacity-0 group-hover:opacity-100",
               )}
               aria-hidden="true"
             />

@@ -79,9 +79,9 @@ export default function FlowToolbar(): JSX.Element {
           <button
             disabled={!hasApiKey || !validApiKey || !hasStore}
             className={classNames(
-              "relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out",
+              "text-foreground relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-150 ease-in-out",
               !hasApiKey || !validApiKey || !hasStore
-                ? "cursor-not-allowed text-muted-foreground"
+                ? "text-muted-foreground cursor-not-allowed"
                 : "hover:bg-accent",
             )}
             data-testid="shared-button-flow"
@@ -120,7 +120,7 @@ export default function FlowToolbar(): JSX.Element {
       <Panel className="!m-2" position="top-right">
         <div
           className={
-            "hover:shadow-round-btn-shadow flex items-center justify-center gap-7 rounded-md border bg-background p-1.5 shadow transition-all"
+            "hover:shadow-round-btn-shadow bg-background flex items-center justify-center gap-7 rounded-md border p-1.5 shadow transition-all"
           }
         >
           <div className="flex gap-1.5">
@@ -147,7 +147,7 @@ export default function FlowToolbar(): JSX.Element {
                     >
                       <div
                         className={classNames(
-                          "relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold text-foreground transition-all duration-150 ease-in-out hover:bg-accent",
+                          "text-foreground hover:bg-accent relative inline-flex h-8 w-full items-center justify-center gap-1.5 rounded px-3 py-1.5 text-sm font-semibold transition-all duration-150 ease-in-out",
                         )}
                       >
                         <ForwardedIconComponent
