@@ -232,7 +232,7 @@ const SettingsVoiceModal = ({
 
   useEffect(() => {
     if (!open) {
-      setIsEditingOpenAIKey(false);
+      setIs;
     }
   }, [open]);
 

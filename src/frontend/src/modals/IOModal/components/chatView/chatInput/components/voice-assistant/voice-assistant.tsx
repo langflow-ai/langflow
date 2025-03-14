@@ -307,14 +307,22 @@ export function VoiceAssistant({
       }
       setIsRecording(false);
     } else {
-      if (hasOpenAIAPIKey) {
-        initializeAudio();
-      }
-    }
-
-    if (!open) {
       setRecordingTime(0);
       setBarHeights(Array(30).fill(20));
+
+      if (hasOpenAIAPIKey) {
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
+        }
+        analyserRef.current = null;
+
+        setTimeout(() => {
+          initializeAudio();
+          startRecording();
+          setIsRecording(true);
+        }, 100);
+      }
     }
 
     if (hasElevenLabsApiKeySaved) {

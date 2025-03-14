@@ -12,9 +12,19 @@ export const useBarControls = (
   const baseHeightsRef = useRef<number[]>([]);
   const lastRandomizeTimeRef = useRef<number>(0);
   const minHeightRef = useRef<number>(20);
+  const analyzerInitializedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (isRecording) {
+      analyzerInitializedRef.current = false;
+
+      if (analyserRef?.current) {
+        const analyser = analyserRef.current;
+        analyser.fftSize = 256;
+        timeDataRef.current = new Uint8Array(analyser.fftSize);
+        analyzerInitializedRef.current = true;
+      }
+
       const interval = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
@@ -26,15 +36,21 @@ export const useBarControls = (
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
+      timeDataRef.current = null;
     }
-  }, [isRecording, setRecordingTime, setBarHeights, setSoundDetected]);
+  }, [
+    isRecording,
+    setRecordingTime,
+    setBarHeights,
+    setSoundDetected,
+    analyserRef,
+  ]);
 
   useEffect(() => {
     const staticHeights = Array(30)
       .fill(0)
       .map((_, i) => {
         const position = i / 30;
-        const centerDistance = Math.abs(position - 0.5);
         const height = 50 + Math.sin(position * Math.PI) * 30;
         return Math.max(minHeightRef.current, Math.min(80, height));
       });
@@ -44,18 +60,29 @@ export const useBarControls = (
   }, [setBarHeights]);
 
   useEffect(() => {
-    if (!isRecording) return;
-
-    if (analyserRef?.current) {
+    if (
+      analyserRef?.current &&
+      !analyzerInitializedRef.current &&
+      isRecording
+    ) {
       const analyser = analyserRef.current;
       analyser.fftSize = 256;
+      timeDataRef.current = new Uint8Array(analyser.fftSize);
+      analyzerInitializedRef.current = true;
+    }
+  }, [analyserRef?.current, isRecording]);
 
-      if (
-        !timeDataRef.current ||
-        timeDataRef.current.length !== analyser.fftSize
-      ) {
-        timeDataRef.current = new Uint8Array(analyser.fftSize);
-      }
+  useEffect(() => {
+    if (!isRecording) return;
+
+    if (
+      analyserRef?.current &&
+      (!timeDataRef.current || !analyzerInitializedRef.current)
+    ) {
+      const analyser = analyserRef.current;
+      analyser.fftSize = 256;
+      timeDataRef.current = new Uint8Array(analyser.fftSize);
+      analyzerInitializedRef.current = true;
     }
 
     const animate = (timestamp: number) => {
@@ -65,6 +92,10 @@ export const useBarControls = (
       if (analyserRef?.current && timeDataRef.current) {
         try {
           const analyser = analyserRef.current;
+
+          if (timeDataRef.current.length !== analyser.fftSize) {
+            timeDataRef.current = new Uint8Array(analyser.fftSize);
+          }
 
           analyser.getByteTimeDomainData(timeDataRef.current);
 
@@ -89,6 +120,9 @@ export const useBarControls = (
           }
         } catch (error) {
           console.error("Error detecting sound:", error);
+          if (setSoundDetected) {
+            setSoundDetected(false);
+          }
         }
       } else {
         if (setSoundDetected) {
