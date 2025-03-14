@@ -1,4 +1,4 @@
-import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
+//import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
 import { EventDeliveryType } from "@/constants/enums";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
@@ -13,6 +13,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import { useCallback, useEffect, useState } from "react";
 import { v5 as uuidv5 } from "uuid";
+import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
 import IconComponent from "../../components/common/genericIconComponent";
 import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
