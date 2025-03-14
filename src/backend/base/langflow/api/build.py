@@ -180,9 +180,6 @@ async def generate_flow_events(
             graph.validate_stream()
             first_layer = sort_vertices(graph)
 
-            if inputs is not None and getattr(inputs, "session", None) is not None:
-                graph.session_id = inputs.session
-
             for vertex_id in first_layer:
                 graph.run_manager.add_to_vertices_being_run(vertex_id)
 
@@ -218,8 +215,19 @@ async def generate_flow_events(
         )
 
     async def create_graph(fresh_session, flow_id_str: str) -> Graph:
+        if inputs is not None and getattr(inputs, "session", None) is not None:
+            effective_session_id = inputs.session
+        else:
+            effective_session_id = flow_id_str
+
         if not data:
-            return await build_graph_from_db(flow_id=flow_id, session=fresh_session, chat_service=chat_service)
+            return await build_graph_from_db(
+                flow_id=flow_id,
+                session=fresh_session,
+                chat_service=chat_service,
+                user_id=str(current_user.id),
+                session_id=effective_session_id,
+            )
 
         result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
         flow_name = result.first()
@@ -229,6 +237,7 @@ async def generate_flow_events(
             payload=data.model_dump(),
             user_id=str(current_user.id),
             flow_name=flow_name,
+            session_id=effective_session_id,
         )
 
     def sort_vertices(graph: Graph) -> list[str]:
@@ -280,7 +289,7 @@ async def generate_flow_events(
                 outputs = {output_label: OutputValue(message=message, type="error")}
                 result_data_response = ResultDataResponse(results={}, outputs=outputs)
                 artifacts = {}
-                background_tasks.add_task(graph.end_all_traces, error=exc)
+                background_tasks.add_task(graph.end_all_traces_in_context(error=exc))
 
             result_data_response.message = artifacts
 
@@ -314,7 +323,7 @@ async def generate_flow_events(
                 next_runnable_vertices = [graph.stop_vertex]
 
             if not graph.run_manager.vertices_being_run and not next_runnable_vertices:
-                background_tasks.add_task(graph.end_all_traces)
+                background_tasks.add_task(graph.end_all_traces_in_context())
 
             build_response = VertexBuildResponse(
                 inactivated_vertices=list(set(inactivated_vertices)),
@@ -410,7 +419,7 @@ async def generate_flow_events(
     try:
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
-        background_tasks.add_task(graph.end_all_traces)
+        background_tasks.add_task(graph.end_all_traces_in_context())
         raise
     except Exception as e:
         logger.error(f"Error building vertices: {e}")
@@ -424,7 +433,9 @@ async def generate_flow_events(
         )
         event_manager.on_error(data=error_message.data)
         raise
+
     event_manager.on_end(data={})
+    await graph.end_all_traces()
     await event_manager.queue.put((None, None, time.time()))
 
 
