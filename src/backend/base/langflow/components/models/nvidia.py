@@ -97,7 +97,7 @@ class NVIDIAModelComponent(LCModelComponent):
             return [m.id for m in tool_models]
         return [m.id for m in model.available_models]
 
-    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
+    def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
         if field_name in {"model_name", "tool_model_enabled", "base_url", "api_key"}:
             try:
                 ids = self.get_models(self.tool_model_enabled)
@@ -108,7 +108,7 @@ class NVIDIAModelComponent(LCModelComponent):
                 elif build_config["model_name"]["value"] not in ids:
                     build_config["model_name"]["value"] = None
 
-                # TODO: have a better way to determine if a model is reasoning
+                # TODO: use api to determine if model supports detailed thinking
                 if build_config["model_name"]["value"] == "nemotron":
                     build_config["detailed_thinking"]["show"] = True
                 else:
