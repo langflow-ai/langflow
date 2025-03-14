@@ -101,7 +101,8 @@ class WatsonxAIComponent(LCModelComponent):
             name="top_p",
             display_name="Top P",
             advanced=True,
-            info="The cumulative probability cutoff for token selection. Lower values mean sampling from a smaller, more top-weighted nucleus.",
+            info="The cumulative probability cutoff for token selection. "
+            "Lower values mean sampling from a smaller, more top-weighted nucleus.",
             range_spec=RangeSpec(min=0, max=1),
             field_type="float",
         ),
@@ -109,7 +110,8 @@ class WatsonxAIComponent(LCModelComponent):
             name="top_k",
             display_name="Top K",
             advanced=True,
-            info="Sample from the k most likely next tokens at each step. Lower k focuses on higher probability tokens.",
+            info="Sample from the k most likely next tokens at each step. "
+            "Lower k focuses on higher probability tokens.",
             range_spec=RangeSpec(min=1, max=100),
             field_type="int",
         ),
@@ -132,20 +134,17 @@ class WatsonxAIComponent(LCModelComponent):
 
     @staticmethod
     def fetch_models(base_url: str) -> list[str]:
-        """Fetch available models from the watsonx.ai API"""
+        """Fetch available models from the watsonx.ai API."""
         try:
             endpoint = f"{base_url}/ml/v1/foundation_model_specs"
             params = {"version": "2024-09-16", "filters": "function_text_generation,!lifecycle_withdrawn:and"}
-
             response = requests.get(endpoint, params=params, timeout=10)
-
-            if response.status_code == 200:
-                data = response.json()
-                models = [model["model_id"] for model in data.get("resources", [])]
-                return sorted(models) if models else WatsonxAIComponent._default_models
-            return WatsonxAIComponent._default_models
-        except Exception as e:
-            print(f"Error fetching models: {e}")
+            response.raise_for_status()
+            data = response.json()
+            models = [model["model_id"] for model in data.get("resources", [])]
+            return sorted(models)
+        except Exception:
+            logger.exception("Error fetching models")
             return WatsonxAIComponent._default_models
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -158,9 +157,10 @@ class WatsonxAIComponent(LCModelComponent):
                 build_config.model_name.options = models
                 if build_config.model_name.value:
                     build_config.model_name.value = models[0]
-                logger.info(f"Updated model options: {len(models)} models found in {build_config.url.value}")
-            except Exception as e:
-                logger.error(f"Error updating model options: {e}")
+                info_message = f"Updated model options: {len(models)} models found in {build_config.url.value}"
+                logger.info(info_message)
+            except Exception:
+                logger.exception("Error updating model options.")
 
     def build_model(self) -> LanguageModel:
         creds = Credentials(
