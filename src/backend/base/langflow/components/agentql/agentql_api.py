@@ -2,8 +2,10 @@ import httpx
 from loguru import logger
 
 from langflow.custom import Component
+from langflow.field_typing.range_spec import RangeSpec
 from langflow.io import (
-    DictInput,
+    BoolInput,
+    DropdownInput,
     IntInput,
     MessageTextInput,
     MultilineInput,
@@ -49,24 +51,48 @@ class AgentQL(Component):
             info="A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
             tool_mode=True,
         ),
+        BoolInput(
+            name="is_stealth_mode_enabled",
+            display_name="Enable Stealth Mode (Beta)",
+            info="Enable experimental anti-bot evasion strategies. May not work for all websites at all times.",
+            value=False,
+            advanced=True,
+        ),
         IntInput(
             name="timeout",
             display_name="Timeout",
-            info="Timeout in seconds for the request. Increase if data extraction takes too long.",
+            info="Seconds to wait for a request.",
             value=900,
             advanced=True,
         ),
-        DictInput(
-            name="params",
-            display_name="Additional Params",
-            info="The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
-            is_list=True,
-            value={
-                "mode": "fast",
-                "wait_for": 0,
-                "is_scroll_to_bottom_enabled": False,
-                "is_screenshot_enabled": False,
-            },
+        DropdownInput(
+            name="mode",
+            display_name="Request Mode",
+            info="'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.",
+            options=["fast", "standard"],
+            value="fast",
+            advanced=True,
+        ),
+        IntInput(
+            name="wait_for",
+            display_name="Wait For",
+            info="Seconds to wait for the page to load before extracting data.",
+            value=0,
+            range_spec=RangeSpec(min=0, max=10, step_type="int"),
+            advanced=True,
+        ),
+        BoolInput(
+            name="is_scroll_to_bottom_enabled",
+            display_name="Enable scroll to bottom",
+            info="Scroll to bottom of the page before extracting data.",
+            value=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="is_screenshot_enabled",
+            display_name="Enable screenshot",
+            info="Take a screenshot before extracting data. Returned in 'metadata' as a Base64 string.",
+            value=False,
             advanced=True,
         ),
     ]
@@ -87,7 +113,15 @@ class AgentQL(Component):
             "url": self.url,
             "query": self.query,
             "prompt": self.prompt,
-            "params": self.params,
+            "params": {
+                "mode": self.mode,
+                "wait_for": self.wait_for,
+                "is_scroll_to_bottom_enabled": self.is_scroll_to_bottom_enabled,
+                "is_screenshot_enabled": self.is_screenshot_enabled,
+            },
+            "metadata": {
+                "experimental_stealth_mode_enabled": self.is_stealth_mode_enabled,
+            },
         }
 
         if not self.prompt and not self.query:
@@ -106,7 +140,7 @@ class AgentQL(Component):
 
         except httpx.HTTPStatusError as e:
             response = e.response
-            if response.status_code in {401, 403}:
+            if response.status_code == httpx.codes.UNAUTHORIZED:
                 self.status = "Please, provide a valid API Key. You can create one at https://dev.agentql.com."
             else:
                 try:
