@@ -1,12 +1,12 @@
 from langchain_openai import AzureOpenAIEmbeddings
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.openai_constants import OPENAI_EMBEDDING_MODEL_NAMES
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import DropdownInput, IntInput, MessageTextInput, SecretStrInput
 
 
-class AzureOpenAIEmbeddingsComponent(LCModelComponent):
+class AzureOpenAIEmbeddingsComponent(LCEmbeddingsModel):
     display_name: str = "Azure OpenAI Embeddings"
     description: str = "Generate embeddings using Azure OpenAI models."
     documentation: str = "https://python.langchain.com/docs/integrations/text_embedding/azureopenai"
@@ -60,10 +60,6 @@ class AzureOpenAIEmbeddingsComponent(LCModelComponent):
             "Only supported by certain models.",
             advanced=True,
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
     def build_embeddings(self) -> Embeddings:

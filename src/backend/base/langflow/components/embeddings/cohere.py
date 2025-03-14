@@ -3,14 +3,14 @@ from typing import Any
 import cohere
 from langchain_cohere import CohereEmbeddings
 
-from langflow.base.models.model import LCModelComponent
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.field_typing import Embeddings
-from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput
+from langflow.io import DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 HTTP_STATUS_OK = 200
 
 
-class CohereEmbeddingsComponent(LCModelComponent):
+class CohereEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "Cohere Embeddings"
     description = "Generate embeddings using Cohere models."
     icon = "Cohere"
@@ -36,10 +36,6 @@ class CohereEmbeddingsComponent(LCModelComponent):
         IntInput(name="max_retries", display_name="Max Retries", value=3, advanced=True),
         MessageTextInput(name="user_agent", display_name="User Agent", advanced=True, value="langchain"),
         FloatInput(name="request_timeout", display_name="Request Timeout", advanced=True),
-    ]
-
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
     def build_embeddings(self) -> Embeddings:
