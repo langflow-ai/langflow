@@ -5,7 +5,7 @@ services:
     runtime: docker
     dockerfilePath: ./docker/render.Dockerfile
     repo: https://github.com/langflow-ai/langflow
-    branch: main
+    branch: melissa-nvidia
     plan: standard
     healthCheckPath: /health_check
     autoDeploy: false
