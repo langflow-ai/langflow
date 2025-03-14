@@ -2,10 +2,12 @@
   "data": {
     "edges": [
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-Uaj2o",
+            "id": "Prompt-WRaed",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -13,24 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-UdvnL",
+            "id": "Agent-IDDA1",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-Uaj2o{œdataTypeœ:œPromptœ,œidœ:œPrompt-Uaj2oœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-UdvnL{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-UdvnLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-Uaj2o",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-Uaj2oœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-UdvnL",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-UdvnLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-WRaed{œdataTypeœ:œPromptœ,œidœ:œPrompt-WRaedœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-WRaed",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-WRaedœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-IDDA1",
+        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "needle",
-            "id": "needle-xopna",
+            "id": "needle-nk3Lq",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -38,24 +43,27 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-UdvnL",
+            "id": "Agent-IDDA1",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__needle-xopna{œdataTypeœ:œneedleœ,œidœ:œneedle-xopnaœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-UdvnL{œfieldNameœ:œtoolsœ,œidœ:œAgent-UdvnLœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "needle-xopna",
-        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-xopnaœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-UdvnL",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-UdvnLœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-needle-nk3Lq{œdataTypeœ:œneedleœ,œidœ:œneedle-nk3Lqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IDDA1{œfieldNameœ:œtoolsœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "needle-nk3Lq",
+        "sourceHandle": "{œdataTypeœ:œneedleœ,œidœ:œneedle-nk3Lqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-IDDA1",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-hpZVc",
+            "id": "ChatInput-V0cjZ",
             "name": "message",
             "output_types": [
               "Message"
@@ -63,24 +71,52 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-UdvnL",
+            "id": "Agent-IDDA1",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-hpZVc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-hpZVcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-UdvnL{œfieldNameœ:œinput_valueœ,œidœ:œAgent-UdvnLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-hpZVc",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-hpZVcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-UdvnL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-UdvnLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-V0cjZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-V0cjZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-V0cjZ",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-V0cjZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-IDDA1",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-IDDA1",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-Ftr5v",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Agent-IDDA1{œdataTypeœ:œAgentœ,œidœ:œAgent-IDDA1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Ftr5v{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Ftr5vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-IDDA1",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-IDDA1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-Ftr5v",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Ftr5vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-QgaMV",
+          "id": "note-JlPa7",
           "node": {
             "description": "# Invoice Summarizer\n\nLeverage the **Needle Search API** and an **Agent** to gather and summarize your invoice data quickly and accurately.\n\n## Prerequisites\n\n* A **Collection** and an **API Key** from your [Needle.ai](https://needle-ai.com) deployment\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Load your invoices into your Needle Collection. \n\n2. In the **Needle Search** tool, add your **Needle Collection ID** and **Needle API Key**.\n\n3. In the **Agent** component, add your **OpenAI Key**.\n\n4. Open the **Playground** and query your invoices. The **Agent** component determines the correct query and search size for data retrieval.\n",
             "display_name": "",
@@ -93,7 +129,7 @@
         },
         "dragging": false,
         "height": 632,
-        "id": "note-QgaMV",
+        "id": "note-JlPa7",
         "measured": {
           "height": 632,
           "width": 583
@@ -109,7 +145,7 @@
       },
       {
         "data": {
-          "id": "Prompt-Uaj2o",
+          "id": "Prompt-WRaed",
           "node": {
             "base_classes": [
               "Message"
@@ -223,7 +259,7 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-Uaj2o",
+        "id": "Prompt-WRaed",
         "measured": {
           "height": 256,
           "width": 320
@@ -237,7 +273,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-GLysl",
+          "id": "ChatOutput-Ftr5v",
           "node": {
             "base_classes": [
               "Message"
@@ -532,7 +568,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-GLysl",
+        "id": "ChatOutput-Ftr5v",
         "measured": {
           "height": 66,
           "width": 192
@@ -546,7 +582,7 @@
       },
       {
         "data": {
-          "id": "note-SdqMV",
+          "id": "note-TRZfV",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -558,7 +594,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-SdqMV",
+        "id": "note-TRZfV",
         "measured": {
           "height": 324,
           "width": 324
@@ -572,7 +608,7 @@
       },
       {
         "data": {
-          "id": "note-n4CeF",
+          "id": "note-P7KNw",
           "node": {
             "description": "### 💡 Add your Needle Search API key here 👇",
             "display_name": "",
@@ -585,7 +621,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-n4CeF",
+        "id": "note-P7KNw",
         "measured": {
           "height": 324,
           "width": 401
@@ -601,7 +637,7 @@
       },
       {
         "data": {
-          "id": "needle-xopna",
+          "id": "needle-nk3Lq",
           "node": {
             "base_classes": [
               "Message"
@@ -645,7 +681,7 @@
               }
             ],
             "pinned": false,
-            "score": 7.568328950209746e-6,
+            "score": 0.000007568328950209746,
             "template": {
               "_type": "Component",
               "code": {
@@ -859,7 +895,7 @@
           "showNode": true,
           "type": "needle"
         },
-        "id": "needle-xopna",
+        "id": "needle-nk3Lq",
         "measured": {
           "height": 582,
           "width": 320
@@ -873,7 +909,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-hpZVc",
+          "id": "ChatInput-V0cjZ",
           "node": {
             "base_classes": [
               "Message"
@@ -1169,7 +1205,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-hpZVc",
+        "id": "ChatInput-V0cjZ",
         "measured": {
           "height": 230,
           "width": 320
@@ -1183,7 +1219,7 @@
       },
       {
         "data": {
-          "id": "Agent-UdvnL",
+          "id": "Agent-IDDA1",
           "node": {
             "base_classes": [
               "Message"
@@ -1864,7 +1900,7 @@
           "showNode": true,
           "type": "Agent"
         },
-        "id": "Agent-UdvnL",
+        "id": "Agent-IDDA1",
         "measured": {
           "height": 624,
           "width": 320
@@ -1878,14 +1914,14 @@
       }
     ],
     "viewport": {
-      "x": 182.7943010835014,
-      "y": 343.4099268578152,
-      "zoom": 0.5792162591251494
+      "x": 220.76849981202122,
+      "y": 353.4961393018069,
+      "zoom": 0.6618875325223841
     }
   },
   "description": "Your AI Agent Accountant - Leverage Needle with Langflows Agent.",
   "endpoint_name": null,
-  "id": "80a9c06d-111a-4f91-a462-2c681b463e56",
+  "id": "94da35d5-a43e-4260-b205-9d0df477cb69",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Invoice Summarizer",
