@@ -4,4 +4,4 @@ cd src/frontend \
     && rm -rf node_modules \
     && npm install \
     && npm run dev:docker &
-make backend
+make backend EXTRA_ARGS="--extra nv-ingest"
