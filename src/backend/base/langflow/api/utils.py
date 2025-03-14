@@ -14,6 +14,7 @@ from langflow.graph.graph.base import Graph
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.database.models import User
 from langflow.services.database.models.flow import Flow
+from langflow.services.database.models.message import MessageTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import get_session, session_scope
@@ -39,13 +40,12 @@ def has_api_terms(word: str):
 
 def remove_api_keys(flow: dict):
     """Remove api keys from flow data."""
-    if flow.get("data") and flow["data"].get("nodes"):
-        for node in flow["data"]["nodes"]:
-            node_data = node.get("data").get("node")
-            template = node_data.get("template")
-            for value in template.values():
-                if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
-                    value["value"] = None
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data").get("node")
+        template = node_data.get("template")
+        for value in template.values():
+            if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
+                value["value"] = None
 
     return flow
 
@@ -154,35 +154,37 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     # Get flow name
     if "flow_name" not in kwargs:
         flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
-        kwargs["flow_name"] = flow_name
+    else:
+        flow_name = kwargs["flow_name"]
     str_flow_id = str(flow_id)
-    graph = Graph.from_payload(payload, str_flow_id, **kwargs)
+    session_id = kwargs.get("session_id") or str_flow_id
+
+    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg)
         if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": str_flow_id}, overwrite=True)
+            vertex.update_raw_params({"session_id": session_id}, overwrite=True)
 
-    run_id = uuid.uuid4()
-    graph.set_run_id(run_id)
-    graph.set_run_name()
+    graph.session_id = session_id
     await graph.initialize_run()
     return graph
 
 
-async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession):
+async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession, **kwargs):
     """Build and cache the graph."""
     flow: Flow | None = await session.get(Flow, flow_id)
     if not flow or not flow.data:
         msg = "Invalid flow ID"
         raise ValueError(msg)
-    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
+    kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
+    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
 
 
-async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService):
-    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session)
+async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService, **kwargs):
+    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session, **kwargs)
     await chat_service.set_cache(str(flow_id), graph)
     return graph
 
@@ -281,16 +283,16 @@ def parse_value(value: Any, input_type: str) -> Any:
 
 async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None:
     try:
-        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
-        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         # TODO: Verify if deleting messages is safe in terms of session id relevance
         # If we delete messages directly, rather than setting flow_id to null,
         # it might cause unexpected behaviors because the session id could still be
         # used elsewhere to search for these messages.
-        # await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
+        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         await session.exec(delete(Flow).where(Flow.id == flow_id))
     except Exception as e:
-        msg = f"Unable to cascade delete flow: ${flow_id}"
+        msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
 
 

@@ -448,7 +448,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       // Add the new node to the list of nodes in state
       newNodes = newNodes
         .map((node) => ({ ...node, selected: false }))
-        .concat({ ...newNode, selected: false });
+        .concat({ ...newNode, selected: true });
     });
     get().setNodes(newNodes);
 
@@ -594,6 +594,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files,
     silent,
     session,
+    stream = true,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -601,6 +602,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     files?: string[];
     silent?: boolean;
     session?: string;
+    stream?: boolean;
   }) => {
     get().setIsBuilding(true);
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -825,6 +827,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       nodes: get().nodes || undefined,
       edges: get().edges || undefined,
       logBuilds: get().onFlowPage,
+      stream,
     });
     get().setIsBuilding(false);
     get().revertBuiltStatusFromBuilding();

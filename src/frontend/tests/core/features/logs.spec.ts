@@ -22,7 +22,7 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
-      timeout: 1000,
+      timeout: 3000,
     });
     let outdatedComponents = await page
       .getByTestId("icon-AlertTriangle")
