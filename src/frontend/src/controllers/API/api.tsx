@@ -67,7 +67,10 @@ function ApiInterceptor() {
 
         if (isAuthenticationError && !IS_AUTO_LOGIN) {
           if (autoLogin !== undefined && !autoLogin) {
-            if (error?.config?.url?.includes("github")) {
+            if (
+              error?.config?.url?.includes("github") ||
+              error?.config?.url?.includes("public")
+            ) {
               return Promise.reject(error);
             }
             const stillRefresh = checkErrorCount();

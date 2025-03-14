@@ -39,6 +39,7 @@ type BuildVerticesParams = {
   edges?: Edge[];
   logBuilds?: boolean;
   session?: string;
+  playgroundPage?: boolean;
   stream?: boolean;
 };
 
@@ -226,10 +227,13 @@ export async function buildFlowVertices({
   edges,
   logBuilds,
   session,
+  playgroundPage,
   stream = true,
 }: BuildVerticesParams) {
   const inputs = {};
-  let buildUrl = `${BASE_URL_API}build/${flowId}/flow`;
+
+  let buildUrl = `${BASE_URL_API}${playgroundPage ? "build_public_tmp" : "build"}/${flowId}/flow`;
+
   const queryParams = new URLSearchParams();
 
   if (startNodeId) {

@@ -21,10 +21,11 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, cascade_delete_flow, remove_api_keys, validate_is_component
 from langflow.api.v1.schemas import FlowListCreate
+from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.logging import logger
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowRead, FlowUpdate
-from langflow.services.database.models.flow.model import FlowHeader
+from langflow.services.database.models.flow.model import AccessTypeEnum, FlowHeader
 from langflow.services.database.models.flow.utils import get_webhook_component_in_flow
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
@@ -276,6 +277,21 @@ async def read_flow(
     if user_flow := await _read_flow(session, flow_id, current_user.id, get_settings_service()):
         return user_flow
     raise HTTPException(status_code=404, detail="Flow not found")
+
+
+@router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
+async def read_public_flow(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+):
+    """Read a public flow."""
+    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
+    if access_type is not AccessTypeEnum.PUBLIC:
+        raise HTTPException(status_code=403, detail="Flow is not public")
+
+    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+    return await read_flow(session=session, flow_id=flow_id, current_user=current_user)
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)

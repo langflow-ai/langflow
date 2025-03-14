@@ -16,4 +16,6 @@ export type ChatViewWrapperProps = {
   sendMessage: (options: { repeat: number; files?: string[] }) => Promise<void>;
   canvasOpen: boolean | undefined;
   setOpen: (open: boolean) => void;
+  playgroundTitle: string;
+  playgroundPage?: boolean;
 };
