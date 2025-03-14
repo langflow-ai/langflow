@@ -1,4 +1,5 @@
 # from langflow.field_typing import Data
+import asyncio
 from contextlib import AsyncExitStack
 
 import httpx
@@ -10,7 +11,6 @@ from langflow.components.tools.mcp_stdio import create_input_schema_from_json_sc
 from langflow.custom import Component
 from langflow.field_typing import Tool
 from langflow.io import MessageTextInput, Output
-from langflow.utils.async_helpers import timeout_context
 
 # Define constant for status code
 HTTP_TEMPORARY_REDIRECT = 307
@@ -38,19 +38,31 @@ class MCPSseClient:
         if headers is None:
             headers = {}
         url = await self.pre_check_redirect(url)
-
-        async with timeout_context(timeout_seconds):
-            sse_transport = await self.exit_stack.enter_async_context(
-                sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+        try:
+            await asyncio.wait_for(
+                self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
+                timeout=timeout_seconds,
             )
-            self.sse, self.write = sse_transport
-            self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
-
-            await self.session.initialize()
-
             # List available tools
+            if self.session is None:
+                msg = "Session not initialized"
+                raise ValueError(msg)
             response = await self.session.list_tools()
+        except asyncio.TimeoutError as err:
+            error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
+            raise TimeoutError(error_message) from err
+        else:  # Only executed if no TimeoutError
             return response.tools
+
+    async def _connect_with_timeout(
+        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
+    ):
+        sse_transport = await self.exit_stack.enter_async_context(
+            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+        )
+        self.sse, self.write = sse_transport
+        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
+        await self.session.initialize()
 
 
 class MCPSse(Component):
@@ -89,6 +101,7 @@ class MCPSse(Component):
                 Tool(
                     name=tool.name,  # maybe format this
                     description=tool.description,
+                    args_schema=args_schema,
                     coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
                     func=create_tool_func(tool.name, self.client.session),
                 )
