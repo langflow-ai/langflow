@@ -11,7 +11,7 @@ Install Langflow locally with [uv (recommended)](https://docs.astral.sh/uv/getti
 
 ### Prerequisites
 
-- [Python 3.10 to 3.12](https://www.python.org/downloads/release/python-3100/) installed
+- [Python 3.10 to 3.13](https://www.python.org/downloads/release/python-3100/) installed
 - [uv](https://docs.astral.sh/uv/getting-started/installation/), [pip](https://pypi.org/project/pip/), or [pipx](https://pipx.pypa.io/stable/installation/) installed
 - Before installing Langflow, we recommend creating a virtual environment to isolate your Python dependencies with [uv](https://docs.astral.sh/uv/pip/environments), [venv](https://docs.python.org/3/library/venv.html), or [conda](https://anaconda.org/anaconda/conda)
 

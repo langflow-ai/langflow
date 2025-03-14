@@ -7,6 +7,7 @@ from langflow.schema.data import Data
 from langflow.template import Input, Output
 from langflow.template.field.base import UNDEFINED
 from langflow.type_extraction.type_extraction import post_process_type
+
 from pydantic import ValidationError
 
 
@@ -139,6 +140,7 @@ class TestOutput:
             "display_name": "test_output",
             "cache": True,
             "value": "__UNDEFINED__",
+            "tool_mode": True,
         }
 
     def test_output_validate_display_name(self):

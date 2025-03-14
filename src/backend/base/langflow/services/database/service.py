@@ -39,6 +39,7 @@ class DatabaseService(Service):
     name = "database_service"
 
     def __init__(self, settings_service: SettingsService):
+        self._logged_pragma = False
         self.settings_service = settings_service
         if settings_service.settings.database_url is None:
             msg = "No database URL provided"
@@ -67,8 +68,6 @@ class DatabaseService(Service):
         else:
             self.alembic_log_path = Path(langflow_dir) / alembic_log_file
 
-        self._logged_pragma = False
-
     async def initialize_alembic_log_file(self):
         # Ensure the directory and file for the alembic log file exists
         await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
@@ -82,28 +81,60 @@ class DatabaseService(Service):
             self.engine = self._create_engine()
 
     def _sanitize_database_url(self):
-        if self.database_url.startswith("postgres://"):
-            self.database_url = self.database_url.replace("postgres://", "postgresql://")
-            logger.warning(
-                "Fixed postgres dialect in database URL. Replacing postgres:// with postgresql://. "
-                "To avoid this warning, update the database URL."
-            )
-
-    def _create_engine(self) -> AsyncEngine:
         """Create the engine for the database."""
         url_components = self.database_url.split("://", maxsplit=1)
-        if url_components[0].startswith("sqlite"):
-            scheme = "sqlite+aiosqlite"
-            kwargs = {}
-        else:
-            kwargs = {
-                "pool_size": self.settings_service.settings.pool_size,
-                "max_overflow": self.settings_service.settings.max_overflow,
-            }
-            scheme = "postgresql+psycopg" if url_components[0].startswith("postgresql") else url_components[0]
-        database_url = f"{scheme}://{url_components[1]}"
+
+        driver = url_components[0]
+
+        if driver == "sqlite":
+            driver = "sqlite+aiosqlite"
+        elif driver in {"postgresql", "postgres"}:
+            if driver == "postgres":
+                logger.warning(
+                    "The postgres dialect in the database URL is deprecated. "
+                    "Use postgresql instead. "
+                    "To avoid this warning, update the database URL."
+                )
+            driver = "postgresql+psycopg"
+
+        self.database_url = f"{driver}://{url_components[1]}"
+
+    def _build_connection_kwargs(self):
+        """Build connection kwargs by merging deprecated settings with db_connection_settings.
+
+        Returns:
+            dict: Connection kwargs with deprecated settings overriding db_connection_settings
+        """
+        settings = self.settings_service.settings
+        # Start with db_connection_settings as base
+        connection_kwargs = settings.db_connection_settings.copy()
+
+        # Override individual settings if explicitly set
+        if "pool_size" in settings.model_fields_set:
+            logger.warning("pool_size is deprecated. Use db_connection_settings['pool_size'] instead.")
+            connection_kwargs["pool_size"] = settings.pool_size
+        if "max_overflow" in settings.model_fields_set:
+            logger.warning("max_overflow is deprecated. Use db_connection_settings['max_overflow'] instead.")
+            connection_kwargs["max_overflow"] = settings.max_overflow
+
+        return connection_kwargs
+
+    def _create_engine(self) -> AsyncEngine:
+        # Get connection settings from config, with defaults if not specified
+        # if the user specifies an empty dict, we allow it.
+        kwargs = self._build_connection_kwargs()
+
+        poolclass_key = kwargs.get("poolclass")
+        if poolclass_key is not None:
+            pool_class = getattr(sa, poolclass_key, None)
+            if pool_class and isinstance(pool_class(), sa.pool.Pool):
+                logger.debug(f"Using poolclass: {poolclass_key}.")
+                kwargs["poolclass"] = pool_class
+            else:
+                logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
+
         return create_async_engine(
-            database_url,
+            self.database_url,
             connect_args=self._get_connect_args(),
             **kwargs,
         )
@@ -114,16 +145,18 @@ class DatabaseService(Service):
         return self._create_engine()
 
     def _get_connect_args(self):
-        if self.settings_service.settings.database_url and self.settings_service.settings.database_url.startswith(
-            "sqlite"
-        ):
-            connect_args = {
+        settings = self.settings_service.settings
+
+        if settings.db_driver_connection_settings is not None:
+            return settings.db_driver_connection_settings
+
+        if settings.database_url and settings.database_url.startswith("sqlite"):
+            return {
                 "check_same_thread": False,
-                "timeout": self.settings_service.settings.db_connect_timeout,
+                "timeout": settings.db_connect_timeout,
             }
-        else:
-            connect_args = {}
-        return connect_args
+
+        return {}
 
     def on_connection(self, dbapi_connection, _connection_record) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection | dialect_sqlite.aiosqlite.AsyncAdapt_aiosqlite_connection):
@@ -142,6 +175,8 @@ class DatabaseService(Service):
                             cursor.execute(pragma)
                         except OperationalError:
                             logger.exception(f"Failed to set PRAGMA {pragma}")
+                        except GeneratorExit:
+                            logger.error(f"Failed to set PRAGMA {pragma}")
                 finally:
                     cursor.close()
 
@@ -364,7 +399,7 @@ class DatabaseService(Service):
         ]
         async with self.with_session() as session, session.bind.connect() as conn:
             return [
-                TableResults(sql_model.__tablename__, conn.run_sync(self.check_table, sql_model))
+                TableResults(sql_model.__tablename__, await conn.run_sync(self.check_table, sql_model))
                 for sql_model in sql_models
             ]
 

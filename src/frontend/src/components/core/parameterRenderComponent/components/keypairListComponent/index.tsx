@@ -7,7 +7,7 @@ import {
 } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import { cloneDeep } from "lodash";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import IconComponent from "../../../../common/genericIconComponent";
 
 const KeypairListComponent = ({

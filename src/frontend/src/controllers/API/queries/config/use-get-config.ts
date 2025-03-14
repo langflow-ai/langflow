@@ -1,3 +1,4 @@
+import { EventDeliveryType } from "@/constants/enums";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import axios from "axios";
@@ -13,6 +14,8 @@ export interface ConfigResponse {
   health_check_max_retries: number;
   max_file_size_upload: number;
   feature_flags: Record<string, any>;
+  webhook_polling_interval: number;
+  event_delivery: EventDeliveryType;
 }
 
 export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
@@ -29,6 +32,9 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
     (state) => state.setMaxFileSizeUpload,
   );
   const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
+  const setWebhookPollingInterval = useUtilityStore(
+    (state) => state.setWebhookPollingInterval,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -46,6 +52,7 @@ export const useGetConfig: useQueryFunctionType<undefined, ConfigResponse> = (
       setHealthCheckMaxRetries(data.health_check_max_retries);
       setMaxFileSizeUpload(data.max_file_size_upload);
       setFeatureFlags(data.feature_flags);
+      setWebhookPollingInterval(data.webhook_polling_interval);
     }
     return data;
   };

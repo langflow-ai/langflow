@@ -1,7 +1,5 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import ChainLogo from "@/assets/logo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -30,8 +28,6 @@ const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
 
 export default function ChatView({
   sendMessage,
-  lockChat,
-  setLockChat,
   visibleSession,
   focusChat,
   closeChat,
@@ -50,6 +46,8 @@ export default function ChatView({
   const displayLoadingMessage = useMessagesStore(
     (state) => state.displayLoadingMessage,
   );
+
+  const isBuilding = useFlowStore((state) => state.isBuilding);
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
@@ -99,7 +97,7 @@ export default function ChatView({
       return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
 
-    if (messages.length === 0 && !lockChat && chatInputNode && isTabHidden) {
+    if (messages.length === 0 && !isBuilding && chatInputNode && isTabHidden) {
       setChatValueStore(
         chatInputNode.data.node.template["input_value"].value ?? "",
       );
@@ -164,12 +162,10 @@ export default function ChatView({
     >
       <div ref={messagesRef} className="chat-message-div">
         {chatHistory &&
-          (lockChat || chatHistory?.length > 0 ? (
+          (isBuilding || chatHistory?.length > 0 ? (
             <>
               {chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
-                  setLockChat={setLockChat}
-                  lockChat={lockChat}
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
                   key={`${chat.id}-${index}`}
@@ -181,17 +177,10 @@ export default function ChatView({
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center">
               <div className="flex flex-col items-center justify-center gap-4 p-8">
-                {ENABLE_NEW_LOGO ? (
-                  <LangflowLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                ) : (
-                  <ChainLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                )}
+                <LangflowLogo
+                  title="Langflow logo"
+                  className="h-10 w-10 scale-[1.5]"
+                />
                 <div className="flex flex-col items-center justify-center">
                   <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
                     New chat
@@ -224,7 +213,6 @@ export default function ChatView({
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
           noInput={!inputTypes.includes("ChatInput")}
-          lockChat={lockChat}
           sendMessage={({ repeat, files }) => {
             sendMessage({ repeat, files });
             track("Playground Message Sent");
