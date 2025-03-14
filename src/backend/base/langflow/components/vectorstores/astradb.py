@@ -7,6 +7,7 @@ from astrapy.info import CollectionDescriptor
 from langchain_astradb import AstraDBVectorStore, CollectionVectorServiceOptions
 
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from langflow.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from langflow.helpers import docs_to_data
 from langflow.inputs import FloatInput, NestedDictInput
 from langflow.io import (
@@ -21,6 +22,7 @@ from langflow.schema import Data
 from langflow.utils.version import get_version_info
 
 
+@vector_store_connection
 class AstraDBVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Astra DB"
     description: str = "Ingest and search documents in Astra DB"
