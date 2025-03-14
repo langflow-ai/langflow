@@ -77,8 +77,17 @@ class AstraDBToolComponent(LCToolComponent):
                     "name": "name",
                     "display_name": "Name",
                     "type": "str",
-                    "description": "Specify the name of the output field.",
+                    "description": "Specify the name of the output field/parameter for the model.",
                     "default": "field",
+                    "edit_mode": EditMode.INLINE,
+                },
+                {
+                    "name": "attribute_name",
+                    "display_name": "Attribute Name",
+                    "type": "str",
+                    "description":  "Specify the attribute name to be filtered on the collection. "
+                                    "Leave empty if the attribute name is the same as the name of the field.",
+                    "default": "",
                     "edit_mode": EditMode.INLINE,
                 },
                 {
@@ -284,16 +293,16 @@ class AstraDBToolComponent(LCToolComponent):
 
             filter_setting = next((x for x in filter_settings if x["name"] == key), None)
             if filter_setting and value is not None:
-                filter_key = key if not filter_setting["metadata"] else f"metadata.{key}"
+                field_name = filter_setting["attribute_name"] if filter_setting["attribute_name"] else key
+                filter_key = field_name if not filter_setting["metadata"] else f"metadata.{field_name}"
                 if filter_setting["operator"] == "$exists":
-                    filters[filter_key] = {filter_setting["operator"]: True}
+                    filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: True}
                 elif filter_setting["operator"] in ["$in", "$nin", "$all"]:
-                    filters[filter_key] = {
+                    filters[filter_key] = {**filters.get(filter_key, {}),
                         filter_setting["operator"]: value.split(",") if isinstance(value, str) else value
                     }
                 else:
-                    filters[filter_key] = {filter_setting["operator"]: value}
-
+                    filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: value}
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
