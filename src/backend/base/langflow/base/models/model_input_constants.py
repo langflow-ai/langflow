@@ -9,6 +9,7 @@ from langflow.components.models.groq import GroqModel
 from langflow.components.models.nvidia import NVIDIAModelComponent
 from langflow.components.models.openai_chat_model import OpenAIModelComponent
 from langflow.components.models.sambanova import SambaNovaComponent
+from langflow.components.models.tongyi import TongyiModelComponent
 from langflow.inputs.inputs import InputTypes, SecretStrInput
 from langflow.template.field.base import Input
 
@@ -71,7 +72,9 @@ def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Inpu
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
-        from langflow.components.models.google_generative_ai import GoogleGenerativeAIComponent
+        from langflow.components.models.google_generative_ai import (
+            GoogleGenerativeAIComponent,
+        )
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
@@ -92,6 +95,17 @@ def _get_openai_inputs_and_fields():
         msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
         raise ImportError(msg) from e
     return openai_inputs, create_input_fields_dict(openai_inputs, "")
+
+
+def _get_tongyi_inputs_and_fields():
+    try:
+        from langflow.components.models.tongyi import TongyiModelComponent
+
+        tongyi_inputs = get_filtered_inputs(TongyiModelComponent)
+    except ImportError as e:
+        msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
+        raise ImportError(msg) from e
+    return tongyi_inputs, create_input_fields_dict(tongyi_inputs, "")
 
 
 def _get_azure_inputs_and_fields():
@@ -171,6 +185,18 @@ try:
         "prefix": "",
         "component_class": OpenAIModelComponent(),
         "icon": OpenAIModelComponent.icon,
+    }
+except ImportError:
+    pass
+
+try:
+    tongyi_inputs, tongyi_fields = _get_tongyi_inputs_and_fields()
+    MODEL_PROVIDERS_DICT["Tongyi"] = {
+        "fields": tongyi_fields,
+        "inputs": tongyi_inputs,
+        "prefix": "",
+        "component_class": TongyiModelComponent(),
+        "icon": TongyiModelComponent.icon,
     }
 except ImportError:
     pass
@@ -262,10 +288,16 @@ except ImportError:
 MODEL_PROVIDERS = list(MODEL_PROVIDERS_DICT.keys())
 ALL_PROVIDER_FIELDS: list[str] = [field for provider in MODEL_PROVIDERS_DICT.values() for field in provider["fields"]]
 
-MODEL_DYNAMIC_UPDATE_FIELDS = ["api_key", "model", "tool_model_enabled", "base_url", "model_name"]
+MODEL_DYNAMIC_UPDATE_FIELDS = [
+    "api_key",
+    "model",
+    "tool_model_enabled",
+    "base_url",
+    "model_name",
+]
 
 
 MODELS_METADATA = {
-    key: {"icon": MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None}
+    key: {"icon": (MODEL_PROVIDERS_DICT[key]["icon"] if key in MODEL_PROVIDERS_DICT else None)}
     for key in MODEL_PROVIDERS_DICT
 }

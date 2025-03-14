@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
   const target =
     env.VITE_PROXY_TARGET || PROXY_TARGET || "http://127.0.0.1:7860";
 
+  const host = env.VITE_HOST || "127.0.0.1";
   const port = Number(env.VITE_PORT) || PORT || 3000;
 
   const proxyTargets = apiRoutes.reduce((proxyObj, route) => {
@@ -57,6 +58,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), svgr(), tsconfigPaths()],
     server: {
       port: port,
+      host: host,
       proxy: {
         ...proxyTargets,
       },

@@ -424,6 +424,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "Tongyi",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -1044,6 +1045,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "Tongyi",
                   "Custom"
                 ],
                 "placeholder": "",
@@ -2485,6 +2487,7 @@
                   "NVIDIA",
                   "OpenAI",
                   "SambaNova",
+                  "Tongyi",
                   "Custom"
                 ],
                 "placeholder": "",
