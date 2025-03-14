@@ -62,7 +62,7 @@ LANGFLOW_BASE_URL=http://0.0.0.0:7860
 
 Add your flows `.JSON` files to the `/flows` folder.
 
-To export your flows from Langflow, see [Flows](/concepts-flows).
+To export your flows from Langflow, see [Flows](/Concepts/concepts-flows).
 
 Optionally, add any custom components to a `/components` folder, and specify the path in your `docker.env`.
 
@@ -99,11 +99,11 @@ EXPOSE 7860
 CMD ["langflow", "run", "--backend-only", "--env-file","/app/.env","--host", "0.0.0.0", "--port", "7860"]
 ```
 
-The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` will override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`. For more information on configuring logs, see [Logging](/logging).
+The environment variables set in the Dockerfile specify resource paths and allow Langflow to access them. Values from `docker.env` will override the values set in the Dockerfile. Additionally, logging behavior is set here with `ENV LANGFLOW_LOG_ENV=container` for serialized JSON to `stdout`. For more information on configuring logs, see [Logging](/platform-logging).
 
 :::note
 Optionally, remove the `--backend-only` flag from the startup command to start Langflow with the frontend enabled.
-For more on `--backend-only` mode and the Langflow Docker image, see [Docker](/deployments-docker).
+For more on `--backend-only` mode and the Langflow Docker image, see [Docker](/deployment-docker).
 :::
 
 2. Save your Dockerfile.
@@ -116,8 +116,8 @@ docker build -t langflow-pokedex:1.2.0 .
 docker run -p 7860:7860 langflow-pokedex:1.2.0
 ```
 
-:::note
-For instructions on building and pushing your image to Docker Hub, see [Docker](/deployments-docker).
+:::note 
+For instructions on building and pushing your image to Docker Hub, see [Docker](/deployment-docker).
 :::
 
 5. Confirm the server is serving your flows.
@@ -143,14 +143,14 @@ curl -X POST \
 If the flow streams the result back to you, your flow is being served, and can be consumed from a front-end application by submitting POST requests to this endpoint.
 
 :::note
-The test application returns a large amount of text, so the example command used `?stream=true`. If you prefer, set `?stream=false` to use batching. For more information, see the [API examples](/api-reference-api-examples#run-flow)
+The test application returns a large amount of text, so the example command used `?stream=true`. If you prefer, set `?stream=false` to use batching. For more information, see the [API examples](/api-reference-api-examples#run-flow).
 :::
 
 ## Deploy to Docker Hub and Kubernetes
 
-For instructions on building and pushing your image to Docker Hub, see [Docker](/deployments-docker).
+For instructions on building and pushing your image to Docker Hub, see [Docker](/deployment-docker).
 
-To deploy your application to Kubernetes, see [Kubernetes](/deployment/kubernetes).
+To deploy your application to Kubernetes, see [Kubernetes](/deployment-kubernetes).
 
 ## Local Development
 
