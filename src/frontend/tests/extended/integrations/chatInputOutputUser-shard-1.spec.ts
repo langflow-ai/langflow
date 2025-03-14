@@ -96,6 +96,7 @@ test(
       .fill("https://www.example.com");
 
     await page.getByTestId("handle-url-shownode-text-right").nth(0).click();
+    await page.waitForTimeout(600);
 
     await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
@@ -124,6 +125,7 @@ test(
       .getByTestId("handle-chatoutput-noshownode-text-target")
       .nth(1)
       .click();
+    await page.waitForTimeout(600);
 
     // Run and verify text output is still shown
     await page.getByTestId("button_run_url").first().click();
@@ -137,6 +139,7 @@ test(
       },
     );
     await page.keyboard.press("Escape");
+    await page.waitForTimeout(600);
 
     // Remove text connection
     const textEdge = await page.locator(".react-flow__edge").first();
@@ -156,7 +159,7 @@ test(
       },
     );
     await page.keyboard.press("Escape");
-
+    await page.waitForTimeout(600);
     // Remove all connections
     const dataEdge = await page.locator(".react-flow__edge").first();
     await dataEdge.click();
