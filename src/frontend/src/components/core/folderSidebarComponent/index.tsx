@@ -5,6 +5,7 @@ import SideBarFoldersButtonsComponent from "./components/sideBarFolderButtons";
 type SidebarNavProps = {
   handleChangeFolder?: (id: string) => void;
   handleDeleteFolder?: (item: FolderType) => void;
+  handleChangeFiles?: () => void;
   className?: string;
 };
 
@@ -12,6 +13,7 @@ export default function FolderSidebarNav({
   className,
   handleChangeFolder,
   handleDeleteFolder,
+  handleChangeFiles,
   ...props
 }: SidebarNavProps) {
   const location = useLocation();
@@ -20,6 +22,7 @@ export default function FolderSidebarNav({
     <SideBarFoldersButtonsComponent
       handleChangeFolder={handleChangeFolder}
       handleDeleteFolder={handleDeleteFolder}
+      handleChangeFiles={handleChangeFiles}
     />
   );
 }

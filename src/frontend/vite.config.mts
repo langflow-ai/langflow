@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
 
   const envLangflow = envLangflowResult.parsed || {};
 
-  const apiRoutes = API_ROUTES || ["^/api/v1/", "/health"];
+  const apiRoutes = API_ROUTES || ["^/api/v1/", "^/api/v2/", "/health"];
 
   const target =
     env.VITE_PROXY_TARGET || PROXY_TARGET || "http://127.0.0.1:7860";

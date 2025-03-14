@@ -23,7 +23,7 @@ from pydantic_core import PydanticSerializationError
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router, router_v2
+from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
@@ -253,7 +253,6 @@ def create_app():
         router.include_router(mcp_router)
 
     app.include_router(router)
-    app.include_router(router_v2)
     app.include_router(health_check_router)
     app.include_router(log_router)
 

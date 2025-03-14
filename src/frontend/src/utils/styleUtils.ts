@@ -1,9 +1,13 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { AWSInvertedIcon } from "@/icons/AWSInverted";
+import { DropboxIcon } from "@/icons/Dropbox";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
+import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
+import { OneDriveIcon } from "@/icons/OneDrive";
 import Perplexity from "@/icons/Perplexity/Perplexity";
 import { SearchAPIIcon } from "@/icons/SearchAPI";
 import { SerpSearchIcon } from "@/icons/SerpSearch";
@@ -56,6 +60,7 @@ import {
   CircleDot,
   CircleOff,
   Clipboard,
+  CloudDownload,
   Code,
   Code2,
   CodeXml,
@@ -76,18 +81,23 @@ import {
   DownloadCloud,
   Edit,
   Ellipsis,
+  EllipsisVertical,
   Eraser,
   ExternalLink,
   Eye,
   EyeOff,
   File,
+  FileChartColumn,
   FileClock,
   FileDown,
+  FileJson,
+  FilePen,
   FileQuestion,
   FileSearch,
   FileSearch2,
   FileSliders,
   FileText,
+  FileType,
   FileType2,
   FileUp,
   Filter,
@@ -126,6 +136,7 @@ import {
   ListChecks,
   ListFilter,
   ListOrdered,
+  ListX,
   Loader2,
   Lock,
   LockOpen,
@@ -174,6 +185,7 @@ import {
   RefreshCcw,
   RefreshCcwDot,
   Repeat,
+  Replace,
   RotateCcw,
   Save,
   SaveAll,
@@ -497,6 +509,25 @@ export const nodeColorsName: { [char: string]: string } = {
   DataFrame: "pink",
 };
 
+export const FILE_ICONS = {
+  json: {
+    icon: "FileJson",
+    color: "text-datatype-indigo dark:text-datatype-indigo-foreground",
+  },
+  csv: {
+    icon: "FileChartColumn",
+    color: "text-datatype-emerald dark:text-datatype-emerald-foreground",
+  },
+  txt: {
+    icon: "FileType",
+    color: "text-datatype-purple dark:text-datatype-purple-foreground",
+  },
+  pdf: {
+    icon: "File",
+    color: "text-datatype-red dark:text-datatype-red-foreground",
+  },
+};
+
 export const SIDEBAR_CATEGORIES = [
   { display_name: "Saved", name: "saved_components", icon: "GradientSave" },
   { display_name: "Inputs", name: "inputs", icon: "Download" },
@@ -638,6 +669,7 @@ export const nodeIconsLucide: iconsType = {
   AirbyteJSONLoader: AirbyteIcon,
   AmazonBedrockEmbeddings: AWSIcon,
   Amazon: AWSIcon,
+  AWSInverted: AWSInvertedIcon,
   Anthropic: AnthropicIcon,
   ArXiv: ArXivIcon,
   ChatAnthropic: AnthropicIcon,
@@ -647,6 +679,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  CloudDownload,
   Olivya: OlivyaIcon,
   Bing: BingIcon,
   Cohere: CohereIcon,
@@ -779,6 +812,10 @@ export const nodeIconsLucide: iconsType = {
   XCircle,
   Info,
   CheckCircle2,
+  FileJson,
+  FileChartColumn,
+  FileType,
+  File,
   SquarePen,
   Zap,
   MessagesSquare,
@@ -793,6 +830,9 @@ export const nodeIconsLucide: iconsType = {
   AlertTriangle,
   ChevronLeft,
   SlidersHorizontal,
+  GoogleDrive: GoogleDriveIcon,
+  OneDrive: OneDriveIcon,
+  Dropbox: DropboxIcon,
   Palette,
   RefreshCcwDot,
   FolderUp,
@@ -832,9 +872,11 @@ export const nodeIconsLucide: iconsType = {
   Snowflake,
   Store,
   Download,
+  Replace,
   Eraser,
   Lock,
   LockOpen,
+  ListX,
   Newspaper,
   Tags,
   CodeXml,
@@ -842,11 +884,11 @@ export const nodeIconsLucide: iconsType = {
   LucideSend,
   Sparkles,
   DownloadCloud,
-  File,
   FileText,
   FolderPlus,
   GitFork,
   FileDown,
+  FilePen,
   FileUp,
   Menu,
   Save,
@@ -916,6 +958,7 @@ export const nodeIconsLucide: iconsType = {
   FlaskConical,
   AlertCircle,
   Bot,
+  EllipsisVertical,
   Delete,
   Command,
   ArrowBigUp,

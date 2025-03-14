@@ -12,7 +12,7 @@
   --ag-selected-row-background-color: hsl(var(--accent)) !important;
   --ag-menu-background-color: hsl(var(--accent)) !important;
   --ag-panel-background-color: hsl(var(--accent)) !important;
-  --ag-row-hover-color: hsl(var(--primary-foreground)) !important;
+  --ag-row-hover-color: hsl(var(--accent)) !important;
   --ag-header-height: 2.5rem !important;
 }
 
@@ -77,4 +77,25 @@
 
 .ag-row {
   cursor: pointer;
+}
+
+.ag-no-border .ag-root-wrapper {
+  border: none !important;
+}
+.ag-no-border .ag-row {
+  border-bottom: none !important;
+}
+
+.ag-no-border .ag-header {
+  margin-bottom: 0.6rem !important;
+}
+
+.ag-no-border .ag-paging-panel {
+  border-top: none !important;
+}
+
+.ag-no-border .ag-cell-focus:not(.ag-cell-inline-editing) {
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
