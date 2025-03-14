@@ -8,6 +8,7 @@ from .couchbase import CouchbaseVectorStoreComponent
 from .elasticsearch import ElasticsearchVectorStoreComponent
 from .faiss import FaissVectorStoreComponent
 from .hcd import HCDVectorStoreComponent
+from .local_db import LocalDBComponent
 from .milvus import MilvusVectorStoreComponent
 from .mongodb_atlas import MongoVectorStoreComponent
 from .opensearch import OpenSearchVectorStoreComponent
@@ -33,6 +34,7 @@ __all__ = [
     "ElasticsearchVectorStoreComponent",
     "FaissVectorStoreComponent",
     "HCDVectorStoreComponent",
+    "LocalDBComponent",
     "MilvusVectorStoreComponent",
     "MongoVectorStoreComponent",
     "OpenSearchVectorStoreComponent",
