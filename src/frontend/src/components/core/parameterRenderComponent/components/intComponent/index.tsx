@@ -60,9 +60,8 @@ export default function IntComponent({
     );
   };
 
-  const getDisabledClassName = () => {
-    return "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm text-input placeholder:text-input";
-  };
+  const DISABLED_INPUT_CLASS =
+    "cursor-default bg-secondary border-border border rounded-md py-2 px-3 text-sm text-input placeholder:text-input";
 
   const handleNumberChange = (newValue) => {
     handleOnNewValue({ value: Number(newValue) });
@@ -97,7 +96,7 @@ export default function IntComponent({
       >
         <NumberInputField
           className={
-            disabled || readonly ? getDisabledClassName() : getInputClassName()
+            disabled || readonly ? DISABLED_INPUT_CLASS : getInputClassName()
           }
           onChange={handleChangeInput}
           onKeyDown={(event) => handleKeyDown(event, value, "")}

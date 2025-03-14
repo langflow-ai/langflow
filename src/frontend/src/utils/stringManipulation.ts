@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import React from "react";
 import { FieldParserType } from "../types/api";
 
@@ -138,6 +139,10 @@ export const getStatusColor = (status: string): string => {
 
 export const convertStringToHTML = (htmlString: string): JSX.Element => {
   return React.createElement("span", {
-    dangerouslySetInnerHTML: { __html: htmlString },
+    dangerouslySetInnerHTML: { __html: sanitizeHTML(htmlString) },
   });
+};
+
+export const sanitizeHTML = (htmlString: string): string => {
+  return DOMPurify.sanitize(htmlString);
 };

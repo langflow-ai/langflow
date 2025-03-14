@@ -120,8 +120,8 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
               fieldValues[key].trim() === "")),
       )
       .map(
-        ([_, fieldValue]) =>
-          (fieldValue as { display_name: string })?.display_name || _,
+        ([fieldKey, fieldValue]) =>
+          (fieldValue as { display_name: string })?.display_name || fieldKey,
       );
 
     if (missingRequiredFields.length > 0) {
