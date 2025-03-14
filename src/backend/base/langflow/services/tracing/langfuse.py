@@ -23,11 +23,21 @@ if TYPE_CHECKING:
 class LangFuseTracer(BaseTracer):
     flow_id: str
 
-    def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+    def __init__(
+        self,
+        trace_name: str,
+        trace_type: str,
+        project_name: str,
+        trace_id: UUID,
+        user_id: str | None = None,
+        session_id: str | None = None,
+    ) -> None:
         self.project_name = project_name
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
+        self.user_id = user_id
+        self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict = OrderedDict()  # spans that are not ended
 
@@ -43,7 +53,19 @@ class LangFuseTracer(BaseTracer):
             from langfuse import Langfuse
 
             self._client = Langfuse(**config)
-            self.trace = self._client.trace(id=str(self.trace_id), name=self.flow_id)
+            try:
+                from langfuse.api.core.request_options import RequestOptions
+
+                self._client.client.health.health(request_options=RequestOptions(timeout_in_seconds=1))
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"can not connect to Langfuse: {e}")
+                return False
+            self.trace = self._client.trace(
+                id=str(self.trace_id),
+                name=self.flow_id,
+                user_id=self.user_id,
+                session_id=self.session_id,
+            )
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
@@ -69,7 +91,7 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        metadata_: dict = {}
+        metadata_: dict = {"from_langflow_component": True, "component_id": trace_id}
         metadata_ |= {"trace_type": trace_type} if trace_type else {}
         metadata_ |= metadata or {}
 
@@ -81,11 +103,12 @@ class LangFuseTracer(BaseTracer):
             "start_time": start_time,
         }
 
-        if len(self.spans) > 0:
-            last_span = next(reversed(self.spans))
-            span = self.spans[last_span].span(**content_span)
-        else:
-            span = self.trace.span(**content_span)
+        # if two component is built concurrently, will use wrong last span. just flatten now, maybe fix in future.
+        # if len(self.spans) > 0:
+        #     last_span = next(reversed(self.spans))
+        #     span = self.spans[last_span].span(**content_span)
+        # else:
+        span = self.trace.span(**content_span)
 
         self.spans[trace_id] = span
 
@@ -121,7 +144,12 @@ class LangFuseTracer(BaseTracer):
     ) -> None:
         if not self._ready:
             return
-
+        content_update = {
+            "input": inputs,
+            "output": outputs,
+            "metadata": metadata,
+        }
+        self.trace.update(**content_update)
         self._client.flush()
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
