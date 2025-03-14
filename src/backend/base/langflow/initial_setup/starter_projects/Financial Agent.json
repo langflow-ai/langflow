@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-JQ8Xk",
+            "id": "CombineText-BlUqp",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-PYaIP",
+            "id": "CombineText-l466f",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-JQ8Xk{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-JQ8Xkœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-PYaIP{œfieldNameœ:œtext2œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-BlUqp{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-BlUqpœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-l466f{œfieldNameœ:œtext2œ,œidœ:œCombineText-l466fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-JQ8Xk",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-JQ8Xkœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-PYaIP",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-PYaIPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-BlUqp",
+        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-BlUqpœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-l466f",
+        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-l466fœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-YVmBe",
+            "id": "ChatInput-5vMpn",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-PYaIP",
+            "id": "CombineText-l466f",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-PYaIP{œfieldNameœ:œtext1œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-5vMpn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5vMpnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-l466f{œfieldNameœ:œtext1œ,œidœ:œCombineText-l466fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-YVmBe",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-PYaIP",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-PYaIPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-5vMpn",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5vMpnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-l466f",
+        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-l466fœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-PYaIP",
+            "id": "CombineText-l466f",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "SambaNovaModel-RMgoi",
+            "id": "SambaNovaModel-fILgM",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-PYaIP{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-PYaIPœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-RMgoi{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-RMgoiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-l466f{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-l466fœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-fILgM{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-fILgMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-PYaIP",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-PYaIPœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-RMgoi",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-RMgoiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-l466f",
+        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-l466fœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SambaNovaModel-fILgM",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-fILgMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-RMgoi",
+            "id": "SambaNovaModel-fILgM",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-6rUbq",
+            "id": "ChatOutput-XZH1t",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +108,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-RMgoi{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-RMgoiœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6rUbq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6rUbqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-fILgM{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-fILgMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XZH1t{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XZH1tœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-RMgoi",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-RMgoiœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-6rUbq",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6rUbqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-fILgM",
+        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-fILgMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-XZH1t",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XZH1tœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-YVmBe",
+            "id": "ChatInput-5vMpn",
             "name": "message",
             "output_types": [
               "Message"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-zWVIS",
+            "id": "Agent-o0wmB",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-zWVIS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-5vMpn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5vMpnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-o0wmB{œfieldNameœ:œinput_valueœ,œidœ:œAgent-o0wmBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-YVmBe",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-zWVIS",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-zWVISœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-5vMpn",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5vMpnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-o0wmB",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-o0wmBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-zWVIS",
+            "id": "Agent-o0wmB",
             "name": "response",
             "output_types": [
               "Message"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-JQ8Xk",
+            "id": "CombineText-BlUqp",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-zWVIS{œdataTypeœ:œAgentœ,œidœ:œAgent-zWVISœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-JQ8Xk{œfieldNameœ:œtext2œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-o0wmB{œdataTypeœ:œAgentœ,œidœ:œAgent-o0wmBœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-BlUqp{œfieldNameœ:œtext2œ,œidœ:œCombineText-BlUqpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-zWVIS",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-zWVISœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-JQ8Xk",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-JQ8Xkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-o0wmB",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-o0wmBœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-BlUqp",
+        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-BlUqpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-fCjYR",
+            "id": "TavilySearchComponent-UoRbP",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,19 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-zWVIS",
+            "id": "Agent-o0wmB",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-fCjYR{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-fCjYRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-zWVIS{œfieldNameœ:œtoolsœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-UoRbP{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-UoRbPœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-o0wmB{œfieldNameœ:œtoolsœ,œidœ:œAgent-o0wmBœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-fCjYR",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-fCjYRœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-zWVIS",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-zWVISœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-UoRbP",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-UoRbPœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-o0wmB",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-o0wmBœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -205,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-ZIoqz",
+            "id": "URL-I2cQs",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -213,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-GayT6",
+            "id": "Agent-kq33I",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-ZIoqz{œdataTypeœ:œURLœ,œidœ:œURL-ZIoqzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GayT6{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-I2cQs{œdataTypeœ:œURLœ,œidœ:œURL-I2cQsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-kq33I{œfieldNameœ:œtoolsœ,œidœ:œAgent-kq33Iœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-ZIoqz",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ZIoqzœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-GayT6",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-I2cQs",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-I2cQsœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-kq33I",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-kq33Iœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -233,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-bHO0e",
+            "id": "YfinanceComponent-iTGtb",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -241,19 +241,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-GayT6",
+            "id": "Agent-kq33I",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YfinanceComponent-bHO0e{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-bHO0eœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GayT6{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YfinanceComponent-iTGtb{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-iTGtbœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-kq33I{œfieldNameœ:œtoolsœ,œidœ:œAgent-kq33Iœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-bHO0e",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-bHO0eœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-GayT6",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YfinanceComponent-iTGtb",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-iTGtbœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-kq33I",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-kq33Iœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -261,7 +261,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-YVmBe",
+            "id": "ChatInput-5vMpn",
             "name": "message",
             "output_types": [
               "Message"
@@ -269,19 +269,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-GayT6",
+            "id": "Agent-kq33I",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-GayT6{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-5vMpn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5vMpnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-kq33I{œfieldNameœ:œinput_valueœ,œidœ:œAgent-kq33Iœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-YVmBe",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-GayT6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-5vMpn",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5vMpnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-kq33I",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-kq33Iœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -289,7 +289,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-GayT6",
+            "id": "Agent-kq33I",
             "name": "response",
             "output_types": [
               "Message"
@@ -297,25 +297,25 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-JQ8Xk",
+            "id": "CombineText-BlUqp",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-GayT6{œdataTypeœ:œAgentœ,œidœ:œAgent-GayT6œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-JQ8Xk{œfieldNameœ:œtext1œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-kq33I{œdataTypeœ:œAgentœ,œidœ:œAgent-kq33Iœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-BlUqp{œfieldNameœ:œtext1œ,œidœ:œCombineText-BlUqpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-GayT6",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-GayT6œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-JQ8Xk",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-JQ8Xkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-kq33I",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-kq33Iœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-BlUqp",
+        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-BlUqpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-YVmBe",
+          "id": "ChatInput-5vMpn",
           "node": {
             "base_classes": [
               "Message"
@@ -609,7 +609,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-YVmBe",
+        "id": "ChatInput-5vMpn",
         "measured": {
           "height": 66,
           "width": 192
@@ -623,7 +623,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-fCjYR",
+          "id": "TavilySearchComponent-UoRbP",
           "node": {
             "base_classes": [
               "Data",
@@ -682,7 +682,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -977,9 +977,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-fCjYR",
+        "id": "TavilySearchComponent-UoRbP",
         "measured": {
-          "height": 437,
+          "height": 435,
           "width": 320
         },
         "position": {
@@ -991,7 +991,7 @@
       },
       {
         "data": {
-          "id": "YfinanceComponent-bHO0e",
+          "id": "YfinanceComponent-iTGtb",
           "node": {
             "base_classes": [
               "Data",
@@ -1261,9 +1261,9 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-bHO0e",
+        "id": "YfinanceComponent-iTGtb",
         "measured": {
-          "height": 519,
+          "height": 517,
           "width": 320
         },
         "position": {
@@ -1275,7 +1275,7 @@
       },
       {
         "data": {
-          "id": "CombineText-JQ8Xk",
+          "id": "CombineText-BlUqp",
           "node": {
             "base_classes": [
               "Message"
@@ -1411,9 +1411,9 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-JQ8Xk",
+        "id": "CombineText-BlUqp",
         "measured": {
-          "height": 415,
+          "height": 413,
           "width": 320
         },
         "position": {
@@ -1425,7 +1425,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-6rUbq",
+          "id": "ChatOutput-XZH1t",
           "node": {
             "base_classes": [
               "Message"
@@ -1720,7 +1720,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-6rUbq",
+        "id": "ChatOutput-XZH1t",
         "measured": {
           "height": 66,
           "width": 192
@@ -1734,7 +1734,7 @@
       },
       {
         "data": {
-          "id": "CombineText-PYaIP",
+          "id": "CombineText-l466f",
           "node": {
             "base_classes": [
               "Message"
@@ -1870,9 +1870,9 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-PYaIP",
+        "id": "CombineText-l466f",
         "measured": {
-          "height": 415,
+          "height": 413,
           "width": 320
         },
         "position": {
@@ -1884,7 +1884,7 @@
       },
       {
         "data": {
-          "id": "URL-ZIoqz",
+          "id": "URL-I2cQs",
           "node": {
             "base_classes": [
               "Data",
@@ -2162,9 +2162,9 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-ZIoqz",
+        "id": "URL-I2cQs",
         "measured": {
-          "height": 590,
+          "height": 587,
           "width": 320
         },
         "position": {
@@ -2176,9 +2176,9 @@
       },
       {
         "data": {
-          "id": "note-JVsiy",
+          "id": "note-VLDEG",
           "node": {
-            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent is a multi agent flow with agents in charge of researching in the web and Yahoo news to retrieve relevant context and write reports about financial queries. Here's how it works:\n\n- **Query Start:** You start by asking the system any financial information you want to know\n\n\n- **Research agents:**\n  - **Finance Research agent:** The agent uses its tools (Yahoo finance news,  url fetcher) to gather latest news about the companies in your query.\n\n  - **Web Research agent:** The agent uses its tools (Tavily AI search) to gather relevant web information about your query.\n\n- **Merge context:** This joins the original query with all the retrieved relevant contexts \n\n- **Report generation step:** This step will get the context and have access to some tools (URL fetcher, and calculator), with this the agent with write a final report/answer to your financial query!\n\n Try it with `Why did Nvidia stock drop in January?`",
+            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [Sambanova API key](https://sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components, add your OpenAI API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Sambanova** component, add your **Sambanova API key**.\n4. In the **Tavily Search** component, add your **Tavily API key**.\n5. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2189,13 +2189,13 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-JVsiy",
+        "id": "note-VLDEG",
         "measured": {
           "height": 630,
           "width": 479
         },
         "position": {
-          "x": -1118.178623158622,
+          "x": -1119.9423274254439,
           "y": -433.35853649245854
         },
         "resizing": false,
@@ -2205,204 +2205,7 @@
       },
       {
         "data": {
-          "id": "note-FRwiT",
-          "node": {
-            "description": "## Configure the model by obtaining your API key from [cloud.sambanova.ai/](https://cloud.sambanova.ai). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 335,
-        "id": "note-FRwiT",
-        "measured": {
-          "height": 335,
-          "width": 326
-        },
-        "position": {
-          "x": 1195.2947481802175,
-          "y": -233.01046242443618
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 325
-      },
-      {
-        "data": {
-          "id": "note-CEkL5",
-          "node": {
-            "description": "## Configure the agent by obtaining your API key from [cloud.sambanova.ai](https://cloud.sambanova.ai/). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n- OpenAI/Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "id": "note-CEkL5",
-        "measured": {
-          "height": 404,
-          "width": 325
-        },
-        "position": {
-          "x": -83.4626659381833,
-          "y": -800.6722543671315
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-uWm92",
-          "node": {
-            "description": "## Configure the agent by obtaining your API key from [cloud.sambanova.ai](https://cloud.sambanova.ai/). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n- OpenAI/Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "id": "note-uWm92",
-        "measured": {
-          "height": 404,
-          "width": 325
-        },
-        "position": {
-          "x": -86.40037380762712,
-          "y": 1066.4235037583003
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-nL7Ws",
-          "node": {
-            "description": "## Configure the Ai search tool by obtaining your Tavily API key from [tavily.com](https://tavily.com/).",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "blue"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-nL7Ws",
-        "measured": {
-          "height": 324,
-          "width": 325
-        },
-        "position": {
-          "x": -690.4648370216432,
-          "y": 1055.7957336403504
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 324
-      },
-      {
-        "data": {
-          "id": "note-rYKvX",
-          "node": {
-            "description": "# **Finance Research Agent**\n   - **Purpose:** This agent research the latest news about the companies in the query.\n   - **Core Functions:** search for latest news based in the company Tickler and fetch web sites with news to return a summarized answer to the initial query\n   - **Tools Utilized:** Yahoo finance, get time, fetch URL\n",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "lime"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 334,
-        "id": "note-rYKvX",
-        "measured": {
-          "height": 334,
-          "width": 326
-        },
-        "position": {
-          "x": 329.16399005786667,
-          "y": -261.35462768237153
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 325
-      },
-      {
-        "data": {
-          "id": "note-wRMT8",
-          "node": {
-            "description": "# **Web Research Agent**\n   - **Purpose:** This agent research the user query in the web.\n   - **Core Functions:** search for latest information about the user query and returns a summarized answer to the initial query\n   - **Tools Utilized:** Tavily AI Search\n",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "lime"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 335,
-        "id": "note-wRMT8",
-        "measured": {
-          "height": 335,
-          "width": 326
-        },
-        "position": {
-          "x": 332.10505860125636,
-          "y": 844.9118495493336
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 325
-      },
-      {
-        "data": {
-          "id": "note-O1RXr",
-          "node": {
-            "description": "# **Report Generation**\n   - **Purpose:** This model generate a final report / answer to the initial query.\n   - **Core Functions:** use the context from the research phase to generate a final answer / report\n\n",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "lime"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 361,
-        "id": "note-O1RXr",
-        "measured": {
-          "height": 361,
-          "width": 326
-        },
-        "position": {
-          "x": 1555.081529730841,
-          "y": 77.85077532148986
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 325
-      },
-      {
-        "data": {
-          "id": "SambaNovaModel-RMgoi",
+          "id": "SambaNovaModel-fILgM",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2477,7 +2280,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2705,9 +2508,9 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-RMgoi",
+        "id": "SambaNovaModel-fILgM",
         "measured": {
-          "height": 656,
+          "height": 653,
           "width": 320
         },
         "position": {
@@ -2719,7 +2522,7 @@
       },
       {
         "data": {
-          "id": "Agent-zWVIS",
+          "id": "Agent-o0wmB",
           "node": {
             "base_classes": [
               "Message"
@@ -2900,7 +2703,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3406,9 +3209,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-zWVIS",
+        "id": "Agent-o0wmB",
         "measured": {
-          "height": 624,
+          "height": 621,
           "width": 320
         },
         "position": {
@@ -3420,7 +3223,7 @@
       },
       {
         "data": {
-          "id": "Agent-GayT6",
+          "id": "Agent-kq33I",
           "node": {
             "base_classes": [
               "Message"
@@ -3601,7 +3404,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -4107,28 +3910,28 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-GayT6",
+        "id": "Agent-kq33I",
         "measured": {
-          "height": 624,
+          "height": 621,
           "width": 320
         },
         "position": {
           "x": -77.82588111053366,
           "y": -413.29696550729983
         },
-        "selected": true,
+        "selected": false,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 658.7456890022404,
-      "y": 290.52250173325774,
-      "zoom": 0.5030767991364286
+      "x": 760.4363905082554,
+      "y": 485.3087531296533,
+      "zoom": 0.566988479197837
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
-  "id": "012ba5cf-a351-4932-8ae7-4a1701fe4c6a",
+  "id": "4251d502-f001-44ff-bbb3-3f46b9eabfda",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Financial Agent",
