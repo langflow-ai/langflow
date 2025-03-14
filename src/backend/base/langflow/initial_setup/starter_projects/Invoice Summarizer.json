@@ -6,36 +6,36 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "AgentQL",
-            "id": "AgentQL-R0YLG",
-            "name": "component_as_tool",
+            "dataType": "Prompt",
+            "id": "Prompt-WRaed",
+            "name": "prompt",
             "output_types": [
-              "Tool"
+              "Message"
             ]
           },
           "targetHandle": {
-            "fieldName": "tools",
-            "id": "Agent-7PMCu",
+            "fieldName": "system_prompt",
+            "id": "Agent-IDDA1",
             "inputTypes": [
-              "Tool"
+              "Message"
             ],
-            "type": "other"
+            "type": "str"
           }
         },
-        "id": "reactflow__edge-AgentQL-R0YLG{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-R0YLGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-Prompt-WRaed{œdataTypeœ:œPromptœ,œidœ:œPrompt-WRaedœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "AgentQL-R0YLG",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-R0YLGœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "Prompt-WRaed",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WRaedœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-IDDA1",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-K4joL",
+            "dataType": "needle",
+            "id": "needle-nk3Lq",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-7PMCu",
+            "id": "Agent-IDDA1",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-K4joL{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-K4joLœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-7PMCu{œfieldNameœ:œtoolsœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-needle-nk3Lq{œdataTypeœ:œneedleœ,œidœ:œneedle-nk3Lqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IDDA1{œfieldNameœ:œtoolsœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-K4joL",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-K4joLœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "needle-nk3Lq",
+        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-nk3Lqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-IDDA1",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-M0lPa",
+            "id": "ChatInput-V0cjZ",
             "name": "message",
             "output_types": [
               "Message"
@@ -71,25 +71,845 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-7PMCu",
+            "id": "Agent-IDDA1",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-M0lPa{œdataTypeœ:œChatInputœ,œidœ:œChatInput-M0lPaœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-7PMCu{œfieldNameœ:œinput_valueœ,œidœ:œAgent-7PMCuœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-V0cjZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-V0cjZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-M0lPa",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-M0lPaœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-7PMCu",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-7PMCuœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-V0cjZ",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-V0cjZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-IDDA1",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-IDDA1",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-Ftr5v",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Agent-IDDA1{œdataTypeœ:œAgentœ,œidœ:œAgent-IDDA1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Ftr5v{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Ftr5vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "source": "Agent-IDDA1",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-IDDA1œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Ftr5v",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Ftr5vœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-M0lPa",
+          "id": "note-JlPa7",
+          "node": {
+            "description": "# Invoice Summarizer\n\nLeverage the **Needle Search API** and an **Agent** to gather and summarize your invoice data quickly and accurately.\n\n## Prerequisites\n\n* A **Collection** and an **API Key** from your [Needle.ai](https://needle-ai.com) deployment\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Load your invoices into your Needle Collection. \n\n2. In the **Needle Search** tool, add your **Needle Collection ID** and **Needle API Key**.\n\n3. In the **Agent** component, add your **OpenAI Key**.\n\n4. Open the **Playground** and query your invoices. The **Agent** component determines the correct query and search size for data retrieval.\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "emerald"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 632,
+        "id": "note-JlPa7",
+        "measured": {
+          "height": 632,
+          "width": 583
+        },
+        "position": {
+          "x": -153.15585970276706,
+          "y": -405.10874004814775
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 582
+      },
+      {
+        "data": {
+          "id": "Prompt-WRaed",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {
+              "template": []
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "display_name": "Prompt",
+            "documentation": "",
+            "edited": false,
+            "error": null,
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "frozen": false,
+            "full_path": null,
+            "icon": "prompts",
+            "is_composition": null,
+            "is_input": null,
+            "is_output": null,
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "name": "",
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "name": "prompt",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n"
+              },
+              "template": {
+                "_input_type": "PromptInput",
+                "advanced": false,
+                "display_name": "Template",
+                "dynamic": false,
+                "info": "",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "prompt",
+                "value": "You are a meticulous expense analyst with expertise in financial data analysis and cost categorization.  \nYour role is to analyze invoices, break down expenses, identify spending patterns, and provide actionable cost-saving insights.  \nYou use available tools, such as a knowledge base search, to enhance your analysis.  \nProvide structured and well-formatted responses.\n"
+              },
+              "tool_placeholder": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Tool Placeholder",
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "tool_placeholder",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "Prompt"
+        },
+        "dragging": false,
+        "id": "Prompt-WRaed",
+        "measured": {
+          "height": 256,
+          "width": 320
+        },
+        "position": {
+          "x": 531.8828954152592,
+          "y": -476.0431839408612
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatOutput-Ftr5v",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Display a chat message in the Playground.",
+            "display_name": "Chat Output",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "data_template",
+              "background_color",
+              "chat_icon",
+              "text_color"
+            ],
+            "frozen": false,
+            "icon": "MessagesSquare",
+            "legacy": false,
+            "lf_version": "1.1.5",
+            "metadata": {},
+            "minimized": true,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "message_response",
+                "name": "message",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "background_color": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Background Color",
+                "dynamic": false,
+                "info": "The background color of the icon.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "background_color",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "chat_icon": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Icon",
+                "dynamic": false,
+                "info": "The icon of the message.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "chat_icon",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "clean_data": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Basic Clean Data",
+                "dynamic": false,
+                "info": "Whether to clean the data",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "clean_data",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n\n                # Replace pipe characters to avoid markdown table issues\n                processed_data = data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n\n                processed_data = processed_data.map(\n                    lambda x: str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x\n                )\n\n                return processed_data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
+              },
+              "data_template": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Data Template",
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "data_template",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "{text}"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Text",
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "sender": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Machine"
+              },
+              "sender_name": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "sender_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "AI"
+              },
+              "session_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "should_store_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": true
+              },
+              "text_color": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Text Color",
+                "dynamic": false,
+                "info": "The text color of the name",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "text_color",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": false,
+          "type": "ChatOutput"
+        },
+        "dragging": false,
+        "id": "ChatOutput-Ftr5v",
+        "measured": {
+          "height": 66,
+          "width": 192
+        },
+        "position": {
+          "x": 1481.751052877705,
+          "y": 232.9723445431882
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "note-TRZfV",
+          "node": {
+            "description": "### 💡 Add your OpenAI API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "id": "note-TRZfV",
+        "measured": {
+          "height": 324,
+          "width": 324
+        },
+        "position": {
+          "x": 1076.1571598578398,
+          "y": -389.50649266044195
+        },
+        "selected": false,
+        "type": "noteNode"
+      },
+      {
+        "data": {
+          "id": "note-P7KNw",
+          "node": {
+            "description": "### 💡 Add your Needle Search API key here 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "dragging": false,
+        "height": 324,
+        "id": "note-P7KNw",
+        "measured": {
+          "height": 324,
+          "width": 401
+        },
+        "position": {
+          "x": 500.88806568161635,
+          "y": -196.26232150672587
+        },
+        "resizing": false,
+        "selected": false,
+        "type": "noteNode",
+        "width": 402
+      },
+      {
+        "data": {
+          "id": "needle-nk3Lq",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "category": "needle",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "A retriever that uses the Needle API to search collections.",
+            "display_name": "Needle Retriever",
+            "documentation": "https://docs.needle-ai.com",
+            "edited": false,
+            "field_order": [
+              "needle_api_key",
+              "collection_id",
+              "query",
+              "top_k"
+            ],
+            "frozen": false,
+            "icon": "Needle",
+            "key": "needle",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Toolset",
+                "hidden": null,
+                "method": "to_toolkit",
+                "name": "component_as_tool",
+                "required_inputs": null,
+                "selected": "Tool",
+                "tool_mode": true,
+                "types": [
+                  "Tool"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "score": 7.568328950209746e-6,
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_community.retrievers.needle import NeedleRetriever\n\nfrom langflow.custom.custom_component.component import Component\nfrom langflow.io import IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import MESSAGE_SENDER_AI\n\n\nclass NeedleComponent(Component):\n    display_name = \"Needle Retriever\"\n    description = \"A retriever that uses the Needle API to search collections.\"\n    documentation = \"https://docs.needle-ai.com\"\n    icon = \"Needle\"\n    name = \"needle\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"needle_api_key\",\n            display_name=\"Needle API Key\",\n            info=\"Your Needle API key.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"collection_id\",\n            display_name=\"Collection ID\",\n            info=\"The ID of the Needle collection.\",\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"User Query\",\n            info=\"Enter your question here. In tool mode, you can also specify top_k parameter (min: 20).\",\n            required=True,\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"top_k\",\n            display_name=\"Top K Results\",\n            info=\"Number of search results to return (min: 20).\",\n            value=20,\n            required=True,\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Result\", name=\"result\", type_=\"Message\", method=\"run\")]\n\n    def run(self) -> Message:\n        # Extract query and top_k\n        query_input = self.query\n        actual_query = query_input.get(\"query\", \"\") if isinstance(query_input, dict) else query_input\n\n        # Parse top_k from tool input or use default, always enforcing minimum of 20\n        try:\n            if isinstance(query_input, dict) and \"top_k\" in query_input:\n                agent_top_k = query_input.get(\"top_k\")\n                # Check if agent_top_k is not None before converting to int\n                top_k = max(20, int(agent_top_k)) if agent_top_k is not None else max(20, self.top_k)\n            else:\n                top_k = max(20, self.top_k)\n        except (ValueError, TypeError):\n            top_k = max(20, self.top_k)\n\n        # Validate required inputs\n        if not self.needle_api_key or not self.needle_api_key.strip():\n            error_msg = \"The Needle API key cannot be empty.\"\n            raise ValueError(error_msg)\n        if not self.collection_id or not self.collection_id.strip():\n            error_msg = \"The Collection ID cannot be empty.\"\n            raise ValueError(error_msg)\n        if not actual_query or not actual_query.strip():\n            error_msg = \"The query cannot be empty.\"\n            raise ValueError(error_msg)\n\n        try:\n            # Initialize the retriever and get documents\n            retriever = NeedleRetriever(\n                needle_api_key=self.needle_api_key,\n                collection_id=self.collection_id,\n                top_k=top_k,\n            )\n\n            docs = retriever.get_relevant_documents(actual_query)\n\n            # Format the response\n            if not docs:\n                text_content = \"No relevant documents found for the query.\"\n            else:\n                context = \"\\n\\n\".join([f\"Document {i + 1}:\\n{doc.page_content}\" for i, doc in enumerate(docs)])\n                text_content = f\"Question: {actual_query}\\n\\nContext:\\n{context}\"\n\n            # Return formatted message\n            return Message(\n                text=text_content,\n                type=\"assistant\",\n                sender=MESSAGE_SENDER_AI,\n                additional_kwargs={\n                    \"source_documents\": [{\"page_content\": doc.page_content, \"metadata\": doc.metadata} for doc in docs],\n                    \"top_k_used\": top_k,\n                },\n            )\n\n        except Exception as e:\n            error_msg = f\"Error processing query: {e!s}\"\n            raise ValueError(error_msg) from e\n"
+              },
+              "collection_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "Collection ID",
+                "dynamic": false,
+                "info": "The ID of the Needle collection.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "collection_id",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "<ENTER YOUR COLLECTION ID>"
+              },
+              "needle_api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "Needle API Key",
+                "dynamic": false,
+                "info": "Your Needle API key.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": false,
+                "name": "needle_api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "query": {
+                "_input_type": "MessageTextInput",
+                "advanced": false,
+                "display_name": "User Query",
+                "dynamic": false,
+                "info": "Enter your question here. In tool mode, you can also specify top_k parameter (min: 20).",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "query",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "tools_metadata": {
+                "_input_type": "TableInput",
+                "advanced": false,
+                "display_name": "Edit tools",
+                "dynamic": false,
+                "info": "",
+                "is_list": true,
+                "list_add_label": "Add More",
+                "name": "tools_metadata",
+                "placeholder": "",
+                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "table_icon": "Hammer",
+                "table_options": {
+                  "block_add": true,
+                  "block_delete": true,
+                  "block_edit": true,
+                  "block_filter": true,
+                  "block_hide": true,
+                  "block_select": true,
+                  "block_sort": true,
+                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
+                  "field_parsers": {
+                    "commands": "commands",
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
+                  },
+                  "hide_options": true
+                },
+                "table_schema": {
+                  "columns": [
+                    {
+                      "default": "None",
+                      "description": "Specify the name of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Name",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "name",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": "None",
+                      "description": "Describe the purpose of the tool.",
+                      "disable_edit": false,
+                      "display_name": "Tool Description",
+                      "edit_mode": "popover",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": false,
+                      "name": "description",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": "None",
+                      "description": "The default identifiers for the tools and cannot be changed.",
+                      "disable_edit": true,
+                      "display_name": "Tool Identifiers",
+                      "edit_mode": "inline",
+                      "filterable": false,
+                      "formatter": "text",
+                      "hidden": true,
+                      "name": "tags",
+                      "sortable": false,
+                      "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "trigger_icon": "Hammer",
+                "trigger_text": "",
+                "type": "table",
+                "value": [
+                  {
+                    "description": "run(collection_id: Message, needle_api_key: Message, query: Message, top_k: FieldTypes.INTEGER) - A retriever that uses the Needle API to search collections.",
+                    "name": "needle-run",
+                    "tags": [
+                      "needle-run"
+                    ]
+                  }
+                ]
+              },
+              "top_k": {
+                "_input_type": "IntInput",
+                "advanced": false,
+                "display_name": "Top K Results",
+                "dynamic": false,
+                "info": "Number of search results to return (min: 20).",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "top_k",
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 20
+              }
+            },
+            "tool_mode": true
+          },
+          "showNode": true,
+          "type": "needle"
+        },
+        "id": "needle-nk3Lq",
+        "measured": {
+          "height": 582,
+          "width": 320
+        },
+        "position": {
+          "x": 540,
+          "y": -150
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "ChatInput-V0cjZ",
           "node": {
             "base_classes": [
               "Message"
@@ -117,7 +937,6 @@
             "icon": "MessagesSquare",
             "key": "ChatInput",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -267,7 +1086,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": ""
+                "value": "Analyze recent invoices and generate a detailed expense report.   Steps:   1. Group expenses and calculate total spend by vendor.   2. Calculate the gross total spend.   3. Identify potential cost-saving opportunities.   Provide the report in markdown format, including:   - Executive Summary   - Vendor-wise Breakdown   - Recommendations for Cost Optimization.  "
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -382,992 +1201,31 @@
             },
             "tool_mode": false
           },
-          "showNode": false,
+          "showNode": true,
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-M0lPa",
+        "id": "ChatInput-V0cjZ",
         "measured": {
-          "height": 66,
-          "width": 192
-        },
-        "position": {
-          "x": 32.99622536761149,
-          "y": 367.6878380048698
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "ChatOutput-LyZb7",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Display a chat message in the Playground.",
-            "display_name": "Chat Output",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "should_store_message",
-              "sender",
-              "sender_name",
-              "session_id",
-              "data_template",
-              "background_color",
-              "chat_icon",
-              "text_color",
-              "clean_data"
-            ],
-            "frozen": false,
-            "icon": "MessagesSquare",
-            "legacy": false,
-            "metadata": {},
-            "minimized": true,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Message",
-                "method": "message_response",
-                "name": "message",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "background_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Background Color",
-                "dynamic": false,
-                "info": "The background color of the icon.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "background_color",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "chat_icon": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Icon",
-                "dynamic": false,
-                "info": "The icon of the message.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "chat_icon",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "clean_data": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Basic Clean Data",
-                "dynamic": false,
-                "info": "Whether to clean the data",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "clean_data",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from collections.abc import Generator\nfrom typing import Any\n\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.inputs.inputs import HandleInput\nfrom langflow.io import DropdownInput, MessageTextInput, Output\nfrom langflow.schema.data import Data\nfrom langflow.schema.dataframe import DataFrame\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n            input_types=[\"Data\", \"DataFrame\", \"Message\"],\n            required=True,\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"clean_data\",\n            display_name=\"Basic Clean Data\",\n            value=True,\n            info=\"Whether to clean the data\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            # Handle case where source is a ChatOpenAI object\n            if hasattr(source, \"model_name\"):\n                source_dict[\"source\"] = source.model_name\n            elif hasattr(source, \"model\"):\n                source_dict[\"source\"] = str(source.model)\n            else:\n                source_dict[\"source\"] = str(source)\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        # First convert the input to string if needed\n        text = self.convert_to_string()\n        # Get source properties\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n\n        # Create or use existing Message object\n        if isinstance(self.input_value, Message):\n            message = self.input_value\n            # Update message properties\n            message.text = text\n        else:\n            message = Message(text=text)\n\n        # Set message properties\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n\n        # Store message if needed\n        if self.session_id and self.should_store_message:\n            stored_message = await self.send_message(message)\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n\n    def _validate_input(self) -> None:\n        \"\"\"Validate the input data and raise ValueError if invalid.\"\"\"\n        if self.input_value is None:\n            msg = \"Input data cannot be None\"\n            raise ValueError(msg)\n        if isinstance(self.input_value, list) and not all(\n            isinstance(item, Message | Data | DataFrame | str) for item in self.input_value\n        ):\n            invalid_types = [\n                type(item).__name__\n                for item in self.input_value\n                if not isinstance(item, Message | Data | DataFrame | str)\n            ]\n            msg = f\"Expected Data or DataFrame or Message or str, got {invalid_types}\"\n            raise TypeError(msg)\n        if not isinstance(\n            self.input_value,\n            Message | Data | DataFrame | str | list | Generator | type(None),\n        ):\n            type_name = type(self.input_value).__name__\n            msg = f\"Expected Data or DataFrame or Message or str, Generator or None, got {type_name}\"\n            raise TypeError(msg)\n\n    def _safe_convert(self, data: Any) -> str:\n        \"\"\"Safely convert input data to string.\"\"\"\n        try:\n            if isinstance(data, str):\n                return data\n            if isinstance(data, Message):\n                return data.get_text()\n            if isinstance(data, Data):\n                if data.get_text() is None:\n                    msg = \"Empty Data object\"\n                    raise ValueError(msg)\n                return data.get_text()\n            if isinstance(data, DataFrame):\n                if self.clean_data:\n                    # Remove empty rows\n                    data = data.dropna(how=\"all\")\n                    # Remove empty lines in each cell\n                    data = data.replace(r\"^\\s*$\", \"\", regex=True)\n                    # Replace multiple newlines with a single newline\n                    data = data.replace(r\"\\n+\", \"\\n\", regex=True)\n\n                # Replace pipe characters to avoid markdown table issues\n                processed_data = data.replace(r\"\\|\", r\"\\\\|\", regex=True)\n\n                processed_data = processed_data.map(\n                    lambda x: str(x).replace(\"\\n\", \"<br/>\") if isinstance(x, str) else x\n                )\n\n                return processed_data.to_markdown(index=False)\n            return str(data)\n        except (ValueError, TypeError, AttributeError) as e:\n            msg = f\"Error converting data: {e!s}\"\n            raise ValueError(msg) from e\n\n    def convert_to_string(self) -> str | Generator[Any, None, None]:\n        \"\"\"Convert input data to string with proper error handling.\"\"\"\n        self._validate_input()\n        if isinstance(self.input_value, list):\n            return \"\\n\".join([self._safe_convert(item) for item in self.input_value])\n        if isinstance(self.input_value, Generator):\n            return self.input_value\n        return self._safe_convert(self.input_value)\n"
-              },
-              "data_template": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Data Template",
-                "dynamic": false,
-                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "data_template",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "{text}"
-              },
-              "input_value": {
-                "_input_type": "HandleInput",
-                "advanced": false,
-                "display_name": "Text",
-                "dynamic": false,
-                "info": "Message to be passed as output.",
-                "input_types": [
-                  "Data",
-                  "DataFrame",
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "input_value",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "trace_as_metadata": true,
-                "type": "other",
-                "value": ""
-              },
-              "sender": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Sender Type",
-                "dynamic": false,
-                "info": "Type of sender.",
-                "name": "sender",
-                "options": [
-                  "Machine",
-                  "User"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Machine"
-              },
-              "sender_name": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Sender Name",
-                "dynamic": false,
-                "info": "Name of the sender.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "sender_name",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "AI"
-              },
-              "session_id": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Session ID",
-                "dynamic": false,
-                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "session_id",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "should_store_message": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Store Messages",
-                "dynamic": false,
-                "info": "Store the message in the history.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "should_store_message",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "text_color": {
-                "_input_type": "MessageTextInput",
-                "advanced": true,
-                "display_name": "Text Color",
-                "dynamic": false,
-                "info": "The text color of the name",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "text_color",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": false,
-          "type": "ChatOutput"
-        },
-        "dragging": false,
-        "id": "ChatOutput-LyZb7",
-        "measured": {
-          "height": 66,
-          "width": 192
-        },
-        "position": {
-          "x": 1239.8390470797185,
-          "y": 313.42117075262695
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "TavilySearchComponent-K4joL",
-          "node": {
-            "base_classes": [
-              "Data",
-              "Message"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "**Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-            "display_name": "Tavily AI Search",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "api_key",
-              "query",
-              "search_depth",
-              "topic",
-              "time_range",
-              "max_results",
-              "include_images",
-              "include_answer"
-            ],
-            "frozen": false,
-            "icon": "TavilyIcon",
-            "legacy": false,
-            "lf_version": "1.2.0",
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "Tavily API Key",
-                "dynamic": false,
-                "info": "Your Tavily API Key.",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.helpers.data import data_to_text\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass TavilySearchComponent(Component):\n    display_name = \"Tavily AI Search\"\n    description = \"\"\"**Tavily AI** is a search engine optimized for LLMs and RAG, \\\n        aimed at efficient, quick, and persistent search results.\"\"\"\n    icon = \"TavilyIcon\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Tavily API Key\",\n            required=True,\n            info=\"Your Tavily API Key.\",\n        ),\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Search Query\",\n            info=\"The search query you want to execute with Tavily.\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_depth\",\n            display_name=\"Search Depth\",\n            info=\"The depth of the search.\",\n            options=[\"basic\", \"advanced\"],\n            value=\"advanced\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"topic\",\n            display_name=\"Search Topic\",\n            info=\"The category of the search.\",\n            options=[\"general\", \"news\"],\n            value=\"general\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_range\",\n            display_name=\"Time Range\",\n            info=\"The time range back from the current date to include in the search results.\",\n            options=[\"day\", \"week\", \"month\", \"year\"],\n            value=None,\n            advanced=True,\n            combobox=True,\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"The maximum number of search results to return.\",\n            value=5,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_images\",\n            display_name=\"Include Images\",\n            info=\"Include a list of query-related images in the response.\",\n            value=True,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"include_answer\",\n            display_name=\"Include Answer\",\n            info=\"Include a short answer to original query.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            url = \"https://api.tavily.com/search\"\n            headers = {\n                \"content-type\": \"application/json\",\n                \"accept\": \"application/json\",\n            }\n            payload = {\n                \"api_key\": self.api_key,\n                \"query\": self.query,\n                \"search_depth\": self.search_depth,\n                \"topic\": self.topic,\n                \"max_results\": self.max_results,\n                \"include_images\": self.include_images,\n                \"include_answer\": self.include_answer,\n                \"time_range\": self.time_range,\n            }\n\n            with httpx.Client() as client:\n                response = client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            search_results = response.json()\n\n            data_results = []\n\n            if self.include_answer and search_results.get(\"answer\"):\n                data_results.append(Data(text=search_results[\"answer\"]))\n\n            for result in search_results.get(\"results\", []):\n                content = result.get(\"content\", \"\")\n                data_results.append(\n                    Data(\n                        text=content,\n                        data={\n                            \"title\": result.get(\"title\"),\n                            \"url\": result.get(\"url\"),\n                            \"content\": content,\n                            \"score\": result.get(\"score\"),\n                        },\n                    )\n                )\n\n            if self.include_images and search_results.get(\"images\"):\n                data_results.append(Data(text=\"Images found\", data={\"images\": search_results[\"images\"]}))\n        except httpx.HTTPStatusError as exc:\n            error_message = f\"HTTP error occurred: {exc.response.status_code} - {exc.response.text}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except httpx.RequestError as exc:\n            error_message = f\"Request error occurred: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        except ValueError as exc:\n            error_message = f\"Invalid response format: {exc}\"\n            logger.error(error_message)\n            return [Data(text=error_message, data={\"error\": error_message})]\n        else:\n            self.status = data_results\n            return data_results\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = data_to_text(\"{text}\", data)\n        self.status = result_string\n        return Message(text=result_string)\n"
-              },
-              "include_answer": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Include Answer",
-                "dynamic": false,
-                "info": "Include a short answer to original query.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "include_answer",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "include_images": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Include Images",
-                "dynamic": false,
-                "info": "Include a list of query-related images in the response.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "include_images",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "bool",
-                "value": true
-              },
-              "max_results": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Results",
-                "dynamic": false,
-                "info": "The maximum number of search results to return.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_results",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 5
-              },
-              "query": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Search Query",
-                "dynamic": false,
-                "info": "The search query you want to execute with Tavily.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "query",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "search_depth": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Search Depth",
-                "dynamic": false,
-                "info": "The depth of the search.",
-                "name": "search_depth",
-                "options": [
-                  "basic",
-                  "advanced"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "advanced"
-              },
-              "time_range": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": true,
-                "dialog_inputs": {},
-                "display_name": "Time Range",
-                "dynamic": false,
-                "info": "The time range back from the current date to include in the search results.",
-                "name": "time_range",
-                "options": [
-                  "day",
-                  "week",
-                  "month",
-                  "year"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str"
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "name",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "description",
-                      "sortable": false,
-                      "type": "text"
-                    },
-                    {
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "text"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "fetch_content(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content",
-                    "tags": [
-                      "TavilySearchComponent-fetch_content"
-                    ]
-                  },
-                  {
-                    "description": "fetch_content_text(api_key: Message) - **Tavily AI** is a search engine optimized for LLMs and RAG,         aimed at efficient, quick, and persistent search results.",
-                    "name": "TavilySearchComponent-fetch_content_text",
-                    "tags": [
-                      "TavilySearchComponent-fetch_content_text"
-                    ]
-                  }
-                ]
-              },
-              "topic": {
-                "_input_type": "DropdownInput",
-                "advanced": true,
-                "combobox": false,
-                "dialog_inputs": {},
-                "display_name": "Search Topic",
-                "dynamic": false,
-                "info": "The category of the search.",
-                "name": "topic",
-                "options": [
-                  "general",
-                  "news"
-                ],
-                "options_metadata": [],
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "general"
-              }
-            },
-            "tool_mode": true
-          },
-          "showNode": true,
-          "type": "TavilySearchComponent"
-        },
-        "dragging": false,
-        "id": "TavilySearchComponent-K4joL",
-        "measured": {
-          "height": 435,
+          "height": 230,
           "width": 320
         },
         "position": {
-          "x": 345.9762510966062,
-          "y": 500.79656821057074
+          "x": 533.1085055774705,
+          "y": 456.54948541243164
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "description": "Uses AgentQL API to extract structured data from a given URL.",
-          "display_name": "AgentQL Query Data",
-          "id": "AgentQL-R0YLG",
-          "node": {
-            "base_classes": [
-              "Data"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
-            "display_name": "Extract Web Data",
-            "documentation": "https://docs.agentql.com/rest-api/api-reference",
-            "edited": false,
-            "field_order": [
-              "api_key",
-              "url",
-              "query",
-              "prompt",
-              "timeout",
-              "params"
-            ],
-            "frozen": false,
-            "icon": "AgentQL",
-            "legacy": false,
-            "metadata": {},
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Toolset",
-                "hidden": null,
-                "method": "to_toolkit",
-                "name": "component_as_tool",
-                "required_inputs": null,
-                "selected": "Tool",
-                "tool_mode": true,
-                "types": [
-                  "Tool"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "template": {
-              "_type": "Component",
-              "api_key": {
-                "_input_type": "SecretStrInput",
-                "advanced": false,
-                "display_name": "API Key",
-                "dynamic": false,
-                "info": "Your AgentQL API key from dev.agentql.com",
-                "input_types": [
-                  "Message"
-                ],
-                "load_from_db": false,
-                "name": "api_key",
-                "password": true,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "str",
-                "value": ""
-              },
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"Extract Web Data\"\n    description = \"Extracts structured data from a web page using an AgentQL query or a Natural Language description.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key from dev.agentql.com\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The URL of the public web page you want to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=False,\n            info=\"The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"prompt\",\n            display_name=\"Prompt\",\n            required=False,\n            info=\"A Natural Language description of the data to extract from the page. Alternative to AgentQL query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"prompt\": self.prompt,\n            \"params\": self.params,\n        }\n\n        if not self.prompt and not self.query:\n            self.status = \"Either Query or Prompt must be provided.\"\n            raise ValueError(self.status)\n        if self.prompt and self.query:\n            self.status = \"Both Query and Prompt can't be provided at the same time.\"\n            raise ValueError(self.status)\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
-              },
-              "params": {
-                "_input_type": "DictInput",
-                "advanced": true,
-                "display_name": "Additional Params",
-                "dynamic": false,
-                "info": "The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
-                "list": true,
-                "list_add_label": "Add More",
-                "name": "params",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {
-                  "is_screenshot_enabled": false,
-                  "is_scroll_to_bottom_enabled": false,
-                  "mode": "fast",
-                  "wait_for": 0
-                }
-              },
-              "prompt": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "Prompt",
-                "dynamic": false,
-                "info": "A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "prompt",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "query": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "AgentQL Query",
-                "dynamic": false,
-                "info": "The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "query",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
-              "timeout": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Timeout",
-                "dynamic": false,
-                "info": "Timeout in seconds for the request. Increase if data extraction takes too long.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "timeout",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "int",
-                "value": 900
-              },
-              "tools_metadata": {
-                "_input_type": "TableInput",
-                "advanced": false,
-                "display_name": "Edit tools",
-                "dynamic": false,
-                "info": "",
-                "is_list": true,
-                "list_add_label": "Add More",
-                "name": "tools_metadata",
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "table_icon": "Hammer",
-                "table_options": {
-                  "block_add": true,
-                  "block_delete": true,
-                  "block_edit": true,
-                  "block_filter": true,
-                  "block_hide": true,
-                  "block_select": true,
-                  "block_sort": true,
-                  "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
-                  "field_parsers": {
-                    "commands": "commands",
-                    "name": [
-                      "snake_case",
-                      "no_blank"
-                    ]
-                  },
-                  "hide_options": true
-                },
-                "table_schema": {
-                  "columns": [
-                    {
-                      "default": "None",
-                      "description": "Specify the name of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Name",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "name",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "Describe the purpose of the tool.",
-                      "disable_edit": false,
-                      "display_name": "Tool Description",
-                      "edit_mode": "popover",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": false,
-                      "name": "description",
-                      "sortable": false,
-                      "type": "str"
-                    },
-                    {
-                      "default": "None",
-                      "description": "The default identifiers for the tools and cannot be changed.",
-                      "disable_edit": true,
-                      "display_name": "Tool Identifiers",
-                      "edit_mode": "inline",
-                      "filterable": false,
-                      "formatter": "text",
-                      "hidden": true,
-                      "name": "tags",
-                      "sortable": false,
-                      "type": "str"
-                    }
-                  ]
-                },
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "trigger_icon": "Hammer",
-                "trigger_text": "",
-                "type": "table",
-                "value": [
-                  {
-                    "description": "build_output(api_key: Message, url: Message) - Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
-                    "name": "AgentQL-build_output",
-                    "tags": [
-                      "AgentQL-build_output"
-                    ]
-                  }
-                ]
-              },
-              "url": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "URL",
-                "dynamic": false,
-                "info": "The URL of the public web page you want to extract data from.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "url",
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              }
-            },
-            "tool_mode": true
-          },
-          "showNode": true,
-          "type": "AgentQL"
-        },
-        "dragging": false,
-        "id": "AgentQL-R0YLG",
-        "measured": {
-          "height": 599,
-          "width": 320
-        },
-        "position": {
-          "x": 258.9873392343597,
-          "y": -351.3788533005941
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "Agent-7PMCu",
+          "id": "Agent-IDDA1",
           "node": {
             "base_classes": [
               "Message"
             ],
             "beta": false,
+            "category": "agents",
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -1404,6 +1262,7 @@
             ],
             "frozen": false,
             "icon": "bot",
+            "key": "Agent",
             "legacy": false,
             "metadata": {},
             "minimized": false,
@@ -1424,6 +1283,7 @@
               }
             ],
             "pinned": false,
+            "score": 1.1732828199964098e-19,
             "template": {
               "_type": "Component",
               "add_current_date_tool": {
@@ -1447,6 +1307,7 @@
               "agent_description": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
@@ -1749,7 +1610,7 @@
                 "tool_mode": false,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "gpt-4o-mini"
+                "value": "gpt-4o"
               },
               "n_messages": {
                 "_input_type": "IntInput",
@@ -1902,6 +1763,7 @@
               "system_prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
@@ -1921,7 +1783,7 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "You are an deal finder assistant that helps find and compare the prices of products across different e-commerce platforms. You must use the Tavily Search API to find the URLs of the ecommerce platforms that sell these products. Then use the AgentQL tool to extract the prices of the product in those websites. Make sure to include the name of the product, the shop name, and the price of the product. The price has to be retrieved, so if it can't don't include it.\n\nHere's how to write an AgentQL query:\n\nThe AgentQL query serves as the building block of your script. This guide shows you how AgentQL's query structure works and how to write a valid query.\n\n### Single term query\n\nA **single term query** enables you to retrieve a single element on the webpage. Here is an example of how you can write a single term query to retrieve a search box.\n\n```AgentQL\n{\n    search_box\n}\n```\n\n### List term query\n\nA **list term query** enables you to retrieve a list of similar elements on the webpage. Here is an example of how you can write a list term query to retrieve a list of prices of apples.\n\n```AgentQL\n{\n    apple_price[]\n}\n```\n\nYou can also specify the exact field you want to return in the list. Here is an example of how you can specify that you want the name and price from the list of products.\n\n```AgentQL\n{\n    products[] {\n        name\n        price(integer)\n    }\n}\n```\n\n### Combining single term queries and list term queries\n\nYou can query for both **single terms** and **list terms** by combining the preceding formats.\n\n```AgentQL\n{\n    author\n    date_of_birth\n    book_titles[]\n}\n```\n\n### Giving context to queries\n\nThere two main ways you can provide additional context to your queries.\n\n#### Structural context\n\nYou can nest queries within parent containers to indicate that your target web element is in a particular section of the webpage.\n\n```AgentQL\n{\n    footer {\n        social_media_links[]\n    }\n}\n```\n\n#### Semantic context\n\nYou can also provide a short description within parentheses to guide AgentQL in locating the right element(s).\n\n```AgentQL\n{\n    footer {\n        social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n    }\n}\n```\n\n### Syntax guidelines\n\nEnclose all AgentQL query terms within curly braces `{}`. The following query structure isn't valid because the term \"social_media_links\" is wrongly enclosed within parenthesis`()`.\n\n```AgentQL\n( # Should be {\n    social_media_links(The icons that lead to Facebook, Snapchat, etc.)[]\n) # Should be }\n```\n\nYou can't include new lines in your semantic context. The following query structure isn't valid because the semantic context isn't contained within one line.\n\n```AgentQL\n{\n    social_media_links(The icons that lead\n        to Facebook, Snapchat, etc.)[]\n}\n```"
+                "value": "You are a helpful assistant that can use tools to answer questions and perform tasks."
               },
               "temperature": {
                 "_input_type": "SliderInput",
@@ -1954,6 +1816,7 @@
               "template": {
                 "_input_type": "MultilineInput",
                 "advanced": true,
+                "copy_field": false,
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
@@ -2037,144 +1900,36 @@
           "showNode": true,
           "type": "Agent"
         },
-        "dragging": false,
-        "id": "Agent-7PMCu",
+        "id": "Agent-IDDA1",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
-          "x": 783.7651594706487,
-          "y": -83.86659665829183
+          "x": 1095,
+          "y": -330
         },
         "selected": false,
         "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "note-1ajq3",
-          "node": {
-            "description": "### 💡 Add your OpenAI API key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "id": "note-1ajq3",
-        "measured": {
-          "height": 324,
-          "width": 324
-        },
-        "position": {
-          "x": 775.1028775592921,
-          "y": -131.5725508478389
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-9nOJ2",
-          "node": {
-            "description": "### 💡 Add your AgentQL API key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 346,
-        "id": "note-9nOJ2",
-        "measured": {
-          "height": 346,
-          "width": 324
-        },
-        "position": {
-          "x": 328.21954223681814,
-          "y": -160.4106577664784
-        },
-        "selected": false,
-        "type": "noteNode"
-      },
-      {
-        "data": {
-          "id": "note-JxjIs",
-          "node": {
-            "description": "# Price Deal Finder \n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n* **[TavilyAI Search API Key](https://tavily.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Add your [TavilyAI Search API Key](https://tavily.com/) to the **Tavily AI Search** component.\n4. Click **Playground** and enter a product in chat. For example, search \"Nintendo Switch - OLed Model - w/ White Joy-Con\")\n* The **Agent** component populates the **Tavily AI Search** component's **Search Query** field, and the **Agent QL** component's **URL** and **Query** fields. \n\n* The **Agent** returns a structured response to your searcn in the chat.",
-            "display_name": "",
-            "documentation": "",
-            "template": {}
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 674,
-        "id": "note-JxjIs",
-        "measured": {
-          "height": 674,
-          "width": 467
-        },
-        "position": {
-          "x": -472.5459222813072,
-          "y": 102.70113417861305
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 466
-      },
-      {
-        "data": {
-          "id": "note-VxmZ9",
-          "node": {
-            "description": "### 💡 Add your Tavily AI Search key here",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "transparent"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 324,
-        "id": "note-VxmZ9",
-        "measured": {
-          "height": 324,
-          "width": 344
-        },
-        "position": {
-          "x": 331.0865722920669,
-          "y": 447.2225407807426
-        },
-        "resizing": false,
-        "selected": false,
-        "type": "noteNode",
-        "width": 345
       }
     ],
     "viewport": {
-      "x": 546.0173634466885,
-      "y": 279.0139837091223,
-      "zoom": 0.671291450402032
+      "x": 220.76849981202122,
+      "y": 353.4961393018069,
+      "zoom": 0.6618875325223841
     }
   },
-  "description": "Searches and compares product prices across multiple e-commerce platforms. ",
+  "description": "Your AI Agent Accountant - Leverage Needle with Langflows Agent.",
   "endpoint_name": null,
-  "id": "675468b8-08ab-44b0-aef1-87d76a75570a",
+  "id": "94da35d5-a43e-4260-b205-9d0df477cb69",
   "is_component": false,
   "last_tested_version": "1.2.0",
-  "name": "Price Deal Finder",
-  "icon": "DollarSign",
+  "name": "Invoice Summarizer",
   "tags": [
-    "web-scraping",
+    "chatbots",
+    "content-generation",
+    "agent",
+    "assistants",
     "agents"
   ]
 }
