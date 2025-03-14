@@ -240,7 +240,7 @@ test(
       .click();
     await page
       .getByTestId("handle-createlist-shownode-data list-right")
-      .nth(2)
+      .nth(1)
       .click();
     await page
       .getByTestId("handle-parsedata-shownode-data-left")
@@ -265,7 +265,7 @@ test(
       .click();
     await page
       .getByTestId("handle-parsedata-shownode-message-right")
-      .nth(2)
+      .nth(1)
       .click();
     await page
       .getByTestId("handle-prompt-shownode-false_examples-left")
@@ -273,7 +273,7 @@ test(
       .click();
     await page
       .getByTestId("handle-pass-shownode-output message-right")
-      .nth(4)
+      .nth(2)
       .click();
     await page
       .getByTestId("handle-prompt-shownode-user_message-left")
@@ -330,7 +330,7 @@ test(
       .click();
     await page
       .getByTestId("handle-pass-shownode-output message-right")
-      .nth(2)
+      .nth(1)
       .click();
     await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
