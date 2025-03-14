@@ -22,9 +22,9 @@
         },
         "id": "xy-edge__APIRequest-BGQE7{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-BGQE7œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-SJJs5{œfieldNameœ:œtoolsœ,œidœ:œAgent-SJJs5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "source": "APIRequest-BGQE7",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-BGQE7œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-BGQE7œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-SJJs5",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-SJJs5œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-SJJs5œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "data": {
@@ -47,9 +47,9 @@
         },
         "id": "xy-edge__ChatInput-RoWKY{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RoWKYœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-SJJs5{œfieldNameœ:œinput_valueœ,œidœ:œAgent-SJJs5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "source": "ChatInput-RoWKY",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-RoWKYœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-RoWKYœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-SJJs5",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-SJJs5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-SJJs5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
@@ -74,9 +74,9 @@
         },
         "id": "xy-edge__Agent-SJJs5{œdataTypeœ:œAgentœ,œidœ:œAgent-SJJs5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-CyhlX{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CyhlXœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "source": "Agent-SJJs5",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-SJJs5œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-SJJs5œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-CyhlX",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-CyhlXœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-CyhlXœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
