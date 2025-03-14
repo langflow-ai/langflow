@@ -1954,16 +1954,26 @@ export function checkHasToolMode(template: APITemplateType): boolean {
   if (!template) return false;
 
   const templateKeys = Object.keys(template);
+
+  // Check if the template has no additional fields
   const hasNoAdditionalFields =
     templateKeys.length === 2 &&
     Boolean(template.code) &&
     Boolean(template._type);
 
+  // Check if the template has at least one field with a truthy 'tool_mode' property
   const hasToolModeFields = Object.values(template).some((field) =>
     Boolean(field.tool_mode),
   );
+  // Check if the component is already in tool mode
+  // This occurs when the template has exactly 3 fields: _type, code, and tools_metadata
+  const isInToolMode =
+    templateKeys.length === 3 &&
+    Boolean(template.code) &&
+    Boolean(template._type) &&
+    Boolean(template.tools_metadata);
 
-  return hasNoAdditionalFields || hasToolModeFields;
+  return hasNoAdditionalFields || hasToolModeFields || isInToolMode;
 }
 
 export function buildPositionDictionary(nodes: AllNodeType[]) {
