@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
@@ -101,17 +101,18 @@ class LCVectorStoreComponent(Component):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
 
-    def _prepare_ingest_data(self) -> list:
+    def _prepare_ingest_data(self) -> list[Any]:
         """Prepares ingest_data by converting DataFrame to Data if needed."""
-        if not self.ingest_data:
-            return self.ingest_data
+        ingest_data: list | Data | DataFrame = self.ingest_data
+        if not ingest_data:
+            return [ingest_data]
 
-        if not isinstance(self.ingest_data, list):
-            self.ingest_data = [self.ingest_data]
+        if not isinstance(ingest_data, list):
+            ingest_data = [ingest_data]
 
         result = []
 
-        for _input in self.ingest_data:
+        for _input in ingest_data:
             if isinstance(_input, DataFrame):
                 result.extend(_input.to_data_list())
             else:
