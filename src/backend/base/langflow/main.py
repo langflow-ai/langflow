@@ -125,19 +125,51 @@ def get_lifespan(*, fix_migration=False, version=None):
         temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
         try:
+            start_time = asyncio.get_event_loop().time()
+
+            rprint("[bold blue]Initializing services[/bold blue]")
             await initialize_services(fix_migration=fix_migration)
+            rprint(f"✓ Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            rprint("[bold blue]Setting up LLM caching[/bold blue]")
             setup_llm_caching()
+            rprint(f"✓ LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            rprint("[bold blue]Initializing super user[/bold blue]")
             await initialize_super_user_if_needed()
+            rprint(f"✓ Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            rprint("[bold blue]Loading bundles[/bold blue]")
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
+            rprint(f"✓ Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            rprint("[bold blue]Caching types[/bold blue]")
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+            rprint(f"✓ Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            current_time = asyncio.get_event_loop().time()
+            rprint("[bold blue]Creating/updating starter projects[/bold blue]")
             await create_or_update_starter_projects(all_types_dict)
+            rprint(f"✓ Starter projects updated in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
             telemetry_service.start()
+
+            current_time = asyncio.get_event_loop().time()
+            rprint("[bold blue]Loading flows[/bold blue]")
             await load_flows_from_directory()
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
+            rprint(f"✓ Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            total_time = asyncio.get_event_loop().time() - start_time
+            rprint(f"[bold green]✓ Total initialization time: {total_time:.2f}s[/bold green]")
             yield
 
         except Exception as exc:
@@ -166,6 +198,7 @@ def create_app():
 
     __version__ = get_version_info()["version"]
 
+    rprint("configuring")
     configure()
     lifespan = get_lifespan(version=__version__)
     app = FastAPI(lifespan=lifespan, title="Langflow", version=__version__)

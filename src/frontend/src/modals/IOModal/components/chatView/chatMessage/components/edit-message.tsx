@@ -11,6 +11,7 @@ type MarkdownFieldProps = {
   isEmpty: boolean;
   chatMessage: string;
   editedFlag: React.ReactNode;
+  isAudioMessage?: boolean;
 };
 
 export const MarkdownField = ({
@@ -18,6 +19,7 @@ export const MarkdownField = ({
   isEmpty,
   chatMessage,
   editedFlag,
+  isAudioMessage,
 }: MarkdownFieldProps) => {
   return (
     <div className="w-full items-baseline gap-2">

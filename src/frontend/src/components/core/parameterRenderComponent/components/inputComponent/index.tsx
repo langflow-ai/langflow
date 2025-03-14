@@ -40,6 +40,7 @@ export default function InputComponent({
   nodeStyle,
   isToolMode,
   popoverWidth,
+  commandWidth,
 }: InputComponentType): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
@@ -151,6 +152,7 @@ export default function InputComponent({
               optionsPlaceholder={optionsPlaceholder}
               nodeStyle={nodeStyle}
               popoverWidth={popoverWidth}
+              commandWidth={commandWidth}
             />
           )}
         </>

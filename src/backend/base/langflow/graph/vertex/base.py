@@ -702,6 +702,16 @@ class Vertex:
         event_manager: EventManager | None = None,
         **kwargs,
     ) -> Any:
+        # Add lazy loading check at the beginning
+        # Check if we need to fully load this component first
+        from langflow.interface.components import ensure_component_loaded
+        from langflow.services.deps import get_settings_service
+
+        if get_settings_service().settings.lazy_load_components:
+            component_name = self.id.split("-")[0]
+            await ensure_component_loaded(self.vertex_type, component_name, get_settings_service())
+
+        # Continue with the original implementation
         async with self._lock:
             if self.state == VertexStates.INACTIVE:
                 # If the vertex is inactive, return None

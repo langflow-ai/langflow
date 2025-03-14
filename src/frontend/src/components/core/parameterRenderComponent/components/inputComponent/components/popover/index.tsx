@@ -56,13 +56,15 @@ const OptionBadge = ({
     className={cn("flex items-center gap-1 truncate", className)}
   >
     <div className="truncate">{option}</div>
-    <X
-      className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
-      onClick={(e) =>
-        onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
-      }
-      data-testid="remove-icon-badge"
-    />
+    <div>
+      <X
+        className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
+        onClick={(e) =>
+          onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
+        }
+        data-testid="remove-icon-badge"
+      />
+    </div>
   </Badge>
 );
 
@@ -71,17 +73,24 @@ const CommandItemContent = ({
   isSelected,
   optionButton,
   nodeStyle,
+  commandWidth,
 }: {
   option: string;
   isSelected: boolean;
   optionButton: (option: string) => ReactNode;
   nodeStyle?: string;
+  commandWidth?: string;
 }) => (
   <div className="group flex w-full items-center justify-between">
     <div className="flex items-center justify-between">
       <SelectionIndicator isSelected={isSelected} />
       <ShadTooltip content={option} side="left">
-        <div className={cn("truncate pr-2", nodeStyle ? "max-w-52" : "w-full")}>
+        <div
+          className={cn("w-full truncate pr-2", nodeStyle && "max-w-52")}
+          style={{
+            maxWidth: commandWidth,
+          }}
+        >
           <span>{option}</span>
         </div>
       </ShadTooltip>
@@ -173,6 +182,7 @@ const CustomInputPopover = ({
   optionButton,
   autoFocus,
   popoverWidth,
+  commandWidth,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
@@ -230,7 +240,11 @@ const CustomInputPopover = ({
             </div>
           ) : selectedOption?.length > 0 ? (
             <ShadTooltip content={selectedOption} side="left">
-              <div>
+              <div
+                style={{
+                  maxWidth: commandWidth,
+                }}
+              >
                 <OptionBadge
                   option={selectedOption}
                   onRemove={(e) => handleRemoveOption(selectedOption, e)}
@@ -318,6 +332,7 @@ const CustomInputPopover = ({
                     }
                     optionButton={optionButton}
                     nodeStyle={nodeStyle}
+                    commandWidth={commandWidth}
                   />
                 </CommandItem>
               ))}

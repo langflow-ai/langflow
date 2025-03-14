@@ -47,6 +47,7 @@ export type InputComponentType = {
   nodeStyle?: boolean;
   isToolMode?: boolean;
   popoverWidth?: string;
+  commandWidth?: string;
 };
 export type DropDownComponent = {
   disabled?: boolean;
