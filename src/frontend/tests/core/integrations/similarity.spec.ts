@@ -195,7 +195,7 @@ test(
     //connection 4
     const textEmbedderOutput_1 = await page
       .getByTestId("handle-textembeddercomponent-shownode-embedding data-right")
-      .nth(2);
+      .nth(1);
     await textEmbedderOutput_1.hover();
     await page.mouse.down();
     await embeddingSimilarityInput.hover();
