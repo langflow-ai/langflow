@@ -28,12 +28,14 @@ from langflow.field_typing import Tool  # noqa: TC001 Needed by _add_toolkit_out
 from langflow.graph.state.model import create_state_model
 from langflow.graph.utils import has_chat_output
 from langflow.helpers.custom import format_type
+from langflow.llm.load import load_llm_for_user
 from langflow.memory import astore_message, aupdate_messages, delete_message
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.schema.message import ErrorMessage, Message
 from langflow.schema.properties import Source
 from langflow.schema.table import FieldParserType, TableOptions
+from langflow.services.deps import get_variable_service, session_scope
 from langflow.services.tracing.schema import Log
 from langflow.template.field.base import UNDEFINED, Input, Output
 from langflow.template.frontend_node.custom_components import ComponentFrontendNode
@@ -44,6 +46,8 @@ from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from langchain_core.language_models.chat_models import BaseChatModel
 
     from langflow.base.tools.component_tool import ComponentToolkit
     from langflow.events.event_manager import EventManager
@@ -109,6 +113,7 @@ class Component(CustomComponent):
         self._ctx: dict = {}
         self._code: str | None = None
         self._logs: list[Log] = []
+        self._llm: BaseChatModel | None = None
 
         # Initialize component-specific collections
         self._inputs: dict[str, InputTypes] = {}
@@ -161,6 +166,58 @@ class Component(CustomComponent):
         self._set_output_types(list(self._outputs_map.values()))
         self.set_class_code()
         self._set_output_required_inputs()
+
+    async def _set_llm(self, llm: BaseChatModel | None = None):
+        if llm is not None:
+            self._llm = llm
+            return
+        if self.user_id is None:
+            msg = "User ID not found."
+            raise ValueError(msg)
+        async with session_scope() as session:
+            self._llm = await load_llm_for_user(
+                user_id=self.user_id,
+                variable_service=get_variable_service(),
+                session=session,
+            )
+
+    async def generate(
+        self, inputs: str | Message, system_message: str | None = None, llm: BaseChatModel | None = None
+    ) -> Any:
+        """Generate a response from the LLM using the provided inputs.
+
+        Args:
+            inputs: Either a string prompt or a list of Message objects
+            system_message: An optional system message to use for generation
+            llm: An optional LLM instance to use for generation
+        Returns:
+            The LLM's response
+
+        Raises:
+            ValueError: If the LLM is not initialized or if an invalid message type is provided
+        """
+        from langflow.base.models.chat_result import get_chat_result
+
+        await self._set_llm(llm)
+        if self._llm is None:
+            msg = "LLM not found. Please build the graph first."
+            raise ValueError(msg)
+
+        config_dict = {
+            "run_name": self.display_name,
+            "project_name": self.get_project_name(),
+            "callbacks": self.get_langchain_callbacks(),
+        }
+        if isinstance(inputs, list):
+            msg = "List of messages is not supported yet."
+            raise TypeError(msg)
+
+        return get_chat_result(
+            runnable=self._llm,
+            input_value=inputs,
+            system_message=system_message,
+            config=config_dict,
+        )
 
     @property
     def enabled_tools(self) -> list[str] | None:
