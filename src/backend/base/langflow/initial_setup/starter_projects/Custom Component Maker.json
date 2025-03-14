@@ -26,9 +26,9 @@
         "id": "reactflow__edge-Memory-lzTrH{œdataTypeœ:œMemoryœ,œidœ:œMemory-lzTrHœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Memory-lzTrH",
-        "sourceHandle": "{œdataTypeœ:œMemoryœ,œidœ:œMemory-lzTrHœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-lzTrHœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-mySXT",
-        "targetHandle": "{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -55,9 +55,9 @@
         "id": "reactflow__edge-ChatInput-99hxg{œdataTypeœ:œChatInputœ,œidœ:œChatInput-99hxgœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-99hxg",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-99hxgœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-99hxgœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-mySXT",
-        "targetHandle": "{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -84,9 +84,9 @@
         "id": "reactflow__edge-URL-ap9ge{œdataTypeœ:œURLœ,œidœ:œURL-ap9geœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-ap9ge",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-ap9geœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ap9geœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-mySXT",
-        "targetHandle": "{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -113,9 +113,9 @@
         "id": "reactflow__edge-URL-1bNqm{œdataTypeœ:œURLœ,œidœ:œURL-1bNqmœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-1bNqm",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-1bNqmœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-1bNqmœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-mySXT",
-        "targetHandle": "{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -142,9 +142,9 @@
         "id": "reactflow__edge-URL-CIWR9{œdataTypeœ:œURLœ,œidœ:œURL-CIWR9œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "URL-CIWR9",
-        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-CIWR9œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-CIWR9œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-mySXT",
-        "targetHandle": "{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -170,9 +170,9 @@
         "id": "reactflow__edge-Prompt-mySXT{œdataTypeœ:œPromptœ,œidœ:œPrompt-mySXTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-rdklm{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-rdklmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-mySXT",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-mySXTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-mySXTœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "AnthropicModel-rdklm",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-rdklmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-rdklmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -200,9 +200,9 @@
         "id": "reactflow__edge-AnthropicModel-rdklm{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-rdklmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-SPhqv{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SPhqvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "AnthropicModel-rdklm",
-        "sourceHandle": "{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-rdklmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-rdklmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-SPhqv",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SPhqvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-SPhqvœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
