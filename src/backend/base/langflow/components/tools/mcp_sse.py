@@ -44,6 +44,9 @@ class MCPSseClient:
                 timeout=timeout_seconds,
             )
             # List available tools
+            if self.session is None:
+                msg = "Session not initialized"
+                raise ValueError(msg)
             response = await self.session.list_tools()
         except asyncio.TimeoutError as err:
             error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
