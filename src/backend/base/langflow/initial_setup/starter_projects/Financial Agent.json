@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-zrv6B",
+            "id": "CombineText-JQ8Xk",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-7tpGT",
+            "id": "CombineText-PYaIP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-zrv6B{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-zrv6Bœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-7tpGT{œfieldNameœ:œtext2œ,œidœ:œCombineText-7tpGTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-JQ8Xk{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-JQ8Xkœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-PYaIP{œfieldNameœ:œtext2œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-zrv6B",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-zrv6Bœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-7tpGT",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-7tpGTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-JQ8Xk",
+        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-JQ8Xkœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-PYaIP",
+        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-PYaIPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-iq5zw",
+            "id": "ChatInput-YVmBe",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-7tpGT",
+            "id": "CombineText-PYaIP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-iq5zw{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iq5zwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-7tpGT{œfieldNameœ:œtext1œ,œidœ:œCombineText-7tpGTœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-PYaIP{œfieldNameœ:œtext1œ,œidœ:œCombineText-PYaIPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-iq5zw",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iq5zwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-7tpGT",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-7tpGTœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-YVmBe",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-PYaIP",
+        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-PYaIPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-7tpGT",
+            "id": "CombineText-PYaIP",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "SambaNovaModel-OKUhL",
+            "id": "SambaNovaModel-RMgoi",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-7tpGT{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-7tpGTœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-OKUhL{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-OKUhLœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-PYaIP{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-PYaIPœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-RMgoi{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-RMgoiœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-7tpGT",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-7tpGTœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-OKUhL",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-OKUhLœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-PYaIP",
+        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-PYaIPœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "SambaNovaModel-RMgoi",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-RMgoiœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-OKUhL",
+            "id": "SambaNovaModel-RMgoi",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-hLHTq",
+            "id": "ChatOutput-6rUbq",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +108,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-OKUhL{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-OKUhLœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-hLHTq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-hLHTqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-RMgoi{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-RMgoiœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6rUbq{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6rUbqœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-OKUhL",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-OKUhLœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-hLHTq",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-hLHTqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-RMgoi",
+        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-RMgoiœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-6rUbq",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-6rUbqœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-iq5zw",
+            "id": "ChatInput-YVmBe",
             "name": "message",
             "output_types": [
               "Message"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-Ax19K",
+            "id": "Agent-zWVIS",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-iq5zw{œdataTypeœ:œChatInputœ,œidœ:œChatInput-iq5zwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-Ax19K{œfieldNameœ:œinput_valueœ,œidœ:œAgent-Ax19Kœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-zWVIS{œfieldNameœ:œinput_valueœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-iq5zw",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-iq5zwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-Ax19K",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-Ax19Kœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-YVmBe",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-zWVIS",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-zWVISœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-Ax19K",
+            "id": "Agent-zWVIS",
             "name": "response",
             "output_types": [
               "Message"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-zrv6B",
+            "id": "CombineText-JQ8Xk",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-Ax19K{œdataTypeœ:œAgentœ,œidœ:œAgent-Ax19Kœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-zrv6B{œfieldNameœ:œtext2œ,œidœ:œCombineText-zrv6Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-zWVIS{œdataTypeœ:œAgentœ,œidœ:œAgent-zWVISœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-JQ8Xk{œfieldNameœ:œtext2œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-Ax19K",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-Ax19Kœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-zrv6B",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-zrv6Bœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-zWVIS",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-zWVISœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-JQ8Xk",
+        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-JQ8Xkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-KvlrU",
+            "id": "TavilySearchComponent-fCjYR",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,47 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-Ax19K",
+            "id": "Agent-zWVIS",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-KvlrU{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-KvlrUœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-Ax19K{œfieldNameœ:œtoolsœ,œidœ:œAgent-Ax19Kœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-fCjYR{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-fCjYRœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-zWVIS{œfieldNameœ:œtoolsœ,œidœ:œAgent-zWVISœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-KvlrU",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-KvlrUœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-Ax19K",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-Ax19Kœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
-            "dataType": "Agent",
-            "id": "Agent-X2v6x",
-            "name": "response",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "text1",
-            "id": "CombineText-zrv6B",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "xy-edge__Agent-X2v6x{œdataTypeœ:œAgentœ,œidœ:œAgent-X2v6xœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-zrv6B{œfieldNameœ:œtext1œ,œidœ:œCombineText-zrv6Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "Agent-X2v6x",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-X2v6xœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-zrv6B",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-zrv6Bœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "TavilySearchComponent-fCjYR",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-fCjYRœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-zWVIS",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-zWVISœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -233,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-JB7Nq",
+            "id": "URL-ZIoqz",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -241,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-X2v6x",
+            "id": "Agent-GayT6",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__URL-JB7Nq{œdataTypeœ:œURLœ,œidœ:œURL-JB7Nqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-X2v6x{œfieldNameœ:œtoolsœ,œidœ:œAgent-X2v6xœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-ZIoqz{œdataTypeœ:œURLœ,œidœ:œURL-ZIoqzœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GayT6{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-JB7Nq",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-JB7Nqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-X2v6x",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-X2v6xœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-ZIoqz",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ZIoqzœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-GayT6",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -261,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-5mZoy",
+            "id": "YfinanceComponent-bHO0e",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -269,25 +241,81 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-X2v6x",
+            "id": "Agent-GayT6",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__YfinanceComponent-5mZoy{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-5mZoyœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-X2v6x{œfieldNameœ:œtoolsœ,œidœ:œAgent-X2v6xœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YfinanceComponent-bHO0e{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-bHO0eœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-GayT6{œfieldNameœ:œtoolsœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-5mZoy",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-5mZoyœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-X2v6x",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-X2v6xœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YfinanceComponent-bHO0e",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-bHO0eœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-GayT6",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "ChatInput",
+            "id": "ChatInput-YVmBe",
+            "name": "message",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "Agent-GayT6",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__ChatInput-YVmBe{œdataTypeœ:œChatInputœ,œidœ:œChatInput-YVmBeœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-GayT6{œfieldNameœ:œinput_valueœ,œidœ:œAgent-GayT6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-YVmBe",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-YVmBeœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-GayT6",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-GayT6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-GayT6",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "text1",
+            "id": "CombineText-JQ8Xk",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__Agent-GayT6{œdataTypeœ:œAgentœ,œidœ:œAgent-GayT6œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-JQ8Xk{œfieldNameœ:œtext1œ,œidœ:œCombineText-JQ8Xkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-GayT6",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-GayT6œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "CombineText-JQ8Xk",
+        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-JQ8Xkœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-iq5zw",
+          "id": "ChatInput-YVmBe",
           "node": {
             "base_classes": [
               "Message"
@@ -313,7 +341,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -581,7 +609,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-iq5zw",
+        "id": "ChatInput-YVmBe",
         "measured": {
           "height": 66,
           "width": 192
@@ -595,7 +623,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-KvlrU",
+          "id": "TavilySearchComponent-fCjYR",
           "node": {
             "base_classes": [
               "Data",
@@ -621,7 +649,7 @@
             "frozen": false,
             "icon": "TavilyIcon",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -654,7 +682,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -949,7 +977,7 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-KvlrU",
+        "id": "TavilySearchComponent-fCjYR",
         "measured": {
           "height": 437,
           "width": 320
@@ -963,7 +991,7 @@
       },
       {
         "data": {
-          "id": "YfinanceComponent-5mZoy",
+          "id": "YfinanceComponent-bHO0e",
           "node": {
             "base_classes": [
               "Data",
@@ -984,7 +1012,7 @@
             "frozen": false,
             "icon": "trending-up",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1233,7 +1261,7 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-5mZoy",
+        "id": "YfinanceComponent-bHO0e",
         "measured": {
           "height": 519,
           "width": 320
@@ -1247,7 +1275,7 @@
       },
       {
         "data": {
-          "id": "CombineText-zrv6B",
+          "id": "CombineText-JQ8Xk",
           "node": {
             "base_classes": [
               "Message"
@@ -1267,7 +1295,7 @@
             "frozen": false,
             "icon": "merge",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1383,7 +1411,7 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-zrv6B",
+        "id": "CombineText-JQ8Xk",
         "measured": {
           "height": 415,
           "width": 320
@@ -1397,7 +1425,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-hLHTq",
+          "id": "ChatOutput-6rUbq",
           "node": {
             "base_classes": [
               "Message"
@@ -1423,7 +1451,7 @@
             "frozen": false,
             "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": true,
             "output_types": [],
@@ -1692,7 +1720,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-hLHTq",
+        "id": "ChatOutput-6rUbq",
         "measured": {
           "height": 66,
           "width": 192
@@ -1706,7 +1734,7 @@
       },
       {
         "data": {
-          "id": "CombineText-7tpGT",
+          "id": "CombineText-PYaIP",
           "node": {
             "base_classes": [
               "Message"
@@ -1726,7 +1754,7 @@
             "frozen": false,
             "icon": "merge",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1842,7 +1870,7 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-7tpGT",
+        "id": "CombineText-PYaIP",
         "measured": {
           "height": 415,
           "width": 320
@@ -1856,7 +1884,7 @@
       },
       {
         "data": {
-          "id": "URL-JB7Nq",
+          "id": "URL-ZIoqz",
           "node": {
             "base_classes": [
               "Data",
@@ -1879,6 +1907,7 @@
             "frozen": false,
             "icon": "layout-template",
             "legacy": false,
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2133,7 +2162,7 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-JB7Nq",
+        "id": "URL-ZIoqz",
         "measured": {
           "height": 590,
           "width": 320
@@ -2147,7 +2176,7 @@
       },
       {
         "data": {
-          "id": "note-yHWe0",
+          "id": "note-JVsiy",
           "node": {
             "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent is a multi agent flow with agents in charge of researching in the web and Yahoo news to retrieve relevant context and write reports about financial queries. Here's how it works:\n\n- **Query Start:** You start by asking the system any financial information you want to know\n\n\n- **Research agents:**\n  - **Finance Research agent:** The agent uses its tools (Yahoo finance news,  url fetcher) to gather latest news about the companies in your query.\n\n  - **Web Research agent:** The agent uses its tools (Tavily AI search) to gather relevant web information about your query.\n\n- **Merge context:** This joins the original query with all the retrieved relevant contexts \n\n- **Report generation step:** This step will get the context and have access to some tools (URL fetcher, and calculator), with this the agent with write a final report/answer to your financial query!\n\n Try it with `Why did Nvidia stock drop in January?`",
             "display_name": "",
@@ -2160,7 +2189,7 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-yHWe0",
+        "id": "note-JVsiy",
         "measured": {
           "height": 630,
           "width": 479
@@ -2176,7 +2205,7 @@
       },
       {
         "data": {
-          "id": "note-z2aYb",
+          "id": "note-FRwiT",
           "node": {
             "description": "## Configure the model by obtaining your API key from [cloud.sambanova.ai/](https://cloud.sambanova.ai). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
             "display_name": "",
@@ -2189,7 +2218,7 @@
         },
         "dragging": false,
         "height": 335,
-        "id": "note-z2aYb",
+        "id": "note-FRwiT",
         "measured": {
           "height": 335,
           "width": 326
@@ -2205,7 +2234,7 @@
       },
       {
         "data": {
-          "id": "note-2Paer",
+          "id": "note-CEkL5",
           "node": {
             "description": "## Configure the agent by obtaining your API key from [cloud.sambanova.ai](https://cloud.sambanova.ai/). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n- OpenAI/Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
             "display_name": "",
@@ -2217,7 +2246,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-2Paer",
+        "id": "note-CEkL5",
         "measured": {
           "height": 404,
           "width": 325
@@ -2231,7 +2260,7 @@
       },
       {
         "data": {
-          "id": "note-yinQ0",
+          "id": "note-uWm92",
           "node": {
             "description": "## Configure the agent by obtaining your API key from [cloud.sambanova.ai](https://cloud.sambanova.ai/). Under \"Model Provider\", choose:\n- SambaNova: Default, requires only API key\n- OpenAI/Anthropic/Azure/Groq/NVIDIA: Each requires their own API keys\n- Custom: Use your own model endpoint + authentication\n\nSelect SambaNova model provider, Meta-Llama-3.1-405B-Instruct and input API key before running the flow.",
             "display_name": "",
@@ -2243,7 +2272,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-yinQ0",
+        "id": "note-uWm92",
         "measured": {
           "height": 404,
           "width": 325
@@ -2257,7 +2286,7 @@
       },
       {
         "data": {
-          "id": "note-s5ixp",
+          "id": "note-nL7Ws",
           "node": {
             "description": "## Configure the Ai search tool by obtaining your Tavily API key from [tavily.com](https://tavily.com/).",
             "display_name": "",
@@ -2270,7 +2299,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-s5ixp",
+        "id": "note-nL7Ws",
         "measured": {
           "height": 324,
           "width": 325
@@ -2286,7 +2315,7 @@
       },
       {
         "data": {
-          "id": "note-IwBPr",
+          "id": "note-rYKvX",
           "node": {
             "description": "# **Finance Research Agent**\n   - **Purpose:** This agent research the latest news about the companies in the query.\n   - **Core Functions:** search for latest news based in the company Tickler and fetch web sites with news to return a summarized answer to the initial query\n   - **Tools Utilized:** Yahoo finance, get time, fetch URL\n",
             "display_name": "",
@@ -2299,7 +2328,7 @@
         },
         "dragging": false,
         "height": 334,
-        "id": "note-IwBPr",
+        "id": "note-rYKvX",
         "measured": {
           "height": 334,
           "width": 326
@@ -2315,7 +2344,7 @@
       },
       {
         "data": {
-          "id": "note-BFPGH",
+          "id": "note-wRMT8",
           "node": {
             "description": "# **Web Research Agent**\n   - **Purpose:** This agent research the user query in the web.\n   - **Core Functions:** search for latest information about the user query and returns a summarized answer to the initial query\n   - **Tools Utilized:** Tavily AI Search\n",
             "display_name": "",
@@ -2328,7 +2357,7 @@
         },
         "dragging": false,
         "height": 335,
-        "id": "note-BFPGH",
+        "id": "note-wRMT8",
         "measured": {
           "height": 335,
           "width": 326
@@ -2344,7 +2373,7 @@
       },
       {
         "data": {
-          "id": "note-z1ZDd",
+          "id": "note-O1RXr",
           "node": {
             "description": "# **Report Generation**\n   - **Purpose:** This model generate a final report / answer to the initial query.\n   - **Core Functions:** use the context from the research phase to generate a final answer / report\n\n",
             "display_name": "",
@@ -2357,7 +2386,7 @@
         },
         "dragging": false,
         "height": 361,
-        "id": "note-z1ZDd",
+        "id": "note-O1RXr",
         "measured": {
           "height": 361,
           "width": 326
@@ -2373,7 +2402,7 @@
       },
       {
         "data": {
-          "id": "SambaNovaModel-OKUhL",
+          "id": "SambaNovaModel-RMgoi",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2400,7 +2429,7 @@
             "frozen": false,
             "icon": "SambaNova",
             "legacy": false,
-            "lf_version": "1.1.5",
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2448,7 +2477,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2676,7 +2705,7 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-OKUhL",
+        "id": "SambaNovaModel-RMgoi",
         "measured": {
           "height": 656,
           "width": 320
@@ -2690,7 +2719,7 @@
       },
       {
         "data": {
-          "id": "Agent-Ax19K",
+          "id": "Agent-zWVIS",
           "node": {
             "base_classes": [
               "Message"
@@ -2735,6 +2764,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -2743,10 +2773,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
                 "method": "message_response",
                 "name": "response",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -2866,13 +2894,13 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "Sambanova API Key",
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
-                "info": "The Sambanova API Key to use for the Sambanova model.",
+                "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2882,33 +2910,12 @@
                 "type": "str",
                 "value": ""
               },
-              "base_url": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "SambaNova Cloud Base Url",
-                "dynamic": false,
-                "info": "The base URL of the Sambanova Cloud API. Defaults to https://api.sambanova.ai/v1/chat/completions. You can change this to use other urls like Sambastudio",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "base_url",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -2963,6 +2970,24 @@
                 "type": "str",
                 "value": ""
               },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -2982,12 +3007,30 @@
                 "type": "int",
                 "value": 15
               },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
                 "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "The maximum number of tokens to generate.",
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
@@ -3021,6 +3064,24 @@
                 "type": "other",
                 "value": ""
               },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -3032,20 +3093,13 @@
                 "input_types": [],
                 "name": "model_name",
                 "options": [
-                  "Meta-Llama-3.3-70B-Instruct",
-                  "Meta-Llama-3.1-8B-Instruct",
-                  "Meta-Llama-3.1-70B-Instruct",
-                  "Meta-Llama-3.1-405B-Instruct",
-                  "DeepSeek-R1-Distill-Llama-70B",
-                  "DeepSeek-R1",
-                  "Meta-Llama-3.2-1B-Instruct",
-                  "Meta-Llama-3.2-3B-Instruct",
-                  "Llama-3.2-11B-Vision-Instruct",
-                  "Llama-3.2-90B-Vision-Instruct",
-                  "Qwen2.5-Coder-32B-Instruct",
-                  "Qwen2.5-72B-Instruct",
-                  "QwQ-32B-Preview",
-                  "Qwen2-Audio-7B-Instruct"
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.5-preview",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3077,6 +3131,25 @@
                 "type": "int",
                 "value": 100
               },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "order": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
@@ -3100,6 +3173,24 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -3251,6 +3342,24 @@
                 "type": "str",
                 "value": "{sender_name}: {text}"
               },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
+              },
               "tools": {
                 "_input_type": "HandleInput",
                 "advanced": false,
@@ -3270,35 +3379,6 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
-              },
-              "top_p": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "top_p",
-                "dynamic": false,
-                "info": "Model top_p",
-                "input_types": [],
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "top_p",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 1
               },
               "verbose": {
                 "_input_type": "BoolInput",
@@ -3326,7 +3406,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-Ax19K",
+        "id": "Agent-zWVIS",
         "measured": {
           "height": 624,
           "width": 320
@@ -3340,7 +3420,7 @@
       },
       {
         "data": {
-          "id": "Agent-X2v6x",
+          "id": "Agent-GayT6",
           "node": {
             "base_classes": [
               "Message"
@@ -3385,6 +3465,7 @@
             "icon": "bot",
             "key": "Agent",
             "legacy": false,
+            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -3393,10 +3474,8 @@
                 "allows_loop": false,
                 "cache": true,
                 "display_name": "Response",
-                "hidden": null,
                 "method": "message_response",
                 "name": "response",
-                "required_inputs": null,
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -3516,13 +3595,13 @@
               "api_key": {
                 "_input_type": "SecretStrInput",
                 "advanced": false,
-                "display_name": "Sambanova API Key",
+                "display_name": "OpenAI API Key",
                 "dynamic": false,
-                "info": "The Sambanova API Key to use for the Sambanova model.",
+                "info": "The OpenAI API Key to use for the OpenAI model.",
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3532,33 +3611,12 @@
                 "type": "str",
                 "value": ""
               },
-              "base_url": {
-                "_input_type": "StrInput",
-                "advanced": true,
-                "display_name": "SambaNova Cloud Base Url",
-                "dynamic": false,
-                "info": "The base URL of the Sambanova Cloud API. Defaults to https://api.sambanova.ai/v1/chat/completions. You can change this to use other urls like Sambastudio",
-                "input_types": [],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "base_url",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": ""
-              },
               "code": {
                 "advanced": true,
                 "dynamic": true,
                 "fileTypes": [],
                 "file_path": "",
                 "info": "",
-                "input_types": [],
                 "list": false,
                 "load_from_db": false,
                 "multiline": true,
@@ -3613,6 +3671,24 @@
                 "type": "str",
                 "value": ""
               },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
               "max_iterations": {
                 "_input_type": "IntInput",
                 "advanced": true,
@@ -3632,12 +3708,30 @@
                 "type": "int",
                 "value": 15
               },
+              "max_retries": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Retries",
+                "dynamic": false,
+                "info": "The maximum number of retries to make when generating.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_retries",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 5
+              },
               "max_tokens": {
                 "_input_type": "IntInput",
                 "advanced": true,
                 "display_name": "Max Tokens",
                 "dynamic": false,
-                "info": "The maximum number of tokens to generate.",
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
                 "input_types": [],
                 "list": false,
                 "list_add_label": "Add More",
@@ -3671,6 +3765,24 @@
                 "type": "other",
                 "value": ""
               },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
               "model_name": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -3682,20 +3794,13 @@
                 "input_types": [],
                 "name": "model_name",
                 "options": [
-                  "Meta-Llama-3.3-70B-Instruct",
-                  "Meta-Llama-3.1-8B-Instruct",
-                  "Meta-Llama-3.1-70B-Instruct",
-                  "Meta-Llama-3.1-405B-Instruct",
-                  "DeepSeek-R1-Distill-Llama-70B",
-                  "DeepSeek-R1",
-                  "Meta-Llama-3.2-1B-Instruct",
-                  "Meta-Llama-3.2-3B-Instruct",
-                  "Llama-3.2-11B-Vision-Instruct",
-                  "Llama-3.2-90B-Vision-Instruct",
-                  "Qwen2.5-Coder-32B-Instruct",
-                  "Qwen2.5-72B-Instruct",
-                  "QwQ-32B-Preview",
-                  "Qwen2-Audio-7B-Instruct"
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4.5-preview",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo"
                 ],
                 "options_metadata": [],
                 "placeholder": "",
@@ -3727,6 +3832,25 @@
                 "type": "int",
                 "value": 100
               },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
               "order": {
                 "_input_type": "DropdownInput",
                 "advanced": true,
@@ -3750,6 +3874,24 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": "Ascending"
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
               },
               "sender": {
                 "_input_type": "DropdownInput",
@@ -3901,6 +4043,24 @@
                 "type": "str",
                 "value": "{sender_name}: {text}"
               },
+              "timeout": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Timeout",
+                "dynamic": false,
+                "info": "The timeout for requests to OpenAI completion API.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "timeout",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 700
+              },
               "tools": {
                 "_input_type": "HandleInput",
                 "advanced": false,
@@ -3920,35 +4080,6 @@
                 "trace_as_metadata": true,
                 "type": "other",
                 "value": ""
-              },
-              "top_p": {
-                "_input_type": "SliderInput",
-                "advanced": true,
-                "display_name": "top_p",
-                "dynamic": false,
-                "info": "Model top_p",
-                "input_types": [],
-                "max_label": "",
-                "max_label_icon": "",
-                "min_label": "",
-                "min_label_icon": "",
-                "name": "top_p",
-                "placeholder": "",
-                "range_spec": {
-                  "max": 1,
-                  "min": 0,
-                  "step": 0.01,
-                  "step_type": "float"
-                },
-                "required": false,
-                "show": true,
-                "slider_buttons": false,
-                "slider_buttons_options": [],
-                "slider_input": false,
-                "title_case": false,
-                "tool_mode": false,
-                "type": "slider",
-                "value": 1
               },
               "verbose": {
                 "_input_type": "BoolInput",
@@ -3976,7 +4107,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-X2v6x",
+        "id": "Agent-GayT6",
         "measured": {
           "height": 624,
           "width": 320
@@ -3985,19 +4116,19 @@
           "x": -77.82588111053366,
           "y": -413.29696550729983
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 576.8638695895717,
-      "y": 286.9123463686055,
-      "zoom": 0.48459471037374324
+      "x": 658.7456890022404,
+      "y": 290.52250173325774,
+      "zoom": 0.5030767991364286
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
-  "id": "034abd36-3b72-4a95-9147-326d3ee4c65f",
+  "id": "012ba5cf-a351-4932-8ae7-4a1701fe4c6a",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Financial Agent",
