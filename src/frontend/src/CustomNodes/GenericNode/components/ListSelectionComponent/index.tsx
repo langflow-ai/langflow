@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { Input } from "@/components/ui/input";
@@ -109,25 +110,11 @@ const ListSelectionComponent = ({
     <Dialog open={open} onOpenChange={handleCloseDialog}>
       <DialogContent>
         <div className="flex items-center justify-between">
-          <div className="mr-10 flex w-full items-center rounded-md border">
-            {searchCategories.length > 0 && (
-              <button className="flex items-center gap-2 pl-4 text-sm">
-                All
-                <ForwardedIconComponent
-                  name="chevron-down"
-                  className="flex h-4 w-4"
-                />
-              </button>
-            )}
-            <Input
-              icon="search"
-              placeholder="Search tools..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              inputClassName="border-none focus:ring-0"
-            />
-          </div>
-
+          <SearchBarComponent
+            searchCategories={searchCategories}
+            search={search}
+            setSearch={setSearch}
+          />
           <Button
             unstyled
             size="icon"
