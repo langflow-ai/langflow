@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-BlUqp",
+            "id": "CombineText-B7MqV",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-l466f",
+            "id": "CombineText-2Ncws",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-BlUqp{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-BlUqpœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-l466f{œfieldNameœ:œtext2œ,œidœ:œCombineText-l466fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-B7MqV{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-B7MqVœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-2Ncws{œfieldNameœ:œtext2œ,œidœ:œCombineText-2Ncwsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-BlUqp",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-BlUqpœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-l466f",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-l466fœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-B7MqV",
+        "sourceHandle": "{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-B7MqVœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-2Ncws",
+        "targetHandle": "{œfieldNameœ:œtext2œ,œidœ:œCombineText-2Ncwsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5vMpn",
+            "id": "ChatInput-bSTG4",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-l466f",
+            "id": "CombineText-2Ncws",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-5vMpn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5vMpnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-l466f{œfieldNameœ:œtext1œ,œidœ:œCombineText-l466fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-bSTG4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-2Ncws{œfieldNameœ:œtext1œ,œidœ:œCombineText-2Ncwsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-5vMpn",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5vMpnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-l466f",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-l466fœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-bSTG4",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-2Ncws",
+        "targetHandle": "{œfieldNameœ:œtext1œ,œidœ:œCombineText-2Ncwsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-l466f",
+            "id": "CombineText-2Ncws",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "SambaNovaModel-fILgM",
+            "id": "SambaNovaModel-67RaX",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-l466f{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-l466fœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-fILgM{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-fILgMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-2Ncws{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-2Ncwsœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-67RaX{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-67RaXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-l466f",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-l466fœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-fILgM",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-fILgMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-2Ncws",
+        "sourceHandle": "{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-2Ncwsœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "SambaNovaModel-67RaX",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-67RaXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-fILgM",
+            "id": "SambaNovaModel-67RaX",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-XZH1t",
+            "id": "ChatOutput-BjiRE",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +108,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-fILgM{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-fILgMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-XZH1t{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-XZH1tœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-67RaX{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-67RaXœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-BjiRE{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BjiREœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-fILgM",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-fILgMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-XZH1t",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-XZH1tœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-67RaX",
+        "sourceHandle": "{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-67RaXœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-BjiRE",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BjiREœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5vMpn",
+            "id": "ChatInput-bSTG4",
             "name": "message",
             "output_types": [
               "Message"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-o0wmB",
+            "id": "Agent-8O2Iy",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-5vMpn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5vMpnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-o0wmB{œfieldNameœ:œinput_valueœ,œidœ:œAgent-o0wmBœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-bSTG4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-8O2Iy{œfieldNameœ:œinput_valueœ,œidœ:œAgent-8O2Iyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-5vMpn",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5vMpnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-o0wmB",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-o0wmBœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-bSTG4",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-8O2Iy",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-8O2Iyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-o0wmB",
+            "id": "Agent-8O2Iy",
             "name": "response",
             "output_types": [
               "Message"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-BlUqp",
+            "id": "CombineText-B7MqV",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-o0wmB{œdataTypeœ:œAgentœ,œidœ:œAgent-o0wmBœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-BlUqp{œfieldNameœ:œtext2œ,œidœ:œCombineText-BlUqpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-8O2Iy{œdataTypeœ:œAgentœ,œidœ:œAgent-8O2Iyœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-B7MqV{œfieldNameœ:œtext2œ,œidœ:œCombineText-B7MqVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-o0wmB",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-o0wmBœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-BlUqp",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-BlUqpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-8O2Iy",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-8O2Iyœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-B7MqV",
+        "targetHandle": "{œfieldNameœ:œtext2œ,œidœ:œCombineText-B7MqVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-UoRbP",
+            "id": "TavilySearchComponent-yRkVZ",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,19 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-o0wmB",
+            "id": "Agent-8O2Iy",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-UoRbP{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-UoRbPœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-o0wmB{œfieldNameœ:œtoolsœ,œidœ:œAgent-o0wmBœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-yRkVZ{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-yRkVZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-8O2Iy{œfieldNameœ:œtoolsœ,œidœ:œAgent-8O2Iyœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-UoRbP",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-UoRbPœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-o0wmB",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-o0wmBœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-yRkVZ",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-yRkVZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-8O2Iy",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-8O2Iyœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -205,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-I2cQs",
+            "id": "URL-1uKdC",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -213,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-kq33I",
+            "id": "Agent-fvvwn",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-I2cQs{œdataTypeœ:œURLœ,œidœ:œURL-I2cQsœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-kq33I{œfieldNameœ:œtoolsœ,œidœ:œAgent-kq33Iœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-1uKdC{œdataTypeœ:œURLœ,œidœ:œURL-1uKdCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-fvvwn{œfieldNameœ:œtoolsœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-I2cQs",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-I2cQsœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-kq33I",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-kq33Iœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-1uKdC",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-1uKdCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-fvvwn",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -233,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-iTGtb",
+            "id": "YfinanceComponent-LaBhV",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -241,19 +241,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-kq33I",
+            "id": "Agent-fvvwn",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YfinanceComponent-iTGtb{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-iTGtbœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-kq33I{œfieldNameœ:œtoolsœ,œidœ:œAgent-kq33Iœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YfinanceComponent-LaBhV{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-LaBhVœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-fvvwn{œfieldNameœ:œtoolsœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-iTGtb",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-iTGtbœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-kq33I",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-kq33Iœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YfinanceComponent-LaBhV",
+        "sourceHandle": "{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-LaBhVœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-fvvwn",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -261,7 +261,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-5vMpn",
+            "id": "ChatInput-bSTG4",
             "name": "message",
             "output_types": [
               "Message"
@@ -269,19 +269,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-kq33I",
+            "id": "Agent-fvvwn",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-5vMpn{œdataTypeœ:œChatInputœ,œidœ:œChatInput-5vMpnœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-kq33I{œfieldNameœ:œinput_valueœ,œidœ:œAgent-kq33Iœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-bSTG4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-fvvwn{œfieldNameœ:œinput_valueœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-5vMpn",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-5vMpnœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-kq33I",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-kq33Iœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-bSTG4",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-fvvwn",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -289,7 +289,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-kq33I",
+            "id": "Agent-fvvwn",
             "name": "response",
             "output_types": [
               "Message"
@@ -297,25 +297,25 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-BlUqp",
+            "id": "CombineText-B7MqV",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-kq33I{œdataTypeœ:œAgentœ,œidœ:œAgent-kq33Iœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-BlUqp{œfieldNameœ:œtext1œ,œidœ:œCombineText-BlUqpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-fvvwn{œdataTypeœ:œAgentœ,œidœ:œAgent-fvvwnœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-B7MqV{œfieldNameœ:œtext1œ,œidœ:œCombineText-B7MqVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-kq33I",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-kq33Iœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-BlUqp",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-BlUqpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-fvvwn",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-fvvwnœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-B7MqV",
+        "targetHandle": "{œfieldNameœ:œtext1œ,œidœ:œCombineText-B7MqVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-5vMpn",
+          "id": "ChatInput-bSTG4",
           "node": {
             "base_classes": [
               "Message"
@@ -609,7 +609,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-5vMpn",
+        "id": "ChatInput-bSTG4",
         "measured": {
           "height": 66,
           "width": 192
@@ -623,7 +623,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-UoRbP",
+          "id": "TavilySearchComponent-yRkVZ",
           "node": {
             "base_classes": [
               "Data",
@@ -682,7 +682,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -977,9 +977,9 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-UoRbP",
+        "id": "TavilySearchComponent-yRkVZ",
         "measured": {
-          "height": 435,
+          "height": 437,
           "width": 320
         },
         "position": {
@@ -991,7 +991,7 @@
       },
       {
         "data": {
-          "id": "YfinanceComponent-iTGtb",
+          "id": "YfinanceComponent-LaBhV",
           "node": {
             "base_classes": [
               "Data",
@@ -1261,9 +1261,9 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-iTGtb",
+        "id": "YfinanceComponent-LaBhV",
         "measured": {
-          "height": 517,
+          "height": 519,
           "width": 320
         },
         "position": {
@@ -1275,7 +1275,7 @@
       },
       {
         "data": {
-          "id": "CombineText-BlUqp",
+          "id": "CombineText-B7MqV",
           "node": {
             "base_classes": [
               "Message"
@@ -1411,9 +1411,9 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-BlUqp",
+        "id": "CombineText-B7MqV",
         "measured": {
-          "height": 413,
+          "height": 415,
           "width": 320
         },
         "position": {
@@ -1425,7 +1425,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-XZH1t",
+          "id": "ChatOutput-BjiRE",
           "node": {
             "base_classes": [
               "Message"
@@ -1720,7 +1720,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-XZH1t",
+        "id": "ChatOutput-BjiRE",
         "measured": {
           "height": 66,
           "width": 192
@@ -1734,7 +1734,7 @@
       },
       {
         "data": {
-          "id": "CombineText-l466f",
+          "id": "CombineText-2Ncws",
           "node": {
             "base_classes": [
               "Message"
@@ -1870,9 +1870,9 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-l466f",
+        "id": "CombineText-2Ncws",
         "measured": {
-          "height": 413,
+          "height": 415,
           "width": 320
         },
         "position": {
@@ -1884,7 +1884,7 @@
       },
       {
         "data": {
-          "id": "URL-I2cQs",
+          "id": "URL-1uKdC",
           "node": {
             "base_classes": [
               "Data",
@@ -2162,9 +2162,9 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-I2cQs",
+        "id": "URL-1uKdC",
         "measured": {
-          "height": 587,
+          "height": 590,
           "width": 320
         },
         "position": {
@@ -2176,9 +2176,9 @@
       },
       {
         "data": {
-          "id": "note-VLDEG",
+          "id": "note-4TLGl",
           "node": {
-            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [Sambanova API key](https://sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components, add your OpenAI API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Sambanova** component, add your **Sambanova API key**.\n4. In the **Tavily Search** component, add your **Tavily API key**.\n5. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
+            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [Sambanova API key](https://sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components, add your OpenAI API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Sambanova** component, add your **Sambanova API key**.\n4. In the **Tavily Search** component, add your **Tavily API key**.\n5. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -2189,7 +2189,7 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-VLDEG",
+        "id": "note-4TLGl",
         "measured": {
           "height": 630,
           "width": 479
@@ -2205,7 +2205,7 @@
       },
       {
         "data": {
-          "id": "SambaNovaModel-fILgM",
+          "id": "SambaNovaModel-67RaX",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2508,9 +2508,9 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-fILgM",
+        "id": "SambaNovaModel-67RaX",
         "measured": {
-          "height": 653,
+          "height": 656,
           "width": 320
         },
         "position": {
@@ -2522,7 +2522,7 @@
       },
       {
         "data": {
-          "id": "Agent-o0wmB",
+          "id": "Agent-8O2Iy",
           "node": {
             "base_classes": [
               "Message"
@@ -3159,9 +3159,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-o0wmB",
+        "id": "Agent-8O2Iy",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -3173,7 +3173,7 @@
       },
       {
         "data": {
-          "id": "Agent-kq33I",
+          "id": "Agent-fvvwn",
           "node": {
             "base_classes": [
               "Message"
@@ -3810,9 +3810,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-kq33I",
+        "id": "Agent-fvvwn",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -3824,14 +3824,14 @@
       }
     ],
     "viewport": {
-      "x": 760.4363905082554,
-      "y": 485.3087531296533,
-      "zoom": 0.566988479197837
+      "x": 874.6841085054481,
+      "y": 289.5843457571535,
+      "zoom": 0.7065898257947951
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
   "endpoint_name": null,
-  "id": "4251d502-f001-44ff-bbb3-3f46b9eabfda",
+  "id": "a4bf0c39-af63-4590-8a17-398938518fe3",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Financial Agent",
