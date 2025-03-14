@@ -86,6 +86,17 @@ module.exports = {
     },
     {
       type: "category",
+      label: "Platform",
+      items: [
+        "Platform/platform-build-application",
+        "Platform/session-id",
+        "Platform/logging",
+        "Platform/memory",
+        "Platform/install-custom-dependencies",
+      ],
+    },
+    {
+      type: "category",
       label: "Deployment",
       items: [
         {
