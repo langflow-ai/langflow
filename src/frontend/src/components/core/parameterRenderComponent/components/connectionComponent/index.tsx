@@ -59,7 +59,7 @@ const ConnectionComponent = ({
 
   return (
     <div className="flex w-full flex-col gap-2">
-      <div className="flex w-full flex-row gap-2">
+      <div className="flex w-full flex-row items-center gap-2">
         <Button
           variant="primary"
           size="xs"
@@ -84,8 +84,8 @@ const ConnectionComponent = ({
 
         <Button
           size="icon"
+          variant="ghost"
           disabled={!selectedItem[0]?.name || connectionButton}
-          variant={buttonMetadata.variant as any}
           className={cn(
             "h-9 w-10 rounded-md border",
             buttonMetadata.variant && `border-${buttonMetadata.variant}`,
