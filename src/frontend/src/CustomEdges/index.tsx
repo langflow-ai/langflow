@@ -21,8 +21,8 @@ export function DefaultEdge({
   const targetHandleObject = scapeJSONParse(targetHandleId!);
 
   const sourceXNew =
-    (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 0);
-  const targetXNew = targetNode?.position.x ?? 0;
+    (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 0) + 7;
+  const targetXNew = (targetNode?.position.x ?? 0) - 7;
 
   const distance = 200 + 0.1 * ((sourceXNew - targetXNew) / 2);
 
@@ -42,22 +42,40 @@ export function DefaultEdge({
     200 * (1 - zeroOnNegative) +
     0.3 * Math.abs(sourceY - targetY) * zeroOnNegative;
 
-  const edgePathLoop = `M ${sourceXNew} ${sourceY} C ${sourceXNew + distance} ${sourceY + sourceDistanceY}, ${targetXNew - distance} ${targetY + distanceY}, ${targetXNew} ${targetY}`;
+  const targetYNew = targetY + 1;
+  const sourceYNew = sourceY + 1;
+
+  const edgePathLoop = `M ${sourceXNew} ${sourceYNew} C ${sourceXNew + distance} ${sourceYNew + sourceDistanceY}, ${targetXNew - distance} ${targetYNew + distanceY}, ${targetXNew} ${targetYNew}`;
 
   const [edgePath] = getBezierPath({
     sourceX: sourceXNew,
-    sourceY,
+    sourceY: sourceYNew,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
     targetX: targetXNew,
-    targetY,
+    targetY: targetYNew,
   });
+
+  const {
+    animated,
+    selectable,
+    deletable,
+    sourcePosition,
+    targetPosition,
+    pathOptions,
+    selected,
+    ...domSafeProps
+  } = props;
 
   return (
     <BaseEdge
       path={targetHandleObject.output_types ? edgePathLoop : edgePath}
       strokeDasharray={targetHandleObject.output_types ? "5 5" : "0"}
-      {...props}
+      {...domSafeProps}
+      data-animated={animated ? "true" : "false"}
+      data-selectable={selectable ? "true" : "false"}
+      data-deletable={deletable ? "true" : "false"}
+      data-selected={selected ? "true" : "false"}
     />
   );
 }

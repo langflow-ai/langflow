@@ -60,50 +60,9 @@ class TracingService(Service):
         self.project_name: str | None = None
         self._tracers: dict[str, BaseTracer] = {}
         self._logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
-        self.logs_queue: asyncio.Queue = asyncio.Queue()
-        self.running = False
-        self.worker_task: asyncio.Task | None = None
         self.end_trace_tasks: set[asyncio.Task] = set()
         self.deactivated = self.settings_service.settings.deactivate_tracing
-
-    async def log_worker(self) -> None:
-        while self.running or not self.logs_queue.empty():
-            log_func, args = await self.logs_queue.get()
-            try:
-                await log_func(*args)
-            except Exception:  # noqa: BLE001
-                logger.exception("Error processing log")
-            finally:
-                self.logs_queue.task_done()
-
-    async def start(self) -> None:
-        if self.running:
-            return
-        try:
-            self.running = True
-            self.worker_task = asyncio.create_task(self.log_worker())
-        except Exception:  # noqa: BLE001
-            logger.exception("Error starting tracing service")
-
-    async def flush(self) -> None:
-        try:
-            await self.logs_queue.join()
-        except Exception:  # noqa: BLE001
-            logger.exception("Error flushing logs")
-
-    async def stop(self) -> None:
-        try:
-            self.running = False
-            await self.flush()
-            # check the qeue is empty
-            if not self.logs_queue.empty():
-                await self.logs_queue.join()
-            if self.worker_task:
-                self.worker_task.cancel()
-                self.worker_task = None
-
-        except Exception:  # noqa: BLE001
-            logger.exception("Error stopping tracing service")
+        self.session_id: str | None = None
 
     def _reset_io(self) -> None:
         self.inputs = defaultdict(dict)
@@ -115,14 +74,12 @@ class TracingService(Service):
         if self.deactivated:
             return
         try:
-            await self.start()
-
             self._initialize_langsmith_tracer()
             self._initialize_langwatch_tracer()
             self._initialize_langfuse_tracer()
             self._initialize_arize_phoenix_tracer()
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error initializing tracers: {e}")
+        except Exception:  # noqa: BLE001
+            logger.opt(exception=True).debug("Error initializing tracers")
 
     def _initialize_langsmith_tracer(self) -> None:
         project_name = os.getenv("LANGCHAIN_PROJECT", "Langflow")
@@ -163,6 +120,7 @@ class TracingService(Service):
             trace_type="chain",
             project_name=self.project_name,
             trace_id=self.run_id,
+            session_id=self.session_id,
         )
 
     def set_run_name(self, name: str) -> None:
@@ -217,7 +175,11 @@ class TracingService(Service):
 
     async def end(self, outputs: dict, error: Exception | None = None) -> None:
         await asyncio.to_thread(self._end_all_traces, outputs, error)
-        await self.stop()
+        try:
+            # Wait for any pending trace tasks to complete
+            await asyncio.gather(*self.end_trace_tasks)
+        except Exception:  # noqa: BLE001
+            logger.exception("Error flushing logs")
 
     def add_log(self, trace_name: str, log: Log) -> None:
         self._logs[trace_name].append(log)
@@ -241,7 +203,7 @@ class TracingService(Service):
             trace_id,
             trace_name,
             trace_type,
-            self._cleanup_inputs(inputs),
+            inputs,
             metadata,
             component._vertex,
         )
@@ -286,3 +248,7 @@ class TracingService(Service):
             if langchain_callback:
                 callbacks.append(langchain_callback)
         return callbacks
+
+    def set_session_id(self, session_id: str) -> None:
+        """Set the session ID for tracing."""
+        self.session_id = session_id

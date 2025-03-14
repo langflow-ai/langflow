@@ -14,8 +14,8 @@ from langflow.schema import Data
 
 
 class AgentQL(Component):
-    display_name = "AgentQL Query Data"
-    description = "Uses AgentQL API to extract structured data from a given URL."
+    display_name = "Extract Web Data"
+    description = "Extracts structured data from a web page using an AgentQL query or a Natural Language description."
     documentation: str = "https://docs.agentql.com/rest-api/api-reference"
     icon = "AgentQL"
     name = "AgentQL"
@@ -23,23 +23,30 @@ class AgentQL(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="AgentQL API Key",
+            display_name="API Key",
             required=True,
             password=True,
-            info="Your AgentQL API key. Get one at https://dev.agentql.com.",
+            info="Your AgentQL API key from dev.agentql.com",
         ),
         MessageTextInput(
             name="url",
             display_name="URL",
             required=True,
-            info="The public URL of the webpage to extract data from.",
+            info="The URL of the public web page you want to extract data from.",
             tool_mode=True,
         ),
         MultilineInput(
             name="query",
             display_name="AgentQL Query",
-            required=True,
-            info="The AgentQL query to execute. Read more at https://docs.agentql.com/agentql-query.",
+            required=False,
+            info="The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
+            tool_mode=True,
+        ),
+        MultilineInput(
+            name="prompt",
+            display_name="Prompt",
+            required=False,
+            info="A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
             tool_mode=True,
         ),
         IntInput(
@@ -73,13 +80,22 @@ class AgentQL(Component):
         headers = {
             "X-API-Key": self.api_key,
             "Content-Type": "application/json",
+            "X-TF-Request-Origin": "langflow",
         }
 
         payload = {
             "url": self.url,
             "query": self.query,
+            "prompt": self.prompt,
             "params": self.params,
         }
+
+        if not self.prompt and not self.query:
+            self.status = "Either Query or Prompt must be provided."
+            raise ValueError(self.status)
+        if self.prompt and self.query:
+            self.status = "Both Query and Prompt can't be provided at the same time."
+            raise ValueError(self.status)
 
         try:
             response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
