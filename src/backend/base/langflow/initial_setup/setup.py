@@ -57,7 +57,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         node_type = node.get("data").get("type")
 
         # Skip updating if tool_mode is True
-        if node_data.get("tool_mode", False):
+        if node_data.get("tool_mode", False) or node_data.get("key") == "Agent":
             continue
 
         # Skip nodes with outputs of the specified format
