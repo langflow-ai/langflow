@@ -132,6 +132,9 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store: "OpenSearchVectorSearch") -> None:
         """Adds documents to the Vector Store."""
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):

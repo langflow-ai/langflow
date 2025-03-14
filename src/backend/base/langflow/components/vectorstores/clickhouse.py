@@ -83,6 +83,9 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             msg = f"Failed to connect to Clickhouse: {e}"
             raise ValueError(msg) from e
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
