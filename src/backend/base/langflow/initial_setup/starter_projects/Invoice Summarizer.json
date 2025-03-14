@@ -25,9 +25,9 @@
         "id": "reactflow__edge-Prompt-WRaed{œdataTypeœ:œPromptœ,œidœ:œPrompt-WRaedœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-WRaed",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-WRaedœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WRaedœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-needle-nk3Lq{œdataTypeœ:œneedleœ,œidœ:œneedle-nk3Lqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IDDA1{œfieldNameœ:œtoolsœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "needle-nk3Lq",
-        "sourceHandle": "{œdataTypeœ:œneedleœ,œidœ:œneedle-nk3Lqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-nk3Lqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-ChatInput-V0cjZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-V0cjZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-V0cjZ",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-V0cjZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-V0cjZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "data": {
@@ -108,9 +108,9 @@
         },
         "id": "xy-edge__Agent-IDDA1{œdataTypeœ:œAgentœ,œidœ:œAgent-IDDA1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Ftr5v{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Ftr5vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "source": "Agent-IDDA1",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-IDDA1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-IDDA1œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-Ftr5v",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Ftr5vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Ftr5vœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -681,7 +681,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.000007568328950209746,
+            "score": 7.568328950209746e-6,
             "template": {
               "_type": "Component",
               "code": {
