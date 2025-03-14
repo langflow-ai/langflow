@@ -266,12 +266,10 @@ class LangWatchComponent(Component):
                 "settings": {},
             }
 
-            if (
-                self._tracing_service
-                and self._tracing_service._tracers
-                and "langwatch" in self._tracing_service._tracers
-            ):
-                payload["trace_id"] = str(self._tracing_service._tracers["langwatch"].trace_id)  # type: ignore[assignment]
+            if self._tracing_service:
+                tracer = self._tracing_service.get_tracer("langwatch")
+                if tracer is not None and hasattr(tracer, "trace_id"):
+                    payload["settings"]["trace_id"] = str(tracer.trace_id)
 
             for setting_name in self.dynamic_inputs:
                 payload["settings"][setting_name] = getattr(self, setting_name, None)
