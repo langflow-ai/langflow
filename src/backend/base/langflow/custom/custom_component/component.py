@@ -181,6 +181,12 @@ class Component(CustomComponent):
                 session=session,
             )
 
+    async def get_global_llm(self):
+        if self._llm is not None:
+            return self._llm
+        self._set_llm()
+        return self._llm
+
     async def generate(
         self, inputs: str | Message, system_message: str | None = None, llm: BaseChatModel | None = None
     ) -> Any:
