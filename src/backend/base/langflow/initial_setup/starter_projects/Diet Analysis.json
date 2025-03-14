@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-ytmlw",
+            "id": "ChatInput-Tza35",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,18 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "NovitaModel-5dzTg",
+            "id": "NovitaModel-NPPoo",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-ytmlw{œdataTypeœ:œChatInputœ,œidœ:œChatInput-ytmlwœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-5dzTg{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-5dzTgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-ytmlw",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-ytmlwœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "NovitaModel-5dzTg",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œNovitaModel-5dzTgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-Tza35{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Tza35œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-NPPoo{œfieldNameœ:œinput_valueœ,œidœ:œNovitaModel-NPPooœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-Tza35",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Tza35œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "NovitaModel-NPPoo",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œNovitaModel-NPPooœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -34,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-skpYP",
+            "id": "Prompt-lo2oI",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -42,18 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "NovitaModel-5dzTg",
+            "id": "NovitaModel-NPPoo",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Prompt-skpYP{œdataTypeœ:œPromptœ,œidœ:œPrompt-skpYPœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-5dzTg{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-5dzTgœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-skpYP",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-skpYPœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "NovitaModel-5dzTg",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œNovitaModel-5dzTgœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-lo2oI{œdataTypeœ:œPromptœ,œidœ:œPrompt-lo2oIœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-NovitaModel-NPPoo{œfieldNameœ:œsystem_messageœ,œidœ:œNovitaModel-NPPooœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-lo2oI",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-lo2oIœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "NovitaModel-NPPoo",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œNovitaModel-NPPooœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "NovitaModel",
-            "id": "NovitaModel-5dzTg",
+            "id": "NovitaModel-NPPoo",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -69,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-pTjG9",
+            "id": "ChatOutput-G6tol",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -78,17 +80,18 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__NovitaModel-5dzTg{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-5dzTgœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-pTjG9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-pTjG9œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "NovitaModel-5dzTg",
-        "sourceHandle": "{œdataTypeœ: œNovitaModelœ, œidœ: œNovitaModel-5dzTgœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-pTjG9",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-pTjG9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-NovitaModel-NPPoo{œdataTypeœ:œNovitaModelœ,œidœ:œNovitaModel-NPPooœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-G6tol{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-G6tolœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "NovitaModel-NPPoo",
+        "sourceHandle": "{œdataTypeœ: œNovitaModelœ, œidœ: œNovitaModel-NPPooœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-G6tol",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-G6tolœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-ytmlw",
+          "id": "ChatInput-Tza35",
           "node": {
             "base_classes": [
               "Message"
@@ -382,7 +385,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-ytmlw",
+        "id": "ChatInput-Tza35",
         "measured": {
           "height": 66,
           "width": 192
@@ -396,7 +399,7 @@
       },
       {
         "data": {
-          "id": "Prompt-skpYP",
+          "id": "Prompt-lo2oI",
           "node": {
             "base_classes": [
               "Message"
@@ -511,9 +514,9 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-skpYP",
+        "id": "Prompt-lo2oI",
         "measured": {
-          "height": 235,
+          "height": 203,
           "width": 320
         },
         "position": {
@@ -525,7 +528,7 @@
       },
       {
         "data": {
-          "id": "NovitaModel-5dzTg",
+          "id": "NovitaModel-NPPoo",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -881,7 +884,7 @@
           "type": "NovitaModel"
         },
         "dragging": false,
-        "id": "NovitaModel-5dzTg",
+        "id": "NovitaModel-NPPoo",
         "measured": {
           "height": 671,
           "width": 320
@@ -895,7 +898,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-pTjG9",
+          "id": "ChatOutput-G6tol",
           "node": {
             "base_classes": [
               "Message"
@@ -1190,7 +1193,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-pTjG9",
+        "id": "ChatOutput-G6tol",
         "measured": {
           "height": 66,
           "width": 192
@@ -1204,9 +1207,9 @@
       },
       {
         "data": {
-          "id": "note-EmA5N",
+          "id": "note-u4rse",
           "node": {
-            "description": "# Diet analysis\n\nA robot that analyzes and scores dietary health\n\n## Core Components\n\n1. **Chat Input**\n   - Accepts user messages\n\n2. **Prompt**\n   - Creates prompt templates\n\n3. **Novita AI**\n   - Processes user input with context\n   - Includes options for model configuration and API key setup\n\n4. **Chat Output**\n   - Displays formatted responses\n\n## Features\n\n- Analyze dietary health and give guidance\n\n## Quick Start\n\n1. **Enter** your diet for the day in Chat Input\n2. **Response** appears in Chat Output\n\n",
+            "description": "# Diet analysis\n\nAnalyze and score dietary health with a [NovitaAI](https://novita.ai/docs/guides/introduction) LLM. \n\n## Prerequisites\n\n* A [NovitaAI API Key](https://novita.ai/settings/key-management)\n\n## Quickstart\n\n1. Add your **NovitaAI API Key** to the **Novita AI** agent.\n2. In the **Chat input** component, enter your diet for the day.\n3. The **Novita AI** analyzes your diet with the **Prompt**, and outputs its analysis to **Chat output**.\n4. Try different models with the **Model Name** menu.\n\n",
             "display_name": "",
             "documentation": "",
             "template": {}
@@ -1215,7 +1218,7 @@
         },
         "dragging": false,
         "height": 636,
-        "id": "note-EmA5N",
+        "id": "note-u4rse",
         "measured": {
           "height": 636,
           "width": 325
@@ -1228,56 +1231,22 @@
         "selected": false,
         "type": "noteNode",
         "width": 324
-      },
-      {
-        "data": {
-          "id": "note-L2VnK",
-          "node": {
-            "description": "## Get Your Novita AI API Key\n\n**Steps**:\n\n1. **Visit** [NovitaAI's API Key Page](https://novita.ai/settings/key-management).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new novita account.\n\n3. **Generate API Key**:\n   - Click \"Add New Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the Novita AI API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
-            "display_name": "",
-            "documentation": "",
-            "template": {
-              "backgroundColor": "rose"
-            }
-          },
-          "type": "note"
-        },
-        "dragging": false,
-        "height": 442,
-        "id": "note-L2VnK",
-        "measured": {
-          "height": 442,
-          "width": 331
-        },
-        "position": {
-          "x": 829.497176358961,
-          "y": -460.1455175410934
-        },
-        "resizing": false,
-        "selected": true,
-        "type": "noteNode",
-        "width": 330
       }
     ],
     "viewport": {
-      "x": 218.99568972859856,
-      "y": 313.09044876978754,
-      "zoom": 0.6262838194250431
+      "x": 188.5810308950804,
+      "y": 326.70291895230537,
+      "zoom": 0.7310399087047124
     }
   },
-  "description": "Enter your daily food intake (food/grams) to receive professional dietary advice!",
+  "description": "Enter your daily food intake (food/grams) to receive dietary advice!",
   "endpoint_name": null,
-  "gradient": null,
-  "icon": "cup-soda",
-  "icon_bg_color": null,
-  "id": "019261c7-177d-453b-9e97-8e7ab71caef9",
-  "locked": false,
+  "id": "9bee0aca-0816-4afe-a4a5-64088e40dd74",
+  "is_component": false,
+  "last_tested_version": "1.2.0",
   "name": "Diet Analysis",
   "tags": [
     "chatbots",
     "content-generation"
-  ],
-  "webhook": false,
-  "is_component": false,
-  "last_tested_version": "1.2.0"
+  ]
 }
