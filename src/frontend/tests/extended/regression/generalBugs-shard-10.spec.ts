@@ -76,7 +76,7 @@ test(
 
     await page.getByTestId("button_open_prompt_modal").click();
 
-    await page.getByTestId("edit-prompt-sanitized").first().click();
+    await page.getByTestId("edit-prompt-sanitized").last().click();
 
     await page
       .getByTestId("modal-promptarea_prompt_template")
