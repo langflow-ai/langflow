@@ -47,7 +47,16 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-
+    {
+      title: "LLM Settings",
+      href: "/settings/llm-settings",
+      icon: (
+        <ForwardedIconComponent
+          name="Bot"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
     {
       title: "Shortcuts",
       href: "/settings/shortcuts",
