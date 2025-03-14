@@ -94,6 +94,7 @@ const ListSelectionComponent = ({
           {
             name: action.name,
             icon: "icon" in action ? action.icon : undefined,
+            link: "link" in action ? action.link : undefined,
           },
         ]);
         onClose();

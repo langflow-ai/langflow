@@ -14,7 +14,6 @@ type ConnectionComponentProps = {
   options?: any[];
   searchCategory?: string[];
   buttonMetadata?: { variant?: string; icon?: string };
-  connectionLink?: string;
 };
 
 const ConnectionComponent = ({
@@ -25,30 +24,38 @@ const ConnectionComponent = ({
   options = [],
   searchCategory = [],
   buttonMetadata = { variant: "destructive", icon: "unplug" },
-  connectionLink = "https://en.wikipedia.org/wiki/DataStax",
   ...baseInputProps
 }: InputProps<any, ConnectionComponentProps>) => {
   const { value, handleOnNewValue } = baseInputProps;
 
   const { placeholder } = baseInputProps;
   const [open, setOpen] = useState(false);
-  const [connectionButton, setConnectionButton] = useState(true);
+  const [connectionButton, setConnectionButton] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
+  const [connectionLink, setConnectionLink] = useState(
+    "https://github.com/langflow-ai/langflow",
+  );
 
-  const handleConnectionButtonClick = useCallback(() => {
-    setConnectionButton((prev) => !prev);
+  const handleConnectionButtonClick = () => {
+    console.log("connectionLink", connectionLink);
+    setConnectionButton(true);
     window.open(connectionLink, "_blank");
-  }, []);
+  };
 
-  const handleOpenListSelectionDialog = useCallback(() => setOpen(true), []);
+  const handleOpenListSelectionDialog = () => setOpen(true);
 
-  const handleCloseListSelectionDialog = useCallback(() => {
-    setOpen(false);
-  }, [value, selectedItem]);
+  const handleCloseListSelectionDialog = () => setOpen(false);
 
   useEffect(() => {
-    handleOnNewValue({ value: selectedItem[0]?.name }, { skipSnapshot: true });
-  }, [selectedItem]);
+    if (selectedItem[0]?.name !== value) {
+      setConnectionButton(false);
+      setConnectionLink(selectedItem[0]?.link);
+      handleOnNewValue(
+        { value: selectedItem[0]?.name },
+        { skipSnapshot: true },
+      );
+    }
+  }, [selectedItem[0]?.name]);
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -75,26 +82,28 @@ const ConnectionComponent = ({
           </div>
         </Button>
 
-        {connectionButton && (
-          <Button
-            size="icon"
-            disabled={!selectedItem[0]?.name}
-            variant={buttonMetadata.variant as any}
+        <Button
+          size="icon"
+          disabled={!selectedItem[0]?.name || connectionButton}
+          variant={buttonMetadata.variant as any}
+          className={cn(
+            "h-9 w-10 rounded-md border",
+            buttonMetadata.variant && `border-${buttonMetadata.variant}`,
+            connectionButton && "border-green-500",
+          )}
+          onClick={handleConnectionButtonClick}
+        >
+          <ForwardedIconComponent
+            name={
+              connectionButton ? "plug-zap" : buttonMetadata.icon || "unplug"
+            }
             className={cn(
-              "h-9 w-10 rounded-md border",
-              buttonMetadata.variant && `border-${buttonMetadata.variant}`,
+              "h-5 w-5",
+              buttonMetadata.variant && `text-${buttonMetadata.variant}`,
+              connectionButton && "text-green-500",
             )}
-            onClick={handleConnectionButtonClick}
-          >
-            <ForwardedIconComponent
-              name={buttonMetadata.icon || "unplug"}
-              className={cn(
-                "h-5 w-5",
-                buttonMetadata.variant && `text-${buttonMetadata.variant}`,
-              )}
-            />
-          </Button>
-        )}
+          />
+        </Button>
       </div>
 
       {helperText && (

@@ -54,7 +54,7 @@ const SearchBarComponent = ({
                 onClick={() => handleCategoryChange(category)}
                 className="cursor-pointer"
               >
-                <span className="flex items-center gap-2 truncate text-sm">
+                <span className="flex items-center gap-2 truncate px-2 py-1 text-sm">
                   {category}
                 </span>
               </DropdownMenuItem>

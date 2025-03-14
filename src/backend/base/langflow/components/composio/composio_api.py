@@ -52,25 +52,30 @@ class ComposioAPIComponent(LCToolComponent):
                 {
                     "name": "Github",
                     "icon": "github",
+                    "link": "https://github.com",
                 },
                 {
                     "name": "Microsoft",
                     "icon": "microsoft",
+                    "link": "https://www.microsoft.com",
                 },
                 {
                     "name": "Google",
                     "icon": "google",
+                    "link": "https://www.google.com",
                 },
                 {
                     "name": "Slack",
                     "icon": "slack",
+                    "link": "https://www.slack.com",
                 },
                 {
                     "name": "Dropbox",
                     "icon": "dropbox",
+                    "link": "https://www.dropbox.com",
                 },
             ],
-            search_category=["all", "analytics & data", "collaboration"],  # TODO: Add more categories
+            search_category=["All", "Analytics & Data", "Collaboration"],  # TODO: Add more categories
             value="",
             connection_link="",
             info="The name of the tool to use",
