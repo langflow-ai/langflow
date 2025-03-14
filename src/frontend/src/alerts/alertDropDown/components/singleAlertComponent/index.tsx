@@ -18,11 +18,9 @@ export default function SingleAlert({
       key={dropItem.id}
     >
       <div className="flex-shrink-0">
-        <IconComponent
-          name="XCircle"
-          className="text-status-red h-5 w-5"
-          aria-hidden="true"
-        />
+
+        <IconComponent name="XCircle" className="h-5 w-5 text-status-red" />
+
       </div>
       <div className="ml-3">
         <h3 className="text-error-foreground word-break-break-word text-sm font-medium">
@@ -80,11 +78,9 @@ export default function SingleAlert({
             className="text-status-red inline-flex rounded-md p-1.5"
           >
             <span className="sr-only">Dismiss</span>
-            <IconComponent
-              name="X"
-              className="text-error-foreground h-4 w-4"
-              aria-hidden="true"
-            />
+
+            <IconComponent name="X" className="h-4 w-4 text-error-foreground" />
+
           </button>
         </div>
       </div>
@@ -95,11 +91,9 @@ export default function SingleAlert({
       key={dropItem.id}
     >
       <div className="flex-shrink-0 cursor-help">
-        <IconComponent
-          name="Info"
-          className="text-status-blue h-5 w-5"
-          aria-hidden="true"
-        />
+
+        <IconComponent name="Info" className="h-5 w-5 text-status-blue" />
+
       </div>
       <div className="ml-3 flex-1 md:flex md:justify-between">
         <p className="text-info-foreground text-sm font-medium">
@@ -131,11 +125,9 @@ export default function SingleAlert({
             className="text-info-foreground inline-flex rounded-md p-1.5"
           >
             <span className="sr-only">Dismiss</span>
-            <IconComponent
-              name="X"
-              className="text-info-foreground h-4 w-4"
-              aria-hidden="true"
-            />
+
+            <IconComponent name="X" className="h-4 w-4 text-info-foreground" />
+
           </button>
         </div>
       </div>
@@ -148,8 +140,9 @@ export default function SingleAlert({
       <div className="flex-shrink-0">
         <IconComponent
           name="CheckCircle2"
-          className="text-status-green h-5 w-5"
-          aria-hidden="true"
+
+          className="h-5 w-5 text-status-green"
+
         />
       </div>
       <div className="ml-3">
@@ -172,8 +165,9 @@ export default function SingleAlert({
             <span className="sr-only">Dismiss</span>
             <IconComponent
               name="X"
-              className="text-success-foreground h-4 w-4"
-              aria-hidden="true"
+
+              className="h-4 w-4 text-success-foreground"
+
             />
           </button>
         </div>

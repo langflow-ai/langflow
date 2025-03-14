@@ -263,19 +263,6 @@ const NodeToolbarComponent = memo(
       });
     }, [data.id, data.node?.documentation, openInNewTab]);
 
-    const freezeFunction = useCallback(() => {
-      setNode(data.id, (old) => ({
-        ...old,
-        data: {
-          ...old.data,
-          node: {
-            ...old.data.node,
-            frozen: old.data?.node?.frozen ? false : true,
-          },
-        },
-      }));
-    }, [data.id, setNode]);
-
     useShortcuts({
       showOverrideModal,
       showModalAdvanced,
@@ -284,7 +271,6 @@ const NodeToolbarComponent = memo(
       FreezeAllVertices: () => {
         FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
       },
-      Freeze: freezeFunction,
       downloadFunction: () => downloadNode(flowComponent!),
       displayDocs: openDocs,
       saveComponent,
@@ -332,9 +318,6 @@ const NodeToolbarComponent = memo(
         switch (event) {
           case "save":
             saveComponent();
-            break;
-          case "freeze":
-            freezeFunction();
             break;
           case "freezeAll":
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
@@ -405,7 +388,6 @@ const NodeToolbarComponent = memo(
       },
       [
         saveComponent,
-        freezeFunction,
         FreezeAllVertices,
         setOpenModal,
         setShowModalAdvanced,
@@ -445,11 +427,16 @@ const NodeToolbarComponent = memo(
       setOpenShowMoreOptions && setOpenShowMoreOptions(open);
     };
 
+    const isCustomComponent = useMemo(() => {
+      return data.type === "CustomComponent" && !data.node?.edited;
+    }, [data.type, data.node?.edited]);
+
     const renderToolbarButtons = useMemo(
       () => (
         <>
           {hasCode && (
             <ToolbarButton
+              className={isCustomComponent ? "!bg-accent-pink" : ""}
               icon="Code"
               label="Code"
               onClick={() => setOpenModal(true)}
@@ -713,24 +700,12 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                <SelectItem value="freeze">
+                <SelectItem value="freezeAll">
                   <ToolbarSelectItem
                     shortcut={
                       shortcuts.find((obj) => obj.name === "Freeze")?.shortcut!
                     }
                     value={"Freeze"}
-                    icon={"Snowflake"}
-                    dataTestId="freeze-button"
-                    style={`${frozen ? " text-ice" : ""} transition-all`}
-                  />
-                </SelectItem>
-                <SelectItem value="freezeAll">
-                  <ToolbarSelectItem
-                    shortcut={
-                      shortcuts.find((obj) => obj.name === "Freeze Path")
-                        ?.shortcut!
-                    }
-                    value={"Freeze Path"}
                     icon={"FreezeAll"}
                     dataTestId="freeze-path-button"
                     style={`${frozen ? " text-ice" : ""} transition-all`}

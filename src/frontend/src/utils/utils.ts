@@ -469,7 +469,20 @@ export const logHasMessage = (
   if (Array.isArray(outputs) && outputs.length > 0) {
     return outputs.some((outputLog) => outputLog?.message);
   }
-  return outputs?.message;
+  return !!outputs?.message;
+};
+
+export const logFirstMessage = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName || !data?.outputs) return false;
+  for (const key of Object.keys(data.outputs)) {
+    if (logHasMessage(data, key)) {
+      return key === outputName;
+    }
+  }
+  return false;
 };
 
 export const logTypeIsUnknown = (
