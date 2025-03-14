@@ -50,6 +50,8 @@ interface SettingsVoiceModalProps {
   language?: string;
   setLanguage?: (language: string) => void;
   handleClickSaveOpenAIApiKey: (openaiApiKey: string) => void;
+  isEditingOpenAIKey: boolean;
+  setIsEditingOpenAIKey: (isEditingOpenAIKey: boolean) => void;
 }
 
 const SettingsVoiceModal = ({
@@ -61,6 +63,8 @@ const SettingsVoiceModal = ({
   language,
   setLanguage,
   handleClickSaveOpenAIApiKey,
+  isEditingOpenAIKey,
+  setIsEditingOpenAIKey,
 }: SettingsVoiceModalProps) => {
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
@@ -105,9 +109,6 @@ const SettingsVoiceModal = ({
   const [currentLanguage, setCurrentLanguage] = useState(
     localStorage.getItem("lf_preferred_language") || "en-US",
   );
-
-  // Add a debounce timeout ref
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isFetched) {
@@ -212,6 +213,10 @@ const SettingsVoiceModal = ({
 
   const handleClickSaveApiKey = (value: string) => {
     if (!value) return;
+    if (value === "OPENAI_API_KEY") {
+      setIsEditingOpenAIKey(false);
+      return;
+    }
     handleClickSaveOpenAIApiKey(value);
     saveButtonClicked.current = true;
   };
@@ -219,47 +224,14 @@ const SettingsVoiceModal = ({
   const handleOpenAIKeyChange = (value: string) => {
     if (!value) return;
     setOpenaiApiKey(value);
-
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    debounceTimeoutRef.current = setTimeout(() => {
-      handleClickSaveApiKey(value);
-    }, 1000);
   };
 
   useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, []);
+    setOpenaiApiKey("");
+  }, [isEditingOpenAIKey]);
 
-  // Add a click outside handler
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        open &&
-        popupRef.current &&
-        !popupRef.current.contains(event.target as Node) &&
-        // Make sure we're not clicking on the trigger element
-        !(event.target as Element).closest('[data-dropdown-trigger="true"]')
-      ) {
-        setOpen(false);
-        setShowSettingsModal(false, openaiApiKey, elevenLabsApiKey);
-      }
-    };
-
-    // Add the event listener
-    document.addEventListener("mousedown", handleClickOutside);
-
-    // Clean up
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [open, openaiApiKey, elevenLabsApiKey, setShowSettingsModal]);
+  const showAddOpenAIKeyButton = !hasOpenAIAPIKey || isEditingOpenAIKey;
+  const showAllSettings = hasOpenAIAPIKey && !isEditingOpenAIKey;
 
   return (
     <>
@@ -294,39 +266,78 @@ const SettingsVoiceModal = ({
                     </ShadTooltip>
                   </span>
 
-                  <InputComponent
-                    isObjectOption={false}
-                    password={false}
-                    nodeStyle
-                    popoverWidth="16rem"
-                    placeholder={getPlaceholder(
-                      false,
-                      "Enter your OpenAI API key",
-                    )}
-                    id="openai-api-key"
-                    options={globalVariables?.map((variable) => variable) ?? []}
-                    optionsPlaceholder={"Global Variables"}
-                    optionsIcon="Globe"
-                    optionsButton={<GeneralGlobalVariableModal />}
-                    optionButton={(option) => (
-                      <GeneralDeleteConfirmationModal
-                        option={option}
-                        onConfirmDelete={() => {}}
+                  {showAddOpenAIKeyButton && (
+                    <>
+                      <InputComponent
+                        isObjectOption={false}
+                        password={false}
+                        nodeStyle
+                        popoverWidth="16rem"
+                        placeholder={getPlaceholder(
+                          false,
+                          "Enter your OpenAI API key",
+                        )}
+                        id="openai-api-key"
+                        options={
+                          globalVariables?.map((variable) => variable) ?? []
+                        }
+                        optionsPlaceholder={"Global Variables"}
+                        optionsIcon="Globe"
+                        optionsButton={<GeneralGlobalVariableModal />}
+                        optionButton={(option) => (
+                          <GeneralDeleteConfirmationModal
+                            option={option}
+                            onConfirmDelete={() => {}}
+                          />
+                        )}
+                        value={openaiApiKey}
+                        onChange={handleOpenAIKeyChange}
+                        selectedOption={
+                          checkIfGlobalVariableExists(openaiApiKey)
+                            ? openaiApiKey
+                            : ""
+                        }
+                        commandWidth="11rem"
                       />
-                    )}
-                    value={openaiApiKey}
-                    onChange={handleOpenAIKeyChange}
-                    selectedOption={
-                      checkIfGlobalVariableExists(openaiApiKey)
-                        ? openaiApiKey
-                        : ""
-                    }
-                    setSelectedOption={setOpenaiApiKey}
-                    commandWidth="11rem"
-                  />
+                    </>
+                  )}
+
+                  {showAllSettings && (
+                    <>
+                      <Button
+                        variant="primary"
+                        className="w-full"
+                        onClick={() => setIsEditingOpenAIKey(true)}
+                        size="md"
+                      >
+                        Edit
+                      </Button>
+                    </>
+                  )}
                 </div>
 
-                {hasOpenAIAPIKey && (
+                {!showAllSettings && (
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setOpen(false)}
+                      variant="primary"
+                      size="md"
+                      className="w-full"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => handleClickSaveApiKey(openaiApiKey)}
+                      className="w-full"
+                      disabled={!openaiApiKey}
+                      size="md"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                )}
+
+                {showAllSettings && (
                   <>
                     <div className="grid w-full items-center gap-2">
                       <span className="flex items-center text-sm">

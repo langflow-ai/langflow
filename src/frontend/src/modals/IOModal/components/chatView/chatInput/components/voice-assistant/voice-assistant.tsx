@@ -4,6 +4,7 @@ import { ICON_STROKE_WIDTH, SAVE_API_KEY_ALERT } from "@/constants/constants";
 import { useGetMessagesPollingMutation } from "@/controllers/API/queries/messages/use-get-messages-polling";
 import {
   useGetGlobalVariables,
+  usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
@@ -48,6 +49,7 @@ export function VoiceAssistant({
   const [preferredLanguage, setPreferredLanguage] = useState(
     localStorage.getItem("lf_preferred_language") || "en-US",
   );
+  const [isEditingOpenAIKey, setIsEditingOpenAIKey] = useState<boolean>(false);
 
   const waveformRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -79,6 +81,7 @@ export function VoiceAssistant({
     (state) => state.globalVariablesEntries,
   );
   const createVariable = usePostGlobalVariables();
+  const updateVariable = usePatchGlobalVariables();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentSessionId = useUtilityStore((state) => state.currentSessionId);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -100,6 +103,12 @@ export function VoiceAssistant({
   const openaiApiKey = useMemo(() => {
     return variables?.find((variable) => variable === "OPENAI_API_KEY");
   }, [variables, addKey]);
+
+  const openaiApiKeyGlobalVariable = useMemo(() => {
+    return globalVariables?.find(
+      (variable) => variable.name === "OPENAI_API_KEY",
+    );
+  }, [globalVariables]);
 
   const elevenLabsApiKeyGlobalVariable = useMemo(() => {
     return variables?.find((variable) => variable === "ELEVENLABS_API_KEY");
@@ -218,26 +227,42 @@ export function VoiceAssistant({
   };
 
   const handleSaveApiKey = async (apiKey: string, variableName: string) => {
-    try {
-      await createVariable.mutateAsync({
+    if (isEditingOpenAIKey && openaiApiKeyGlobalVariable) {
+      await updateVariable.mutateAsync(
+        {
+          name: variableName,
+          value: apiKey,
+          id: openaiApiKeyGlobalVariable?.id,
+        },
+        {
+          onSuccess: () => {
+            setSuccessData({
+              title: SAVE_API_KEY_ALERT,
+            });
+            setAddKey(!addKey);
+            setIsEditingOpenAIKey(false);
+          },
+        },
+      );
+      return;
+    }
+
+    await createVariable.mutateAsync(
+      {
         name: variableName,
         value: apiKey,
         type: "secret",
         default_fields: ["voice_mode"],
-      });
-      setSuccessData({
-        title: SAVE_API_KEY_ALERT,
-      });
-      setAddKey(!addKey);
-    } catch (error) {
-      console.error("Error saving API key:", error);
-      if (error instanceof AxiosError) {
-        setErrorData({
-          title: "Error saving API key",
-          list: [error.response?.data?.detail ?? "Error saving API key"],
-        });
-      }
-    }
+      },
+      {
+        onSuccess: () => {
+          setSuccessData({
+            title: SAVE_API_KEY_ALERT,
+          });
+          setAddKey(!addKey);
+        },
+      },
+    );
   };
 
   useEffect(() => {
@@ -394,6 +419,8 @@ export function VoiceAssistant({
               language={preferredLanguage}
               setLanguage={setPreferredLanguage}
               handleClickSaveOpenAIApiKey={handleClickSaveOpenAIApiKey}
+              isEditingOpenAIKey={isEditingOpenAIKey}
+              setIsEditingOpenAIKey={setIsEditingOpenAIKey}
             >
               {hasOpenAIAPIKey ? (
                 <>
