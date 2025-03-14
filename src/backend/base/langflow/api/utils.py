@@ -327,6 +327,7 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
             - 400 if no client_id is provided
             - 403 if flow doesn't exist or isn't public
             - 403 if unable to retrieve the flow owner user
+            - 403 if user is not found for public flow
     """
     if not client_id:
         raise HTTPException(status_code=400, detail="No client_id cookie found")
@@ -350,7 +351,13 @@ async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | N
         from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 
         user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+
     except Exception as exc:
         logger.exception(f"Error getting user for public flow {flow_id}")
         raise HTTPException(status_code=403, detail="Flow is not accessible") from exc
+
+    if not user:
+        msg = f"User not found for public flow {flow_id}"
+        raise HTTPException(status_code=403, detail=msg)
+
     return user, new_flow_id

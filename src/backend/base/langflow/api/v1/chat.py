@@ -585,7 +585,7 @@ async def build_public_tmp(
             files=files,
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
-            log_builds=log_builds,
+            log_builds=log_builds or False,
             current_user=owner_user,
             queue_service=queue_service,
             flow_name=flow_name or f"{client_id}_{flow_id}",
