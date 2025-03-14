@@ -8,7 +8,6 @@ from collections.abc import AsyncIterator
 from fastapi import BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse
 from loguru import logger
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
