@@ -1,3 +1,5 @@
+import re
+
 import httpx
 from loguru import logger
 
@@ -124,6 +126,18 @@ class SearchMemoriesComponent(Component):
             logger.error("API key is missing")
             error_message = "API Key is required."
             raise ValueError(error_message)
+
+        # Add date format validation
+        date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+        if self.created_at_gte and not date_pattern.match(self.created_at_gte):
+            logger.error("Invalid date format for 'Created After' field")
+            error_message = "Invalid date format for 'Created After' field. Please use YYYY-MM-DD."
+            raise ValueError(error_message)
+        if self.created_at_lte and not date_pattern.match(self.created_at_lte):
+            logger.error("Invalid date format for 'Created Before' field")
+            error_message = "Invalid date format for 'Created Before' field. Please use YYYY-MM-DD."
+            raise ValueError(error_message)
+
         logger.success("Input validation successful")
 
     def build_filters(self):

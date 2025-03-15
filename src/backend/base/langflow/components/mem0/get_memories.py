@@ -1,3 +1,4 @@
+import re
 from typing import Any
 
 from mem0 import MemoryClient
@@ -99,7 +100,19 @@ class GetMemoriesComponent(Component):
 
     def validate_inputs(self):
         if not self.api_key:
-            raise ValueError
+            error_message = "API Key is required."
+            raise ValueError(error_message)
+
+        # Validate date formats
+        date_format = r"^\d{4}-\d{2}-\d{2}$"  # YYYY-MM-DD format
+
+        if self.created_at_gte and not re.match(date_format, self.created_at_gte):
+            error_message = f"Created After date must be in YYYY-MM-DD format. Got: {self.created_at_gte}"
+            raise ValueError(error_message)
+
+        if self.created_at_lte and not re.match(date_format, self.created_at_lte):
+            error_message = f"Created Before date must be in YYYY-MM-DD format. Got: {self.created_at_lte}"
+            raise ValueError(error_message)
 
     def build_filters(self) -> dict[str, Any]:
         filters = {}
@@ -148,10 +161,9 @@ class GetMemoriesComponent(Component):
             error_data = {"error": error_message}
             error_df = DataFrame(data=[error_data])
             self.status = error_df
-            return error_df
         except (ValueError, RuntimeError) as e:
             error_message = f"Error: {e!s}"
             error_data = {"error": error_message}
             error_df = DataFrame(data=[error_data])
             self.status = error_df
-            return error_df
+        return self.status
