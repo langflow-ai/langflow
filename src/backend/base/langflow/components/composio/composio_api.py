@@ -13,7 +13,16 @@ from loguru import logger
 
 # Local imports
 from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.inputs import DropdownInput, LinkInput, MessageTextInput, MultiselectInput, SecretStrInput, StrInput
+from langflow.inputs import (
+    ConnectionInput,
+    DropdownInput,
+    LinkInput,
+    MessageTextInput,
+    MultiselectInput,
+    SecretStrInput,
+    SortableListInput,
+    StrInput,
+)
 from langflow.io import Output
 
 
@@ -34,12 +43,101 @@ class ComposioAPIComponent(LCToolComponent):
             info="Refer to https://docs.composio.dev/faq/api_key/api_key",
             real_time_refresh=True,
         ),
+        ConnectionInput(
+            name="tool_name",
+            display_name="Tool Name",
+            placeholder="Select a tool...",
+            button_metadata={"icon": "unplug", "variant": "destructive"},
+            options=[
+                {
+                    "name": "Github",
+                    "icon": "github",
+                    "link": "https://github.com",
+                },
+                {
+                    "name": "Microsoft",
+                    "icon": "microsoft",
+                    "link": "https://www.microsoft.com",
+                },
+                {
+                    "name": "Google",
+                    "icon": "google",
+                    "link": "https://www.google.com",
+                },
+                {
+                    "name": "Slack",
+                    "icon": "slack",
+                    "link": "https://www.slack.com",
+                },
+                {
+                    "name": "Dropbox",
+                    "icon": "dropbox",
+                    "link": "https://www.dropbox.com",
+                },
+            ],
+            search_category=["All", "Analytics & Data", "Collaboration"],  # TODO: Add more categories
+            value="",
+            connection_link="",
+            info="The name of the tool to use",
+        ),
+        SortableListInput(
+            name="actions",
+            display_name="Actions",
+            placeholder="Select action",
+            helper_text="Please connect before selecting tools",
+            helper_text_metadata={"icon": "OctagonAlert", "variant": "destructive"},
+            options=[
+                {
+                    "name": "Accept a repository invitation",
+                    "metaData": "21 actions",
+                },
+                {
+                    "name": "Add an email address for the repository",
+                    "metaData": "15 actions",
+                },
+                {
+                    "name": "Add assignee to an issue",
+                    "metaData": "18 actions",
+                },
+                {
+                    "name": "Create a new branch",
+                    "metaData": "12 actions",
+                },
+                {
+                    "name": "Delete repository files",
+                    "metaData": "9 actions",
+                },
+                {
+                    "name": "Fork a repository",
+                    "metaData": "24 actions",
+                },
+                {
+                    "name": "Merge pull request",
+                    "metaData": "16 actions",
+                },
+                {
+                    "name": "Review code changes",
+                    "metaData": "19 actions",
+                },
+                {
+                    "name": "Update repository settings",
+                    "metaData": "27 actions",
+                },
+                {
+                    "name": "Create repository webhook",
+                    "metaData": "13 actions",
+                },
+            ],
+            value="",
+            info="The actions to use",
+        ),
         DropdownInput(
             name="app_names",
             display_name="App Name",
             options=[],
             value="",
             info="The app name to use. Please refresh after selecting app name",
+            show=False,  # TODO: Remove this
             refresh_button=True,
             required=True,
         ),

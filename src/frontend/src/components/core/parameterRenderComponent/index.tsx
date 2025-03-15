@@ -5,6 +5,7 @@ import SliderComponent from "@/components/core/parameterRenderComponent/componen
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import { APIClassType, InputFieldType } from "@/types/api";
 import { useMemo } from "react";
+import ConnectionComponent from "./components/connectionComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
@@ -16,6 +17,7 @@ import LinkComponent from "./components/linkComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import PromptAreaComponent from "./components/promptComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
+import SortableListComponent from "./components/sortableListComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
 import { InputProps, NodeInfoType } from "./types";
@@ -206,6 +208,28 @@ export function ParameterRenderComponent({
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
             id={`slider_${id}`}
+          />
+        );
+      case "sortableList":
+        return (
+          <SortableListComponent
+            {...baseInputProps}
+            helperText={templateData?.helper_text}
+            helperMetadata={templateData?.helper_text_metadata}
+            options={templateData?.options}
+            searchCategory={templateData?.search_category}
+          />
+        );
+      case "connect":
+        return (
+          <ConnectionComponent
+            {...baseInputProps}
+            helperText={templateData?.helper_text}
+            helperMetadata={templateData?.helper_text_metadata}
+            options={templateData?.options}
+            searchCategory={templateData?.search_category}
+            buttonMetadata={templateData?.button_metadata}
+            connectionLink={templateData?.connection_link}
           />
         );
       default:

@@ -23,6 +23,8 @@ class FieldTypes(str, Enum):
     BOOLEAN = "bool"
     DICT = "dict"
     NESTED_DICT = "NestedDict"
+    SORTABLE_LIST = "sortableList"
+    CONNECTION = "connect"
     FILE = "file"
     PROMPT = "prompt"
     CODE = "code"
@@ -186,6 +188,32 @@ class DropDownMixin(BaseModel):
     """Variable that defines if the user can insert custom values in the dropdown."""
     dialog_inputs: dict[str, Any] | None = None
     """Dictionary of dialog inputs for the field. Default is an empty object."""
+
+
+class SortableListMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    helper_text_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the helper text."""
+    search_category: list[str] = Field(default=[])
+    """Specifies the category of the field. Defaults to an empty list."""
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    """List of dictionaries with metadata for each option."""
+
+
+class ConnectionMixin(BaseModel):
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+    helper_text_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the helper text."""
+    connection_link: str | None = None
+    """Specifies the link of the connection. Defaults to an empty string."""
+    button_metadata: dict[str, Any] | None = None
+    """Dictionary of metadata for the button."""
+    search_category: list[str] = Field(default=[])
+    """Specifies the category of the field. Defaults to an empty list."""
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    """List of dictionaries with metadata for each option."""
 
 
 class MultilineMixin(BaseModel):
