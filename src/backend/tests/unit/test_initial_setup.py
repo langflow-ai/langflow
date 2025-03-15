@@ -1,10 +1,13 @@
 import asyncio
+import os
+import tempfile
 import uuid
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from anyio import Path
+from httpx import AsyncClient
 from langflow.custom.directory_reader.utils import abuild_custom_component_list_from_path
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
@@ -253,3 +256,48 @@ async def test_load_bundles_from_urls():
     finally:
         for temp_dir in temp_dirs:
             await asyncio.to_thread(temp_dir.cleanup)
+
+
+@pytest.fixture
+def set_fs_flows_polling_interval():
+    os.environ["LANGFLOW_FS_FLOWS_POLLING_INTERVAL"] = "100"
+    yield
+    os.unsetenv("LANGFLOW_FS_FLOWS_POLLING_INTERVAL")
+
+
+@pytest.mark.usefixtures("set_fs_flows_polling_interval")
+async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
+    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()}.json"
+    try:
+        basic_case = {
+            "name": "string",
+            "description": "string",
+            "data": {},
+            "locked": False,
+            "fs_path": str(flow_file),
+        }
+        await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+
+        content = await flow_file.read_text(encoding="utf-8")
+        fs_flow = Flow.model_validate_json(content)
+        fs_flow.name = "new name"
+        fs_flow.description = "new description"
+        fs_flow.data = {"nodes": {}, "edges": {}}
+        fs_flow.locked = True
+
+        await flow_file.write_text(fs_flow.model_dump_json(), encoding="utf-8")
+
+        result = {}
+        for i in range(10):
+            response = await client.get(f"api/v1/flows/{fs_flow.id}", headers=logged_in_headers)
+            result = response.json()
+            if result["name"] == "new name":
+                break
+            assert i != 9, "flow name should have been updated"
+            await asyncio.sleep(0.1)
+
+        assert result["description"] == "new description"
+        assert result["data"] == {"nodes": {}, "edges": {}}
+        assert result["locked"] is True
+    finally:
+        await flow_file.unlink(missing_ok=True)
