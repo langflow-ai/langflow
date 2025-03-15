@@ -115,6 +115,7 @@ dependencies = [
     "apify-client>=1.8.1",
     "pylint>=3.3.4",
     "ruff>=0.9.7",
+    "rise",
 ]
 
 [dependency-groups]
@@ -163,6 +164,7 @@ dev = [
 [tool.uv.sources]
 langflow-base = { workspace = true }
 langflow = { workspace = true }
+rise = { path = "../rise/dist/rise-0.1.0-py3-none-any.whl" }
 
 [tool.uv.workspace]
 members = ["src/backend/base", "."]
