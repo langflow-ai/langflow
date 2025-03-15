@@ -168,3 +168,11 @@ class DataFrame(pandas_DataFrame):
             DataFrame: A new DataFrame with the converted Documents
         """
         return DataFrame(docs)
+
+
+class Table(DataFrame):
+    """A pandas DataFrame subclass specialized for handling collections of Data objects.
+
+    This class extends pandas.DataFrame to provide seamless integration between
+    Langflow's JSON objects and pandas' powerful data manipulation capabilities.
+    """

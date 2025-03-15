@@ -102,7 +102,8 @@
             "fieldName": "df",
             "id": "ParseDataFrame-PwX09",
             "inputTypes": [
-              "DataFrame"
+              "DataFrame",
+              "Table"
             ],
             "type": "other"
           }
@@ -112,7 +113,7 @@
         "source": "StructuredOutputv2-Io4Zq",
         "sourceHandle": "{œdataTypeœ: œStructuredOutputœ, œidœ: œStructuredOutputv2-Io4Zqœ, œnameœ: œstructured_output_dataframeœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParseDataFrame-PwX09",
-        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-PwX09œ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-PwX09œ, œinputTypesœ: [œDataFrameœ, œTableœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
@@ -1214,7 +1215,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -1227,7 +1229,8 @@
                 "selected": "DataFrame",
                 "tool_mode": true,
                 "types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1549,7 +1552,8 @@
                 "dynamic": false,
                 "info": "The DataFrame to convert to text rows.",
                 "input_types": [
-                  "DataFrame"
+                  "DataFrame",
+                  "Table"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
