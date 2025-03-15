@@ -2178,7 +2178,7 @@
         "data": {
           "id": "note-4TLGl",
           "node": {
-            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [Sambanova API key](https://sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components, add your OpenAI API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Sambanova** component, add your **Sambanova API key**.\n4. In the **Tavily Search** component, add your **Tavily API key**.\n5. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
+            "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [SambaNova API key](https://cloud.sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components and **SambaNova** component, add your SambaNova API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Tavily Search** component, add your **Tavily API key**.\n4. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
             "documentation": "",
             "template": {
