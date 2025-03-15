@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Memory",
-            "id": "Memory-v5bRq",
+            "id": "Memory-lzTrH",
             "name": "messages_text",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "CHAT_HISTORY",
-            "id": "Prompt-QIyYT",
+            "id": "Prompt-mySXT",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Memory-v5bRq{œdataTypeœ:œMemoryœ,œidœ:œMemory-v5bRqœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Memory-lzTrH{œdataTypeœ:œMemoryœ,œidœ:œMemory-lzTrHœ,œnameœ:œmessages_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œCHAT_HISTORYœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Memory-v5bRq",
-        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-v5bRqœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-QIyYT",
-        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "Memory-lzTrH",
+        "sourceHandle": "{œdataTypeœ: œMemoryœ, œidœ: œMemory-lzTrHœ, œnameœ: œmessages_textœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-mySXT",
+        "targetHandle": "{œfieldNameœ: œCHAT_HISTORYœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-Z88lk",
+            "id": "ChatInput-99hxg",
             "name": "message",
             "output_types": [
               "Message"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "USER_INPUT",
-            "id": "Prompt-QIyYT",
+            "id": "Prompt-mySXT",
             "inputTypes": [
               "Message",
               "Text"
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-Z88lk{œdataTypeœ:œChatInputœ,œidœ:œChatInput-Z88lkœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-99hxg{œdataTypeœ:œChatInputœ,œidœ:œChatInput-99hxgœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œUSER_INPUTœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-Z88lk",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-Z88lkœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-QIyYT",
-        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-99hxg",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-99hxgœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-mySXT",
+        "targetHandle": "{œfieldNameœ: œUSER_INPUTœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-wNOPd",
+            "id": "URL-ap9ge",
             "name": "text",
             "output_types": [
               "Message"
@@ -73,7 +73,7 @@
           },
           "targetHandle": {
             "fieldName": "EXAMPLE_COMPONENTS",
-            "id": "Prompt-QIyYT",
+            "id": "Prompt-mySXT",
             "inputTypes": [
               "Message",
               "Text"
@@ -81,11 +81,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-wNOPd{œdataTypeœ:œURLœ,œidœ:œURL-wNOPdœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-wNOPd",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-wNOPdœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-QIyYT",
-        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-ap9ge{œdataTypeœ:œURLœ,œidœ:œURL-ap9geœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œEXAMPLE_COMPONENTSœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "URL-ap9ge",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-ap9geœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-mySXT",
+        "targetHandle": "{œfieldNameœ: œEXAMPLE_COMPONENTSœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +94,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-pFAuR",
+            "id": "URL-1bNqm",
             "name": "text",
             "output_types": [
               "Message"
@@ -101,7 +102,7 @@
           },
           "targetHandle": {
             "fieldName": "BASE_COMPONENT_CODE",
-            "id": "Prompt-QIyYT",
+            "id": "Prompt-mySXT",
             "inputTypes": [
               "Message",
               "Text"
@@ -109,11 +110,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-pFAuR{œdataTypeœ:œURLœ,œidœ:œURL-pFAuRœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-pFAuR",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-pFAuRœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-QIyYT",
-        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-1bNqm{œdataTypeœ:œURLœ,œidœ:œURL-1bNqmœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œBASE_COMPONENT_CODEœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "URL-1bNqm",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-1bNqmœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-mySXT",
+        "targetHandle": "{œfieldNameœ: œBASE_COMPONENT_CODEœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +123,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-KARv3",
+            "id": "URL-CIWR9",
             "name": "text",
             "output_types": [
               "Message"
@@ -129,7 +131,7 @@
           },
           "targetHandle": {
             "fieldName": "CUSTOM_COMPONENT_CODE",
-            "id": "Prompt-QIyYT",
+            "id": "Prompt-mySXT",
             "inputTypes": [
               "Message",
               "Text"
@@ -137,18 +139,20 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-URL-KARv3{œdataTypeœ:œURLœ,œidœ:œURL-KARv3œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-QIyYT{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-QIyYTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
-        "source": "URL-KARv3",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-KARv3œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-QIyYT",
-        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-QIyYTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-URL-CIWR9{œdataTypeœ:œURLœ,œidœ:œURL-CIWR9œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-mySXT{œfieldNameœ:œCUSTOM_COMPONENT_CODEœ,œidœ:œPrompt-mySXTœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "URL-CIWR9",
+        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-CIWR9œ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Prompt-mySXT",
+        "targetHandle": "{œfieldNameœ: œCUSTOM_COMPONENT_CODEœ, œidœ: œPrompt-mySXTœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-QIyYT",
+            "id": "Prompt-mySXT",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -156,25 +160,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-RQQCm",
+            "id": "AnthropicModel-rdklm",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-QIyYT{œdataTypeœ:œPromptœ,œidœ:œPrompt-QIyYTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-RQQCm{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-RQQCmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "Prompt-QIyYT",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-QIyYTœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-RQQCm",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-RQQCmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Prompt-mySXT{œdataTypeœ:œPromptœ,œidœ:œPrompt-mySXTœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-rdklm{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-rdklmœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Prompt-mySXT",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-mySXTœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-rdklm",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-rdklmœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-RQQCm",
+            "id": "AnthropicModel-rdklm",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -182,7 +188,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Jj8M6",
+            "id": "ChatOutput-SPhqv",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -191,11 +197,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-AnthropicModel-RQQCm{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-RQQCmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Jj8M6{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Jj8M6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "AnthropicModel-RQQCm",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-RQQCmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Jj8M6",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Jj8M6œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-AnthropicModel-rdklm{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-rdklmœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-SPhqv{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-SPhqvœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "AnthropicModel-rdklm",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-rdklmœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-SPhqv",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-SPhqvœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -203,7 +210,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-Z88lk",
+          "id": "ChatInput-99hxg",
           "node": {
             "base_classes": [
               "Message"
@@ -485,14 +492,14 @@
         },
         "dragging": false,
         "height": 231,
-        "id": "ChatInput-Z88lk",
+        "id": "ChatInput-99hxg",
         "measured": {
           "height": 231,
           "width": 320
         },
         "position": {
-          "x": 1436.7228707197569,
-          "y": 1045.2749109595
+          "x": 1425.511811793499,
+          "y": 1250.8109912742284
         },
         "positionAbsolute": {
           "x": 1436.7228707197569,
@@ -506,7 +513,7 @@
         "data": {
           "description": "Retrieves stored chat messages from Langflow tables or an external memory.",
           "display_name": "Chat Memory",
-          "id": "Memory-v5bRq",
+          "id": "Memory-lzTrH",
           "node": {
             "base_classes": [
               "Data",
@@ -735,14 +742,14 @@
         },
         "dragging": false,
         "height": 262,
-        "id": "Memory-v5bRq",
+        "id": "Memory-lzTrH",
         "measured": {
           "height": 262,
           "width": 320
         },
         "position": {
-          "x": 1830.6888981898887,
-          "y": 946.1205963195098
+          "x": 1832.6206210738642,
+          "y": 1150.8832220209044
         },
         "positionAbsolute": {
           "x": 1830.6888981898887,
@@ -756,7 +763,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-QIyYT",
+          "id": "Prompt-mySXT",
           "node": {
             "base_classes": [
               "Message"
@@ -983,20 +990,20 @@
         },
         "dragging": false,
         "height": 685,
-        "id": "Prompt-QIyYT",
+        "id": "Prompt-mySXT",
         "measured": {
           "height": 685,
           "width": 320
         },
         "position": {
-          "x": 2219.5265974825707,
-          "y": 521.6320563271215
+          "x": 2214.0288118788944,
+          "y": 514.3016755222201
         },
         "positionAbsolute": {
           "x": 2219.5265974825707,
           "y": 521.6320563271215
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
@@ -1004,7 +1011,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-Jj8M6",
+          "id": "ChatOutput-SPhqv",
           "node": {
             "base_classes": [
               "Message"
@@ -1285,7 +1292,7 @@
         },
         "dragging": false,
         "height": 232,
-        "id": "ChatOutput-Jj8M6",
+        "id": "ChatOutput-SPhqv",
         "measured": {
           "height": 232,
           "width": 320
@@ -1304,7 +1311,7 @@
       },
       {
         "data": {
-          "id": "note-M2lYQ",
+          "id": "note-FI4hN",
           "node": {
             "description": "# Fetch Components code \n\nUsing the URL component we are extracting from Github, the code from a few classes to provide as example to the LLM. \n\nThis ensures we are always up to date with recent information from the codebase.",
             "display_name": "",
@@ -1315,14 +1322,14 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-M2lYQ",
+        "id": "note-FI4hN",
         "measured": {
           "height": 324,
           "width": 325
         },
         "position": {
-          "x": 1430.2014058924922,
-          "y": -19.30392196909918
+          "x": 1428.2696830085167,
+          "y": -263.5483680075372
         },
         "positionAbsolute": {
           "x": 1430.2014058924922,
@@ -1334,7 +1341,7 @@
       },
       {
         "data": {
-          "id": "note-nxR1T",
+          "id": "note-rp8sO",
           "node": {
             "description": "# 🛠️ Custom Component Generator 🚀\n\nHi! I'm here to help you create custom components for Langflow. Think of me as your technical partner who can help turn your ideas into working components! \n\n## 🎯 How to Work With Me\n\n### 1. 💭 Tell Me What You Want to Build\nSimply describe what you want your component to do in plain English. For example:\n- \"I need a component that sends Slack messages\"\n- \"I want to create a tool that can process CSV files\"\n- \"I need something that can translate text\"\n\n### 2. 📚 Share Any Relevant Information\nIf you're working with a specific:\n- 🔑 API or service (just share the documentation link or main endpoints)\n- 📄 File format\n- 🔄 Data structure\n- 🔧 Existing component you want to modify\n\n### 3. 🎨 Let Me Help Design It\nI'll help by:\n- 📊 Breaking down complex requirements into manageable pieces\n- 💡 Suggesting the best way to structure inputs and outputs\n- ⚙️ Creating the component code\n- 📝 Explaining how to use it\n\n### 4. 🔄 Iterative Refinement\nWe can then:\n- ✅ Test and refine the component\n- ⭐ Add features\n- 🔧 Modify behavior\n- 🛡️ Improve error handling\n- 📖 Add documentation\n\n## 🚀 What I Can Help With\n\nI can help create components that:\n- 📊 Process different file types (CSV, JSON, Excel, etc.)\n- 🔌 Integrate with external APIs\n- 🔄 Transform data\n- 🔀 Route messages\n- 🌐 Handle web requests\n- 🎯 Parse structured data\n- ✨ And much more!\n\n## 💡 Tips for Best Results\n\n1. **Be Specific** 🎯: The more details you provide about what you want to accomplish, the better I can help.\n\n2. **Share Examples** 📋: If you have example data or specific use cases, share them.\n\n3. **Ask Questions** ❓: Don't hesitate to ask for clarification or modifications.\n\nJust start by telling me what kind of component you'd like to create, and I'll guide you through the process! \n\nReady to build something awesome? 🚀 Let's get started!",
             "display_name": "",
@@ -1345,21 +1352,21 @@
         },
         "dragging": false,
         "height": 573,
-        "id": "note-nxR1T",
+        "id": "note-rp8sO",
         "measured": {
           "height": 573,
-          "width": 324
+          "width": 325
         },
         "position": {
-          "x": 807.6293964045135,
-          "y": 605.6504562080672
+          "x": 1002.7334076860311,
+          "y": 538.0401552689275
         },
         "positionAbsolute": {
           "x": 807.6293964045135,
           "y": 605.6504562080672
         },
         "resizing": false,
-        "selected": true,
+        "selected": false,
         "style": {
           "height": 573,
           "width": 324
@@ -1369,7 +1376,7 @@
       },
       {
         "data": {
-          "id": "URL-pFAuR",
+          "id": "URL-1bNqm",
           "node": {
             "base_classes": [
               "Data",
@@ -1544,14 +1551,14 @@
         },
         "dragging": false,
         "height": 365,
-        "id": "URL-pFAuR",
+        "id": "URL-1bNqm",
         "measured": {
           "height": 365,
           "width": 320
         },
         "position": {
-          "x": 1436.3617127766433,
-          "y": 264.218898085405
+          "x": 1428.8876734924713,
+          "y": 32.523680276074714
         },
         "positionAbsolute": {
           "x": 1436.3617127766433,
@@ -1563,7 +1570,7 @@
       },
       {
         "data": {
-          "id": "URL-wNOPd",
+          "id": "URL-ap9ge",
           "node": {
             "base_classes": [
               "Data",
@@ -1744,7 +1751,7 @@
         },
         "dragging": false,
         "height": 661,
-        "id": "URL-wNOPd",
+        "id": "URL-ap9ge",
         "measured": {
           "height": 661,
           "width": 320
@@ -1763,7 +1770,7 @@
       },
       {
         "data": {
-          "id": "URL-KARv3",
+          "id": "URL-CIWR9",
           "node": {
             "base_classes": [
               "Data",
@@ -1938,14 +1945,14 @@
         },
         "dragging": false,
         "height": 365,
-        "id": "URL-KARv3",
+        "id": "URL-CIWR9",
         "measured": {
           "height": 365,
           "width": 320
         },
         "position": {
-          "x": 1436.982480021523,
-          "y": 651.1409296825055
+          "x": 1429.5084407373513,
+          "y": 632.4558314720756
         },
         "positionAbsolute": {
           "x": 1436.982480021523,
@@ -1957,7 +1964,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-RQQCm",
+          "id": "AnthropicModel-rdklm",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2278,9 +2285,9 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "id": "AnthropicModel-RQQCm",
+        "id": "AnthropicModel-rdklm",
         "measured": {
-          "height": 797,
+          "height": 801,
           "width": 320
         },
         "position": {
@@ -2292,18 +2299,16 @@
       }
     ],
     "viewport": {
-      "x": -366.41363591649906,
-      "y": 264.64346206947675,
-      "zoom": 0.5351858410044688
+      "x": -312.5858922909906,
+      "y": 143.0557404215083,
+      "zoom": 0.5176725959481484
     }
   },
   "description": "Generates well-structured code for custom components following Langflow's specifications.",
   "endpoint_name": null,
-  "gradient": "1",
-  "icon": "SquareCode",
-  "id": "5155918c-68b1-4013-8d7b-61f31ffa931c",
+  "id": "4e7e8184-1a8c-4e04-ae99-b9c9ba48be53",
   "is_component": false,
-  "last_tested_version": "1.1.0",
+  "last_tested_version": "1.2.0",
   "name": "Custom Component Generator",
   "tags": [
     "coding",
