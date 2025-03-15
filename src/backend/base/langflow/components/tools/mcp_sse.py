@@ -104,6 +104,7 @@ class MCPSse(Component):
                     args_schema=args_schema,
                     coroutine=create_tool_coroutine(tool.name, args_schema, self.client.session),
                     func=create_tool_func(tool.name, self.client.session),
+                    args_schema=args_schema,
                 )
             )
 
