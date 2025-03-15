@@ -210,7 +210,7 @@ export default function Dropdown({
           <ForwardedIconComponent
             name="ChevronsUpDown"
             className={cn(
-              "ml-2 h-4 w-4 shrink-0 text-foreground",
+              "text-foreground ml-2 h-4 w-4 shrink-0",
               disabled
                 ? "hover:text-placeholder-foreground"
                 : "hover:text-foreground",
@@ -235,7 +235,7 @@ export default function Dropdown({
       <input
         onChange={searchRoleByTerm}
         placeholder="Search options..."
-        className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        className="placeholder:text-muted-foreground flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
       />
     </div>
@@ -243,7 +243,7 @@ export default function Dropdown({
 
   const renderCustomOptionDialog = () => (
     <CommandGroup className="flex flex-col">
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+      <CommandItem className="text-muted-foreground flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold">
         <Button
           className="w-full"
           unstyled
@@ -254,13 +254,13 @@ export default function Dropdown({
           <div className="flex items-center gap-2 pl-1">
             <ForwardedIconComponent
               name="Plus"
-              className="h-3 w-3 text-primary"
+              className="text-primary h-3 w-3"
             />
             {`New ${firstWord}`}
           </div>
         </Button>
       </CommandItem>
-      <CommandItem className="flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold text-muted-foreground">
+      <CommandItem className="text-muted-foreground flex cursor-pointer items-center justify-start gap-2 truncate py-3 text-xs font-semibold">
         <Button
           className="w-full"
           unstyled
@@ -271,7 +271,7 @@ export default function Dropdown({
           <div className="flex items-center gap-2 pl-1">
             <ForwardedIconComponent
               name="RefreshCcw"
-              className={cn("refresh-icon h-3 w-3 text-primary")}
+              className={cn("refresh-icon text-primary h-3 w-3")}
             />
             Refresh list
           </div>
@@ -316,7 +316,7 @@ export default function Dropdown({
                     {optionsMetaData?.[index]?.icon && (
                       <ForwardedIconComponent
                         name={optionsMetaData?.[index]?.icon || "Unknown"}
-                        className="h-4 w-4 shrink-0 text-primary"
+                        className="text-primary h-4 w-4 shrink-0"
                       />
                     )}
                     <div
@@ -341,7 +341,7 @@ export default function Dropdown({
                         </span>
                       </div>
                       {optionsMetaData && optionsMetaData?.length > 0 ? (
-                        <div className="flex w-full items-center text-muted-foreground">
+                        <div className="text-muted-foreground flex w-full items-center">
                           {Object.entries(
                             filterMetadataKeys(optionsMetaData?.[index] || {}),
                           )
@@ -359,7 +359,7 @@ export default function Dropdown({
                                 {i > 0 && (
                                   <ForwardedIconComponent
                                     name="Circle"
-                                    className="mx-1 h-1 w-1 overflow-visible fill-muted-foreground"
+                                    className="fill-muted-foreground mx-1 h-1 w-1 overflow-visible"
                                   />
                                 )}
                                 <div
@@ -375,7 +375,7 @@ export default function Dropdown({
                           <ForwardedIconComponent
                             name="Check"
                             className={cn(
-                              "h-4 w-4 shrink-0 text-primary",
+                              "text-primary h-4 w-4 shrink-0",
                               value === option ? "opacity-100" : "opacity-0",
                             )}
                           />

@@ -100,7 +100,7 @@ const KeypairListComponent = ({
         className={cn(
           "hit-area-icon group flex items-center justify-center",
           disabled
-            ? "pointer-events-none bg-background hover:bg-background"
+            ? "bg-background hover:bg-background pointer-events-none"
             : "",
           isFirstItem ? "bg-background hover:bg-muted" : "hover:bg-smooth-red",
         )}
@@ -108,8 +108,8 @@ const KeypairListComponent = ({
         <IconComponent
           name={iconName}
           className={cn(
-            "icon-size justify-self-center text-muted-foreground",
-            !disabled && "hover:cursor-pointer hover:text-foreground",
+            "icon-size text-muted-foreground justify-self-center",
+            !disabled && "hover:text-foreground hover:cursor-pointer",
             isFirstItem
               ? "group-hover:text-foreground"
               : "group-hover:text-destructive",
@@ -124,8 +124,8 @@ const KeypairListComponent = ({
     Object.keys(obj).map((key, idx) => (
       <div key={idx} className="flex w-full items-center gap-2">
         <Input
-          data-testid={getTestId("keypair", index)}
-          id={getTestId("keypair", index)}
+          data-testid={getTestId("key pair", index)}
+          id={getTestId("key pair", index)}
           type="text"
           value={key.trim()}
           className={getInputClassName(editNode, duplicateKey)}
@@ -133,8 +133,8 @@ const KeypairListComponent = ({
           onChange={(event) => handleChangeKey(event, index)}
         />
         <Input
-          data-testid={getTestId("keypair", index + 100)}
-          id={getTestId("keypair", index + 100)}
+          data-testid={getTestId("key pair", index + 100)}
+          id={getTestId("key pair", index + 100)}
           type="text"
           disabled={disabled}
           value={obj[key]}

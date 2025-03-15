@@ -21,7 +21,7 @@ class VectaraSelfQueryRetriverComponent(CustomComponent):
 
     field_config = {
         "code": {"show": True},
-        "vectorstore": {"display_name": "Vector Store", "info": "Input Vectara Vectore Store"},
+        "vectorstore": {"display_name": "Vector Store", "info": "Input Vectara Vector Store"},
         "llm": {"display_name": "LLM", "info": "For self query retriever"},
         "document_content_description": {
             "display_name": "Document Content Description",

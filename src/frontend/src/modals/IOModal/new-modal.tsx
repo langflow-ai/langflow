@@ -261,7 +261,7 @@ export default function IOModal({
                   : "w-0",
               )}
             >
-              <div className="flex h-full flex-col overflow-y-auto border-r border-border bg-muted p-4 text-center custom-scroll dark:bg-canvas">
+              <div className="border-border bg-muted custom-scroll dark:bg-canvas flex h-full flex-col overflow-y-auto border-r p-4 text-center">
                 <div className="flex items-center gap-2 pb-8">
                   <ShadTooltip
                     styleClasses="z-50"
@@ -275,7 +275,7 @@ export default function IOModal({
                     >
                       <IconComponent
                         name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
-                        className="h-[18px] w-[18px] text-ring"
+                        className="text-ring h-[18px] w-[18px]"
                       />
                     </Button>
                   </ShadTooltip>
@@ -295,7 +295,7 @@ export default function IOModal({
                 )}
               </div>
             </div>
-            <div className="flex h-full min-w-96 flex-grow bg-background">
+            <div className="bg-background flex h-full min-w-96 flex-grow">
               {selectedViewField && (
                 <SelectedViewField
                   selectedViewField={selectedViewField}

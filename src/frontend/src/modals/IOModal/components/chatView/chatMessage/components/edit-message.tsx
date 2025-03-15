@@ -26,7 +26,7 @@ export const MarkdownField = ({
         linkTarget="_blank"
         rehypePlugins={[rehypeMathjax, rehypeRaw]}
         className={cn(
-          "markdown prose flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal word-break-break-word dark:prose-invert",
+          "markdown prose word-break-break-word dark:prose-invert flex w-fit max-w-full flex-col items-baseline text-[14px] font-normal",
           isEmpty ? "text-muted-foreground" : "text-primary",
         )}
         components={{

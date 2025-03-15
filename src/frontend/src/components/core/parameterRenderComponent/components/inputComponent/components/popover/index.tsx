@@ -57,7 +57,7 @@ const OptionBadge = ({
   >
     <div className="truncate">{option}</div>
     <X
-      className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
+      className="hover:text-destructive h-3 w-3 cursor-pointer bg-transparent"
       onClick={(e) =>
         onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
       }
@@ -100,14 +100,14 @@ const SelectionIndicator = ({ isSelected }: { isSelected: boolean }) => (
     <div className="absolute opacity-100 transition-all group-hover:opacity-0">
       <ForwardedIconComponent
         name="Check"
-        className="mr-2 h-4 w-4 text-primary"
+        className="text-primary mr-2 h-4 w-4"
         aria-hidden="true"
       />
     </div>
     <div className="absolute opacity-0 transition-all group-hover:opacity-100">
       <ForwardedIconComponent
         name="X"
-        className="mr-2 h-4 w-4 text-status-red"
+        className="text-status-red mr-2 h-4 w-4"
         aria-hidden="true"
       />
     </div>
