@@ -104,6 +104,10 @@ export type MultiselectComponentType = {
   combobox?: boolean;
 };
 
+export type TabComponentType = {
+  options: string[];
+};
+
 export type NodeInfoType = {
   flowId: string;
   nodeType: string;
