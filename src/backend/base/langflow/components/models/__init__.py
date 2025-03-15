@@ -20,6 +20,7 @@ from .openrouter import OpenRouterComponent
 from .perplexity import PerplexityComponent
 from .sambanova import SambaNovaComponent
 from .vertexai import ChatVertexAIComponent
+from .watsonx import WatsonxAIComponent
 from .xai import XAIModelComponent
 
 __all__ = [
@@ -45,5 +46,6 @@ __all__ = [
     "PerplexityComponent",
     "QianfanChatEndpointComponent",
     "SambaNovaComponent",
+    "WatsonxAIComponent",
     "XAIModelComponent",
 ]
