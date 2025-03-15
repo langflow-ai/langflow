@@ -54,6 +54,9 @@ class AuthSettings(BaseSettings):
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
+    disable_superuser_creation: bool = False
+    """If True, the superuser will not be created automatically."""
+
     def reset_credentials(self) -> None:
         self.SUPERUSER = DEFAULT_SUPERUSER
         self.SUPERUSER_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
