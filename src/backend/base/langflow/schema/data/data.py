@@ -236,6 +236,19 @@ class Data(BaseModel):
         return isinstance(other, Data) and self.data == other.data
 
 
+class JSON(Data):
+    # We will phase out the Data class in favor of the JSON class
+    # But they'll have the same interface and will be interchangeable
+    """Represents a JSON object.
+
+    Attributes:
+        data (dict): The JSON data.
+    """
+
+    def __init__(self, data: dict):
+        super().__init__(data=data)
+
+
 def custom_serializer(obj):
     if isinstance(obj, datetime):
         utc_date = obj.replace(tzinfo=timezone.utc)
