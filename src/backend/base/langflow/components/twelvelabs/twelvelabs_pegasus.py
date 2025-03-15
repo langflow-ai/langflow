@@ -3,7 +3,7 @@ from langflow.inputs import DataInput, SecretStrInput, MessageInput, MultilineIn
 from langflow.io import Output
 from langflow.schema.message import Message
 from langflow.field_typing.range_spec import RangeSpec
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 from twelvelabs import TwelveLabs
 import time
 import os
@@ -47,20 +47,6 @@ class TwelveLabsPegasus(Component):
             value=0.7,
             range_spec=RangeSpec(min=0, max=1, step=0.01),
             info="Controls randomness in responses. Lower values are more deterministic, higher values are more creative.",
-        ),
-        BoolInput(
-            name="stream",
-            display_name="Stream",
-            info="Stream the response from the model.",
-            advanced=False,
-            value=False
-        ),
-        IntInput(
-            name="clip_length",
-            display_name="Clip Length",
-            info="Maximum length of video clips in seconds.",
-            advanced=True,
-            value=30
         )
     ]
 
@@ -69,6 +55,12 @@ class TwelveLabsPegasus(Component):
             display_name="Message",
             name="response",
             method="process_video",
+            type_=Message,
+        ),
+        Output(
+            display_name="Video ID",
+            name="processed_video_id",
+            method="get_video_id",
             type_=Message,
         ),
     ]
@@ -204,30 +196,16 @@ class TwelveLabsPegasus(Component):
                 # Get message text from either string or Message object
                 message_text = self.message.text if hasattr(self.message, 'text') else self.message
                 
-                # Handle streaming if enabled
-                if self.stream:
-                    self.status = f"Streaming response for query: {message_text}"
-                    self.log(self.status)
-
-                    
-                    # For streaming, we'll return a generator that yields chunks
-                    response_stream = client.generate.text_stream(
-                        video_id=self._video_id,
-                        prompt=message_text,
-                        temperature=self.temperature,
-                    )
-                    
-                    return Message(text=response_stream)
-                else:
-                    self.status = f"Processing query (w/ video ID): {self._video_id} {message_text} "
-                    self.log(self.status)
-                    
-                    response = client.generate.text(
-                        video_id=self.video_id,
-                        prompt=message_text,
-                        temperature=self.temperature,
-                    )
-                    return Message(text=response.data)
+            
+                self.status = f"Processing query (w/ video ID): {self._video_id} {message_text} "
+                self.log(self.status)
+                
+                response = client.generate.text(
+                    video_id=self.video_id,
+                    prompt=message_text,
+                    temperature=self.temperature,
+                )
+                return Message(text=response.data)
 
             # Otherwise process new video
             if not self.videodata or not isinstance(self.videodata, list) or len(self.videodata) != 1:
@@ -273,23 +251,15 @@ class TwelveLabsPegasus(Component):
                 self.status = f"Processing query: {message_text}"
                 self.log(self.status)
 
-                # Handle streaming if enabled
-                if self.stream:
-                    response_stream = client.generate.text_stream(
-                        video_id=self._video_id,
-                        prompt=message_text,
-                        temperature=self.temperature
-                    )
-                    return Message(text=response_stream)
-                else:
-                    response = client.generate.text(
-                        video_id=self._video_id,
-                        prompt=message_text,
-                        temperature=self.temperature,
-                    )
-                    return Message(text=response.data)
+                
+                response = client.generate.text(
+                    video_id=self._video_id,
+                    prompt=message_text,
+                    temperature=self.temperature,
+                )
+                return Message(text=response.data)
             else:
-                return Message(text="Video processed successfully. You can now ask questions about the video.")
+                return Message(text=f"Video processed successfully. You can now ask questions about the video. Video ID: {self._video_id}")
 
         except Exception as e:
             self.log(f"Error: {str(e)}", "ERROR")
@@ -298,3 +268,8 @@ class TwelveLabsPegasus(Component):
             self._index_id = None
             self._task_id = None
             return Message(text=f"Error: {str(e)}")
+            
+    def get_video_id(self) -> Message:
+        """Return the video ID of the processed video as a Message"""
+        video_id = self._video_id or ""
+        return Message(text=video_id)

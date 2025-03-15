@@ -4,13 +4,11 @@ from langflow.io import SecretStrInput, IntInput
 from twelvelabs import TwelveLabs
 import time
 from typing import List
-import os
 
 class TwelveLabsVideoEmbeddings(Embeddings):
-    def __init__(self, api_key: str, video_clip_length: int):
+    def __init__(self, api_key: str):
         self.client = TwelveLabs(api_key=api_key)
         self.model_name = "Marengo-retrieval-2.7"
-        self.video_clip_length = video_clip_length
         
     def _wait_for_task_completion(self, task_id: str):
         while True:
@@ -51,15 +49,11 @@ class TwelveLabsVideoEmbeddings(Embeddings):
 
     def embed_video(self, video_path: str) -> dict:
 
-        clip_length = 6
-        if self.video_clip_length is not None:
-            clip_length = self.video_clip_length
         with open(video_path, 'rb') as video_file:
             task = self.client.embed.task.create(
                 model_name=self.model_name,
                 video_file=video_file,
-                video_embedding_scopes=["clip", "video"],
-                video_clip_length=clip_length
+                video_embedding_scopes=["video","clip"],
             )
         
         result = self._wait_for_task_completion(task.id)
@@ -73,9 +67,6 @@ class TwelveLabsVideoEmbeddings(Embeddings):
                     if seg.embedding_scope == "video":
                         # Convert to list of floats
                         video_embedding['video_embedding'] = [float(x) for x in seg.embeddings_float]
-                    elif seg.embedding_scope == "clip":
-                        # Convert to list of floats
-                        video_embedding['clip_embeddings'].append([float(x) for x in seg.embeddings_float])
         
         return video_embedding
 
@@ -83,14 +74,8 @@ class TwelveLabsVideoEmbeddingsComponent(LCEmbeddingsModel):
     display_name = "TwelveLabs Video Embeddings"
     name = "TwelveLabsVideoEmbeddings"
     inputs = [
-        SecretStrInput(name="api_key", display_name="API Key", required=True),
-        IntInput(
-            name="video_clip_length",
-            display_name="Clip Length",
-            info="Length of each video clip in seconds (default: 6s).",
-            required=False
-        )
+        SecretStrInput(name="api_key", display_name="API Key", required=True)
     ]
 
     def build_embeddings(self) -> Embeddings:
-        return TwelveLabsVideoEmbeddings(api_key=self.api_key,video_clip_length=self.video_clip_length)
+        return TwelveLabsVideoEmbeddings(api_key=self.api_key)
