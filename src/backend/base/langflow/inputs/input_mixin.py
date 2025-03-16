@@ -72,6 +72,9 @@ class BaseInputMixin(BaseModel, validate_assignment=True):  # type: ignore[call-
     dynamic: bool = False
     """Specifies if the field is dynamic. Defaults to False."""
 
+    helper_text: str | None = None
+    """Adds a helper text to the field. Defaults to an empty string."""
+
     info: str | None = ""
     """Additional information about the field to be shown in the tooltip. Defaults to an empty string."""
 
