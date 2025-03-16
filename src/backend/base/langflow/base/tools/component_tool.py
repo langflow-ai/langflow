@@ -11,6 +11,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
+from langflow.io import Output
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
 from langflow.schema.message import Message
@@ -183,8 +184,10 @@ class ComponentToolkit:
         - output name matches TOOL_OUTPUT_NAME
         - output types contain any of the tool types in TOOL_TYPES_SET
         """
-        return not output.tool_mode or (
-            output.name == TOOL_OUTPUT_NAME or any(tool_type in output.types for tool_type in TOOL_TYPES_SET)
+        return (
+            not output.tool_mode
+            or output.name == TOOL_OUTPUT_NAME
+            or bool(self.TOOL_TYPES_SET_FROZEN.intersection(output.types))
         )
 
     def get_tools(
