@@ -495,16 +495,14 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
         return build_config
 
     def reset_database_list(self, build_config: dict):
-        # Get the list of options we have based on the token provided
-        database_options = self._initialize_database_options()
+        # Get names and metadata in a single sweep
+        names, metadata = self._get_and_parse_database_list()
 
-        # If we retrieved options based on the token, show the dropdown
-        build_config["api_endpoint"]["options"] = [db["name"] for db in database_options]
-        build_config["api_endpoint"]["options_metadata"] = [
-            {k: v for k, v in db.items() if k not in ["name"]} for db in database_options
-        ]
+        # Set the lists directly without further processing
+        build_config["api_endpoint"]["options"] = names
+        build_config["api_endpoint"]["options_metadata"] = metadata
 
-        # Reset the selected database
+        # Reset the selected database to empty string
         build_config["api_endpoint"]["value"] = ""
 
         return build_config
@@ -806,3 +804,20 @@ class AstraDBVectorStoreComponent(LCVectorStoreComponent):
             "search_type": self._map_search_type(),
             "search_kwargs": search_args,
         }
+
+    def _get_and_parse_database_list(self):
+        try:
+            database_list = self.get_database_list()
+            names = []
+            metadata = []
+            for name, info in database_list.items():
+                names.append(name)
+                metadata.append(
+                    {
+                        "collections": info["collections"],
+                        "api_endpoint": info["api_endpoint"],
+                    }
+                )
+            return names, metadata
+        except Exception as e:
+            raise ValueError(f"Error fetching database options: {e}") from e
