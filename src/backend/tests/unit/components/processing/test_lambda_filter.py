@@ -1,6 +1,4 @@
-import tempfile
-from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from langflow.components import processing
@@ -20,12 +18,14 @@ async def test_successful_lambda_generation(lambda_filter):
     mock_llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 15]"
 
     # Configure component
-    lambda_filter.set_attributes({
-        "data": [Data(data=test_data)],
-        "llm": mock_llm,
-        "filter_instruction": "Filter items with value greater than 15",
-        "sample_size": 1000
-    })
+    lambda_filter.set_attributes(
+        {
+            "data": [Data(data=test_data)],
+            "llm": mock_llm,
+            "filter_instruction": "Filter items with value greater than 15",
+            "sample_size": 1000,
+        }
+    )
 
     # Execute filter
     result = await lambda_filter.filter_data()
@@ -44,12 +44,9 @@ async def test_invalid_lambda_response(lambda_filter):
     mock_llm.ainvoke.return_value.content = "invalid lambda syntax"
 
     # Configure component
-    lambda_filter.set_attributes({
-        "data": [Data(data=test_data)],
-        "llm": mock_llm,
-        "filter_instruction": "Filter items",
-        "sample_size": 1000
-    })
+    lambda_filter.set_attributes(
+        {"data": [Data(data=test_data)], "llm": mock_llm, "filter_instruction": "Filter items", "sample_size": 1000}
+    )
 
     # Test exception handling
     with pytest.raises(ValueError, match="Could not find lambda in response"):
@@ -63,12 +60,14 @@ async def test_lambda_with_large_dataset(lambda_filter):
     mock_llm.ainvoke.return_value.content = "lambda x: [item for item in x['items'] if item['value'] > 1500]"
 
     # Configure component
-    lambda_filter.set_attributes({
-        "data": [Data(data=large_data)],
-        "llm": mock_llm,
-        "filter_instruction": "Filter items with value greater than 1500",
-        "sample_size": 100
-    })
+    lambda_filter.set_attributes(
+        {
+            "data": [Data(data=large_data)],
+            "llm": mock_llm,
+            "filter_instruction": "Filter items with value greater than 1500",
+            "sample_size": 100,
+        }
+    )
 
     # Execute filter
     result = await lambda_filter.filter_data()
@@ -84,19 +83,23 @@ async def test_lambda_with_complex_data_structure(lambda_filter):
     complex_data = {
         "categories": {
             "A": [{"id": 1, "score": 90}, {"id": 2, "score": 85}],
-            "B": [{"id": 3, "score": 95}, {"id": 4, "score": 88}]
+            "B": [{"id": 3, "score": 95}, {"id": 4, "score": 88}],
         }
     }
     mock_llm = AsyncMock()
-    mock_llm.ainvoke.return_value.content = "lambda x: [item for cat in x['categories'].values() for item in cat if item['score'] > 90]"
+    mock_llm.ainvoke.return_value.content = (
+        "lambda x: [item for cat in x['categories'].values() for item in cat if item['score'] > 90]"
+    )
 
     # Configure component
-    lambda_filter.set_attributes({
-        "data": [Data(data=complex_data)],
-        "llm": mock_llm,
-        "filter_instruction": "Filter items with score greater than 90",
-        "sample_size": 1000
-    })
+    lambda_filter.set_attributes(
+        {
+            "data": [Data(data=complex_data)],
+            "llm": mock_llm,
+            "filter_instruction": "Filter items with score greater than 90",
+            "sample_size": 1000,
+        }
+    )
 
     # Execute filter
     result = await lambda_filter.filter_data()
@@ -115,7 +118,7 @@ def test_get_data_structure(lambda_filter):
         "number": 42,
         "list": [1, 2, 3],
         "dict": {"key": "value"},
-        "nested": {"a": [{"b": 1}]}
+        "nested": {"a": [{"b": 1}]},
     }
 
     structure = lambda_filter.get_data_structure(test_data)
@@ -127,4 +130,4 @@ def test_get_data_structure(lambda_filter):
     assert structure["dict"]["structure"]["key"] == "str"
     assert "structure" in structure["nested"]
     assert "a" in structure["nested"]["structure"]
-    assert "list" in structure["nested"]["structure"]["a"] 
+    assert "list" in structure["nested"]["structure"]["a"]
