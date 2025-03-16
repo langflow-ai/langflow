@@ -148,6 +148,11 @@ module.exports = {
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
         {
+          type: "doc",
+          id: "Integrations/integrations-mcp",
+          label: "MCP (Model context protocol)"
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
