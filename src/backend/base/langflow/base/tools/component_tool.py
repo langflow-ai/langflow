@@ -2,17 +2,23 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
+from langchain_core.callbacks import Callbacks
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
-from loguru import logger
 from pydantic import BaseModel
 
 from langflow.base.tools.constants import TOOL_OUTPUT_NAME
+from langflow.custom.custom_component.component import Component
+from langflow.events.event_manager import EventManager
+from langflow.inputs.inputs import InputTypes
+from langflow.io import Output
 from langflow.io.schema import create_input_schema, create_input_schema_from_dict
 from langflow.schema.data import Data
+from langflow.schema.dotdict import dotdict
 from langflow.schema.message import Message
 
 if TYPE_CHECKING:
@@ -40,20 +46,14 @@ def _get_input_type(input_: InputTypes):
 
 
 def build_description(component: Component, output: Output) -> str:
-    if not output.required_inputs:
-        logger.warning(f"Output {output.name} does not have required inputs defined")
-
-    if output.required_inputs:
-        args = ", ".join(
-            sorted(
-                [
-                    f"{input_name}: {_get_input_type(component._inputs[input_name])}"
-                    for input_name in output.required_inputs
-                ]
-            )
+    args = ", ".join(
+        sorted(
+            [
+                f"{input_name}: {_get_input_type(component._inputs[input_name])}"
+                for input_name in (output.required_inputs or [])
+            ]
         )
-    else:
-        args = ""
+    )
     return f"{output.method}({args}) - {component.description}"
 
 
@@ -118,12 +118,14 @@ def _build_output_function(component: Component, output_method: Callable, event_
         except Exception as e:
             raise ToolException(e) from e
 
-        if isinstance(result, Message):
-            return result.get_text()
-        if isinstance(result, Data):
-            return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
+        if isinstance(result, (Message, Data, BaseModel)):
+            return (
+                result.model_dump()
+                if isinstance(result, BaseModel)
+                else result.get_text()
+                if isinstance(result, Message)
+                else result.data
+            )
         return result
 
     return _patch_send_message_decorator(component, output_function)
@@ -142,21 +144,20 @@ def _build_output_async_function(
                 await asyncio.to_thread(event_manager.on_build_end, data={"id": component._id})
         except Exception as e:
             raise ToolException(e) from e
-        if isinstance(result, Message):
-            return result.get_text()
-        if isinstance(result, Data):
-            return result.data
-        if isinstance(result, BaseModel):
-            return result.model_dump()
+        if isinstance(result, (Message, Data, BaseModel)):
+            return (
+                result.model_dump()
+                if isinstance(result, BaseModel)
+                else result.get_text()
+                if isinstance(result, Message)
+                else result.data
+            )
         return result
 
     return _patch_send_message_decorator(component, output_function)
 
 
 def _format_tool_name(name: str):
-    # format to '^[a-zA-Z0-9_-]+$'."
-    # to do that we must remove all non-alphanumeric characters
-
     return re.sub(r"[^a-zA-Z0-9_-]", "-", name)
 
 
@@ -195,95 +196,79 @@ class ComponentToolkit:
         flow_mode_inputs: list[dotdict] | None = None,
     ) -> list[BaseTool]:
         tools = []
+        event_manager = self.component._event_manager
+
         for output in self.component.outputs:
             if self._should_skip_output(output):
                 continue
 
             if not output.method:
-                msg = f"Output {output.name} does not have a method defined"
-                raise ValueError(msg)
+                raise ValueError(f"Output {output.name} does not have a method defined")
 
             output_method: Callable = getattr(self.component, output.method)
-            args_schema = None
-            tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
+
             if flow_mode_inputs:
-                args_schema = create_input_schema_from_dict(
-                    inputs=flow_mode_inputs,
-                    param_key="flow_tweak_data",
-                )
+                args_schema = create_input_schema_from_dict(inputs=flow_mode_inputs, param_key="flow_tweak_data")
             elif output.required_inputs:
                 inputs = [
                     self.component._inputs[input_name]
                     for input_name in output.required_inputs
                     if getattr(self.component, input_name) is None
                 ]
-                # If any of the required inputs are not in tool mode, this means
-                # that when the tool is called it will raise an error.
-                # so we should raise an error here.
                 if not all(getattr(_input, "tool_mode", False) for _input in inputs):
-                    non_tool_mode_inputs = [
-                        input_.name
-                        for input_ in inputs
-                        if not getattr(input_, "tool_mode", False) and input_.name is not None
-                    ]
-                    non_tool_mode_inputs_str = ", ".join(non_tool_mode_inputs)
-                    msg = (
-                        f"Output '{output.name}' requires inputs that are not in tool mode. "
-                        f"The following inputs are not in tool mode: {non_tool_mode_inputs_str}. "
-                        "Please ensure all required inputs are set to tool mode."
+                    non_tool_mode_inputs_str = ", ".join(
+                        input_.name for input_ in inputs if not getattr(input_, "tool_mode", False) and input_.name
                     )
-                    raise ValueError(msg)
+                    raise ValueError(
+                        f"Output '{output.name}' requires inputs that are not in tool mode. The following inputs are not in tool mode: {non_tool_mode_inputs_str}. Please ensure all required inputs are set to tool mode."
+                    )
                 args_schema = create_input_schema(inputs)
-            elif tool_mode_inputs:
-                args_schema = create_input_schema(tool_mode_inputs)
             else:
-                args_schema = create_input_schema(self.component.inputs)
+                tool_mode_inputs = [_input for _input in self.component.inputs if getattr(_input, "tool_mode", False)]
+                args_schema = create_input_schema(tool_mode_inputs if tool_mode_inputs else self.component.inputs)
 
             name = f"{self.component.name or self.component.__class__.__name__ or ''}.{output.method}".strip(".")
             formatted_name = _format_tool_name(name)
-            event_manager = self.component._event_manager
+
             if asyncio.iscoroutinefunction(output_method):
-                tools.append(
-                    StructuredTool(
-                        name=formatted_name,
-                        description=build_description(self.component, output),
-                        coroutine=_build_output_async_function(self.component, output_method, event_manager),
-                        args_schema=args_schema,
-                        handle_tool_error=True,
-                        callbacks=callbacks,
-                        tags=[formatted_name],
-                    )
+                tool = StructuredTool(
+                    name=formatted_name,
+                    description=build_description(self.component, output),
+                    coroutine=_build_output_async_function(self.component, output_method, event_manager),
+                    args_schema=args_schema,
+                    handle_tool_error=True,
+                    callbacks=callbacks,
+                    tags=[formatted_name],
                 )
             else:
-                tools.append(
-                    StructuredTool(
-                        name=formatted_name,
-                        description=build_description(self.component, output),
-                        func=_build_output_function(self.component, output_method, event_manager),
-                        args_schema=args_schema,
-                        handle_tool_error=True,
-                        callbacks=callbacks,
-                        tags=[formatted_name],
-                    )
+                tool = StructuredTool(
+                    name=formatted_name,
+                    description=build_description(self.component, output),
+                    func=_build_output_function(self.component, output_method, event_manager),
+                    args_schema=args_schema,
+                    handle_tool_error=True,
+                    callbacks=callbacks,
+                    tags=[formatted_name],
                 )
+
+            tools.append(tool)
+
         if len(tools) == 1 and (tool_name or tool_description):
-            tool = tools[0]
-            tool.name = _format_tool_name(str(tool_name)) or tool.name
-            tool.description = tool_description or tool.description
-            tool.tags = [tool.name]
+            tools[0].name = _format_tool_name(str(tool_name)) or tools[0].name
+            tools[0].description = tool_description or tools[0].description
+            tools[0].tags = [tools[0].name]
         elif flow_mode_inputs and (tool_name or tool_description):
             for tool in tools:
-                tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
+                tool.name = _format_tool_name(f"{tool_name}_{tool.name}") if tool_name else tool.name
                 tool.description = (
-                    str(tool_description) + " Output details: " + str(tool.description)
-                ) or tool.description
+                    f"{tool_description} Output details: {tool.description}" if tool_description else tool.description
+                )
                 tool.tags = [tool.name]
         elif tool_name or tool_description:
-            msg = (
-                "When passing a tool name or description, there must be only one tool, "
-                f"but {len(tools)} tools were found."
+            raise ValueError(
+                "When passing a tool name or description, there must be only one tool, but multiple tools were found."
             )
-            raise ValueError(msg)
+
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:
