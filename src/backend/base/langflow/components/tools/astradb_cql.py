@@ -46,7 +46,7 @@ class AstraDBCQLToolComponent(LCToolComponent):
             value="ASTRA_DB_APPLICATION_TOKEN",
             required=True,
         ),
-        StrInput(
+        SecretStrInput(
             name="api_endpoint",
             display_name="API Endpoint",
             info="API endpoint URL for the Astra DB service.",

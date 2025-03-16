@@ -11,7 +11,7 @@ from langflow.schema import Data
 
 
 class AstraDBToolComponent(LCToolComponent):
-    display_name: str = "Astra DB Tool"
+    display_name: str = "Astra DB JSON"
     description: str = "Create a tool to get transactional data from DataStax Astra DB Collection"
     documentation: str = "https://docs.langflow.org/Components/components-tools#astra-db-tool"
     icon: str = "AstraDB"
@@ -30,9 +30,9 @@ class AstraDBToolComponent(LCToolComponent):
             required=True,
         ),
         StrInput(
-            name="namespace",
-            display_name="Namespace Name",
-            info="The name of the namespace within Astra where the collection is be stored.",
+            name="keyspace",
+            display_name="Keyspace Name",
+            info="The name of the keyspace within Astra where the collection is be stored.",
             value="default_keyspace",
             advanced=True,
         ),
@@ -95,7 +95,7 @@ class AstraDBToolComponent(LCToolComponent):
             return self._cached_collection
 
         cached_client = DataAPIClient(self.token)
-        cached_db = cached_client.get_database(self.api_endpoint, namespace=self.namespace)
+        cached_db = cached_client.get_database(self.api_endpoint, keyspace=self.keyspace)
         self._cached_collection = cached_db.get_collection(self.collection_name)
         return self._cached_collection
 
