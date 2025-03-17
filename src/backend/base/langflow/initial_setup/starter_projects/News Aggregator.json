@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-XIw0m",
+            "id": "AgentQL-QrQyl",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-O1xzr",
+            "id": "Agent-DlbOP",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-XIw0m{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-XIw0mœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-O1xzr{œfieldNameœ:œtoolsœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-QrQyl{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-QrQylœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-DlbOP{œfieldNameœ:œtoolsœ,œidœ:œAgent-DlbOPœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-XIw0m",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-XIw0mœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-O1xzr",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-O1xzrœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-QrQyl",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-QrQylœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-DlbOP",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-DlbOPœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-KdiYi",
+            "id": "ChatInput-rZZHB",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,25 +43,54 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-O1xzr",
+            "id": "Agent-DlbOP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-KdiYi{œdataTypeœ:œChatInputœ,œidœ:œChatInput-KdiYiœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-O1xzr{œfieldNameœ:œinput_valueœ,œidœ:œAgent-O1xzrœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-rZZHB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-rZZHBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-DlbOP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-DlbOPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-KdiYi",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-KdiYiœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-O1xzr",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-O1xzrœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-rZZHB",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-rZZHBœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-DlbOP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-DlbOPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-DlbOP",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-tCBqx",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__Agent-DlbOP{œdataTypeœ:œAgentœ,œidœ:œAgent-DlbOPœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tCBqx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tCBqxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-DlbOP",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-DlbOPœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-tCBqx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tCBqxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-vGF5M",
+          "id": "note-8QugF",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -73,7 +102,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-vGF5M",
+        "id": "note-8QugF",
         "measured": {
           "height": 324,
           "width": 324
@@ -87,7 +116,7 @@
       },
       {
         "data": {
-          "id": "note-VvhWf",
+          "id": "note-KBJMn",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -100,7 +129,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-VvhWf",
+        "id": "note-KBJMn",
         "measured": {
           "height": 346,
           "width": 324
@@ -116,7 +145,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-XIw0m",
+          "id": "AgentQL-QrQyl",
           "node": {
             "base_classes": [
               "Data"
@@ -133,8 +162,12 @@
               "url",
               "query",
               "prompt",
+              "is_stealth_mode_enabled",
               "timeout",
-              "params"
+              "mode",
+              "wait_for",
+              "is_scroll_to_bottom_enabled",
+              "is_screenshot_enabled"
             ],
             "frozen": false,
             "icon": "AgentQL",
@@ -171,7 +204,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": true,
+                "load_from_db": false,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -179,7 +212,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "AGENTQL_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -197,34 +230,89 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.io import (\n    DictInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"Extract Web Data\"\n    description = \"Extracts structured data from a web page using an AgentQL query or a Natural Language description.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key from dev.agentql.com\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The URL of the public web page you want to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=False,\n            info=\"The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"prompt\",\n            display_name=\"Prompt\",\n            required=False,\n            info=\"A Natural Language description of the data to extract from the page. Alternative to AgentQL query.\",\n            tool_mode=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Timeout in seconds for the request. Increase if data extraction takes too long.\",\n            value=900,\n            advanced=True,\n        ),\n        DictInput(\n            name=\"params\",\n            display_name=\"Additional Params\",\n            info=\"The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.\",\n            is_list=True,\n            value={\n                \"mode\": \"fast\",\n                \"wait_for\": 0,\n                \"is_scroll_to_bottom_enabled\": False,\n                \"is_screenshot_enabled\": False,\n            },\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"prompt\": self.prompt,\n            \"params\": self.params,\n        }\n\n        if not self.prompt and not self.query:\n            self.status = \"Either Query or Prompt must be provided.\"\n            raise ValueError(self.status)\n        if self.prompt and self.query:\n            self.status = \"Both Query and Prompt can't be provided at the same time.\"\n            raise ValueError(self.status)\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code in {401, 403}:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
+                "value": "import httpx\nfrom loguru import logger\n\nfrom langflow.custom import Component\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import (\n    BoolInput,\n    DropdownInput,\n    IntInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\n\n\nclass AgentQL(Component):\n    display_name = \"Extract Web Data\"\n    description = \"Extracts structured data from a web page using an AgentQL query or a Natural Language description.\"\n    documentation: str = \"https://docs.agentql.com/rest-api/api-reference\"\n    icon = \"AgentQL\"\n    name = \"AgentQL\"\n\n    inputs = [\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            required=True,\n            password=True,\n            info=\"Your AgentQL API key from dev.agentql.com\",\n        ),\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The URL of the public web page you want to extract data from.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"AgentQL Query\",\n            required=False,\n            info=\"The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.\",\n            tool_mode=True,\n        ),\n        MultilineInput(\n            name=\"prompt\",\n            display_name=\"Prompt\",\n            required=False,\n            info=\"A Natural Language description of the data to extract from the page. Alternative to AgentQL query.\",\n            tool_mode=True,\n        ),\n        BoolInput(\n            name=\"is_stealth_mode_enabled\",\n            display_name=\"Enable Stealth Mode (Beta)\",\n            info=\"Enable experimental anti-bot evasion strategies. May not work for all websites at all times.\",\n            value=False,\n            advanced=True,\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"Seconds to wait for a request.\",\n            value=900,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"mode\",\n            display_name=\"Request Mode\",\n            info=\"'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.\",\n            options=[\"fast\", \"standard\"],\n            value=\"fast\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"wait_for\",\n            display_name=\"Wait For\",\n            info=\"Seconds to wait for the page to load before extracting data.\",\n            value=0,\n            range_spec=RangeSpec(min=0, max=10, step_type=\"int\"),\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"is_scroll_to_bottom_enabled\",\n            display_name=\"Enable scroll to bottom\",\n            info=\"Scroll to bottom of the page before extracting data.\",\n            value=False,\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"is_screenshot_enabled\",\n            display_name=\"Enable screenshot\",\n            info=\"Take a screenshot before extracting data. Returned in 'metadata' as a Base64 string.\",\n            value=False,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Data:\n        endpoint = \"https://api.agentql.com/v1/query-data\"\n        headers = {\n            \"X-API-Key\": self.api_key,\n            \"Content-Type\": \"application/json\",\n            \"X-TF-Request-Origin\": \"langflow\",\n        }\n\n        payload = {\n            \"url\": self.url,\n            \"query\": self.query,\n            \"prompt\": self.prompt,\n            \"params\": {\n                \"mode\": self.mode,\n                \"wait_for\": self.wait_for,\n                \"is_scroll_to_bottom_enabled\": self.is_scroll_to_bottom_enabled,\n                \"is_screenshot_enabled\": self.is_screenshot_enabled,\n            },\n            \"metadata\": {\n                \"experimental_stealth_mode_enabled\": self.is_stealth_mode_enabled,\n            },\n        }\n\n        if not self.prompt and not self.query:\n            self.status = \"Either Query or Prompt must be provided.\"\n            raise ValueError(self.status)\n        if self.prompt and self.query:\n            self.status = \"Both Query and Prompt can't be provided at the same time.\"\n            raise ValueError(self.status)\n\n        try:\n            response = httpx.post(endpoint, headers=headers, json=payload, timeout=self.timeout)\n            response.raise_for_status()\n\n            json = response.json()\n            data = Data(result=json[\"data\"], metadata=json[\"metadata\"])\n\n        except httpx.HTTPStatusError as e:\n            response = e.response\n            if response.status_code == httpx.codes.UNAUTHORIZED:\n                self.status = \"Please, provide a valid API Key. You can create one at https://dev.agentql.com.\"\n            else:\n                try:\n                    error_json = response.json()\n                    logger.error(\n                        f\"Failure response: '{response.status_code} {response.reason_phrase}' with body: {error_json}\"\n                    )\n                    msg = error_json[\"error_info\"] if \"error_info\" in error_json else error_json[\"detail\"]\n                except (ValueError, TypeError):\n                    msg = f\"HTTP {e}.\"\n                self.status = msg\n            raise ValueError(self.status) from e\n\n        else:\n            self.status = data\n            return data\n"
               },
-              "params": {
-                "_input_type": "DictInput",
+              "is_screenshot_enabled": {
+                "_input_type": "BoolInput",
                 "advanced": true,
-                "display_name": "Additional Params",
+                "display_name": "Enable screenshot",
                 "dynamic": false,
-                "info": "The additional params to send with the request. For details refer to https://docs.agentql.com/rest-api/api-reference#request-body.",
-                "list": true,
+                "info": "Take a screenshot before extracting data. Returned in 'metadata' as a Base64 string.",
+                "list": false,
                 "list_add_label": "Add More",
-                "name": "params",
+                "name": "is_screenshot_enabled",
                 "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
                 "tool_mode": false,
-                "trace_as_input": true,
-                "type": "dict",
-                "value": {
-                  "is_screenshot_enabled": false,
-                  "is_scroll_to_bottom_enabled": false,
-                  "mode": "fast",
-                  "wait_for": 0
-                }
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "is_scroll_to_bottom_enabled": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Enable scroll to bottom",
+                "dynamic": false,
+                "info": "Scroll to bottom of the page before extracting data.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "is_scroll_to_bottom_enabled",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "is_stealth_mode_enabled": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Enable Stealth Mode (Beta)",
+                "dynamic": false,
+                "info": "Enable experimental anti-bot evasion strategies. May not work for all websites at all times.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "is_stealth_mode_enabled",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "mode": {
+                "_input_type": "DropdownInput",
+                "advanced": true,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Request Mode",
+                "dynamic": false,
+                "info": "'standard' uses deep data analysis, while 'fast' trades some depth of analysis for speed.",
+                "name": "mode",
+                "options": [
+                  "fast",
+                  "standard"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "fast"
               },
               "prompt": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "Prompt",
                 "dynamic": false,
                 "info": "A Natural Language description of the data to extract from the page. Alternative to AgentQL query.",
@@ -249,6 +337,7 @@
               "query": {
                 "_input_type": "MultilineInput",
                 "advanced": false,
+                "copy_field": false,
                 "display_name": "AgentQL Query",
                 "dynamic": false,
                 "info": "The AgentQL query to execute. Learn more at https://docs.agentql.com/agentql-query or use a prompt.",
@@ -275,7 +364,7 @@
                 "advanced": true,
                 "display_name": "Timeout",
                 "dynamic": false,
-                "info": "Timeout in seconds for the request. Increase if data extraction takes too long.",
+                "info": "Seconds to wait for a request.",
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "timeout",
@@ -360,6 +449,32 @@
                       "name": "tags",
                       "sortable": false,
                       "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -373,6 +488,7 @@
                   {
                     "description": "build_output(api_key: Message, url: Message) - Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
                     "name": "AgentQL-build_output",
+                    "status": true,
                     "tags": [
                       "AgentQL-build_output"
                     ]
@@ -401,6 +517,30 @@
                 "trace_as_metadata": true,
                 "type": "str",
                 "value": ""
+              },
+              "wait_for": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Wait For",
+                "dynamic": false,
+                "info": "Seconds to wait for the page to load before extracting data.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "wait_for",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 10,
+                  "min": 0,
+                  "step": 0.1,
+                  "step_type": "int"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 0
               }
             },
             "tool_mode": true
@@ -409,21 +549,21 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-XIw0m",
+        "id": "AgentQL-QrQyl",
         "measured": {
-          "height": 599,
+          "height": 602,
           "width": 320
         },
         "position": {
           "x": 746.6171255053692,
           "y": 323.12336325015775
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-KdiYi",
+          "id": "ChatInput-rZZHB",
           "node": {
             "base_classes": [
               "Message"
@@ -720,7 +860,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-KdiYi",
+        "id": "ChatInput-rZZHB",
         "measured": {
           "height": 66,
           "width": 192
@@ -734,7 +874,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-QiEpu",
+          "id": "ChatOutput-tCBqx",
           "node": {
             "base_classes": [
               "Message"
@@ -1026,7 +1166,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-QiEpu",
+        "id": "ChatOutput-tCBqx",
         "measured": {
           "height": 66,
           "width": 192
@@ -1040,7 +1180,7 @@
       },
       {
         "data": {
-          "id": "Agent-O1xzr",
+          "id": "Agent-DlbOP",
           "node": {
             "base_classes": [
               "Message"
@@ -1215,7 +1355,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1223,7 +1363,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1716,9 +1856,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-O1xzr",
+        "id": "Agent-DlbOP",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -1730,7 +1870,7 @@
       },
       {
         "data": {
-          "id": "note-OAlDJ",
+          "id": "note-0zajW",
           "node": {
             "description": "# News Aggregator\n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\nThe **Agent** component populates the **Agent QL** component's **URL** and **Query** fields, and returns a structured response to your question.",
             "display_name": "",
@@ -1742,7 +1882,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-OAlDJ",
+        "id": "note-0zajW",
         "measured": {
           "height": 604,
           "width": 325
@@ -1756,18 +1896,17 @@
       }
     ],
     "viewport": {
-      "x": -140.6486665710372,
-      "y": 68.92081829746667,
-      "zoom": 1.0230031993478927
+      "x": -117.84864069491266,
+      "y": 80.81149435068329,
+      "zoom": 0.8538293672913081
     }
   },
   "description": "Extracts data and information from webpages.",
   "endpoint_name": null,
-  "id": "a5383bea-acb4-44ba-adeb-80c0fcb168b9",
+  "id": "f2015209-2422-432c-b5c2-61e8edf988aa",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "News Aggregator",
-  "icon": "Newspaper",
   "tags": [
     "web-scraping",
     "agents"
