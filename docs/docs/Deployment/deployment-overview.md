@@ -10,21 +10,17 @@ You have a flow, and want to share it with the world in a production environment
 
 This page outlines the journey from locally-run flow to a cloud-hosted production server.
 
-More specific instructions can be found in the [Docker](/deployment-docker) and [Kubernetes](/deployment-kubernetes) pages.
+More specific instructions are available in the [Docker](/deployment-docker) and [Kubernetes](/deployment-kubernetes) pages.
 
 ## Langflow deployment architecture
 
 Langflow can be deployed as an **IDE** or as a **runtime**.
 
-## Langflow IDE
-
 The **IDE** includes the frontend, for visual development of your flow.
 
-The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE with an additional PostgreSQL service for storage. For more on starting Langflow with Docker, see [Docker](/deployment-docker).
+The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE with an additional PostgreSQL service for storage. To deploy Langflow IDE, see [Docker](/deployment-docker).
 
-## Langflow runtime
-
-The **runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the backend processes necessary to run your flow, with PostgreSQL as the database. For more on starting this file, see [Docker](/deployment-docker).
+The **runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the backend processes necessary to run your flow, with PostgreSQL as the database. To deploy the Langflow runtime, see [Docker](/deployment-docker).
 
 ## Package your flow with the Langflow runtime image
 
@@ -58,7 +54,7 @@ For more on building the Langflow docker image and pushing it to Docker Hub, see
 
 Override the values in the [langflow-runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/Chart.yaml) Helm chart to deploy the application.
 
-```
+```text
 helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
 helm repo update
 helm install langflow-runtime langflow/langflow-runtime \
@@ -67,6 +63,10 @@ helm install langflow-runtime langflow/langflow-runtime \
 ```
 
 For more information, refer to [Deploy Langflow on Kubernetes](/deployment-kubernetes).
+
+
+
+
 
 
 

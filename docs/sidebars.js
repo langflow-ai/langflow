@@ -79,6 +79,7 @@ module.exports = {
         "Configuration/configuration-auto-saving",
         "Configuration/configuration-backend-only",
         "Configuration/configuration-cli",
+        "Configuration/configuration-custom-database",
         "Configuration/configuration-global-variables",
         "Configuration/environment-variables",
         "Configuration/configuration-security-best-practices"
