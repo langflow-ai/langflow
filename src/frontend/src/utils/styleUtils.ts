@@ -1,10 +1,12 @@
 import { AIMLIcon } from "@/icons/AIML";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
+import { BWPythonIcon } from "@/icons/BW python";
 import { DropboxIcon } from "@/icons/Dropbox";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
+import { JSIcon } from "@/icons/JSicon";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import { OneDriveIcon } from "@/icons/OneDrive";
@@ -65,6 +67,7 @@ import {
   Code2,
   CodeXml,
   Cog,
+  Columns2,
   Combine,
   Command,
   Compass,
@@ -89,6 +92,7 @@ import {
   File,
   FileChartColumn,
   FileClock,
+  FileCode2,
   FileDown,
   FileJson,
   FilePen,
@@ -643,6 +647,7 @@ export const nodeIconsLucide: iconsType = {
   ListFlows: Group,
   ClearMessageHistory: FileClock,
   Python: PythonIcon,
+  BWPython: BWPythonIcon,
   AzureChatOpenAi: AzureIcon,
   Ollama: OllamaIcon,
   ChatOllama: OllamaIcon,
@@ -1015,6 +1020,9 @@ export const nodeIconsLucide: iconsType = {
   ThumbDownIconCustom,
   ThumbUpIconCustom,
   Serper: SerperIcon,
+  javascript: JSIcon,
+  FileCode2,
+  Columns2,
   ScrapeGraphAI: ScrapeGraph,
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,
