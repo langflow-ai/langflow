@@ -1,4 +1,5 @@
 import { jsonquery } from "@jsonquerylang/jsonquery";
+import { Check } from "lucide-react";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   Content,
@@ -9,7 +10,6 @@ import useAlertStore from "../../../stores/alertStore";
 import { cn } from "../../../utils/utils";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
-import { Check } from "lucide-react";
 
 interface JsonEditorProps {
   data?: Content;
@@ -70,7 +70,7 @@ const JsonEditor = ({
     setShowSuccess(false);
   };
 
-  const applyFilter = (filtered: {json:any},query:string) => {
+  const applyFilter = (filtered: { json: any }, query: string) => {
     onChange?.(filtered);
     setFilter?.(query.trim());
     setShowSuccess(true);
@@ -259,7 +259,10 @@ const JsonEditor = ({
     }
   };
 
-  const getFilteredContent = (sourceJson: any, query: string): { json: any } | undefined => {
+  const getFilteredContent = (
+    sourceJson: any,
+    query: string,
+  ): { json: any } | undefined => {
     // Try JSONQuery first
     try {
       const result = jsonquery(sourceJson, query);
@@ -375,8 +378,8 @@ const JsonEditor = ({
             variant="primary"
             size="sm"
             className={cn(
-              "whitespace-nowrap min-w-[60px]",
-              showSuccess && "!bg-green-500 hover:!bg-green-600"
+              "min-w-[60px] whitespace-nowrap",
+              showSuccess && "!bg-green-500 hover:!bg-green-600",
             )}
           >
             {showSuccess ? (
