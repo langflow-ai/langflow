@@ -26,9 +26,7 @@ async def create_scheduler(
     scheduler_service: SchedulerService = Depends(get_scheduler_service),
 ):
     """Create a new scheduler."""
-    return await scheduler_service.create_scheduler(
-        session=session, scheduler=scheduler
-    )
+    return await scheduler_service.create_scheduler(session=session, scheduler=scheduler)
 
 
 @router.get("/{scheduler_id}", response_model=SchedulerRead, status_code=200)
@@ -40,9 +38,7 @@ async def read_scheduler(
     scheduler_service: SchedulerService = Depends(get_scheduler_service),
 ):
     """Get a scheduler by ID."""
-    return await scheduler_service.get_scheduler(
-        session=session, scheduler_id=scheduler_id
-    )
+    return await scheduler_service.get_scheduler(session=session, scheduler_id=scheduler_id)
 
 
 @router.get("/", response_model=list[SchedulerRead], status_code=200)
@@ -67,9 +63,7 @@ async def update_scheduler(
     scheduler_service: SchedulerService = Depends(get_scheduler_service),
 ):
     """Update a scheduler."""
-    return await scheduler_service.update_scheduler(
-        session=session, scheduler_id=scheduler_id, scheduler=scheduler
-    )
+    return await scheduler_service.update_scheduler(session=session, scheduler_id=scheduler_id, scheduler=scheduler)
 
 
 @router.delete("/{scheduler_id}", status_code=204)

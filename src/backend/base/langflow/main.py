@@ -141,6 +141,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Start the scheduler service
             from langflow.services.deps import get_scheduler_service
+
             scheduler_service = get_scheduler_service()
             await scheduler_service.start()
 
@@ -159,6 +160,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             # Stop the scheduler service
             from langflow.services.deps import get_scheduler_service
+
             scheduler_service = get_scheduler_service()
             await scheduler_service.stop()
 

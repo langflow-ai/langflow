@@ -51,7 +51,6 @@ class SchedulerCreate(SchedulerBase):
     """Create model for scheduler."""
 
 
-
 class SchedulerRead(SchedulerBase):
     """Read model for scheduler."""
 

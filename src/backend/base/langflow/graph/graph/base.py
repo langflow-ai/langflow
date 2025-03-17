@@ -840,9 +840,13 @@ class Graph:
         # we need to go through self.inputs and update the self.raw_params
         # of the vertices that are inputs
         # if the value is a list, we need to run multiple times
-        logger.warning(f"[BUG LOG] Starting graph execution with {len(inputs)} input(s), {len(outputs or [])} output(s), stream={stream}")
-        logger.warning(f"[BUG LOG] Graph details: flow_id={self.flow_id}, session_id={session_id}, vertices={len(self.vertices)}")
-        
+        logger.warning(
+            f"[BUG LOG] Starting graph execution with {len(inputs)} input(s), {len(outputs or [])} output(s), stream={stream}"
+        )
+        logger.warning(
+            f"[BUG LOG] Graph details: flow_id={self.flow_id}, session_id={session_id}, vertices={len(self.vertices)}"
+        )
+
         vertex_outputs = []
         if not isinstance(inputs, list):
             inputs = [inputs]
@@ -861,21 +865,22 @@ class Graph:
             logger.warning(f"[BUG LOG] Using session_id: {session_id}")
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
-            
+
         logger.warning(f"[BUG LOG] Prepared {len(inputs)} input(s) for execution with types: {types}")
-        
+
         # Log the runnable vertices
         runnable_vertices = [v_id for v_id in self.vertices_to_run if self.is_vertex_runnable(v_id)]
         logger.warning(f"[BUG LOG] Runnable vertices before execution: {runnable_vertices}")
-        
+
         for i, (run_inputs, components, input_type) in enumerate(zip(inputs, inputs_components, types, strict=True)):
-            logger.warning(f"[BUG LOG] Executing run {i+1}/{len(inputs)} with input_type={input_type}")
+            logger.warning(f"[BUG LOG] Executing run {i + 1}/{len(inputs)} with input_type={input_type}")
             logger.warning(f"[BUG LOG] Run inputs: {run_inputs}")
             logger.warning(f"[BUG LOG] Components to run: {components}")
-            
+
             import time
+
             start_time = time.time()
-            
+
             try:
                 run_outputs = await self._run(
                     inputs=run_inputs,
@@ -887,26 +892,28 @@ class Graph:
                     fallback_to_env_vars=fallback_to_env_vars,
                     event_manager=event_manager,
                 )
-                
+
                 elapsed_time = time.time() - start_time
-                logger.warning(f"[BUG LOG] Run {i+1} completed in {elapsed_time:.2f} seconds with {len(run_outputs)} output(s)")
-                
+                logger.warning(
+                    f"[BUG LOG] Run {i + 1} completed in {elapsed_time:.2f} seconds with {len(run_outputs)} output(s)"
+                )
+
                 # Log detailed output information
                 for j, output in enumerate(run_outputs):
                     if output:
-                        logger.warning(f"[BUG LOG] Output {j+1}/{len(run_outputs)}: {output.results}")
+                        logger.warning(f"[BUG LOG] Output {j + 1}/{len(run_outputs)}: {output.results}")
                     else:
-                        logger.warning(f"[BUG LOG] Output {j+1}/{len(run_outputs)}: None")
-                
+                        logger.warning(f"[BUG LOG] Output {j + 1}/{len(run_outputs)}: None")
+
                 run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
                 logger.warning(f"[BUG LOG] Run outputs object created with {len(run_outputs)} outputs")
                 vertex_outputs.append(run_output_object)
             except Exception as e:
                 elapsed_time = time.time() - start_time
-                logger.warning(f"[BUG LOG] Run {i+1} failed after {elapsed_time:.2f} seconds: {str(e)}", exc_info=True)
+                logger.warning(f"[BUG LOG] Run {i + 1} failed after {elapsed_time:.2f} seconds: {e!s}", exc_info=True)
                 logger.warning(f"[BUG LOG] Exception type: {type(e).__name__}")
                 raise
-                
+
         logger.warning(f"[BUG LOG] Graph execution completed with {len(vertex_outputs)} output(s)")
         return vertex_outputs
 

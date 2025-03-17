@@ -1,4 +1,5 @@
 """Factory for the scheduler service."""
+
 from typing import Any
 
 from typing_extensions import override
