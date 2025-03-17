@@ -22,6 +22,11 @@ if TYPE_CHECKING:
     from langflow.services.tracing.schema import Log
 
 
+def get_distributed_trace_headers(trace_id, span_id):
+    """Returns headers dictionary to be passed into tracked function on remote node."""
+    return {"opik_parent_span_id": span_id, "opik_trace_id": trace_id}
+
+
 class OpikTracer(BaseTracer):
     flow_id: str
 
@@ -43,6 +48,7 @@ class OpikTracer(BaseTracer):
     def _setup_opik(self, trace_id: UUID) -> bool:
         try:
             from opik import Opik
+            from opik.api_objects.trace import TraceData
 
             self._client = Opik(project_name=self._project_name)
 
@@ -55,7 +61,10 @@ class OpikTracer(BaseTracer):
                 "langflow_trace_name": self.trace_name,
                 "create_from": "langflow",
             }
-            self.trace = self._client.trace(id=self.opik_trace_id, name=self.flow_id, metadata=metadata)
+            self.trace = TraceData(
+                name=self.flow_id,
+                metadata=metadata,
+            )
             self.opik_trace_id = self.trace.id
         except ImportError:
             logger.exception("Could not import opik. Please install it with `pip install opik`.")
@@ -89,20 +98,22 @@ class OpikTracer(BaseTracer):
         if not self._ready:
             return
 
+        from opik.api_objects.span import SpanData
+
         name = trace_name.removesuffix(f" ({trace_id})")
         processed_inputs = self._convert_to_opik_types(inputs) if inputs else {}
         processed_metadata = self._convert_to_opik_types(metadata) if metadata else {}
 
-        content_span = {
-            "name": name,
-            "input": processed_inputs,
-            "metadata": processed_metadata,
-            "type": "general",  # The LLM span will comes from the langchain callback
-        }
+        span = SpanData(
+            trace_id=self.opik_trace_id,
+            name=name,
+            input=processed_inputs,
+            metadata=processed_metadata,
+            type="general",  # The LLM span will comes from the langchain callback
+        )
 
-        span = self.trace.span(**content_span)
         self.spans[trace_id] = span
-        self._distributed_headers = span.get_distributed_trace_headers()
+        self._distributed_headers = get_distributed_trace_headers(self.opik_trace_id, span.id)
 
     @override
     def end_trace(
@@ -125,9 +136,12 @@ class OpikTracer(BaseTracer):
             output |= outputs or {}
             output |= {"logs": list(logs)} if logs else {}
             content = {"output": output, "error_info": collect(error) if error else None}
-            span.end(**content)
+
+            span.init_end_time().update(**content)
+
+            self._client.span(**span.__dict__)
         else:
-            logger.warning("No span found in context storage")
+            logger.warning("No corresponding span found")
 
     @override
     def end(
@@ -142,7 +156,11 @@ class OpikTracer(BaseTracer):
 
         from opik.decorator.error_info_collector import collect
 
-        self.trace.end(input=inputs, output=outputs, error_info=collect(error) if error else None, metadata=metadata)
+        self.trace.init_end_time().update(
+            input=inputs, output=outputs, error_info=collect(error) if error else None, metadata=metadata
+        )
+
+        self._client.trace(**self.trace.__dict__)
 
         self._client.flush()
 
