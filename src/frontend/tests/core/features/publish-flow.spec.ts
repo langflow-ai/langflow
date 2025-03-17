@@ -3,7 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "Publish feature test",
+  "user should be able to publish a flow",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page, context }) => {
     await awaitBootstrapTest(page);
@@ -41,6 +41,7 @@ test(
       ),
     ).resolves.toBeTruthy();
 
+    await page.getByTestId("publish-switch").click();
     await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await page.getByTestId("publish-button").click();

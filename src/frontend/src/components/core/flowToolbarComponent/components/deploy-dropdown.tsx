@@ -101,7 +101,10 @@ export default function PublishDropdown() {
             className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}
           >
-            <div className="group-hover:bg-accent">
+            <div
+              className="group-hover:bg-accent"
+              data-testid="api-access-item"
+            >
               <IconComponent
                 name="Code2"
                 className={`${groupStyle} icon-size mr-2`}
