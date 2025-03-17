@@ -1,5 +1,4 @@
 from langchain_openai import AzureChatOpenAI
-
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
@@ -10,7 +9,9 @@ from langflow.io import DropdownInput, IntInput, SecretStrInput, SliderInput
 class AzureChatOpenAIComponent(LCModelComponent):
     display_name: str = "Azure OpenAI"
     description: str = "Generate text using Azure OpenAI LLMs."
-    documentation: str = "https://python.langchain.com/docs/integrations/llms/azure_openai"
+    documentation: str = (
+        "https://python.langchain.com/docs/integrations/llms/azure_openai"
+    )
     beta = False
     icon = "Azure"
     name = "AzureOpenAIModel"
@@ -25,6 +26,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
         "2023-12-01-preview",
         "2024-02-15-preview",
         "2024-03-01-preview",
+        "2024-12-01-preview",
+        "2025-01-01-preview",
+        "2025-02-01-preview",
     ]
 
     inputs = [
@@ -35,7 +39,9 @@ class AzureChatOpenAIComponent(LCModelComponent):
             info="Your Azure endpoint, including the resource. Example: `https://example-resource.azure.openai.com/`",
             required=True,
         ),
-        MessageTextInput(name="azure_deployment", display_name="Deployment Name", required=True),
+        MessageTextInput(
+            name="azure_deployment", display_name="Deployment Name", required=True
+        ),
         SecretStrInput(name="api_key", display_name="API Key", required=True),
         DropdownInput(
             name="api_version",
