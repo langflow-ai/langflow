@@ -169,8 +169,11 @@ const config = {
             from: "/components-rag",
           },
           {
-            to: "/concepts-api",
-            from: "/workspace-api",
+            to: "/concepts-publish",
+            from: [
+              "/concepts-api",
+              "/workspace-api",
+            ]
           },
           {
             to: "/components-custom-components",
