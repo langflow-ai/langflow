@@ -110,12 +110,12 @@ export default function RecentFilesComponent({
               {searchQuery !== ""
                 ? "No files found, try again "
                 : "Upload or import files, "}
-              or visit the{" "}
+              or visit{" "}
               <CustomLink
                 className="text-accent-pink-foreground underline"
                 to="/files"
               >
-                file browser.
+                My Files.
               </CustomLink>
             </span>
           </div>
