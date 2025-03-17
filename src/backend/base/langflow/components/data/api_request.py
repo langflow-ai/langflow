@@ -391,6 +391,7 @@ class APIRequestComponent(Component):
 
         # Process body using the new helper method
         processed_body = self._process_body(body)
+        redirection_history = []
 
         try:
             response = await client.request(
