@@ -190,7 +190,6 @@ export default function InputFileComponent({
           : (files?.find((f) => selectedFiles.includes(f.path))?.path ?? ""),
       });
     }
-    console.log(files, selectedFiles, file_path);
   }, [files, value, file_path]);
 
   return (
