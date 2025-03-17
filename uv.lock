@@ -430,6 +430,18 @@ wheels = [
 ]
 
 [[package]]
+name = "astroid"
+version = "3.3.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/80/c5/5c83c48bbf547f3dd8b587529db7cf5a265a3368b33e85e76af8ff6061d3/astroid-3.3.8.tar.gz", hash = "sha256:a88c7994f914a4ea8572fac479459f4955eeccc877be3f2d959a33273b0cf40b", size = 398196 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/28/0bc8a17d6cd4cc3c79ae41b7105a2b9a327c110e5ddd37a8a27b29a5c8a2/astroid-3.3.8-py3-none-any.whl", hash = "sha256:187ccc0c248bfbba564826c26f070494f7bc964fd286b6d9fff4420e55de828c", size = 275153 },
+]
+
+[[package]]
 name = "asttokens"
 version = "2.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4345,6 +4357,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
+    { name = "pylint" },
     { name = "pymongo" },
     { name = "pytube" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
@@ -4352,6 +4365,7 @@ dependencies = [
     { name = "qianfan" },
     { name = "ragstack-ai-knowledge-store" },
     { name = "redis" },
+    { name = "ruff" },
     { name = "scrapegraph-py" },
     { name = "smolagents" },
     { name = "spider-client" },
@@ -4520,11 +4534,12 @@ requires-dist = [
     { name = "nv-ingest-client", marker = "extra == 'nv-ingest'", specifier = "==2025.2.7.dev0" },
     { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
     { name = "opensearch-py", specifier = "==2.8.0" },
-    { name = "opik", specifier = ">=1.4.16" },
+    { name = "opik", specifier = ">=1.6.3" },
     { name = "pgvector", specifier = "==0.3.6" },
     { name = "pyarrow", specifier = "==19.0.0" },
     { name = "pydantic-ai", specifier = ">=0.0.19" },
     { name = "pydantic-settings", specifier = "==2.4.0" },
+    { name = "pylint", specifier = ">=3.3.4" },
     { name = "pymilvus", extras = ["bulk-writer", "model"], marker = "extra == 'nv-ingest'", specifier = "==2.5.0" },
     { name = "pymongo", specifier = "==4.10.1" },
     { name = "python-pptx", marker = "extra == 'nv-ingest'", specifier = "==0.6.23" },
@@ -4534,6 +4549,7 @@ requires-dist = [
     { name = "qianfan", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
     { name = "redis", specifier = "==5.2.1" },
+    { name = "ruff", specifier = ">=0.9.7" },
     { name = "scrapegraph-py", specifier = ">=1.12.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
     { name = "smolagents", specifier = ">=1.8.0" },
@@ -5426,6 +5442,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/99/5b/a36a337438a14116b16480db471ad061c36c3694df7c2084a0da7ba538b7/matplotlib_inline-0.1.7.tar.gz", hash = "sha256:8423b23ec666be3d16e16b60bdd8ac4e86e840ebd1dd11a30b9f117f2fa0ab90", size = 8159 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl", hash = "sha256:df192d39a4ff8f21b1895d72e6a13f5fcc5099f00fa84384e0ea28c2cc0653ca", size = 9899 },
+]
+
+[[package]]
+name = "mccabe"
+version = "0.7.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/ff/0ffefdcac38932a54d2b5eed4e0ba8a408f215002cd178ad1df0f2806ff8/mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325", size = 9658 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/1a/1f68f9ba0c207934b35b86a8ca3aad8395a3d6dd7921c0686e23853ff5a9/mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e", size = 7350 },
 ]
 
 [[package]]
@@ -6450,7 +6475,7 @@ wheels = [
 
 [[package]]
 name = "opik"
-version = "1.5.4"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3-stubs", extra = ["bedrock-runtime"] },
@@ -6468,9 +6493,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "uuid6" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/80/24a2085ed7d83d0521da1b8e1440bdfbe3c9d8a25c2cab69380ae854bd6d/opik-1.5.4.tar.gz", hash = "sha256:364918ccb23facd57240ad71af4859b1b784760c6d973aebcc6e1cb91dde0d9f", size = 212601 }
+sdist = { url = "https://files.pythonhosted.org/packages/27/74/4bc6eb55b302e19f91302a4fbba9c7da2816a0017907024bde3ad82f7e4e/opik-1.6.3.tar.gz", hash = "sha256:6fa827aa2e940f3320974ffcf7e78c5c76a690870af6d097bb54da86f15fd483", size = 220827 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/bf/fb921e03815d370b5133f4a0959f9f7eef76f5776887ad8a5003ef90279e/opik-1.5.4-py3-none-any.whl", hash = "sha256:9d700684c1922fe014cc9b0c809fe0b1294f2e03a1e520ae2a852d1076be91c0", size = 400713 },
+    { url = "https://files.pythonhosted.org/packages/bb/9d/7adfeca3eee21709b452a3b923b4b0e830f8961bb7d3efa46bfd3616420e/opik-1.6.3-py3-none-any.whl", hash = "sha256:d223fb977919abac96b26e80ff134ec619d834021d749e3bce6bfa27a88b2dab", size = 415866 },
 ]
 
 [[package]]
@@ -7464,6 +7489,25 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e7/46/bd74733ff231675599650d3e47f361794b22ef3e3770998dda30d3b63726/pyjwt-2.10.1.tar.gz", hash = "sha256:3cc5772eb20009233caf06e9d8a0577824723b44e6648ee0a2aedb6cf9381953", size = 87785 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/ad/689f02752eeec26aed679477e80e632ef1b682313be70793d798c1d5fc8f/PyJWT-2.10.1-py3-none-any.whl", hash = "sha256:dcdd193e30abefd5debf142f9adfcdd2b58004e644f25406ffaebd50bd98dacb", size = 22997 },
+]
+
+[[package]]
+name = "pylint"
+version = "3.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "astroid" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "dill" },
+    { name = "isort" },
+    { name = "mccabe" },
+    { name = "platformdirs" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "tomlkit" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ab/b9/50be49afc91469f832c4bf12318ab4abe56ee9aa3700a89aad5359ad195f/pylint-3.3.4.tar.gz", hash = "sha256:74ae7a38b177e69a9b525d0794bd8183820bfa7eb68cc1bee6e8ed22a42be4ce", size = 1518905 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0d/8b/eef15df5f4e7aa393de31feb96ca9a3d6639669bd59d589d0685d5ef4e62/pylint-3.3.4-py3-none-any.whl", hash = "sha256:289e6a1eb27b453b08436478391a48cd53bb0efb824873f949e709350f3de018", size = 522280 },
 ]
 
 [[package]]
