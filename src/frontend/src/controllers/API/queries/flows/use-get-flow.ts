@@ -30,6 +30,8 @@ export const useGetFlow: useMutationFunctionType<undefined, IGetFlow> = (
 
   const mutation = mutate(["useGetFlow"], getFlowFn, {
     ...options,
+    retry: 1,
+    retryDelay: 2000,
     onSettled: (response) => {
       if (response) {
         queryClient.refetchQueries({

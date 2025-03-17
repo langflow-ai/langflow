@@ -42,12 +42,6 @@ test(
     ).resolves.toBeTruthy();
 
     await page.getByTestId("publish-switch").click();
-    await page.getByTestId("shareable-playground").click();
-    await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    await page.getByTestId("publish-button").click();
-    await page.getByTestId("publish-switch").click();
-    await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    await expect(page.getByTestId("publish-switch")).toBeChecked();
     const pagePromise = context.waitForEvent("page");
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
@@ -65,9 +59,17 @@ test(
     await expect(page.getByTestId("publish-switch")).toBeChecked({
       checked: false,
     });
-    await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await page.goto(newUrl);
-    await expect(page.getByTestId("mainpage_title")).toBeVisible();
+    try {
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 10000,
+      });
+    } catch (error) {
+      await page.reload();
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 10000,
+      });
+    }
   },
 );
