@@ -16,11 +16,9 @@ More specific instructions are available in the [Docker](/deployment-docker) and
 
 Langflow can be deployed as an **IDE** or as a **runtime**.
 
-The **IDE** includes the frontend, for visual development of your flow.
+The **IDE** includes the frontend for visual development of your flow. The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE with an additional PostgreSQL service for storage. To deploy the Langflow IDE, see [Docker](/deployment-docker).
 
-The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE with an additional PostgreSQL service for storage. To deploy Langflow IDE, see [Docker](/deployment-docker).
-
-The **runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the backend processes necessary to run your flow, with PostgreSQL as the database. To deploy the Langflow runtime, see [Docker](/deployment-docker).
+The **runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the backend processes necessary to run your flow, with PostgreSQL as the database. Use the Langflow **runtime** to deploy your flows, because you don't require the front-end for visual development.
 
 ## Package your flow with the Langflow runtime image
 
@@ -39,7 +37,7 @@ LANGFLOW-APPLICATION/
 Include the `COPY` command in your Dockerfile:
 
 ```dockerfile
-FROM langflowai/langflow:latest
+FROM langflowai/langflow-backend
 RUN mkdir -p /app/flows
 COPY ./flows/*.json /app/flows/
 ```
