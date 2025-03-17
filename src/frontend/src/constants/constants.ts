@@ -870,11 +870,6 @@ export const defaultShortcuts = [
   },
   {
     display_name: "Freeze",
-    name: "Freeze",
-    shortcut: "mod+f",
-  },
-  {
-    display_name: "Freeze Path",
     name: "Freeze Path",
     shortcut: "mod+shift+f",
   },
@@ -998,6 +993,9 @@ export const STORE_PAGINATION_ROWS_COUNT = [12, 24, 48, 96];
 export const GRADIENT_CLASS =
   "linear-gradient(to right, hsl(var(--background) / 0.3), hsl(var(--background)))";
 
+export const GRADIENT_CLASS_DISABLED =
+  "linear-gradient(to right, hsl(var(--muted) / 0.3), hsl(var(--muted)))";
+
 export const RECEIVING_INPUT_VALUE = "Receiving input";
 
 export const ICON_STROKE_WIDTH = 1.5;
@@ -1006,9 +1004,17 @@ export const DEFAULT_PLACEHOLDER = "Type something...";
 
 export const DEFAULT_TOOLSET_PLACEHOLDER = "Used as a tool";
 
+export const PLAYGROUND_BUTTON_NAME = "Playground";
 export const POLLING_MESSAGES = {
   ENDPOINT_NOT_AVAILABLE: "Endpoint not available",
   STREAMING_NOT_SUPPORTED: "Streaming not supported",
 } as const;
 
-export const POLLING_INTERVAL = 100; // milliseconds between polling attempts
+export const POLLING_INTERVAL = 100;
+
+export const IS_AUTO_LOGIN =
+  !process?.env?.LANGFLOW_AUTO_LOGIN ||
+  String(process?.env?.LANGFLOW_AUTO_LOGIN)?.toLowerCase() !== "false";
+
+export const AUTO_LOGIN_RETRY_DELAY = 2000;
+export const AUTO_LOGIN_MAX_RETRY_DELAY = 60000;

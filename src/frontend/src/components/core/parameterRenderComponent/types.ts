@@ -11,6 +11,7 @@ export type BaseInputProps<valueType = any> = {
   handleOnNewValue: handleOnNewValueType;
   disabled: boolean;
   nodeClass?: APIClassType;
+  helperText?: string;
   handleNodeClass?: (value: any, code?: string, type?: string) => void;
   readonly?: boolean;
   placeholder?: string;
@@ -18,6 +19,7 @@ export type BaseInputProps<valueType = any> = {
   tooltip?: string;
   metadata?: any;
   nodeId?: string;
+  nodeInformationMetadata?: NodeInfoType;
 };
 
 // Generic type for composing input props
@@ -100,4 +102,16 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
+};
+
+export type TabComponentType = {
+  options: string[];
+};
+
+export type NodeInfoType = {
+  flowId: string;
+  nodeType: string;
+  flowName: string;
+  isAuth: boolean;
+  variableName: string;
 };

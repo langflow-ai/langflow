@@ -2,7 +2,6 @@ import { expect, Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { evaluateReactStateChanges } from "../../utils/evaluate-input-react-state-changes";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
@@ -36,14 +35,7 @@ test(
     await page.getByTestId("dropdown_str_model_name").click();
     await page.getByTestId("gpt-4o-1-option").click();
 
-    await page.waitForSelector('[data-testid="default_slider_display_value"]', {
-      timeout: 1000,
-    });
-
     await page.getByTestId("fit_view").click();
-    await page
-      .getByTestId("default_slider_display_value")
-      .click({ force: true });
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
@@ -69,11 +61,9 @@ test(
 
     await page.getByText("Close").last().click();
 
-    await page.waitForSelector('[data-testid="default_slider_display_value"]', {
-      timeout: 1000,
-    });
-
-    await moveSlider(page, "right", false);
+    // Change model to force different output
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-mini-0-option").click();
 
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 1000,
