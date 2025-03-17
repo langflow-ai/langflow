@@ -54,7 +54,9 @@ withEventDeliveryModes(
       timeout: 3000,
     });
 
-    await page.getByTestId("input-chat-playground").fill("This is a test");
+    await page
+      .getByTestId("input-chat-playground")
+      .fill("Do a quick research about who Ayrton Senna was");
 
     await page.getByTestId("button-send").click();
 
