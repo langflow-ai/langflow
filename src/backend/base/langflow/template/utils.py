@@ -2,6 +2,8 @@ from pathlib import Path
 
 from platformdirs import user_cache_dir
 
+from langflow.schema.data import Data
+
 
 def raw_frontend_data_is_valid(raw_frontend_data):
     """Check if the raw frontend data is valid for processing."""
@@ -96,3 +98,65 @@ def update_frontend_node_with_template_values(frontend_node, raw_frontend_node):
         frontend_node["description"] = raw_frontend_node.get("description", frontend_node.get("description", ""))
 
     return frontend_node
+
+
+def apply_json_filter(result, filter_) -> Data:
+    """Apply a json filter to the result.
+
+    Args:
+        result (Data): The JSON data to filter
+        filter_ (str): The filter query string in jsonquery format
+
+    Returns:
+        Data: The filtered result
+    """
+    if not filter_ or not filter_.strip():
+        return result
+    # if result is a Data object, get the data
+    if isinstance(result, Data):
+        result = result.data
+    try:
+        from jsonquerylang import jsonquery
+
+        # If query doesn't start with '.', add it to match jsonquery syntax
+        return Data(data=jsonquery(result, filter_))
+
+    except (ImportError, ValueError, TypeError):
+        # Fallback to basic path-based filtering
+        # or if there's an error processing the query
+        # Normalize array access notation and handle direct key access
+        filter_str = filter_.strip()
+        normalized_query = "." + filter_str if not filter_str.startswith(".") else filter_str
+        normalized_query = normalized_query.replace("[", ".[")
+        path = normalized_query.strip().split(".")
+        path = [p for p in path if p]
+
+        current = result
+        for key in path:
+            if current is None:
+                return None
+
+            # Handle array access
+            if key.startswith("[") and key.endswith("]"):
+                try:
+                    index = int(key[1:-1])
+                    if not isinstance(current, list) or index >= len(current):
+                        return None
+                    current = current[index]
+                except (ValueError, TypeError):
+                    return None
+            # Handle object access
+            elif isinstance(current, dict):
+                if key not in current:
+                    return None
+                current = current[key]
+            # Handle array operation
+            elif isinstance(current, list):
+                try:
+                    current = [item[key] for item in current if isinstance(item, dict) and key in item]
+                except (TypeError, KeyError):
+                    return None
+            else:
+                return None
+
+        return Data(data=current)

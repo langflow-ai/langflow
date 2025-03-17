@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AgentQL",
-            "id": "AgentQL-mvSyT",
+            "id": "AgentQL-QrQyl",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-0WtsM",
+            "id": "Agent-DlbOP",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-AgentQL-mvSyT{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-mvSyTœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-0WtsM{œfieldNameœ:œtoolsœ,œidœ:œAgent-0WtsMœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-AgentQL-QrQyl{œdataTypeœ:œAgentQLœ,œidœ:œAgentQL-QrQylœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-DlbOP{œfieldNameœ:œtoolsœ,œidœ:œAgent-DlbOPœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "AgentQL-mvSyT",
-        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-mvSyTœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-0WtsM",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-0WtsMœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "AgentQL-QrQyl",
+        "sourceHandle": "{œdataTypeœ: œAgentQLœ, œidœ: œAgentQL-QrQylœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-DlbOP",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-DlbOPœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-aQctf",
+            "id": "ChatInput-rZZHB",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,25 +43,54 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-0WtsM",
+            "id": "Agent-DlbOP",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-aQctf{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aQctfœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-0WtsM{œfieldNameœ:œinput_valueœ,œidœ:œAgent-0WtsMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-rZZHB{œdataTypeœ:œChatInputœ,œidœ:œChatInput-rZZHBœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-DlbOP{œfieldNameœ:œinput_valueœ,œidœ:œAgent-DlbOPœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-aQctf",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aQctfœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-0WtsM",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-0WtsMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-rZZHB",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-rZZHBœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-DlbOP",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-DlbOPœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "animated": false,
+        "data": {
+          "sourceHandle": {
+            "dataType": "Agent",
+            "id": "Agent-DlbOP",
+            "name": "response",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-tCBqx",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__Agent-DlbOP{œdataTypeœ:œAgentœ,œidœ:œAgent-DlbOPœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-tCBqx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-tCBqxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-DlbOP",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-DlbOPœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-tCBqx",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-tCBqxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-ha8Ib",
+          "id": "note-8QugF",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -73,7 +102,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-ha8Ib",
+        "id": "note-8QugF",
         "measured": {
           "height": 324,
           "width": 324
@@ -87,7 +116,7 @@
       },
       {
         "data": {
-          "id": "note-RBW3I",
+          "id": "note-KBJMn",
           "node": {
             "description": "### 💡 Add your AgentQL API key here",
             "display_name": "",
@@ -100,7 +129,7 @@
         },
         "dragging": false,
         "height": 346,
-        "id": "note-RBW3I",
+        "id": "note-KBJMn",
         "measured": {
           "height": 346,
           "width": 324
@@ -116,7 +145,7 @@
         "data": {
           "description": "Uses AgentQL API to extract structured data from a given URL.",
           "display_name": "AgentQL Query Data",
-          "id": "AgentQL-mvSyT",
+          "id": "AgentQL-QrQyl",
           "node": {
             "base_classes": [
               "Data"
@@ -183,7 +212,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "AGENTQL_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -433,6 +462,19 @@
                       "name": "status",
                       "sortable": true,
                       "type": "boolean"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -507,21 +549,21 @@
           "type": "AgentQL"
         },
         "dragging": false,
-        "id": "AgentQL-mvSyT",
+        "id": "AgentQL-QrQyl",
         "measured": {
-          "height": 599,
+          "height": 602,
           "width": 320
         },
         "position": {
           "x": 746.6171255053692,
           "y": 323.12336325015775
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatInput-aQctf",
+          "id": "ChatInput-rZZHB",
           "node": {
             "base_classes": [
               "Message"
@@ -818,7 +860,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-aQctf",
+        "id": "ChatInput-rZZHB",
         "measured": {
           "height": 66,
           "width": 192
@@ -832,7 +874,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-yNdUZ",
+          "id": "ChatOutput-tCBqx",
           "node": {
             "base_classes": [
               "Message"
@@ -1124,7 +1166,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-yNdUZ",
+        "id": "ChatOutput-tCBqx",
         "measured": {
           "height": 66,
           "width": 192
@@ -1138,7 +1180,7 @@
       },
       {
         "data": {
-          "id": "Agent-0WtsM",
+          "id": "Agent-DlbOP",
           "node": {
             "base_classes": [
               "Message"
@@ -1313,7 +1355,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1321,7 +1363,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1815,9 +1857,9 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-0WtsM",
+        "id": "Agent-DlbOP",
         "measured": {
-          "height": 621,
+          "height": 624,
           "width": 320
         },
         "position": {
@@ -1829,7 +1871,7 @@
       },
       {
         "data": {
-          "id": "note-X9QDV",
+          "id": "note-0zajW",
           "node": {
             "description": "# News Aggregator\n\nThis flow extracts structured data from a URL.\n## Prerequisites\n\n* **[AgentQL API Key](https://dev.agentql.com/api-keys)**\n* **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick Start\n\n1. Add your [AgentQL API Key](https://dev.agentql.com/api-keys) to the **AgentQL** component.\n2. Add your [OpenAI API Key](https://platform.openai.com/) to the **Agent** component.\n3. Click **Playground** and enter a question.\nThe **Agent** component populates the **Agent QL** component's **URL** and **Query** fields, and returns a structured response to your question.",
             "display_name": "",
@@ -1841,7 +1883,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-X9QDV",
+        "id": "note-0zajW",
         "measured": {
           "height": 604,
           "width": 325
@@ -1855,14 +1897,14 @@
       }
     ],
     "viewport": {
-      "x": -122.32493574893215,
-      "y": 249.0480899983669,
-      "zoom": 0.8862607313804116
+      "x": -117.84864069491266,
+      "y": 80.81149435068329,
+      "zoom": 0.8538293672913081
     }
   },
   "description": "Extracts data and information from webpages.",
   "endpoint_name": null,
-  "id": "ed796384-2002-49d5-8480-8c8aa806c9d5",
+  "id": "f2015209-2422-432c-b5c2-61e8edf988aa",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "News Aggregator",
