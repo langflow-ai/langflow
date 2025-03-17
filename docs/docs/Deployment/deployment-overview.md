@@ -1,5 +1,5 @@
 ---
-title: Langflow deployment overview
+title: Langflow deployment concepts
 slug: /deployment-overview
 ---
 
@@ -14,31 +14,33 @@ More specific instructions can be found in the [Docker](/deployment-docker) and 
 
 ## Langflow deployment architecture
 
-// architecture image
-
 Langflow can be deployed as an **IDE** or as a **runtime**.
+
+## Langflow IDE
 
 The **IDE** includes the frontend, for visual development of your flow.
 
-The default https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml[docker-compose.yml] file hosted in the Langflow repository builds the Langflow IDE with an additional PostgreSQL service for storage. For more on starting Langflow with Docker, see [Docker](/deployment-docker).
+The default [docker-compose.yml](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file hosted in the Langflow repository builds the Langflow IDE with an additional PostgreSQL service for storage. For more on starting Langflow with Docker, see [Docker](/deployment-docker).
+
+## Langflow runtime
 
 The **runtime** is a headless or backend-only mode. The server exposes your flow as an endpoint, and runs only the backend processes necessary to run your flow, with PostgreSQL as the database. For more on starting this file, see [Docker](/deployment-docker).
 
 ## Package your flow with the Langflow runtime image
 
-To package your flow as a Docker image, include the flow's `.JSON` file in the folder you build for locally.
+To package your flow as a Docker image, copy your flow's `.JSON` file with a command in the Dockerfile.
 
 For example, if you have your flow stored in a directory like this:
 
-```plain
-./
-├── Dockerfile
-├── README.md
+```text
+LANGFLOW-APPLICATION/
 ├── flows/
-    └── basic_prompting.json
+│   ├── flow1.json
+│   └── flow2.json
+├── Dockerfile
 ```
 
-Your Dockerfile would look like this:
+Include the `COPY` command in your Dockerfile:
 
 ```dockerfile
 FROM langflowai/langflow:latest
@@ -46,18 +48,25 @@ RUN mkdir -p /app/flows
 COPY ./flows/*.json /app/flows/
 ```
 
-The Dockerfile includes the command `COPY ./flows/*.json /app/flows/` which copies all JSON files from your local flows directory into the container's `/app/flows` directory. This makes your flow definitions available to the Langflow runtime when the container starts.
+An example [Dockerfile](https://github.com/langflow-ai/langflow-helm-charts/blob/main/examples/langflow-runtime/docker/Dockerfile) for bundling flows is hosted in the Langflow Helm Charts repository.
 
-An example https://github.com/langflow-ai/langflow-helm-charts/blob/main/examples/langflow-runtime/docker/Dockerfile[Dockerfile] for bundling flows is hosted in the Langflow Helm Charts repository.
+For a step-by-step example, see [Build applications in Langflow](/platform-build-application).
 
-Build the Docker image
+For more on building the Langflow docker image and pushing it to Docker Hub, see [Package your flow as a docker image](/deployment-docker#package-your-flow-as-a-docker-image).
 
-For more on building the Langflow docker images, see the [Docker](/deployment-docker) page.
-
-## Push to container registry
-
-Test 
 ## Deploy to Kubernetes
+
+Override the values in the [langflow-runtime](https://github.com/langflow-ai/langflow-helm-charts/blob/main/charts/langflow-runtime/Chart.yaml) Helm chart to deploy the application.
+
+```
+helm repo add langflow https://langflow-ai.github.io/langflow-helm-charts
+helm repo update
+helm install langflow-runtime langflow/langflow-runtime \
+    --set "image.repository=myuser/langflow-hello-world" \
+    --set "image.tag=1.0.0"\
+```
+
+For more information, refer to [Deploy Langflow on Kubernetes](/deployment-kubernetes).
 
 
 
