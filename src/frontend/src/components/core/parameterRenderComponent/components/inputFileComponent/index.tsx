@@ -177,7 +177,6 @@ export default function InputFileComponent({
           return;
         }
       }
-      console.log(files);
       handleOnNewValue({
         value: isList
           ? (files
