@@ -172,7 +172,7 @@ test(
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
     await page.waitForSelector(
-      `[data-testid="${urlNodeId}-data-output-modal"]`,
+      `[data-testid="${urlNodeId}-dataframe-output-modal"]`,
       {
         timeout: 3000,
       },
