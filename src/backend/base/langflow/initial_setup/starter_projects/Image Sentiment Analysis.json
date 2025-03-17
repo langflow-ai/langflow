@@ -17,7 +17,8 @@
             "fieldName": "data",
             "id": "ParseData-HzweJ",
             "inputTypes": [
-              "Data"
+              "Data",
+              "JSON"
             ],
             "type": "other"
           }
@@ -27,7 +28,7 @@
         "source": "StructuredOutputComponent-XYoUc",
         "sourceHandle": "{œdataTypeœ: œStructuredOutputComponentœ, œidœ: œStructuredOutputComponent-XYoUcœ, œnameœ: œstructured_outputœ, œoutput_typesœ: [œDataœ]}",
         "target": "ParseData-HzweJ",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-HzweJœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-HzweJœ, œinputTypesœ: [œDataœ, œJSONœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -1093,7 +1094,8 @@
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -1126,7 +1128,8 @@
                 "dynamic": false,
                 "info": "The data to convert to text.",
                 "input_types": [
-                  "Data"
+                  "Data",
+                  "JSON"
                 ],
                 "list": true,
                 "name": "data",
