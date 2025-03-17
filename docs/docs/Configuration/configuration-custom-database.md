@@ -42,7 +42,7 @@ Replace the value for `LANGFLOW_DATABASE_URL` with your PostgreSQL connection st
 
 4. Run Langflow with the `.env` file:
 ```bash
-langflow run --env-file .env
+uv run langflow run --env-file .env
 ```
 
 5. In Langflow, create traffic by running a flow.
@@ -77,11 +77,11 @@ services:
 
 ## Connect multiple Langflow containers to PostgreSQL
 
-When deploying multiple Langflow containers, use a single PostgreSQL database to serve multiple Langflow runtime containers for horizontal scaling of Langflow without increased complexity.
+When deploying multiple Langflow containers, use a single PostgreSQL database to serve multiple Langflow runtime containers with a single PostgreSQL database.
 
 To connect multiple Langflow containers to the same PostgreSQL database, all Langflow containers should use the same `LANGFLOW_DATABASE_URL`.
 
-1. Add multiple Langflow runtimes to your `docker-compose.yml` file:
+1. Add multiple Langflow runtime images to your `docker-compose.yml` file:
 ```yaml
    services:
      langflow-1:
