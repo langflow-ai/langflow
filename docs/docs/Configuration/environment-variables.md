@@ -58,7 +58,7 @@ If it detects a supported environment variable, then it automatically adopts the
 
 2. Add your environment variables to the file:
 
-    ```plaintext title=".env"
+    ```text title=".env"
     VARIABLE_NAME='VALUE'
     VARIABLE_NAME='VALUE'
     ```
@@ -165,7 +165,7 @@ The `.env` file is a text file that contains key-value pairs of environment vari
 
 Create or edit a file named `.env` in your project root directory and add your configuration:
 
-```plaintext title=".env"
+```text title=".env"
 DO_NOT_TRACK=true
 LANGFLOW_AUTO_LOGIN=false
 LANGFLOW_AUTO_SAVING=true
