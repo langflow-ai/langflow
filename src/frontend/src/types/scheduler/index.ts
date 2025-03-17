@@ -27,4 +27,4 @@ export type SchedulerUpdateType = {
   cron_expression?: string;
   interval_seconds?: number;
   enabled?: boolean;
-}; 
+};

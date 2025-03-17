@@ -1,29 +1,41 @@
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
+import {
+  useCreateScheduler,
+  useDeleteScheduler,
+  useGetSchedulers,
+  useUpdateScheduler,
+} from "../../hooks/scheduler/use-scheduler";
+import useAlertStore from "../../stores/alertStore";
+import { SchedulerType } from "../../types/scheduler";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
-import { SchedulerType } from "../../types/scheduler";
-import { Trash2 } from "lucide-react";
-import useAlertStore from "../../stores/alertStore";
-import { useCreateScheduler, useDeleteScheduler, useGetSchedulers, useUpdateScheduler } from "../../hooks/scheduler/use-scheduler";
 
 interface SchedulerComponentProps {
   flowId: string;
 }
 
-export default function SchedulerComponent({ flowId }: SchedulerComponentProps) {
+export default function SchedulerComponent({
+  flowId,
+}: SchedulerComponentProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [intervalSeconds, setIntervalSeconds] = useState("60"); // Default to 60 seconds
   const [enabled, setEnabled] = useState(true);
-  const [selectedScheduler, setSelectedScheduler] = useState<SchedulerType | null>(null);
+  const [selectedScheduler, setSelectedScheduler] =
+    useState<SchedulerType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const { data: schedulers = [], isLoading, refetch } = useGetSchedulers(flowId);
+  const {
+    data: schedulers = [],
+    isLoading,
+    refetch,
+  } = useGetSchedulers(flowId);
   const createSchedulerMutation = useCreateScheduler();
   const updateSchedulerMutation = useUpdateScheduler();
   const deleteSchedulerMutation = useDeleteScheduler();
@@ -59,7 +71,7 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
 
   const handleUpdateScheduler = async () => {
     if (!selectedScheduler) return;
-    
+
     try {
       const schedulerData = {
         name,
@@ -70,7 +82,7 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
 
       await updateSchedulerMutation.mutateAsync({
         id: selectedScheduler.id,
-        scheduler: schedulerData
+        scheduler: schedulerData,
       });
       setSuccessData({ title: "Scheduler updated successfully" });
       resetForm();
@@ -83,7 +95,7 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
 
   const handleDeleteScheduler = async () => {
     if (!selectedScheduler) return;
-    
+
     try {
       await deleteSchedulerMutation.mutateAsync(selectedScheduler.id);
       setSuccessData({ title: "Scheduler deleted successfully" });
@@ -120,7 +132,7 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
             {schedulers.map((scheduler) => (
               <div
                 key={scheduler.id}
-                className={`flex items-center justify-between p-2 border rounded-md cursor-pointer ${
+                className={`flex cursor-pointer items-center justify-between rounded-md border p-2 ${
                   selectedScheduler?.id === scheduler.id ? "border-primary" : ""
                 }`}
                 onClick={() => handleSelectScheduler(scheduler)}
@@ -149,7 +161,7 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
         </div>
       )}
 
-      <div className="flex flex-col gap-4 border p-4 rounded-md">
+      <div className="flex flex-col gap-4 rounded-md border p-4">
         <h4 className="text-sm font-medium">
           {isEditing ? "Edit Scheduler" : "Create Scheduler"}
         </h4>
@@ -189,24 +201,22 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
         </div>
 
         <div className="flex items-center gap-2">
-          <Switch
-            id="enabled"
-            checked={enabled}
-            onCheckedChange={setEnabled}
-          />
+          <Switch id="enabled" checked={enabled} onCheckedChange={setEnabled} />
           <Label htmlFor="enabled">Enabled</Label>
         </div>
 
         <div className="flex justify-between">
           <div className="flex gap-2">
             <Button
-              onClick={isEditing ? handleUpdateScheduler : handleCreateScheduler}
+              onClick={
+                isEditing ? handleUpdateScheduler : handleCreateScheduler
+              }
               disabled={
-                isLoading || 
-                createSchedulerMutation.isPending || 
-                updateSchedulerMutation.isPending || 
-                deleteSchedulerMutation.isPending || 
-                !name || 
+                isLoading ||
+                createSchedulerMutation.isPending ||
+                updateSchedulerMutation.isPending ||
+                deleteSchedulerMutation.isPending ||
+                !name ||
                 !intervalSeconds
               }
             >
@@ -224,9 +234,9 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
               size="icon"
               onClick={handleDeleteScheduler}
               disabled={
-                isLoading || 
-                createSchedulerMutation.isPending || 
-                updateSchedulerMutation.isPending || 
+                isLoading ||
+                createSchedulerMutation.isPending ||
+                updateSchedulerMutation.isPending ||
                 deleteSchedulerMutation.isPending
               }
             >
@@ -237,4 +247,4 @@ export default function SchedulerComponent({ flowId }: SchedulerComponentProps) 
       </div>
     </div>
   );
-} 
+}

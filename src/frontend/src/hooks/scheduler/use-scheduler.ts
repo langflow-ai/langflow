@@ -1,14 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  getSchedulers, 
-  getScheduler, 
-  createScheduler, 
-  updateScheduler, 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createScheduler,
   deleteScheduler,
+  getNextRunTimes,
+  getScheduler,
+  getSchedulers,
   getSchedulerStatus,
-  getNextRunTimes
+  updateScheduler,
 } from "../../controllers/API/scheduler";
-import { SchedulerCreateType, SchedulerUpdateType } from "../../types/scheduler";
+import {
+  SchedulerCreateType,
+  SchedulerUpdateType,
+} from "../../types/scheduler";
 
 export function useGetSchedulers(flowId?: string) {
   return useQuery({
@@ -47,8 +50,13 @@ export function useCreateScheduler() {
 export function useUpdateScheduler() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, scheduler }: { id: string; scheduler: SchedulerUpdateType }) =>
-      updateScheduler(id, scheduler),
+    mutationFn: ({
+      id,
+      scheduler,
+    }: {
+      id: string;
+      scheduler: SchedulerUpdateType;
+    }) => updateScheduler(id, scheduler),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["schedulers"] });
       queryClient.invalidateQueries({ queryKey: ["scheduler-status"] });
@@ -91,4 +99,4 @@ export function useGetNextRunTimes(flowId?: string) {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 5000,
   });
-} 
+}

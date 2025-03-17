@@ -1,4 +1,8 @@
-import { SchedulerCreateType, SchedulerType, SchedulerUpdateType } from "../../types/scheduler";
+import {
+  SchedulerCreateType,
+  SchedulerType,
+  SchedulerUpdateType,
+} from "../../types/scheduler";
 
 export async function getSchedulers(flowId?: string): Promise<SchedulerType[]> {
   const url = flowId
@@ -19,7 +23,9 @@ export async function getSchedulers(flowId?: string): Promise<SchedulerType[]> {
       } else {
         // Handle HTML or other non-JSON responses
         const text = await response.text();
-        throw new Error("Failed to get schedulers: Server returned non-JSON response");
+        throw new Error(
+          "Failed to get schedulers: Server returned non-JSON response",
+        );
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -47,7 +53,9 @@ export async function getScheduler(id: string): Promise<SchedulerType> {
       } else {
         // Handle HTML or other non-JSON responses
         const text = await response.text();
-        throw new Error("Failed to get scheduler: Server returned non-JSON response");
+        throw new Error(
+          "Failed to get scheduler: Server returned non-JSON response",
+        );
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -60,7 +68,7 @@ export async function getScheduler(id: string): Promise<SchedulerType> {
 }
 
 export async function createScheduler(
-  scheduler: SchedulerCreateType
+  scheduler: SchedulerCreateType,
 ): Promise<SchedulerType> {
   const response = await fetch(`/api/v1/schedulers/`, {
     method: "POST",
@@ -78,7 +86,9 @@ export async function createScheduler(
       } else {
         // Handle HTML or other non-JSON responses
         const text = await response.text();
-        throw new Error("Failed to create scheduler: Server returned non-JSON response");
+        throw new Error(
+          "Failed to create scheduler: Server returned non-JSON response",
+        );
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -92,7 +102,7 @@ export async function createScheduler(
 
 export async function updateScheduler(
   id: string,
-  scheduler: SchedulerUpdateType
+  scheduler: SchedulerUpdateType,
 ): Promise<SchedulerType> {
   const response = await fetch(`/api/v1/schedulers/${id}`, {
     method: "PATCH",
@@ -110,7 +120,9 @@ export async function updateScheduler(
       } else {
         // Handle HTML or other non-JSON responses
         const text = await response.text();
-        throw new Error("Failed to update scheduler: Server returned non-JSON response");
+        throw new Error(
+          "Failed to update scheduler: Server returned non-JSON response",
+        );
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -138,7 +150,9 @@ export async function deleteScheduler(id: string): Promise<void> {
       } else {
         // Handle HTML or other non-JSON responses
         const text = await response.text();
-        throw new Error("Failed to delete scheduler: Server returned non-JSON response");
+        throw new Error(
+          "Failed to delete scheduler: Server returned non-JSON response",
+        );
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -165,7 +179,9 @@ export async function getSchedulerStatus(): Promise<any> {
       } else {
         // Handle HTML or other non-JSON responses
         const text = await response.text();
-        throw new Error("Failed to get scheduler status: Server returned non-JSON response");
+        throw new Error(
+          "Failed to get scheduler status: Server returned non-JSON response",
+        );
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -196,7 +212,9 @@ export async function getNextRunTimes(flowId?: string): Promise<any> {
       } else {
         // Handle HTML or other non-JSON responses
         const text = await response.text();
-        throw new Error("Failed to get next run times: Server returned non-JSON response");
+        throw new Error(
+          "Failed to get next run times: Server returned non-JSON response",
+        );
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -206,4 +224,4 @@ export async function getNextRunTimes(flowId?: string): Promise<any> {
     }
   }
   return await response.json();
-} 
+}

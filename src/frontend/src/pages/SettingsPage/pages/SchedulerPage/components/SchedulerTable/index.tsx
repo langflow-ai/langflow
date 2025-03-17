@@ -1,26 +1,7 @@
+import { formatDistanceToNow, parseISO } from "date-fns";
+import { LoaderCircle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import {
-  useDeleteScheduler,
-  useGetNextRunTimes,
-  useUpdateScheduler,
-} from "../../../../../../hooks/scheduler/use-scheduler";
-import { SchedulerType } from "../../../../../../types/scheduler";
-import { Button } from "../../../../../../components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../../../../../components/ui/table";
-import { LoaderCircle, Trash2 } from "lucide-react";
-import { formatDistanceToNow, parseISO } from "date-fns";
-import { Badge } from "../../../../../../components/ui/badge";
-import { Switch } from "../../../../../../components/ui/switch";
-import useAlertStore from "../../../../../../stores/alertStore";
-import { SAVE_ERROR_ALERT, SAVE_SUCCESS_ALERT } from "../../../../../../constants/alerts_constants";
-import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,26 +11,54 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../../../../../components/ui/alert-dialog";
+import { Badge } from "../../../../../../components/ui/badge";
+import { Button } from "../../../../../../components/ui/button";
+import { Switch } from "../../../../../../components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../../../../components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "../../../../../../components/ui/tooltip";
+import {
+  SAVE_ERROR_ALERT,
+  SAVE_SUCCESS_ALERT,
+} from "../../../../../../constants/alerts_constants";
+import {
+  useDeleteScheduler,
+  useGetNextRunTimes,
+  useUpdateScheduler,
+} from "../../../../../../hooks/scheduler/use-scheduler";
+import useAlertStore from "../../../../../../stores/alertStore";
+import { SchedulerType } from "../../../../../../types/scheduler";
 
 interface SchedulerTableProps {
   schedulers: SchedulerType[];
   onRefresh?: () => void;
 }
 
-export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTableProps) {
-  const { data: nextRunTimes = [], isLoading: isLoadingNextRunTimes } = useGetNextRunTimes();
+export default function SchedulerTable({
+  schedulers,
+  onRefresh,
+}: SchedulerTableProps) {
+  const { data: nextRunTimes = [], isLoading: isLoadingNextRunTimes } =
+    useGetNextRunTimes();
   const { mutateAsync: updateScheduler } = useUpdateScheduler();
   const { mutateAsync: deleteScheduler } = useDeleteScheduler();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const [schedulerToDelete, setSchedulerToDelete] = useState<string | null>(null);
+  const [schedulerToDelete, setSchedulerToDelete] = useState<string | null>(
+    null,
+  );
 
   // Create a map of scheduler IDs to next run times
   const nextRunTimeMap = nextRunTimes.reduce((acc, item) => {
@@ -82,11 +91,14 @@ export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTable
 
   const handleDeleteScheduler = async () => {
     if (!schedulerToDelete) return;
-    
+
     try {
       setLoading((prev) => ({ ...prev, [schedulerToDelete]: true }));
       await deleteScheduler(schedulerToDelete);
-      setSuccessData({ title: "Success", list: ["Scheduler deleted successfully"] });
+      setSuccessData({
+        title: "Success",
+        list: ["Scheduler deleted successfully"],
+      });
       if (onRefresh) {
         onRefresh();
       }
@@ -103,7 +115,7 @@ export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTable
     if (isLoadingNextRunTimes) {
       return "Loading...";
     }
-    
+
     const nextRunInfo = nextRunTimeMap[schedulerId];
     if (!nextRunInfo || !nextRunInfo.next_run_time) {
       return "Not scheduled";
@@ -150,8 +162,13 @@ export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTable
               ) : (
                 schedulers.map((scheduler) => (
                   <TableRow key={scheduler.id}>
-                    <TableCell className="font-medium">{scheduler.name}</TableCell>
-                    <TableCell className="max-w-[150px] truncate" title={scheduler.flow_id}>
+                    <TableCell className="font-medium">
+                      {scheduler.name}
+                    </TableCell>
+                    <TableCell
+                      className="max-w-[150px] truncate"
+                      title={scheduler.flow_id}
+                    >
                       {scheduler.flow_id}
                     </TableCell>
                     <TableCell>{getScheduleDescription(scheduler)}</TableCell>
@@ -163,11 +180,15 @@ export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTable
                             <Switch
                               checked={scheduler.enabled}
                               disabled={loading[scheduler.id]}
-                              onCheckedChange={() => handleToggleEnabled(scheduler)}
+                              onCheckedChange={() =>
+                                handleToggleEnabled(scheduler)
+                              }
                             />
                           </TooltipTrigger>
                           <TooltipContent>
-                            {scheduler.enabled ? "Disable scheduler" : "Enable scheduler"}
+                            {scheduler.enabled
+                              ? "Disable scheduler"
+                              : "Enable scheduler"}
                           </TooltipContent>
                         </Tooltip>
                         <Badge
@@ -187,13 +208,9 @@ export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTable
                             disabled={loading[scheduler.id]}
                           >
                             {loading[scheduler.id] ? (
-                              <LoaderCircle
-                                className="h-4 w-4 animate-spin"
-                              />
+                              <LoaderCircle className="h-4 w-4 animate-spin" />
                             ) : (
-                              <Trash2
-                                className="h-4 w-4 text-destructive"
-                              />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             )}
                           </Button>
                         </TooltipTrigger>
@@ -207,21 +224,27 @@ export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTable
           </Table>
         </div>
 
-        <AlertDialog open={!!schedulerToDelete} onOpenChange={(open) => !open && setSchedulerToDelete(null)}>
+        <AlertDialog
+          open={!!schedulerToDelete}
+          onOpenChange={(open) => !open && setSchedulerToDelete(null)}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the scheduler.
+                This action cannot be undone. This will permanently delete the
+                scheduler.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteScheduler}>Delete</AlertDialogAction>
+              <AlertDialogAction onClick={handleDeleteScheduler}>
+                Delete
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </>
     </TooltipProvider>
   );
-} 
+}

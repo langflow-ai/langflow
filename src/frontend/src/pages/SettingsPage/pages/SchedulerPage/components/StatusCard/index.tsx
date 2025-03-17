@@ -1,6 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../../../components/ui/card";
-import { Skeleton } from "../../../../../../components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../../../../components/ui/card";
+import { Skeleton } from "../../../../../../components/ui/skeleton";
 
 interface StatusCardProps {
   title: string;
@@ -45,11 +50,9 @@ export default function StatusCard({
           </div>
         )}
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">
-            {description}
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
         )}
       </CardContent>
     </Card>
   );
-} 
+}

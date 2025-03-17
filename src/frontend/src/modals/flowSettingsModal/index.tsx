@@ -5,14 +5,19 @@ import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
+import SchedulerComponent from "../../components/schedulerComponent";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
 import { FlowType } from "../../types/flow";
 import { isEndpointNameValid } from "../../utils/utils";
 import BaseModal from "../baseModal";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import SchedulerComponent from "../../components/schedulerComponent";
 
 export default function FlowSettingsModal({
   open,
@@ -27,7 +32,7 @@ export default function FlowSettingsModal({
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
   const [activeTab, setActiveTab] = useState("details");
-  
+
   useEffect(() => {
     setName(flow?.name ?? "");
     setDescription(flow?.description ?? "");
@@ -88,7 +93,7 @@ export default function FlowSettingsModal({
       setDisableSave(true);
     }
   }, [nameLists, flow, description, endpoint_name, name]);
-  
+
   return (
     <BaseModal
       open={open}

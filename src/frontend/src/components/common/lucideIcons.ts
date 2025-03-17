@@ -6,7 +6,7 @@ import {
   ListChecks,
   LoaderCircle,
   RefreshCw,
-  Trash2
+  Trash2,
 } from "lucide-react";
 
 // Export the icons needed for the scheduler settings page
@@ -18,7 +18,7 @@ export const schedulerIcons = {
   ListChecks,
   LoaderCircle,
   RefreshCw,
-  Trash2
+  Trash2,
 };
 
-export default schedulerIcons; 
+export default schedulerIcons;
