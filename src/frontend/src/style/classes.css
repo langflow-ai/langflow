@@ -174,6 +174,7 @@ textarea[class^="ag-"]:focus {
 
 .json-view {
   height: 370px !important;
+  overflow-y: auto !important;
   border-radius: 10px !important;
   padding: 10px !important;
 }
@@ -282,13 +283,17 @@ input[type="search"]::-webkit-search-cancel-button {
   fill: hsl(var(--canvas-dot)) !important;
 }
 
+.markdown td {
+  min-width: 78px;
+}
+
 .jse-group-button.jse-last,
 .jse-button.jse-sort,
 .jse-dropdown-button:last-child,
 .jse-button.jse-transform {
   display: none !important;
 }
-.jse-search-box-background{
+.jse-search-box-background {
   display: none !important;
 }
 

@@ -90,6 +90,7 @@ class Input(BaseModel):
 
     refresh_button: bool | None = None
     """Specifies if the field should have a refresh button. Defaults to False."""
+
     refresh_button_text: str | None = None
     """Specifies the text for the refresh button. Defaults to None."""
 
@@ -98,6 +99,7 @@ class Input(BaseModel):
 
     load_from_db: bool = False
     """Specifies if the field should be loaded from the database. Defaults to False."""
+
     title_case: bool = False
     """Specifies if the field should be displayed in title case. Defaults to True."""
 
@@ -208,6 +210,9 @@ class Output(BaseModel):
 
     options: OutputOptions | None = Field(default=None)
     """Options for the output."""
+
+    tool_mode: bool = Field(default=True)
+    """Specifies if the output should be used as a tool"""
 
     def to_dict(self):
         return self.model_dump(by_alias=True, exclude_none=True)

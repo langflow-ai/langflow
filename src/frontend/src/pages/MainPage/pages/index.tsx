@@ -1,8 +1,8 @@
-import LoadingComponent from "@/components/common/loadingComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
+import CustomLoader from "@/customization/components/custom-loader";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -10,8 +10,8 @@ import { useFolderStore } from "@/stores/foldersStore";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
+import ModalsComponent from "../components/modalsComponent";
 import useFileDrop from "../hooks/use-on-file-drop";
-import ModalsComponent from "../oldComponents/modalsComponent";
 import EmptyPage from "./emptyPage";
 
 export default function CollectionPage(): JSX.Element {
@@ -90,7 +90,7 @@ export default function CollectionPage(): JSX.Element {
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <LoadingComponent remSize={30} />
+            <CustomLoader remSize={30} />
           </div>
         )}
       </main>

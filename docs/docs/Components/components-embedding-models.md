@@ -55,6 +55,11 @@ This component is used to load embedding models from [Amazon Bedrock](https://aw
 
 ## Astra DB vectorize
 
+:::important
+This component is deprecated as of Langflow version 1.1.2.
+Instead, use the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store)
+:::
+
 Connect this component to the **Embeddings** port of the [Astra DB vector store component](/components-vector-stores#astra-db-vector-store) to generate embeddings.
 
 This component requires that your Astra DB database has a collection that uses a vectorize embedding provider integration.
@@ -95,6 +100,28 @@ This component generates embeddings using Azure OpenAI models.
 | Name | Type | Description |
 |------|------|-------------|
 | embeddings | Embeddings | An instance for generating embeddings using Azure OpenAI |
+
+## Cloudflare Workers AI Embeddings
+
+This component generates embeddings using [Cloudflare Workers AI models](https://developers.cloudflare.com/workers-ai/).
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| account_id | Cloudflare account ID |[Find your Cloudflare account ID](https://developers.cloudflare.com/fundamentals/setup/find-account-and-zone-ids/#find-account-id-workers-and-pages) |
+| api_token | Cloudflare API token | [Create an API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) |
+| model_name | Model Name | [List of supported models](https://developers.cloudflare.com/workers-ai/models/#text-embeddings) |
+| strip_new_lines | Strip New Lines | Whether to strip new lines from the input text |
+| batch_size | Batch Size | Number of texts to embed in each batch |
+| api_base_url | Cloudflare API base URL | Base URL for the Cloudflare API |
+| headers | Headers | Additional request headers |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings |  An instance for generating embeddings using Cloudflare Workers |
 
 ## Cohere Embeddings
 
@@ -152,7 +179,7 @@ This component connects to Google's generative AI embedding service using the Go
 
 :::note
 This component is deprecated as of Langflow version 1.0.18.
-Instead, use the [Hugging Face API Embeddings component](#hugging-face-embeddings-inference-api).
+Instead, use the [Hugging Face Embeddings Inference component](#hugging-face-embeddings-inference).
 :::
 
 This component loads embedding models from HuggingFace.
@@ -169,27 +196,72 @@ Use this component to generate embeddings using locally downloaded Hugging Face 
 | Model Name | Model Name | Name of the HuggingFace model to use |
 | Multi Process | Multi-Process | Whether to use multiple processes |
 
-## Hugging Face embeddings Inference API
+### Outputs
 
-This component generates embeddings using Hugging Face Inference API models.
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings |
 
-Use this component to create embeddings with Hugging Face's hosted models. Ensure you have a valid Hugging Face API key.
+## Hugging Face embeddings inference
+
+This component generates embeddings using [Hugging Face Inference API models](https://huggingface.co/) and requires a [Hugging Face API token](https://huggingface.co/docs/hub/security-tokens) to authenticate. Local inference models do not require an API key.
+
+Use this component to create embeddings with Hugging Face's hosted models, or to connect to your own locally hosted models.
 
 ### Inputs
 
 | Name | Display Name | Info |
 |------|--------------|------|
-| API Key | API Key | API key for accessing the Hugging Face Inference API |
-| API URL | API URL | URL of the Hugging Face Inference API |
-| Model Name | Model Name | Name of the model to use for embeddings |
-| Cache Folder | Cache Folder | Folder path to cache Hugging Face models |
-| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process |
-| Model Kwargs | Model Arguments | Additional arguments for the model |
-| Multi Process | Multi-Process | Whether to use multiple processes |
+| API Key | API Key | The API key for accessing the Hugging Face Inference API. |
+| API URL | API URL | The URL of the Hugging Face Inference API. |
+| Model Name | Model Name | The name of the model to use for embeddings. |
+| Cache Folder | Cache Folder | The folder path to cache Hugging Face models. |
+| Encode Kwargs | Encoding Arguments | Additional arguments for the encoding process. |
+| Model Kwargs | Model Arguments | Additional arguments for the model. |
+| Multi Process | Multi-Process | Whether to use multiple processes. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings. |
+
+### Connect the Hugging Face component to a local embeddings model
+
+To run an embeddings inference locally, see the [HuggingFace documentation](https://huggingface.co/docs/text-embeddings-inference/local_cpu).
+
+To connect the local Hugging Face model to the **Hugging Face embeddings inference** component and use it in a flow, follow these steps:
+
+1. Create a [Vector store RAG flow](/starter-projects-vector-store-rag).
+There are two embeddings models in this flow that you can replace with **Hugging Face** embeddings inference components.
+2. Replace both **OpenAI** embeddings model components with **Hugging Face** model components.
+3. Connect both **Hugging Face** components to the **Embeddings** ports of the **Astra DB vector store** components.
+4. In the **Hugging Face** components, set the **Inference Endpoint** field to the URL of your local inference model. **The **API Key** field is not required for local inference.**
+5. Run the flow. The local inference models generate embeddings for the input text.
+
+## LM Studio Embeddings
+
+This component generates embeddings using [LM Studio](https://lmstudio.ai/docs) models.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| model | Model | The LM Studio model to use for generating embeddings |
+| base_url | LM Studio Base URL | The base URL for the LM Studio API |
+| api_key | LM Studio API Key | API key for authentication with LM Studio |
+| temperature | Model Temperature | Temperature setting for the model |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| embeddings | Embeddings | The generated embeddings |
+
 
 ## MistralAI
 
-This component generates embeddings using MistralAI models.
+This component generates embeddings using [MistralAI](https://docs.mistral.ai/) models.
 
 ### Inputs
 
@@ -210,7 +282,7 @@ This component generates embeddings using MistralAI models.
 
 ## NVIDIA
 
-This component generates embeddings using NVIDIA models.
+This component generates embeddings using [NVIDIA models](https://docs.nvidia.com).
 
 ### Inputs
 
@@ -229,7 +301,7 @@ This component generates embeddings using NVIDIA models.
 
 ## Ollama Embeddings
 
-This component generates embeddings using Ollama models.
+This component generates embeddings using [Ollama models](https://ollama.com/).
 
 ### Inputs
 

@@ -32,6 +32,7 @@ class AnthropicModelComponent(LCModelComponent):
             options=ANTHROPIC_MODELS,
             refresh_button=True,
             value=ANTHROPIC_MODELS[0],
+            combobox=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -62,7 +63,7 @@ class AnthropicModelComponent(LCModelComponent):
                 "Select if you want to use models that can work with tools. If yes, only those models will be shown."
             ),
             advanced=False,
-            value=True,
+            value=False,
             real_time_refresh=True,
         ),
         MessageTextInput(
@@ -137,7 +138,7 @@ class AnthropicModelComponent(LCModelComponent):
         return None
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
-        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 if len(self.api_key) == 0:
                     ids = ANTHROPIC_MODELS

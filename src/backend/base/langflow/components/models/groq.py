@@ -61,7 +61,7 @@ class GroqModel(LCModelComponent):
             options=GROQ_MODELS,
             value=GROQ_MODELS[0],
             refresh_button=True,
-            real_time_refresh=True,
+            combobox=True,
         ),
         BoolInput(
             name="tool_model_enabled",
@@ -70,7 +70,7 @@ class GroqModel(LCModelComponent):
                 "Select if you want to use models that can work with tools. If yes, only those models will be shown."
             ),
             advanced=False,
-            value=True,
+            value=False,
             real_time_refresh=True,
         ),
     ]
@@ -105,7 +105,7 @@ class GroqModel(LCModelComponent):
         return model_ids
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        if field_name in ("base_url", "model_name", "tool_model_enabled", "api_key") and field_value:
+        if field_name in {"base_url", "model_name", "tool_model_enabled", "api_key"} and field_value:
             try:
                 if len(self.api_key) != 0:
                     try:

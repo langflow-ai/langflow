@@ -18,7 +18,7 @@ import PromptAreaComponent from "./components/promptComponent";
 import { RefreshParameterComponent } from "./components/refreshParameterComponent";
 import { StrRenderComponent } from "./components/strRenderComponent";
 import ToggleShadComponent from "./components/toggleShadComponent";
-import { InputProps } from "./types";
+import { InputProps, NodeInfoType } from "./types";
 
 export function ParameterRenderComponent({
   handleOnNewValue,
@@ -32,6 +32,7 @@ export function ParameterRenderComponent({
   disabled,
   placeholder,
   isToolMode,
+  nodeInformationMetadata,
 }: {
   handleOnNewValue:
     | handleOnNewValueType
@@ -46,6 +47,7 @@ export function ParameterRenderComponent({
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
+  nodeInformationMetadata?: NodeInfoType;
 }) {
   const id = (
     templateData.type +
@@ -63,10 +65,12 @@ export function ParameterRenderComponent({
       disabled,
       nodeClass,
       handleNodeClass,
+      helperText: templateData?.helper_text,
       readonly: templateData.readonly,
       placeholder,
       isToolMode,
       nodeId,
+      nodeInformationMetadata,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {

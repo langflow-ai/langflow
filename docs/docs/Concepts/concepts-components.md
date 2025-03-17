@@ -27,7 +27,7 @@ Use the component controls to do the following:
 
 Click <Icon name="Ellipsis" aria-label="Horizontal ellipsis" /> **All** to see additional options for a component.
 
-To view a component’s output and logs, click the <Icon name="View" aria-label="View icon" />**Visibility** icon.
+To view a component’s output and logs, click the <Icon name="TextSearch" aria-label="Search and filter" /> icon.
 
 To run a single component, click <Icon name="Play" aria-label="Play button" /> **Play**.
 
@@ -45,18 +45,18 @@ Handles (<Icon name="Circle" size="16" aria-label="A circle on the side of a com
 
 The following table lists the handle colors and their corresponding data types:
 
-| Data type | Handle color | Hex code |
+| Data type | Handle color | Handle |
 |-----------|--------------|----------|
-| BaseLanguageModel | Fuchsia | #c026d3 |
-| Data | Red | #dc2626 |
-| Document | Lime | #65a30d |
-| Embeddings | Emerald | #10b981 |
-| LanguageModel | Fuchsia | #c026d3 |
-| Message | Indigo | #4f46e5 |
-| Prompt | Violet | #7c3aed |
-| str | Indigo | #4F46E5 |
-| Text | Indigo | #4F46E5 |
-| unknown | Gray | #9CA3AF |
+| BaseLanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
+| Data | Red | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#dc2626' }} /> |
+| Document | Lime | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#65a30d' }} /> |
+| Embeddings | Emerald | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#10b981' }} /> |
+| LanguageModel | Fuchsia | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#c026d3' }} /> |
+| Message | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4f46e5' }} /> |
+| Prompt | Violet | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#7c3aed' }} /> |
+| str | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
+| Text | Indigo | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#4F46E5' }} /> |
+| unknown | Gray | <Icon name="Circle" size="16" aria-label="A circle on the side of a component" style={{ color: '#9CA3AF' }} /> |
 
 ## Component code
 

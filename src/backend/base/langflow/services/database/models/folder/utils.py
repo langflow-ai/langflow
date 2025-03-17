@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlmodel import and_, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.model import Flow
 
 from .constants import DEFAULT_FOLDER_DESCRIPTION, DEFAULT_FOLDER_NAME
@@ -40,5 +41,5 @@ async def get_default_folder_id(session: AsyncSession, user_id: UUID):
         await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME, Folder.user_id == user_id))
     ).first()
     if not folder:
-        folder = await create_default_folder_if_it_doesnt_exist(session, user_id)
+        folder = await get_or_create_default_folder(session, user_id)
     return folder.id

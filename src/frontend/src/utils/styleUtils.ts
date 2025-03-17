@@ -30,6 +30,7 @@ import {
   Binary,
   Blocks,
   BookMarked,
+  BookOpenText,
   BookmarkPlus,
   Bot,
   BotMessageSquare,
@@ -69,6 +70,7 @@ import {
   Database,
   DatabaseZap,
   Delete,
+  DollarSign,
   Dot,
   Download,
   DownloadCloud,
@@ -158,6 +160,7 @@ import {
   Pen,
   Pencil,
   PencilLine,
+  PencilRuler,
   PieChart,
   Pin,
   Plane,
@@ -238,6 +241,7 @@ import { AWSIcon } from "../icons/AWS";
 import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
+import { ApifyIcon, ApifyWhiteIcon } from "../icons/Apify";
 import { ArXivIcon } from "../icons/ArXiv";
 import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
@@ -285,6 +289,7 @@ import { NotDiamondIcon } from "../icons/NotDiamond";
 import { NotionIcon } from "../icons/Notion";
 import { NovitaIcon } from "../icons/Novita";
 import { NvidiaIcon } from "../icons/Nvidia";
+import { OlivyaIcon } from "../icons/Olivya";
 import { OllamaIcon } from "../icons/Ollama";
 import { OpenAiIcon } from "../icons/OpenAi";
 import { OpenRouterIcon } from "../icons/OpenRouter";
@@ -296,6 +301,7 @@ import { QDrantIcon } from "../icons/QDrant";
 import { QianFanChatIcon } from "../icons/QianFanChat";
 import { RedisIcon } from "../icons/Redis";
 import { SambaNovaIcon } from "../icons/SambaNova";
+import ScrapeGraph from "../icons/ScrapeGraphAI/ScrapeGraphAI";
 import { SearxIcon } from "../icons/Searx";
 import { SerperIcon } from "../icons/Serper";
 import { ShareIcon } from "../icons/Share";
@@ -312,6 +318,7 @@ import SvgWolfram from "../icons/Wolfram/Wolfram";
 import { HackerNewsIcon } from "../icons/hackerNews";
 import { MistralIcon } from "../icons/mistral";
 import { SupabaseIcon } from "../icons/supabase";
+import { XAIIcon } from "../icons/xAI";
 import { iconsType } from "../types/components";
 
 export const BG_NOISE =
@@ -397,6 +404,7 @@ export const nodeColors: { [char: string]: string } = {
   chains: "#FE7500",
   list: "#9AAE42",
   agents: "#903BBE",
+  Olivya: "#00413B",
   tools: "#00fbfc",
   memories: "#F5B85A",
   saved_components: "#a5B85A",
@@ -432,6 +440,7 @@ export const nodeColors: { [char: string]: string } = {
   BaseLanguageModel: "#c026d3",
   LanguageModel: "#c026d3",
   Agent: "#903BBE",
+  AgentExecutor: "#903BBE",
   Tool: "#00fbfc",
 };
 
@@ -480,6 +489,7 @@ export const nodeColorsName: { [char: string]: string } = {
   BaseLanguageModel: "fuchsia",
   LanguageModel: "fuchsia",
   Agent: "purple",
+  AgentExecutor: "purple",
   Tool: "cyan",
   BaseChatMemory: "cyan",
   BaseChatMessageHistory: "orange",
@@ -513,6 +523,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
   { display_name: "AssemblyAI", name: "assemblyai", icon: "AssemblyAI" },
@@ -521,6 +532,7 @@ export const SIDEBAR_BUNDLES = [
     name: "astra_assistants",
     icon: "AstraDB",
   },
+  { display_name: "Olivya", name: "olivya", icon: "Olivya" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "Notion", name: "Notion", icon: "Notion" },
   { display_name: "Needle", name: "needle", icon: "Needle" },
@@ -537,7 +549,8 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Confluence", name: "confluence", icon: "Confluence" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
-  { display_name: "Youtube", name: "youtube", icon: "Youtube" },
+  { display_name: "Youtube", name: "youtube", icon: "YouTube" },
+  { display_name: "ScrapeGraph AI", name: "scrapegraph", icon: "ScrapeGraph" },
 ];
 
 export const categoryIcons = {
@@ -634,6 +647,7 @@ export const nodeIconsLucide: iconsType = {
   AstraDB: AstraDBIcon,
   BingSearchAPIWrapper: BingIcon,
   BingSearchRun: BingIcon,
+  Olivya: OlivyaIcon,
   Bing: BingIcon,
   Cohere: CohereIcon,
   ChevronsUpDownIcon,
@@ -642,6 +656,8 @@ export const nodeIconsLucide: iconsType = {
   FacebookChatLoader: FBIcon,
   FirecrawlCrawlApi: FirecrawlIcon,
   FirecrawlScrapeApi: FirecrawlIcon,
+  FirecrawlMapApi: FirecrawlIcon,
+  FirecrawlExtractApi: FirecrawlIcon,
   GitbookLoader: GitBookIcon,
   GoogleSearchAPIWrapper: GoogleIcon,
   GoogleSearchResults: GoogleIcon,
@@ -680,6 +696,7 @@ export const nodeIconsLucide: iconsType = {
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   DeepSeek: DeepSeekIcon,
+  xAI: XAIIcon,
   OpenAIEmbeddings: OpenAiIcon,
   Pinecone: PineconeIcon,
   Qdrant: QDrantIcon,
@@ -730,6 +747,8 @@ export const nodeIconsLucide: iconsType = {
   SearchAPI: SearchAPIIcon,
   Wikipedia: WikipediaIcon,
   Arize: ArizeIcon,
+  Apify: ApifyIcon,
+  ApifyWhite: ApifyWhiteIcon,
 
   //Node Icons
   model_specs: FileSliders,
@@ -839,6 +858,7 @@ export const nodeIconsLucide: iconsType = {
   UserMinus2,
   UserPlus2,
   Pencil,
+  PencilRuler,
   ChevronsRight,
   ChevronsLeft,
   EyeOff,
@@ -952,4 +972,10 @@ export const nodeIconsLucide: iconsType = {
   ThumbDownIconCustom,
   ThumbUpIconCustom,
   Serper: SerperIcon,
+  ScrapeGraphAI: ScrapeGraph,
+  ScrapeGraph: ScrapeGraph,
+  ScrapeGraphSmartScraperApi: ScrapeGraph,
+  ScrapeGraphMarkdownifyApi: ScrapeGraph,
+  DollarSign,
+  BookOpenText,
 };

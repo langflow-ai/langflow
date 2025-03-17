@@ -1,75 +1,91 @@
-from typing import Any
-
-from langchain.tools import StructuredTool
 from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_core.tools import ToolException
-from pydantic import BaseModel, Field
 
-from langflow.base.langchain_utilities.model import LCToolComponent
-from langflow.field_typing import Tool
+from langflow.custom import Component
 from langflow.inputs import IntInput, MessageTextInput
+from langflow.io import Output
 from langflow.schema import Data
+from langflow.schema.message import Message
 
 
-class DuckDuckGoSearchComponent(LCToolComponent):
-    display_name: str = "DuckDuckGo Search"
-    description: str = "Perform web searches using the DuckDuckGo search engine with result limiting"
-    name = "DuckDuckGoSearch"
-    documentation: str = "https://python.langchain.com/docs/integrations/tools/ddg"
-    icon: str = "DuckDuckGo"
+class DuckDuckGoSearchComponent(Component):
+    """Component for performing web searches using DuckDuckGo."""
+
+    display_name = "DuckDuckGo Search"
+    description = "Search the web using DuckDuckGo with customizable result limits"
+    documentation = "https://python.langchain.com/docs/integrations/tools/ddg"
+    icon = "DuckDuckGo"
+
     inputs = [
         MessageTextInput(
             name="input_value",
             display_name="Search Query",
+            required=True,
+            info="The search query to execute with DuckDuckGo",
+            tool_mode=True,
         ),
-        IntInput(name="max_results", display_name="Max Results", value=5, advanced=True),
-        IntInput(name="max_snippet_length", display_name="Max Snippet Length", value=100, advanced=True),
+        IntInput(
+            name="max_results",
+            display_name="Max Results",
+            value=5,
+            required=False,
+            advanced=True,
+            info="Maximum number of search results to return",
+        ),
+        IntInput(
+            name="max_snippet_length",
+            display_name="Max Snippet Length",
+            value=100,
+            required=False,
+            advanced=True,
+            info="Maximum length of each result snippet",
+        ),
     ]
 
-    class DuckDuckGoSearchSchema(BaseModel):
-        query: str = Field(..., description="The search query")
-        max_results: int = Field(5, description="Maximum number of results to return")
-        max_snippet_length: int = Field(100, description="Maximum length of each result snippet")
+    outputs = [
+        Output(display_name="Data", name="data", method="fetch_content"),
+        Output(display_name="Text", name="text", method="fetch_content_text"),
+    ]
 
-    def _build_wrapper(self):
+    def _build_wrapper(self) -> DuckDuckGoSearchRun:
+        """Build the DuckDuckGo search wrapper."""
         return DuckDuckGoSearchRun()
 
-    def build_tool(self) -> Tool:
-        wrapper = self._build_wrapper()
-
-        def search_func(query: str, max_results: int = 5, max_snippet_length: int = 100) -> list[dict[str, Any]]:
-            try:
-                full_results = wrapper.run(f"{query} (site:*)")
-                result_list = full_results.split("\n")[:max_results]
-                limited_results = []
-                for result in result_list:
-                    limited_result = {
-                        "snippet": result[:max_snippet_length],
-                    }
-                    limited_results.append(limited_result)
-            except Exception as e:
-                msg = f"Error in DuckDuckGo Search: {e!s}"
-                raise ToolException(msg) from e
-            return limited_results
-
-        tool = StructuredTool.from_function(
-            name="duckduckgo_search",
-            description="Search for recent results using DuckDuckGo with result limiting",
-            func=search_func,
-            args_schema=self.DuckDuckGoSearchSchema,
-        )
-        self.status = "DuckDuckGo Search Tool created"
-        return tool
-
     def run_model(self) -> list[Data]:
-        tool = self.build_tool()
-        results = tool.run(
-            {
-                "query": self.input_value,
-                "max_results": self.max_results,
-                "max_snippet_length": self.max_snippet_length,
-            }
-        )
-        data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
-        self.status = data_list  # type: ignore[assignment]
-        return data_list
+        return self.fetch_content()
+
+    def fetch_content(self) -> list[Data]:
+        """Execute the search and return results as Data objects."""
+        try:
+            wrapper = self._build_wrapper()
+
+            full_results = wrapper.run(f"{self.input_value} (site:*)")
+
+            result_list = full_results.split("\n")[: self.max_results]
+
+            data_results = []
+            for result in result_list:
+                if result.strip():
+                    snippet = result[: self.max_snippet_length]
+                    data_results.append(
+                        Data(
+                            text=snippet,
+                            data={
+                                "content": result,
+                                "snippet": snippet,
+                            },
+                        )
+                    )
+        except (ValueError, AttributeError) as e:
+            error_data = [Data(text=str(e), data={"error": str(e)})]
+            self.status = error_data
+            return error_data
+        else:
+            self.status = data_results
+            return data_results
+
+    def fetch_content_text(self) -> Message:
+        """Return search results as a single text message."""
+        data = self.fetch_content()
+        result_string = "\n".join(item.text for item in data)
+        self.status = result_string
+        return Message(text=result_string)

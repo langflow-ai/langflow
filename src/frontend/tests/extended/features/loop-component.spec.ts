@@ -59,27 +59,27 @@ test(
 
     // Add Parse Data component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("parse data");
-    await page.waitForSelector('[data-testid="processingParse Data"]', {
+    await page.getByTestId("sidebar-search-input").fill("data to message");
+    await page.waitForSelector('[data-testid="processingData to Message"]', {
       timeout: 1000,
     });
 
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 100 },
       });
 
     //This one is for testing the wrong loop message
     await page
-      .getByTestId("processingParse Data")
+      .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 700, y: 400 },
       });
 
     const secondParseDataOutput = await page
       .getByTestId("handle-parsedata-shownode-data list-right")
-      .nth(2);
+      .nth(1);
 
     const loopItemInput = await page
       .getByTestId("handle-loopcomponent-shownode-item-left")
@@ -231,7 +231,6 @@ test(
       .getByTestId("output-inspection-message-chatoutput")
       .first()
       .click();
-    await page.getByRole("gridcell").nth(4).click();
 
     const output = await page.getByPlaceholder("Empty").textContent();
     expect(output).toContain("modified_value");

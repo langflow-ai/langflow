@@ -421,7 +421,29 @@ export type UserInputType = {
 export type ApiKeyType = {
   children: ReactElement;
   data?: any;
-  onCloseModal: () => void;
+  onCloseModal?: () => void;
+  modalProps?: {
+    title?: string;
+    description?: string | ReactElement | HTMLElement;
+    inputLabel?: string | ReactElement | HTMLElement | ReactNode;
+    inputPlaceholder?: string;
+    buttonText?: string;
+    generatedKeyMessage?: string | ReactElement | HTMLElement;
+    showIcon?: boolean;
+    size?:
+      | "x-small"
+      | "smaller"
+      | "small"
+      | "medium"
+      | "medium-tall"
+      | "large"
+      | "three-cards"
+      | "large-thin"
+      | "large-h-full"
+      | "templates"
+      | "small-h-full"
+      | "medium-h-full";
+  };
 };
 
 export type StoreApiKeyType = {
@@ -505,7 +527,6 @@ export type ChatInputType = {
   inputRef: {
     current: any;
   };
-  lockChat: boolean;
   noInput: boolean;
   sendMessage: ({
     repeat,
@@ -575,6 +596,7 @@ export type iconsType = {
 export type modalHeaderType = {
   children: ReactNode;
   description: string | JSX.Element | null;
+  clampDescription?: number;
 };
 
 export type codeAreaModalPropsType = {
@@ -593,9 +615,7 @@ export type codeAreaModalPropsType = {
 
 export type chatMessagePropsType = {
   chat: ChatMessageType;
-  lockChat: boolean;
   lastMessage: boolean;
-  setLockChat: (lock: boolean) => void;
   updateChat: (
     chat: ChatMessageType,
     message: string,
@@ -643,6 +663,7 @@ export type textModalPropsType = {
   changeVisibility?: () => void;
   open?: boolean;
   setOpen?: (open: boolean) => void;
+  onCloseModal?: () => void;
 };
 
 export type newFlowModalPropsType = {
@@ -772,8 +793,6 @@ export type chatViewProps = {
     repeat: number;
     files?: string[];
   }) => void;
-  lockChat: boolean;
-  setLockChat: (lock: boolean) => void;
   visibleSession?: string;
   focusChat?: string;
   closeChat?: () => void;
@@ -794,15 +813,11 @@ export type toolbarSelectItemProps = {
 };
 
 export type clearChatPropsType = {
-  lockChat: boolean;
-  setLockChat: (lock: boolean) => void;
   setChatHistory: (chatHistory: ChatMessageType) => void;
   method: string;
 };
 
 export type handleSelectPropsType = {
   event: string;
-  lockChat: boolean;
-  setLockChat: (lock: boolean) => void;
   setChatHistory: (chatHistory: ChatMessageType) => void;
 };

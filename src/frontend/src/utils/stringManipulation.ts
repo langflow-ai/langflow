@@ -1,3 +1,5 @@
+import DOMPurify from "dompurify";
+import React from "react";
 import { FieldParserType } from "../types/api";
 
 function toSnakeCase(str: string): string {
@@ -113,3 +115,34 @@ export function parseString(
 
   return result;
 }
+
+export const getStatusColor = (status: string): string => {
+  const amberStatuses = [
+    "initializing",
+    "pending",
+    "hibernating",
+    "hiberated",
+    "maintenance",
+    "parked",
+  ];
+
+  if (amberStatuses.includes(status?.toLowerCase())) {
+    return "text-accent-amber-foreground";
+  }
+
+  if (status?.toLowerCase() === "terminating") {
+    return "red-500";
+  }
+
+  return "";
+};
+
+export const convertStringToHTML = (htmlString: string): JSX.Element => {
+  return React.createElement("span", {
+    dangerouslySetInnerHTML: { __html: sanitizeHTML(htmlString) },
+  });
+};
+
+export const sanitizeHTML = (htmlString: string): string => {
+  return DOMPurify.sanitize(htmlString);
+};
