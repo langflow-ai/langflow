@@ -44,9 +44,9 @@ test(
 
     await page.getByTestId("textarea").fill(randomDescription);
 
-    await page.getByTestId("api_button_modal").click();
+    await page.getByTestId("publish-button").click();
 
-    await page.getByText("Close").last().click();
+    await page.keyboard.press("Escape");
 
     expect(await page.getByText(randomName).count()).toBe(1);
     expect(await page.getByText(randomDescription).count()).toBe(1);
