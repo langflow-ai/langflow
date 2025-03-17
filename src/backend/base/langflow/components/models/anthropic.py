@@ -48,6 +48,7 @@ class AnthropicModelComponent(LCModelComponent):
             value=0.1,
             info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
         ),
         MessageTextInput(
             name="base_url",

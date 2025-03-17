@@ -33,7 +33,7 @@ class LCModelComponent(Component):
             info="System message to pass to the model.",
             advanced=False,
         ),
-        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=False),
+        BoolInput(name="stream", display_name="Stream", info=STREAM_INFO_TEXT, advanced=True),
     ]
 
     outputs = [
