@@ -1,3 +1,4 @@
+import useAlertStore from "@/stores/alertStore";
 import { FileType } from "@/types/file_management";
 import { useQueryClient } from "@tanstack/react-query";
 import { ReactNode, useEffect, useState } from "react";
@@ -26,6 +27,8 @@ export default function FileManagerModal({
   isList?: boolean;
 }): JSX.Element {
   const [internalOpen, internalSetOpen] = useState(false);
+
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const queryClient = useQueryClient();
 
@@ -56,6 +59,12 @@ export default function FileManagerModal({
         open={!disabled && internalOpen}
         setOpen={internalSetOpen}
         onSubmit={() => {
+          if (internalSelectedFiles.length === 0) {
+            setErrorData({
+              title: "Please select at least one file",
+            });
+            return;
+          }
           handleSubmit(internalSelectedFiles);
           internalSetOpen(false);
         }}
