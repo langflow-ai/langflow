@@ -77,4 +77,35 @@ export async function deleteScheduler(id: string): Promise<void> {
     const error = await response.json();
     throw new Error(error.detail || "Failed to delete scheduler");
   }
+}
+
+export async function getSchedulerStatus(): Promise<any> {
+  const response = await fetch(`/api/v1/schedulers/status`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to get scheduler status");
+  }
+  return await response.json();
+}
+
+export async function getNextRunTimes(flowId?: string): Promise<any> {
+  const url = flowId
+    ? `/api/v1/schedulers/next-runs?flow_id=${flowId}`
+    : `/api/v1/schedulers/next-runs`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to get next run times");
+  }
+  return await response.json();
 } 

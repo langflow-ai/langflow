@@ -21,6 +21,8 @@ const badgeVariants = cva(
           "bg-accent-emerald text-accent-emerald-foreground hover:bg-accent-emerald-hover border-0",
         successStatic:
           "bg-accent-emerald text-accent-emerald-foreground border-0",
+        success:
+          "bg-green-500 hover:bg-green-600 border-transparent text-white",
         errorStatic: "bg-error-background text-error-foreground border-0",
       },
       size: {

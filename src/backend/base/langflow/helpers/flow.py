@@ -91,26 +91,57 @@ async def run_flow(
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
+    
+    logger.warning(f"[BUG LOG] Starting flow execution: flow_id={flow_id}, flow_name={flow_name}, run_id={run_id}, session_id={session_id}")
+    
     if graph is None:
-        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+        logger.warning(f"[BUG LOG] Loading flow: user_id={user_id}, flow_id={flow_id}, flow_name={flow_name}")
+        try:
+            graph = await load_flow(user_id, flow_id, flow_name, tweaks)
+            logger.warning(f"[BUG LOG] Flow loaded successfully with {len(graph.vertices)} vertices")
+            
+            # Log vertex details for debugging
+            for i, vertex in enumerate(graph.vertices):
+                logger.warning(f"[BUG LOG] Vertex {i+1}/{len(graph.vertices)}: id={vertex.id}, type={vertex.vertex_type}, is_active={vertex.is_active()}")
+                
+            # Log edge details for debugging
+            for i, edge in enumerate(graph.edges):
+                logger.warning(f"[BUG LOG] Edge {i+1}/{len(graph.edges)}: source={edge.source_id}, target={edge.target_id}")
+                
+        except Exception as e:
+            logger.warning(f"[BUG LOG] Error loading flow: {str(e)}", exc_info=True)
+            raise
+    
     if run_id:
         graph.set_run_id(UUID(run_id))
+        logger.warning(f"[BUG LOG] Set run_id: {run_id}")
     if session_id:
         graph.session_id = session_id
+        logger.warning(f"[BUG LOG] Set session_id: {session_id}")
     if user_id:
         graph.user_id = user_id
+        logger.warning(f"[BUG LOG] Set user_id: {user_id}")
 
     if inputs is None:
         inputs = []
+        logger.warning("[BUG LOG] No inputs provided, using empty list")
     if isinstance(inputs, dict):
         inputs = [inputs]
+        logger.warning("[BUG LOG] Converted dict input to list")
     inputs_list = []
     inputs_components = []
     types = []
-    for input_dict in inputs:
-        inputs_list.append({INPUT_FIELD_NAME: cast("str", input_dict.get("input_value"))})
-        inputs_components.append(input_dict.get("components", []))
-        types.append(input_dict.get("type", "chat"))
+    for i, input_dict in enumerate(inputs):
+        input_value = input_dict.get("input_value")
+        logger.warning(f"[BUG LOG] Input {i+1}: {input_value}")
+        inputs_list.append({INPUT_FIELD_NAME: cast("str", input_value)})
+        components = input_dict.get("components", [])
+        inputs_components.append(components)
+        input_type = input_dict.get("type", "chat")
+        types.append(input_type)
+        logger.warning(f"[BUG LOG] Input {i+1} components: {components}, type: {input_type}")
+
+    logger.warning(f"[BUG LOG] Prepared {len(inputs_list)} inputs for flow execution")
 
     outputs = [
         vertex.id
@@ -120,16 +151,52 @@ async def run_flow(
             vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore[operator]
         )
     ]
+    
+    if not outputs:
+        logger.warning(f"[BUG LOG] No output vertices found for output_type={output_type}")
+    else:
+        logger.warning(f"[BUG LOG] Found {len(outputs)} output vertices for output_type={output_type}: {outputs}")
 
     fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
-
-    return await graph.arun(
-        inputs_list,
-        outputs=outputs,
-        inputs_components=inputs_components,
-        types=types,
-        fallback_to_env_vars=fallback_to_env_vars,
-    )
+    logger.warning(f"[BUG LOG] fallback_to_env_vars: {fallback_to_env_vars}")
+    
+    import time
+    start_time = time.time()
+    
+    try:
+        logger.warning("[BUG LOG] Calling graph.arun...")
+        run_outputs = await graph.arun(
+            inputs_list,
+            outputs=outputs,
+            inputs_components=inputs_components,
+            types=types,
+            fallback_to_env_vars=fallback_to_env_vars,
+        )
+        
+        elapsed_time = time.time() - start_time
+        logger.warning(f"[BUG LOG] Flow execution completed in {elapsed_time:.2f} seconds")
+        
+        # Log detailed output information
+        if run_outputs:
+            for i, output in enumerate(run_outputs):
+                logger.warning(f"[BUG LOG] Output {i+1}/{len(run_outputs)}: {len(output.outputs)} result(s)")
+                for j, result in enumerate(output.outputs):
+                    if result:
+                        logger.warning(f"[BUG LOG] Result {j+1}: {result.results}")
+                        # Log more details about the result
+                        if hasattr(result, 'artifacts') and result.artifacts:
+                            logger.warning(f"[BUG LOG] Result {j+1} artifacts: {result.artifacts}")
+                        if hasattr(result, 'metadata') and result.metadata:
+                            logger.warning(f"[BUG LOG] Result {j+1} metadata: {result.metadata}")
+        else:
+            logger.warning("[BUG LOG] Flow execution completed but no outputs were returned")
+            
+        return run_outputs
+    except Exception as e:
+        elapsed_time = time.time() - start_time
+        logger.warning(f"[BUG LOG] Error executing flow after {elapsed_time:.2f} seconds: {str(e)}", exc_info=True)
+        logger.warning(f"[BUG LOG] Exception type: {type(e).__name__}")
+        raise
 
 
 def generate_function_for_flow(

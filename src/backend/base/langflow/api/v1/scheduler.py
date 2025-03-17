@@ -82,3 +82,25 @@ async def delete_scheduler(
 ):
     """Delete a scheduler."""
     await scheduler_service.delete_scheduler(session=session, scheduler_id=scheduler_id)
+
+
+@router.get("/status", status_code=200)
+async def get_scheduler_status(
+    *,
+    current_user: CurrentActiveUser,
+    scheduler_service: SchedulerService = Depends(get_scheduler_service),
+):
+    """Get the status of the scheduler service and all scheduled jobs."""
+    return await scheduler_service.get_scheduler_status()
+
+
+@router.get("/next-runs", status_code=200)
+async def get_next_run_times(
+    *,
+    session: DbSession,
+    flow_id: UUID | None = None,
+    current_user: CurrentActiveUser,
+    scheduler_service: SchedulerService = Depends(get_scheduler_service),
+):
+    """Get the next run times for all scheduled jobs, optionally filtered by flow_id."""
+    return await scheduler_service.get_next_run_times(session=session, flow_id=flow_id)

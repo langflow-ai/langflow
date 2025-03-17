@@ -1,6 +1,8 @@
 """Scheduler service for Langflow using APScheduler."""
 import logging
 from uuid import UUID
+import asyncio
+import time
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -44,6 +46,16 @@ class SchedulerService(Service):
             self.running = True
             self.scheduler.start()
             logger.info("Scheduler service started")
+            
+            # Log the number of scheduled jobs
+            jobs = self.scheduler.get_jobs()
+            if jobs:
+                logger.info(f"Loaded {len(jobs)} scheduled jobs")
+                for job in jobs:
+                    next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job.next_run_time else "Not scheduled"
+                    logger.info(f"Job {job.id} next run: {next_run}")
+            else:
+                logger.info("No scheduled jobs found")
 
     async def stop(self):
         """Stop the scheduler."""
@@ -171,18 +183,34 @@ class SchedulerService(Service):
         # Create trigger based on scheduler type
         if scheduler.cron_expression:
             trigger = CronTrigger.from_crontab(scheduler.cron_expression)
+            schedule_desc = f"cron expression '{scheduler.cron_expression}'"
         else:
             # Use interval_seconds (which now has a default value of 60)
             trigger = IntervalTrigger(seconds=scheduler.interval_seconds)
+            schedule_desc = f"interval of {scheduler.interval_seconds} seconds"
+
+        # Log job creation
+        logger.info(f"Creating scheduled job for flow_id={scheduler.flow_id} with {schedule_desc} (scheduler_id={scheduler.id})")
 
         # Define the job function
         async def run_flow():
             """Run the flow."""
-            logger.info(f"Running scheduled flow {scheduler.flow_id}")
+            start_time = None
             try:
                 # Import necessary modules
                 import httpx
+                import time
+                import json
                 from langflow.services.deps import get_settings_service
+                
+                # Log when the scheduled flow starts running
+                start_time = time.time()
+                logger.info(f"Starting scheduled flow execution for flow_id={scheduler.flow_id} (scheduler_id={scheduler.id})")
+                
+                # Log job configuration
+                job = self.scheduler.get_job(str(scheduler.id))
+                if job:
+                    logger.info(f"Job configuration: max_instances={job.max_instances}, next_run_time={job.next_run_time}")
                 
                 # Get the Langflow port from settings
                 settings = get_settings_service().settings
@@ -198,39 +226,179 @@ class SchedulerService(Service):
                     "stream": False  # No streaming for scheduled runs
                 }
                 
-                # Make the HTTP request to run the flow
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(url, json=payload)
-                    
-                    if response.status_code == 200:
-                        logger.info(f"Successfully ran scheduled flow {scheduler.flow_id}")
-                    else:
-                        logger.error(f"Error running flow: HTTP {response.status_code} - {response.text}")
-                        
+                logger.warning(f"[BUG LOG] Attempting to execute flow with payload: {payload}")
+                
+                # Make the HTTP request to run the flow with a timeout from settings and retry logic
+                # Using the scheduler_timeout setting which defaults to 300 seconds (5 minutes)
+                max_retries = 3
+                retry_delay = 5
+                
+                for attempt in range(1, max_retries + 1):
+                    try:
+                        logger.warning(f"[BUG LOG] Attempt {attempt}/{max_retries} to run scheduled flow {scheduler.flow_id}")
+                        async with httpx.AsyncClient(timeout=settings.scheduler_timeout) as client:
+                            logger.warning(f"[BUG LOG] Sending POST request to {url}")
+                            response = await client.post(url, json=payload)
+                            
+                            if response.status_code == 200:
+                                elapsed_time = time.time() - start_time
+                                # Log more detailed execution results
+                                try:
+                                    result_data = response.json()
+                                    logger.warning(f"[BUG LOG] Successfully ran scheduled flow {scheduler.flow_id} in {elapsed_time:.2f} seconds")
+                                    logger.warning(f"[BUG LOG] Flow execution result: {json.dumps(result_data, indent=2)}")
+                                    
+                                    # Extract and log specific parts of the result for easier debugging
+                                    if isinstance(result_data, dict):
+                                        if 'result' in result_data:
+                                            logger.warning(f"[BUG LOG] Flow result content: {result_data['result']}")
+                                        if 'error' in result_data:
+                                            logger.warning(f"[BUG LOG] Flow execution error: {result_data['error']}")
+                                    
+                                    return
+                                except Exception as e:
+                                    logger.warning(f"[BUG LOG] Error parsing flow execution result: {e}")
+                                    logger.warning(f"[BUG LOG] Raw response: {response.text[:1000]}...")
+                                return
+                            else:
+                                logger.warning(f"[BUG LOG] Error running flow: HTTP {response.status_code} - {response.text}")
+                                if attempt < max_retries:
+                                    logger.warning(f"[BUG LOG] Retrying in {retry_delay} seconds...")
+                                    await asyncio.sleep(retry_delay)
+                                else:
+                                    logger.warning(f"[BUG LOG] Failed to run scheduled flow after {max_retries} attempts")
+                    except httpx.ReadTimeout:
+                        elapsed_time = time.time() - start_time
+                        logger.warning(f"[BUG LOG] Timeout running scheduled flow {scheduler.flow_id} after {elapsed_time:.2f} seconds")
+                        if attempt < max_retries:
+                            logger.warning(f"[BUG LOG] Retrying in {retry_delay} seconds...")
+                            await asyncio.sleep(retry_delay)
+                        else:
+                            logger.warning(f"[BUG LOG] Failed to run scheduled flow after {max_retries} attempts due to timeout")
+                    except Exception as e:
+                        logger.warning(f"[BUG LOG] Error on attempt {attempt}/{max_retries} running scheduled flow {scheduler.flow_id}: {e}", exc_info=True)
+                        if attempt < max_retries:
+                            logger.warning(f"[BUG LOG] Retrying in {retry_delay} seconds...")
+                            await asyncio.sleep(retry_delay)
+                        else:
+                            logger.warning(f"[BUG LOG] Failed to run scheduled flow after {max_retries} attempts")
+                
             except Exception as e:
-                logger.error(f"Error running scheduled flow {scheduler.flow_id}: {e}", exc_info=True)
+                elapsed_time = None
+                if start_time:
+                    import time
+                    elapsed_time = time.time() - start_time
+                    elapsed_str = f" after {elapsed_time:.2f} seconds"
+                else:
+                    elapsed_str = ""
+                logger.warning(f"[BUG LOG] Error running scheduled flow {scheduler.flow_id}{elapsed_str}: {e}", exc_info=True)
 
-        # Add the job to the scheduler
+        # Add the job to the scheduler with max_instances=5 to allow more instances
         job = self.scheduler.add_job(
             run_flow,
             trigger=trigger,
             id=str(scheduler.id),
-            replace_existing=True
+            replace_existing=True,
+            max_instances=5,  # Allow up to 5 instances to run concurrently
+            coalesce=True,   # Coalesce missed executions to prevent pile-up
+            misfire_grace_time=300  # Allow misfires up to 5 minutes late
         )
 
         # Store job ID
         self.tasks[str(scheduler.id)] = job.id
+        
+        # Log job scheduling details
+        next_run_time = job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job.next_run_time else "Not scheduled"
+        logger.info(f"Scheduled job for flow_id={scheduler.flow_id} created successfully. Next run time: {next_run_time}")
 
     async def _delete_job(self, scheduler_id: UUID) -> None:
         """Delete a job from the scheduler."""
         job_id = self.tasks.get(str(scheduler_id))
         if job_id:
             try:
+                # Get job info before removing
+                job = self.scheduler.get_job(job_id)
+                if job:
+                    next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job.next_run_time else "Not scheduled"
+                    logger.info(f"Removing scheduled job {job_id} for scheduler_id={scheduler_id}. Next run was: {next_run}")
+                
                 self.scheduler.remove_job(job_id)
+                logger.info(f"Successfully removed job {job_id} for scheduler_id={scheduler_id}")
             except Exception as e:
-                logger.error(f"Error removing job {job_id}: {e}")
+                logger.error(f"Error removing job {job_id} for scheduler_id={scheduler_id}: {e}")
             # Remove from tasks dict
             del self.tasks[str(scheduler_id)]
+        else:
+            logger.debug(f"No job found for scheduler_id={scheduler_id}")
+
+    def get_job_info(self, scheduler_id: UUID) -> dict:
+        """Get information about a scheduled job."""
+        job_id = self.tasks.get(str(scheduler_id))
+        if not job_id:
+            return {"status": "not_found", "message": f"No job found for scheduler_id={scheduler_id}"}
+        
+        try:
+            job = self.scheduler.get_job(job_id)
+            if not job:
+                return {"status": "not_found", "message": f"Job {job_id} not found in scheduler"}
+            
+            return {
+                "status": "scheduled" if job.next_run_time else "paused",
+                "job_id": job_id,
+                "next_run_time": job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job.next_run_time else None,
+                "trigger": str(job.trigger),
+            }
+        except Exception as e:
+            logger.error(f"Error getting job info for {job_id}: {e}")
+            return {"status": "error", "message": str(e)}
+
+    async def get_scheduler_status(self) -> dict:
+        """Get the status of the scheduler service and all scheduled jobs."""
+        jobs = self.scheduler.get_jobs()
+        job_statuses = []
+        
+        for job in jobs:
+            scheduler_id = job.id
+            next_run = job.next_run_time.strftime("%Y-%m-%d %H:%M:%S") if job.next_run_time else "Not scheduled"
+            
+            job_statuses.append({
+                "scheduler_id": scheduler_id,
+                "status": "scheduled" if job.next_run_time else "paused",
+                "next_run_time": next_run,
+                "trigger": str(job.trigger),
+            })
+        
+        return {
+            "service_status": "running" if self.running else "stopped",
+            "job_count": len(jobs),
+            "jobs": job_statuses
+        }
+
+    async def get_next_run_times(self, *, session: AsyncSession, flow_id: UUID | None = None) -> list[dict]:
+        """Get the next run times for all scheduled jobs, optionally filtered by flow_id."""
+        # Get schedulers from database
+        if flow_id:
+            scheduler_query = select(Scheduler).where(Scheduler.flow_id == flow_id)
+        else:
+            scheduler_query = select(Scheduler)
+        
+        schedulers = await session.exec(scheduler_query)
+        schedulers = schedulers.all()
+        
+        result = []
+        for scheduler in schedulers:
+            job_info = self.get_job_info(scheduler.id)
+            result.append({
+                "scheduler_id": str(scheduler.id),
+                "flow_id": str(scheduler.flow_id),
+                "enabled": scheduler.enabled,
+                "next_run_time": job_info.get("next_run_time"),
+                "status": job_info.get("status"),
+                "schedule_type": "cron" if scheduler.cron_expression else "interval",
+                "schedule": scheduler.cron_expression if scheduler.cron_expression else f"{scheduler.interval_seconds} seconds",
+            })
+        
+        return result
 
 
 # Create a global instance of the scheduler service

@@ -47,7 +47,16 @@ export default function SettingsPage(): JSX.Element {
         />
       ),
     },
-
+    {
+      title: "Schedulers",
+      href: "/settings/scheduler",
+      icon: (
+        <ForwardedIconComponent
+          name="CalendarClock"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
     {
       title: "Shortcuts",
       href: "/settings/shortcuts",
