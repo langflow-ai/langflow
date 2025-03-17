@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
 from pandas import DataFrame
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
@@ -26,6 +26,7 @@ from .input_mixin import (
     SerializableFieldTypes,
     SliderMixin,
     TableMixin,
+    TabMixin,
     ToolModeMixin,
 )
 
@@ -54,7 +55,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
                 "- A single dictionary (will become a one-row table)\n"
                 "- A Data object (Langflow's internal data structure)\n"
             )
-            raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
+            raise ValueError(msg)  # noqa: TRY004
         # Ensure each item in the list is either a dict or a Data instance.
         for i, item in enumerate(v):
             if not isinstance(item, dict | Data):
@@ -64,7 +65,7 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
                     "- A Data object (Langflow's internal data structure for passing data between components)\n"
                     f"Instead, got a {type(item).__name__}. Please check the format of your input data."
                 )
-                raise ValueError(msg)  # noqa: TRY004 Pydantic only catches ValueError or AssertionError
+                raise ValueError(msg)  # noqa: TRY004
         return v
 
 
@@ -105,7 +106,13 @@ class CodeInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMix
 
 
 # Applying mixins to a specific input type
-class StrInput(BaseInputMixin, ListableInputMixin, DatabaseLoadMixin, MetadataTraceMixin, ToolModeMixin):
+class StrInput(
+    BaseInputMixin,
+    ListableInputMixin,
+    DatabaseLoadMixin,
+    MetadataTraceMixin,
+    ToolModeMixin,
+):
     field_type: SerializableFieldTypes = FieldTypes.TEXT
     load_from_db: CoalesceBool = False
     """Defines if the field will allow the user to open a text editor. Default is False."""
@@ -399,7 +406,13 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
     value: CoalesceBool = False
 
 
-class NestedDictInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, InputTraceMixin, ToolModeMixin):
+class NestedDictInput(
+    BaseInputMixin,
+    ListableInputMixin,
+    MetadataTraceMixin,
+    InputTraceMixin,
+    ToolModeMixin,
+):
     """Represents a nested dictionary field.
 
     This class represents a nested dictionary input and provides functionality for handling dictionary values.
@@ -449,6 +462,39 @@ class DropdownInput(BaseInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeM
     options_metadata: list[dict[str, Any]] = Field(default_factory=list)
     combobox: CoalesceBool = False
     dialog_inputs: dict[str, Any] = Field(default_factory=dict)
+
+
+class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
+    """Represents a tab input field.
+
+    This class represents a tab input field that allows a maximum of 3 values, each with a maximum of 20 characters.
+    It inherits from the `BaseInputMixin` and `TabMixin` classes.
+
+    Attributes:
+        field_type (SerializableFieldTypes): The field type of the input. Defaults to FieldTypes.TAB.
+        options (list[str]): List of tab options. Maximum of 3 values allowed, each with a maximum of 20 characters.
+        active_tab (int): Index of the currently active tab. Defaults to 0.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.TAB
+    options: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    @classmethod
+    def validate_value(cls, values):
+        """Validates the value to ensure it's one of the tab values."""
+        options = values.options  # Agora temos certeza de que options está disponível
+        value = values.value
+
+        if not isinstance(value, str):
+            msg = f"TabInput value must be a string. Got {type(value).__name__}."
+            raise TypeError(msg)
+
+        if value not in options and value != "":
+            msg = f"TabInput value must be one of the following: {options}. Got: '{value}'"
+            raise ValueError(msg)
+
+        return values
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
@@ -541,6 +587,7 @@ InputTypes: TypeAlias = (
     | LinkInput
     | SliderInput
     | DataFrameInput
+    | TabInput
 )
 
 InputTypesMap: dict[str, type[InputTypes]] = {t.__name__: t for t in get_args(InputTypes)}

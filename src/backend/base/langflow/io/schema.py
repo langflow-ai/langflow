@@ -17,6 +17,7 @@ _convert_field_type_to_type: dict[FieldTypes, type] = {
     FieldTypes.PROMPT: str,
     FieldTypes.CODE: str,
     FieldTypes.OTHER: str,
+    FieldTypes.TAB: str,
 }
 
 if TYPE_CHECKING:

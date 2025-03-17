@@ -19,6 +19,7 @@ from langflow.inputs.inputs import (
     SecretStrInput,
     SliderInput,
     StrInput,
+    TabInput,
     TableInput,
 )
 from langflow.inputs.utils import instantiate_input
@@ -213,6 +214,81 @@ def test_file_input_valid():
     assert file_input.value == ["/path/to/file"]
 
 
+@pytest.mark.parametrize(
+    ("test_id", "options", "value", "expected_options", "expected_value"),
+    [
+        (
+            "standard_valid",
+            ["Tab1", "Tab2", "Tab3"],
+            "Tab1",
+            ["Tab1", "Tab2", "Tab3"],
+            "Tab1",
+        ),
+        (
+            "fewer_options",
+            ["Tab1", "Tab2"],
+            "Tab2",
+            ["Tab1", "Tab2"],
+            "Tab2",
+        ),
+        (
+            "empty_options",
+            [],
+            "",
+            [],
+            "",
+        ),
+    ],
+)
+def test_tab_input_valid(test_id, options, value, expected_options, expected_value):
+    """Test TabInput validation with valid inputs."""
+    data = TabInput(
+        name=f"valid_tab_{test_id}",
+        options=options,
+        value=value,
+    )
+    assert data.options == expected_options
+    assert data.value == expected_value
+
+
+@pytest.mark.parametrize(
+    ("test_id", "options", "value", "error_expected"),
+    [
+        (
+            "too_many_options",
+            ["Tab1", "Tab2", "Tab3", "Tab4"],
+            "Tab1",
+            ValidationError,
+        ),
+        (
+            "option_too_long",
+            [
+                "Tab1",
+                "ThisTabValueIsTooLongAndExceedsTwentyCharacters",
+                "Tab3",
+            ],
+            "Tab1",
+            ValidationError,
+        ),
+        (
+            "non_string_value",
+            ["Tab1", "Tab2", "Tab3"],
+            123,
+            TypeError,
+        ),
+    ],
+)
+def test_tab_input_invalid(test_id, options, value, error_expected):
+    """Test TabInput validation with invalid inputs."""
+    if error_expected:
+        with pytest.raises(error_expected):
+            TabInput(
+                name=f"invalid_tab_{test_id}",
+                options=options,
+                value=value,
+            )
+
+
 def test_instantiate_input_comprehensive():
     valid_data = {
         "StrInput": {"name": "str_input", "value": "A string"},
@@ -223,6 +299,11 @@ def test_instantiate_input_comprehensive():
         "MultiselectInput": {
             "name": "multiselect_input",
             "value": ["option1", "option2"],
+        },
+        "TabInput": {
+            "name": "tab_input",
+            "options": ["Tab1", "Tab2", "Tab3"],
+            "value": "Tab1",
         },
     }
 
