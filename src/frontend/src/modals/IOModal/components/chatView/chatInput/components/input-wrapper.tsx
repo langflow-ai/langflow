@@ -26,6 +26,7 @@ interface InputWrapperProps {
   handleButtonClick: () => void;
   setShowAudioInput: (value: boolean) => void;
   currentFlowId: string;
+  playgroundPage: boolean;
 }
 
 const InputWrapper: React.FC<InputWrapperProps> = ({
@@ -43,6 +44,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   handleButtonClick,
   setShowAudioInput,
   currentFlowId,
+  playgroundPage,
 }) => {
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto custom-scroll`;
 
@@ -79,24 +81,30 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         </div>
         <div className="flex w-full items-end justify-between">
           <div className={isBuilding ? "cursor-not-allowed" : ""}>
-            <UploadFileButton
-              isBuilding={isBuilding}
-              fileInputRef={fileInputRef}
-              handleFileChange={handleFileChange}
-              handleButtonClick={handleButtonClick}
-            />
+            {!playgroundPage && (
+              <div className={isBuilding ? "cursor-not-allowed" : ""}>
+                <UploadFileButton
+                  isBuilding={isBuilding}
+                  fileInputRef={fileInputRef}
+                  handleFileChange={handleFileChange}
+                  handleButtonClick={handleButtonClick}
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {ENABLE_VOICE_ASSISTANT && (
               <VoiceButton toggleRecording={() => setShowAudioInput(true)} />
             )}
 
-            <ButtonSendWrapper
-              send={send}
-              noInput={noInput}
-              chatValue={chatValue}
-              files={files}
-            />
+            <div className={playgroundPage ? "ml-auto" : ""}>
+              <ButtonSendWrapper
+                send={send}
+                noInput={noInput}
+                chatValue={chatValue}
+                files={files}
+              />
+            </div>
           </div>
         </div>
       </div>

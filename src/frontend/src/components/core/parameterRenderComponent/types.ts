@@ -11,6 +11,7 @@ export type BaseInputProps<valueType = any> = {
   handleOnNewValue: handleOnNewValueType;
   disabled: boolean;
   nodeClass?: APIClassType;
+  helperText?: string;
   handleNodeClass?: (value: any, code?: string, type?: string) => void;
   readonly?: boolean;
   placeholder?: string;
@@ -101,6 +102,10 @@ export type InputGlobalComponentType = {
 export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
+};
+
+export type TabComponentType = {
+  options: string[];
 };
 
 export type NodeInfoType = {

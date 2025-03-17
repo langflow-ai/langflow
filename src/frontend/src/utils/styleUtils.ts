@@ -1,7 +1,9 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { BWPythonIcon } from "@/icons/BW python";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
+import { JSIcon } from "@/icons/JSicon";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
@@ -61,6 +63,7 @@ import {
   Code2,
   CodeXml,
   Cog,
+  Columns2,
   Combine,
   Command,
   Compass,
@@ -83,6 +86,7 @@ import {
   EyeOff,
   File,
   FileClock,
+  FileCode2,
   FileDown,
   FileQuestion,
   FileSearch,
@@ -245,7 +249,7 @@ import { AWSIcon } from "../icons/AWS";
 import { AgentQLIcon } from "../icons/AgentQL";
 import { AirbyteIcon } from "../icons/Airbyte";
 import { AnthropicIcon } from "../icons/Anthropic";
-import { ApifyIcon } from "../icons/Apify";
+import { ApifyIcon, ApifyWhiteIcon } from "../icons/Apify";
 import { ArXivIcon } from "../icons/ArXiv";
 import { ArizeIcon } from "../icons/Arize";
 import { AssemblyAIIcon } from "../icons/AssemblyAI";
@@ -527,7 +531,6 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
-  // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "AgentQL", name: "agentql", icon: "AgentQL" },
@@ -617,6 +620,7 @@ export const nodeIconsLucide: iconsType = {
   ListFlows: Group,
   ClearMessageHistory: FileClock,
   Python: PythonIcon,
+  BWPython: BWPythonIcon,
   AzureChatOpenAi: AzureIcon,
   Ollama: OllamaIcon,
   ChatOllama: OllamaIcon,
@@ -753,6 +757,7 @@ export const nodeIconsLucide: iconsType = {
   Wikipedia: WikipediaIcon,
   Arize: ArizeIcon,
   Apify: ApifyIcon,
+  ApifyWhite: ApifyWhiteIcon,
 
   //Node Icons
   model_specs: FileSliders,
@@ -976,6 +981,9 @@ export const nodeIconsLucide: iconsType = {
   ThumbDownIconCustom,
   ThumbUpIconCustom,
   Serper: SerperIcon,
+  javascript: JSIcon,
+  FileCode2,
+  Columns2,
   ScrapeGraphAI: ScrapeGraph,
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,

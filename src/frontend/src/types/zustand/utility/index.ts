@@ -23,4 +23,6 @@ export type UtilityStoreType = {
   setDismissAll: (dismissAll: boolean) => void;
   currentSessionId: string;
   setCurrentSessionId: (sessionId: string) => void;
+  setClientId: (clientId: string) => void;
+  clientId: string;
 };

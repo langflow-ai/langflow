@@ -110,6 +110,28 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   };
 
   const handleSubmitDialog = async () => {
+    // Validate required fields first
+    const missingRequiredFields = Object.entries(dialogTemplate)
+      .filter(
+        ([key, fieldValue]) =>
+          (fieldValue as { required: boolean })?.required === true &&
+          (!fieldValues[key] ||
+            (typeof fieldValues[key] === "string" &&
+              fieldValues[key].trim() === "")),
+      )
+      .map(
+        ([fieldKey, fieldValue]) =>
+          (fieldValue as { display_name: string })?.display_name || fieldKey,
+      );
+
+    if (missingRequiredFields.length > 0) {
+      handleErrorData({
+        title: "Missing required fields",
+        list: missingRequiredFields,
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     await mutateTemplate(
@@ -162,13 +184,15 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
         <div className="flex flex-col gap-5 overflow-y-auto px-5">
           {Object.entries(dialogTemplate).map(([fieldKey, fieldValue]) => (
             <div key={fieldKey}>
-              <div>
+              <div className="flex items-center gap-2">
                 {getCustomParameterTitle({
                   title:
                     (fieldValue as { display_name: string })?.display_name ??
                     "",
                   nodeId,
                   isFlexView: false,
+                  required:
+                    (fieldValue as { required: boolean })?.required ?? false,
                 })}
               </div>
               <ParameterRenderComponent
@@ -178,12 +202,16 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                 name={fieldKey}
                 nodeId={nodeId}
                 templateData={fieldValue as Partial<InputFieldType>}
-                templateValue={fieldValues[fieldKey] || ""}
+                templateValue={(fieldValue as { value: string })?.value ?? ""}
                 editNode={false}
                 handleNodeClass={() => {}}
                 nodeClass={dialogNodeData}
-                disabled={false}
-                placeholder=""
+                disabled={
+                  (fieldValue as { disabled: boolean })?.disabled ?? false
+                }
+                placeholder={
+                  (fieldValue as { placeholder: string })?.placeholder ?? ""
+                }
                 isToolMode={false}
               />
             </div>

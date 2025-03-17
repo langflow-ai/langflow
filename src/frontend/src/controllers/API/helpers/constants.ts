@@ -24,6 +24,7 @@ export const URLs = {
   SIDEBAR_CATEGORIES: `sidebar_categories`,
   ALL: `all`,
   VOICE: `voice`,
+  PUBLIC_FLOW: `/flows/public_flow`,
 } as const;
 
 export function getURL(key: keyof typeof URLs, params: any = {}) {
