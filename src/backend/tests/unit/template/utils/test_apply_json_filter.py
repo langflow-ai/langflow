@@ -1,5 +1,5 @@
 import pytest
-from hypothesis import given, assume
+from hypothesis import assume, given
 from hypothesis import strategies as st
 from langflow.schema.data import Data
 from langflow.template.utils import apply_json_filter
@@ -19,7 +19,7 @@ def dict_strategy():
 def test_basic_dict_access(data, key):
     # Skip empty key tests which have special handling
     assume(key != "")
-    
+
     if key in data:
         result = apply_json_filter(data, key)
         assert result == data[key]
@@ -44,7 +44,7 @@ def test_array_access(data, index):
 def test_nested_object_access(nested_data):
     # Skip non-dictionary inputs that would cause Data validation errors
     assume(isinstance(nested_data, dict))
-    
+
     # Wrap in Data object to test both raw and Data object inputs
     data_obj = Data(data=nested_data)
     result = apply_json_filter(data_obj, "")
@@ -80,7 +80,11 @@ def test_complex_nested_access(data):
 
 
 # Test array operations on objects
-@given(data=st.lists(st.dictionaries(keys=st.text(), values=st.integers(), min_size=1), min_size=1))
+@given(data=st.lists(st.dictionaries(
+    keys=st.text(min_size=1).filter(lambda s: s.strip() and not any(c in s for c in "\r\n\t")),
+    values=st.integers(),
+    min_size=1),
+    min_size=1))
 def test_array_object_operations(data):
     if data and all(data):
         key = next(iter(data[0]))

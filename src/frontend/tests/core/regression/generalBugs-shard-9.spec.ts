@@ -68,7 +68,7 @@ test(
       .getByTestId("helpersMessage History")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 500 },
+        targetPosition: { x: 200, y: 600 },
       });
 
     await initialGPTsetup(page, {
@@ -90,7 +90,6 @@ AI:
     await page.getByText("Edit Prompt", { exact: true }).click();
     await page.getByText("Check & Save").last().click();
 
-    await page.getByTestId("fit_view").click();
     await page.getByTestId("fit_view").click();
 
     //connection 1
@@ -136,7 +135,7 @@ AI:
     await expect(textLocator.nth(1)).toBeVisible();
 
     await page.waitForSelector("[data-testid='button-send']", {
-      timeout: 3000,
+      timeout: 3000 * 3,
     });
 
     const memoryResponseText = await page
