@@ -24,10 +24,9 @@ export function AppInitPage() {
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
-  // const { isFetched: typesLoaded } = useGetTypes({ enabled: isFetched });
-  useGetGlobalVariables();
-  useGetTagsQuery();
-  useGetFoldersQuery();
+  useGetGlobalVariables({ enabled: isFetched });
+  useGetTagsQuery({ enabled: isFetched });
+  useGetFoldersQuery({ enabled: isFetched });
   const { isFetched: isExamplesFetched } = useGetBasicExamplesQuery();
 
   useEffect(() => {
