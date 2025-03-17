@@ -18,6 +18,7 @@ interface ContentBlockDisplayProps {
   isLoading?: boolean;
   state?: string;
   chatId: string;
+  playgroundPage?: boolean;
 }
 
 export function ContentBlockDisplay({
@@ -25,6 +26,7 @@ export function ContentBlockDisplay({
   isLoading,
   state,
   chatId,
+  playgroundPage,
 }: ContentBlockDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -41,7 +43,7 @@ export function ContentBlockDisplay({
   const lastContent =
     contentBlocks[0]?.contents[contentBlocks[0]?.contents.length - 1];
   const headerIcon =
-    state === "partial" ? lastContent?.header?.icon || "Bot" : "Bot";
+    state === "partial" ? lastContent?.header?.icon || "Bot" : "Check";
 
   const headerTitle =
     state === "partial" ? (lastContent?.header?.title ?? "Steps") : "Finished";
@@ -76,11 +78,14 @@ export function ContentBlockDisplay({
           className="flex cursor-pointer items-center justify-between p-4"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 align-baseline">
             {headerIcon && (
               <ForwardedIconComponent
                 name={headerIcon}
-                className="h-4 w-4"
+                className={cn(
+                  "h-4 w-4",
+                  state !== "partial" && "text-status-green",
+                )}
                 strokeWidth={1.5}
               />
             )}
@@ -102,7 +107,9 @@ export function ContentBlockDisplay({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <DurationDisplay duration={totalDuration} chatId={chatId} />
+            {!playgroundPage && (
+              <DurationDisplay duration={totalDuration} chatId={chatId} />
+            )}
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
@@ -193,6 +200,7 @@ export function ContentBlockDisplay({
                           )}
                         </AnimatePresence>
                         <ContentDisplay
+                          playgroundPage={playgroundPage}
                           content={content}
                           chatId={`${chatId}-${index}`}
                         />

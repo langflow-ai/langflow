@@ -73,7 +73,7 @@ const Trigger: React.FC<TriggerProps> = ({
 
 const Header: React.FC<{
   children: ReactNode;
-  description: string | JSX.Element | null;
+  description?: string | JSX.Element | null;
   clampDescription?: number;
 }> = ({
   children,
@@ -85,11 +85,13 @@ const Header: React.FC<{
       <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
         {children}
       </DialogTitle>
-      <DialogDescription
-        className={`line-clamp-${clampDescription ?? 2} text-sm`}
-      >
-        {description}
-      </DialogDescription>
+      {description && (
+        <DialogDescription
+          className={`line-clamp-${clampDescription ?? 2} text-sm`}
+        >
+          {description}
+        </DialogDescription>
+      )}
     </DialogHeader>
   );
 };
@@ -166,6 +168,7 @@ interface BaseModalProps {
   setOpen?: (open: boolean) => void;
   size?:
     | "x-small"
+    | "retangular"
     | "smaller"
     | "small"
     | "medium"
@@ -176,6 +179,7 @@ interface BaseModalProps {
     | "large-h-full"
     | "templates"
     | "small-h-full"
+    | "medium-small-tall"
     | "medium-h-full"
     | "md-thin"
     | "sm-thin"
@@ -188,6 +192,7 @@ interface BaseModalProps {
   type?: "modal" | "dialog" | "full-screen";
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  closeButtonClassName?: string;
 }
 function BaseModal({
   className,
@@ -199,6 +204,7 @@ function BaseModal({
   type = "dialog",
   onSubmit,
   onEscapeKeyDown,
+  closeButtonClassName,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -253,6 +259,7 @@ function BaseModal({
             onOpenAutoFocus={(event) => event.preventDefault()}
             onEscapeKeyDown={onEscapeKeyDown}
             className={contentClasses}
+            closeButtonClassName={closeButtonClassName}
           >
             {onSubmit ? (
               <Form.Root
