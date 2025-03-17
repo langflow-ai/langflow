@@ -229,7 +229,6 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
 
 async def initialize_services(*, fix_migration: bool = False) -> None:
     """Initialize all the services needed."""
-    get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     cache_service = get_service(ServiceType.CACHE_SERVICE, default=CacheServiceFactory())
     # Test external cache connection
     if isinstance(cache_service, ExternalAsyncBaseCacheService) and not (await cache_service.is_connected()):
