@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "APIRequest",
-            "id": "APIRequest-y0mPJ",
+            "id": "APIRequest-ooZcW",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-013yW",
+            "id": "Agent-6NKOE",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-APIRequest-y0mPJ{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-y0mPJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-013yW{œfieldNameœ:œtoolsœ,œidœ:œAgent-013yWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-APIRequest-ooZcW{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-ooZcWœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-6NKOE{œfieldNameœ:œtoolsœ,œidœ:œAgent-6NKOEœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "APIRequest-y0mPJ",
-        "sourceHandle": "{œdataTypeœ:œAPIRequestœ,œidœ:œAPIRequest-y0mPJœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
-        "target": "Agent-013yW",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-013yWœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "source": "APIRequest-ooZcW",
+        "sourceHandle": "{œdataTypeœ: œAPIRequestœ, œidœ: œAPIRequest-ooZcWœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-6NKOE",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-6NKOEœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-x0vgP",
+            "id": "ChatInput-aFhoH",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-013yW",
+            "id": "Agent-6NKOE",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-x0vgP{œdataTypeœ:œChatInputœ,œidœ:œChatInput-x0vgPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-013yW{œfieldNameœ:œinput_valueœ,œidœ:œAgent-013yWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-aFhoH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aFhoHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-6NKOE{œfieldNameœ:œinput_valueœ,œidœ:œAgent-6NKOEœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-x0vgP",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-x0vgPœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "Agent-013yW",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-013yWœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "source": "ChatInput-aFhoH",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aFhoHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-6NKOE",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-6NKOEœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-013yW",
+            "id": "Agent-6NKOE",
             "name": "response",
             "output_types": [
               "Message"
@@ -71,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-iOafU",
+            "id": "ChatOutput-WuOt0",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -80,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-013yW{œdataTypeœ:œAgentœ,œidœ:œAgent-013yWœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iOafU{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iOafUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-6NKOE{œdataTypeœ:œAgentœ,œidœ:œAgent-6NKOEœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-WuOt0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-WuOt0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-013yW",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-013yWœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
-        "target": "ChatOutput-iOafU",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iOafUœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "source": "Agent-6NKOE",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-6NKOEœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-WuOt0",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-WuOt0œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -93,7 +93,7 @@
         "data": {
           "description": "Make HTTP requests using URLs or cURL commands.",
           "display_name": "API Request",
-          "id": "APIRequest-y0mPJ",
+          "id": "APIRequest-ooZcW",
           "node": {
             "base_classes": [
               "Data"
@@ -573,7 +573,7 @@
           "type": "APIRequest"
         },
         "dragging": false,
-        "id": "APIRequest-y0mPJ",
+        "id": "APIRequest-ooZcW",
         "measured": {
           "height": 523,
           "width": 360
@@ -587,7 +587,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-x0vgP",
+          "id": "ChatInput-aFhoH",
           "node": {
             "base_classes": [
               "Message"
@@ -884,7 +884,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-x0vgP",
+        "id": "ChatInput-aFhoH",
         "measured": {
           "height": 74,
           "width": 216
@@ -898,7 +898,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-iOafU",
+          "id": "ChatOutput-WuOt0",
           "node": {
             "base_classes": [
               "Message"
@@ -1195,7 +1195,7 @@
           "showNode": false,
           "type": "ChatOutput"
         },
-        "id": "ChatOutput-iOafU",
+        "id": "ChatOutput-WuOt0",
         "measured": {
           "height": 74,
           "width": 216
@@ -1209,7 +1209,7 @@
       },
       {
         "data": {
-          "id": "note-FRHPN",
+          "id": "note-2G3L2",
           "node": {
             "description": "## Open the playground and ask anything about a Pokémon! ⚡ 🐹",
             "display_name": "",
@@ -1222,7 +1222,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-FRHPN",
+        "id": "note-2G3L2",
         "measured": {
           "height": 324,
           "width": 393
@@ -1238,7 +1238,7 @@
       },
       {
         "data": {
-          "id": "note-X1E5Q",
+          "id": "note-Vwu4L",
           "node": {
             "description": "# Pokédex Agent\n\nCollect research on Pokémon with a specialized **Agent** and the Pokédex API.\n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Paste your OpenAI API key in the **Agent** component.\n2.  Click **Playground** and ask about your favorite Pokémon.\nThe **Agent** queries the Pokedex API and returns a formatted entry.",
             "display_name": "",
@@ -1249,7 +1249,7 @@
         },
         "dragging": false,
         "height": 543,
-        "id": "note-X1E5Q",
+        "id": "note-Vwu4L",
         "measured": {
           "height": 543,
           "width": 352
@@ -1265,7 +1265,7 @@
       },
       {
         "data": {
-          "id": "note-umVLM",
+          "id": "note-kgDfT",
           "node": {
             "description": "### 💡 Add your OpenAI API key here",
             "display_name": "",
@@ -1278,7 +1278,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-umVLM",
+        "id": "note-kgDfT",
         "measured": {
           "height": 324,
           "width": 337
@@ -1294,7 +1294,7 @@
       },
       {
         "data": {
-          "id": "Agent-013yW",
+          "id": "Agent-6NKOE",
           "node": {
             "base_classes": [
               "Message"
@@ -1975,7 +1975,7 @@
           "showNode": true,
           "type": "Agent"
         },
-        "id": "Agent-013yW",
+        "id": "Agent-6NKOE",
         "measured": {
           "height": 698,
           "width": 360

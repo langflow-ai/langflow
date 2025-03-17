@@ -14,4 +14,5 @@ export type GetCodeType = {
   tweaksBuildedObject?: {};
   endpointName?: string | null;
   activeTweaks?: boolean;
+  copy?: boolean;
 };
