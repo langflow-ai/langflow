@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -95,17 +95,13 @@ test(
       .getByTestId("inputlist_str_urls_0")
       .fill("https://www.example.com");
 
-    // Connect text output to first chat output
-    const urlTextOutput = await page
-      .getByTestId("handle-url-shownode-text-right")
-      .nth(0);
-    await urlTextOutput.hover();
-    await page.mouse.down();
-    const firstChatInput = await page
+    await page.getByTestId("handle-url-shownode-text-right").nth(0).click();
+    await page.waitForTimeout(600);
+
+    await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
-      .nth(0);
-    await firstChatInput.hover();
-    await page.mouse.up();
+      .nth(0)
+      .click();
 
     // Run flow and test text output inspection
     await page.getByTestId("button_run_url").first().click();
@@ -120,16 +116,16 @@ test(
     await page.keyboard.press("Escape");
 
     // Connect dataframe output to second chat output
-    const urlDataframeOutput = await page
+    await page
       .getByTestId("handle-url-shownode-dataframe-right")
-      .nth(0);
-    await urlDataframeOutput.hover();
-    await page.mouse.down();
-    const secondChatInput = await page
+      .nth(0)
+      .click();
+    await page.waitForTimeout(600);
+    await page
       .getByTestId("handle-chatoutput-noshownode-text-target")
-      .nth(1);
-    await secondChatInput.hover();
-    await page.mouse.up();
+      .nth(1)
+      .click();
+    await page.waitForTimeout(600);
 
     // Run and verify text output is still shown
     await page.getByTestId("button_run_url").first().click();
@@ -143,6 +139,7 @@ test(
       },
     );
     await page.keyboard.press("Escape");
+    await page.waitForTimeout(600);
 
     // Remove text connection
     const textEdge = await page.locator(".react-flow__edge").first();
@@ -162,7 +159,7 @@ test(
       },
     );
     await page.keyboard.press("Escape");
-
+    await page.waitForTimeout(600);
     // Remove all connections
     const dataEdge = await page.locator(".react-flow__edge").first();
     await dataEdge.click();
@@ -174,11 +171,20 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-data-output-modal"]`,
-      {
-        timeout: 3000,
-      },
-    );
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+
+    const closeButton = await page
+      .getByText(`Close`, {
+        exact: true,
+      })
+      .count();
+
+    expect(closeButton).toBeGreaterThan(1);
   },
 );

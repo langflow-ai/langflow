@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import { useMutationFunctionType } from "@/types/api";
 import { Message } from "@/types/messages";
 import { UseMutationResult } from "@tanstack/react-query";
@@ -17,14 +18,31 @@ export const useUpdateSessionName: useMutationFunctionType<
   const { mutate, queryClient } = UseRequestProcessor();
 
   const updateSessionApi = async (data: UpdateSessionParams) => {
-    const result = await api.patch(
-      `${getURL("MESSAGES")}/session/${data.old_session_id}`,
-      null,
-      {
-        params: { new_session_id: data.new_session_id },
-      },
-    );
-    return result.data;
+    const isPlayground = useFlowStore.getState().playgroundPage;
+    const flowId = useFlowStore.getState().currentFlow?.id;
+    // if we are in playground we will edit the local storage instead of the API
+    if (isPlayground && flowId) {
+      const messages = JSON.parse(sessionStorage.getItem(flowId) || "");
+      const messagesWithNewSessionId = messages.map((message: Message) => {
+        if (message.session_id === data.old_session_id) {
+          message.session_id = data.new_session_id;
+        }
+        return message;
+      });
+      sessionStorage.setItem(flowId, JSON.stringify(messagesWithNewSessionId));
+      return {
+        data: messagesWithNewSessionId,
+      };
+    } else {
+      const result = await api.patch(
+        `${getURL("MESSAGES")}/session/${data.old_session_id}`,
+        null,
+        {
+          params: { new_session_id: data.new_session_id },
+        },
+      );
+      return result.data;
+    }
   };
 
   const mutation: UseMutationResult<Message[], any, UpdateSessionParams> =
