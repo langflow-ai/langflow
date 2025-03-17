@@ -573,7 +573,7 @@ export default function Page({
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
             className="theme-attribution"
-            minZoom={0.01}
+            minZoom={0.4}
             maxZoom={8}
             zoomOnScroll={!view}
             zoomOnPinch={!view}
