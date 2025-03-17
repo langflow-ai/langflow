@@ -81,6 +81,7 @@ dependencies = [
     "mcp>=1.1.2",
     "aiosqlite>=0.20.0",
     "greenlet>=3.1.1",
+    "jsonquerylang>=1.1.1",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
 ]
 
