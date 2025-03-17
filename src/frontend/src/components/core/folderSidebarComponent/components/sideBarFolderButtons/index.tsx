@@ -43,12 +43,12 @@ import { SelectOptions } from "./components/select-options";
 type SideBarFoldersButtonsComponentProps = {
   handleChangeFolder?: (id: string) => void;
   handleDeleteFolder?: (item: FolderType) => void;
-  handleChangeFiles?: () => void;
+  handleFilesClick?: () => void;
 };
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
   handleDeleteFolder,
-  handleChangeFiles,
+  handleFilesClick,
 }: SideBarFoldersButtonsComponentProps) => {
   const location = useLocation();
   const pathname = location.pathname;
@@ -450,7 +450,7 @@ const SideBarFoldersButtonsComponent = ({
           <div className="flex w-full items-center gap-2 p-2">
             <SidebarMenuButton
               isActive={checkPathFiles}
-              onClick={() => handleChangeFiles?.()}
+              onClick={() => handleFilesClick?.()}
               size="md"
               className="text-[13px]"
             >

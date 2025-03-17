@@ -67,7 +67,7 @@ export default function CollectionPage(): JSX.Element {
               setFolderToEdit(item);
               setOpenDeleteFolderModal(true);
             }}
-            handleChangeFiles={() => {
+            handleFilesClick={() => {
               navigate("files");
             }}
           />
