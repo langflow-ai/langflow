@@ -10,6 +10,7 @@ from langflow.api.v1 import (
     folders_router,
     login_router,
     monitor_router,
+    scheduler_router,
     starter_projects_router,
     store_router,
     users_router,
@@ -39,5 +40,6 @@ router.include_router(files_router)
 router.include_router(monitor_router)
 router.include_router(folders_router)
 router.include_router(starter_projects_router)
+router.include_router(scheduler_router)
 
 router_v2.include_router(files_router_v2)

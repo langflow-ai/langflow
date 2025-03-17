@@ -5,6 +5,13 @@ import { cloneDeep } from "lodash";
 import { useEffect, useState } from "react";
 import IconComponent from "../../components/common/genericIconComponent";
 import EditFlowSettings from "../../components/core/editFlowSettingsComponent";
+import SchedulerComponent from "../../components/schedulerComponent";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
 import { SETTINGS_DIALOG_SUBTITLE } from "../../constants/constants";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { FlowSettingsPropsType } from "../../types/components";
@@ -24,6 +31,8 @@ export default function FlowSettingsModal({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
+  const [activeTab, setActiveTab] = useState("details");
+
   useEffect(() => {
     setName(flow?.name ?? "");
     setDescription(flow?.description ?? "");
@@ -84,6 +93,7 @@ export default function FlowSettingsModal({
       setDisableSave(true);
     }
   }, [nameLists, flow, description, endpoint_name, name]);
+
   return (
     <BaseModal
       open={open}
@@ -92,26 +102,37 @@ export default function FlowSettingsModal({
       onSubmit={handleClick}
     >
       <BaseModal.Header description={SETTINGS_DIALOG_SUBTITLE}>
-        <span className="pr-2">Details</span>
-        <IconComponent name="SquarePen" className="mr-2 h-4 w-4" />
+        <span className="pr-2">Flow Settings</span>
+        <IconComponent name="Settings" className="mr-2 h-4 w-4" />
       </BaseModal.Header>
       <BaseModal.Content>
-        <EditFlowSettings
-          invalidNameList={nameLists}
-          name={name}
-          description={description}
-          endpointName={endpoint_name}
-          setName={setName}
-          setDescription={setDescription}
-          setEndpointName={details ? undefined : setEndpointName}
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="scheduler">Scheduler</TabsTrigger>
+          </TabsList>
+          <TabsContent value="details" className="mt-4">
+            <EditFlowSettings
+              invalidNameList={nameLists}
+              name={name}
+              description={description}
+              endpointName={endpoint_name}
+              setName={setName}
+              setDescription={setDescription}
+              setEndpointName={details ? undefined : setEndpointName}
+            />
+          </TabsContent>
+          <TabsContent value="scheduler" className="mt-4">
+            {flow?.id && <SchedulerComponent flowId={flow.id} />}
+          </TabsContent>
+        </Tabs>
       </BaseModal.Content>
 
       <BaseModal.Footer
         submit={{
           label: "Save",
           dataTestId: "save-flow-settings",
-          disabled: disableSave,
+          disabled: activeTab === "details" ? disableSave : false,
           loading: isSaving,
         }}
       />

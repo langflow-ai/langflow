@@ -18,6 +18,7 @@ import { GlobeOkIcon } from "@/icons/globe-ok";
 import { ThumbDownIconCustom, ThumbUpIconCustom } from "@/icons/thumbs";
 import { TwitterLogoIcon } from "@radix-ui/react-icons";
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   ArrowBigUp,
@@ -37,6 +38,7 @@ import {
   Boxes,
   Braces,
   BrainCircuit,
+  CalendarClock,
   ChartNetwork,
   Check,
   CheckCheck,
@@ -56,6 +58,7 @@ import {
   CircleDot,
   CircleOff,
   Clipboard,
+  Clock,
   Code,
   Code2,
   CodeXml,
@@ -173,6 +176,7 @@ import {
   Redo,
   RefreshCcw,
   RefreshCcwDot,
+  RefreshCw,
   Repeat,
   RotateCcw,
   Save,
@@ -606,6 +610,12 @@ export const nodeIconsLucide: iconsType = {
   custom_components: GradientInfinity,
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
+  Clock: Clock,
+  Loader2: Loader2,
+  RefreshCw: RefreshCw,
+  Activity: Activity,
+  CalendarClock: CalendarClock,
+  ListChecks: ListChecks,
   //Integration Icons
   LMStudio: LMStudioIcon,
   Notify: Bell,
@@ -947,7 +957,6 @@ export const nodeIconsLucide: iconsType = {
   Youtube,
   List,
   SquareCode,
-  ListChecks,
   PanelRightOpen,
   CornerDownLeft,
   ChevronsDownUp,
@@ -962,7 +971,6 @@ export const nodeIconsLucide: iconsType = {
   ZoomIn,
   ZoomOut,
   Sigma,
-  Radio,
   DatabaseZap,
   Cog,
   ArrowRightLeft,
@@ -978,4 +986,11 @@ export const nodeIconsLucide: iconsType = {
   ScrapeGraphMarkdownifyApi: ScrapeGraph,
   DollarSign,
   BookOpenText,
+  // Remove duplicate entries
+  // Clock: Clock,
+  // Loader2: Loader2,
+  // RefreshCw: RefreshCw,
+  // Activity: Activity,
+  // CalendarClock: CalendarClock,
+  // ListChecks: ListChecks,
 };
