@@ -7,6 +7,7 @@ from langflow.schema import Data
 
 def infer_list_type(items: list, max_samples: int = 5) -> str:
     """Infer the type of a list by sampling its items.
+
     Handles mixed types and provides more detailed type information.
     """
     if not items:
@@ -29,6 +30,7 @@ def infer_list_type(items: list, max_samples: int = 5) -> str:
 
 def get_type_str(value: Any) -> str:
     """Get a detailed string representation of the type of a value.
+
     Handles special cases and provides more specific type information.
     """
     if value is None:
@@ -49,8 +51,9 @@ def get_type_str(value: Any) -> str:
             return "str(json)"
         except (json.JSONDecodeError, TypeError):
             pass
-        return "str"
-    if isinstance(value, (list, tuple, set)):
+        else:
+            return "str"
+    if isinstance(value, list | tuple | set):
         return infer_list_type(list(value))
     if isinstance(value, dict):
         return "dict"
@@ -63,6 +66,7 @@ def analyze_value(
     max_depth: int = 10,
     current_depth: int = 0,
     path: str = "",
+    *,
     size_hints: bool = True,
     include_samples: bool = True,
 ) -> str | dict:
@@ -80,7 +84,7 @@ def analyze_value(
         return f"max_depth_reached(depth={max_depth})"
 
     try:
-        if isinstance(value, (list, tuple, set)):
+        if isinstance(value, list | tuple | set):
             length = len(value)
             if length == 0:
                 return "list(unknown)"
@@ -89,9 +93,20 @@ def analyze_value(
             size_info = f"[size={length}]" if size_hints else ""
 
             # For lists of complex objects, include a sample of the structure
-            if include_samples and length > 0 and isinstance(value[0], (dict, list)) and current_depth < max_depth - 1:
+            if (
+                include_samples
+                and length > 0
+                and isinstance(value, list | tuple)
+                and isinstance(value[0], dict | list)
+                and current_depth < max_depth - 1
+            ):
                 sample = analyze_value(
-                    value[0], max_depth, current_depth + 1, f"{path}[0]", size_hints, include_samples
+                    value[0],
+                    max_depth,
+                    current_depth + 1,
+                    f"{path}[0]",
+                    size_hints=size_hints,
+                    include_samples=include_samples,
                 )
                 return f"{type_info}{size_info}, sample: {json.dumps(sample)}"
 
@@ -102,24 +117,32 @@ def analyze_value(
             for k, v in value.items():
                 new_path = f"{path}.{k}" if path else k
                 try:
-                    result[k] = analyze_value(v, max_depth, current_depth + 1, new_path, size_hints, include_samples)
-                except Exception as e:
+                    result[k] = analyze_value(
+                        v,
+                        max_depth,
+                        current_depth + 1,
+                        new_path,
+                        size_hints=size_hints,
+                        include_samples=include_samples,
+                    )
+                except Exception as e:  # noqa: BLE001
                     result[k] = f"error({e!s})"
             return result
 
         return get_type_str(value)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return f"error({e!s})"
 
 
 def get_data_structure(
     data_obj: Data | dict,
     max_depth: int = 10,
+    max_sample_size: int = 3,
+    *,
     size_hints: bool = True,
     include_sample_values: bool = False,
     include_sample_structure: bool = True,
-    max_sample_size: int = 3,
 ) -> dict:
     """Convert a Data object or dictionary into a detailed schema representation.
 
@@ -182,7 +205,7 @@ def get_data_structure(
 
 def get_sample_values(data: Any, max_items: int = 3) -> Any:
     """Get sample values from a data structure, handling nested structures."""
-    if isinstance(data, (list, tuple, set)):
+    if isinstance(data, list | tuple | set):
         return [get_sample_values(item) for item in list(data)[:max_items]]
     if isinstance(data, dict):
         return {k: get_sample_values(v, max_items) for k, v in data.items()}

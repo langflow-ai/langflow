@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
+
 from langflow.components import processing
 from langflow.schema import Data
 
@@ -33,8 +34,8 @@ async def test_successful_lambda_generation(lambda_filter):
     # Assertions
     assert isinstance(result, list)
     assert len(result) == 1
-    assert result[0]["name"] == "test2"
-    assert result[0]["value"] == 20
+    assert result[0].name == "test2"
+    assert result[0].value == 20
 
 
 async def test_invalid_lambda_response(lambda_filter):
@@ -75,7 +76,7 @@ async def test_lambda_with_large_dataset(lambda_filter):
     # Assertions
     assert isinstance(result, list)
     assert len(result) == 499  # Items with value from 1501 to 1999
-    assert all(item["value"] > 1500 for item in result)
+    assert all(item.value > 1500 for item in result)
 
 
 async def test_lambda_with_complex_data_structure(lambda_filter):
@@ -107,8 +108,8 @@ async def test_lambda_with_complex_data_structure(lambda_filter):
     # Assertions
     assert isinstance(result, list)
     assert len(result) == 1
-    assert result[0]["id"] == 3
-    assert result[0]["score"] == 95
+    assert result[0].id == 3
+    assert result[0].score == 95
 
 
 def test_get_data_structure(lambda_filter):
