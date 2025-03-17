@@ -169,12 +169,11 @@ uv pip install langflow
 
 If your application requires additional dependencies, see [Install custom dependencies](/install-custom-dependencies).
 
-3. To set up your environment variables, copy the `.env.example` file to `.env` (if it exists).
-Add your required API keys and configurations.
+3. To set up your environment variables, create a `.env` file, and add your required API keys and configurations.
 
-4. Start the Langflow server:
+4. Start the Langflow server with the values from your `.env` file:
 ```bash
-langflow run --env-file .env
+uv run langflow run --env-file .env
 ```
 
 The Langflow server is available by default at `http://localhost:7860`.
