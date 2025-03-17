@@ -21,6 +21,7 @@ from langflow.template.field.base import Output
 # Models are trained with this exact string. Do not update.
 DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
 
+
 class LCModelComponent(Component):
     display_name: str = "Model Name"
     description: str = "Model Description"
@@ -167,7 +168,7 @@ class LCModelComponent(Component):
         input_value: str | Message,
         system_message: str | None = None,
     ):
-        if getattr(self, 'detailed_thinking', False):
+        if getattr(self, "detailed_thinking", False):
             system_message = DETAILED_THINKING_PREFIX + (system_message or "")
 
         return self._get_chat_result(

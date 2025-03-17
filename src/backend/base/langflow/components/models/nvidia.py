@@ -6,6 +6,7 @@ from langflow.field_typing.range_spec import RangeSpec
 from langflow.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from langflow.schema.dotdict import dotdict
 
+
 class NVIDIAModelComponent(LCModelComponent):
     display_name = "NVIDIA"
     description = "Generates text using NVIDIA LLMs."
@@ -13,6 +14,7 @@ class NVIDIAModelComponent(LCModelComponent):
 
     try:
         from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
         all_models = ChatNVIDIA().get_available_models()
     except ImportError as e:
         msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
@@ -41,7 +43,7 @@ class NVIDIAModelComponent(LCModelComponent):
             display_name="Detailed Thinking",
             info="If true, the model will return a detailed thought process. Only supported by reasoning models.",
             value=False,
-            show=False
+            show=False,
         ),
         BoolInput(
             name="tool_model_enabled",
@@ -89,7 +91,7 @@ class NVIDIAModelComponent(LCModelComponent):
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
- 
+
         # Note: don't include the previous model, as it may not exist in available models from the new base url
         model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
         if tool_model_enabled:
