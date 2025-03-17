@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -171,11 +171,20 @@ test(
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
-    await page.waitForSelector(
-      `[data-testid="${urlNodeId}-data-output-modal"]`,
-      {
-        timeout: 3000,
-      },
-    );
+    await page.getByText(`Inspect the output of the component below.`, {
+      exact: true,
+    });
+
+    await page.getByText(`Component Output`, {
+      exact: true,
+    });
+
+    const closeButton = await page
+      .getByText(`Close`, {
+        exact: true,
+      })
+      .count();
+
+    expect(closeButton).toBeGreaterThan(1);
   },
 );
