@@ -103,7 +103,7 @@ export default function DragFilesComponent({
           <span>{types.slice(0, 3).join(", ")}</span>
           {types.length > 3 && (
             <ShadTooltip content={types.slice(3).join(", ")}>
-              <span className="cursor-help text-accent-pink-foreground underline">
+              <span className="text-accent-pink-foreground underline">
                 +{types.length - 3} more
               </span>
             </ShadTooltip>
