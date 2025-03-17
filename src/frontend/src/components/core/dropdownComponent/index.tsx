@@ -203,7 +203,9 @@ export default function Dropdown({
                 className="h-4 w-4"
               />
             )}
-            {value && filteredOptions.includes(value) ? value : placeholderName}{" "}
+            {value && filteredOptions.includes(value)
+              ? value
+              : placeholderName}{" "}
           </span>
           <ForwardedIconComponent
             name="ChevronsUpDown"
