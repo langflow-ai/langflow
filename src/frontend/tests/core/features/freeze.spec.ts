@@ -119,7 +119,7 @@ test(
     await urlOutput.hover();
     await page.mouse.down();
     const splitTextInputData = await page.getByTestId(
-      "handle-splittext-shownode-input documents-left",
+      "handle-splittext-shownode-data or dataframe-left",
     );
     await splitTextInputData.hover();
     await page.mouse.up();
@@ -231,11 +231,11 @@ test(
 
     await page.getByTestId("more-options-modal").click();
 
-    await page.waitForSelector('[data-testid="icon-Snowflake"]', {
+    await page.waitForSelector('[data-testid="icon-FreezeAll"]', {
       timeout: 1000,
     });
 
-    await page.getByTestId("icon-Snowflake").click();
+    await page.getByTestId("icon-FreezeAll").last().click();
 
     await page.keyboard.press("Escape");
 
