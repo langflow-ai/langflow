@@ -96,16 +96,16 @@ To connect multiple Langflow containers to the same PostgreSQL database, all Lan
 ```
 
 2. To manage your database credentials using environment variables, create a `.env` file with the following values.
-   ```text
+```text
    POSTGRES_USER=langflow
    POSTGRES_PASSWORD=your_secure_password
    POSTGRES_DB=langflow
    POSTGRES_HOST=postgres
    POSTGRES_PORT=5432
-   ```
+```
 
 3. Reference the `.env` values in your `docker-compose.yml`:
-   ```yaml
+```yaml
    services:
      langflow-1:
        environment:
@@ -114,7 +114,7 @@ To connect multiple Langflow containers to the same PostgreSQL database, all Lan
      langflow-2:
        environment:
          - LANGFLOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-   ```
+```
 
 4. Run `docker compose up` to deploy the containers locally.
 
