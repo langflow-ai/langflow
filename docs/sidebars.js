@@ -153,6 +153,11 @@ module.exports = {
         "Integrations/integrations-langsmith",
         "Integrations/integrations-langwatch",
         {
+          type: "doc",
+          id: "Integrations/integrations-mcp",
+          label: "MCP (Model context protocol)"
+        },
+        {
           type: 'category',
           label: 'Google',
           items: [
@@ -184,6 +189,7 @@ module.exports = {
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-components",
+        "Contributing/contributing-component-tests",
         "Contributing/contributing-github-discussion-board",
         "Contributing/contributing-github-issues",
         "Contributing/contributing-how-to-contribute",
@@ -198,6 +204,17 @@ module.exports = {
           type: "link",
           label: "Changelog",
           href: "https://github.com/langflow-ai/langflow/releases/latest",
+        },
+      ],
+    },
+    {
+      type: "category",
+      label: "Support",
+      items: [
+        {
+          type: "doc",
+          id: "Support/luna-for-langflow",
+          label: "Luna for Langflow",
         },
       ],
     },
