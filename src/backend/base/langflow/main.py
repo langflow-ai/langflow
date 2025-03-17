@@ -274,6 +274,7 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
     return app
 
 
