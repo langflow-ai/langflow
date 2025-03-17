@@ -157,7 +157,7 @@ export default function InputFileComponent({
   ).filter((value) => value !== "");
 
   useEffect(() => {
-    if (files !== null) {
+    if (files !== undefined) {
       if (isList) {
         if (
           Array.isArray(value) &&
@@ -177,6 +177,7 @@ export default function InputFileComponent({
           return;
         }
       }
+      console.log(files);
       handleOnNewValue({
         value: isList
           ? (files
