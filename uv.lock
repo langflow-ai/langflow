@@ -385,7 +385,7 @@ wheels = [
 
 [[package]]
 name = "astra-assistants"
-version = "2.2.9"
+version = "2.2.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -400,9 +400,9 @@ dependencies = [
     { name = "tree-sitter" },
     { name = "tree-sitter-python" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/88/37b7ba47e7e639588a9068bfc90b4f3cbd964a8a2f4153e69b40e2165648/astra_assistants-2.2.9.tar.gz", hash = "sha256:b33e6a31d08155917e6b5413f986c278efcaa8e1c5a03ca1563e92ca0130a807", size = 67838 }
+sdist = { url = "https://files.pythonhosted.org/packages/a4/c5/8e0685e2e886802027bc3510142f536c3d5c8e6b4f5d72d11a6ed42c9da6/astra_assistants-2.2.11.tar.gz", hash = "sha256:580c080bd722bbf4c26517e6c3bc2ca4f7dffb6a02853d28705a75643c4e2083", size = 66264 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f3/32/30a69010077a71ef5fd80c71296b2976946b140e8274ff37b44552c54ef4/astra_assistants-2.2.9-py3-none-any.whl", hash = "sha256:b5b2713cd32ac2050e4f28b1d748cb4701c021d802912837b943c65861699a4e", size = 78527 },
+    { url = "https://files.pythonhosted.org/packages/54/85/8ea7ab5b09aab9d1274642b50495b820124a24f6d91c5ce559c268336176/astra_assistants-2.2.11-py3-none-any.whl", hash = "sha256:202bc27b31f41c3541a4676b1b8bc2f87581153bb2919aae903f3ffd682ed6e9", size = 78559 },
 ]
 
 [package.optional-dependencies]
@@ -3725,6 +3725,15 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonquerylang"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a1/49/2bc349923d322ef682391c149b59f1e766356b3c98e340233a3cc8c5edc9/jsonquerylang-1.1.1.tar.gz", hash = "sha256:b66cc9cae12135fe9fb7f6e2d4f1f703685806223a180d85d695afa414b9d2ba", size = 13573 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/8a/d4ef935f41b13b617fb72a27a2ca7f0d950cb777fabe4e57b121ed688195/jsonquerylang-1.1.1-py3-none-any.whl", hash = "sha256:40906259692439fce4da345f9175e455a820b38c87d738b8bd9567078644f3d8", size = 12724 },
+]
+
+[[package]]
 name = "jsonref"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4429,7 +4438,7 @@ requires-dist = [
     { name = "apify-client", specifier = ">=1.8.1" },
     { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = "==0.35.1" },
-    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.9" },
+    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.11" },
     { name = "atlassian-python-api", specifier = "==3.41.16" },
     { name = "beautifulsoup4", specifier = "==4.12.3" },
     { name = "boto3", specifier = "==1.34.162" },
@@ -4610,6 +4619,7 @@ dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "json-repair" },
+    { name = "jsonquerylang" },
     { name = "langchain" },
     { name = "langchain-community" },
     { name = "langchain-core" },
@@ -4746,6 +4756,7 @@ requires-dist = [
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
     { name = "json-repair", specifier = ">=0.30.3" },
+    { name = "jsonquerylang", specifier = ">=1.1.1" },
     { name = "langchain", specifier = "~=0.3.10" },
     { name = "langchain-community", specifier = "~=0.3.10" },
     { name = "langchain-core", specifier = "~=0.3.15" },
