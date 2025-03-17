@@ -172,14 +172,6 @@ def apply_json_filter(result, filter_) -> Data:  # type: ignore[return-value]
                 filter_ = "." + filter_
 
             try:
-                filtered_data = jsonquery(original_data, filter_)
-
-                # For primitive types, return directly
-                if isinstance(filtered_data, (int, float, str, bool)) or filtered_data is None:
-                    return filtered_data
-                return filtered_data
-            except Exception:
-                pass
                 return jsonquery(original_data, filter_)
             except (ValueError, TypeError, SyntaxError, AttributeError):
                 return None
