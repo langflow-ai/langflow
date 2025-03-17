@@ -572,6 +572,10 @@ export default function Page({
             onSelectionChange={onSelectionChange}
             deleteKeyCode={[]}
             fitView={isEmptyFlow.current ? false : true}
+            fitViewOptions={{
+              minZoom: 0.4,
+              maxZoom: 1.25,
+            }}
             className="theme-attribution"
             minZoom={0.4}
             maxZoom={8}
