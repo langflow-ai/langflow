@@ -16,6 +16,10 @@ from langflow.inputs.inputs import BoolInput, InputTypes, MultilineInput
 from langflow.schema.message import Message
 from langflow.template.field.base import Output
 
+# Enabled detailed thinking for NVIDIA reasoning models.
+#
+# Models are trained with this exact string. Do not update.
+DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
 
 class LCModelComponent(Component):
     display_name: str = "Model Name"
@@ -164,7 +168,7 @@ class LCModelComponent(Component):
         system_message: str | None = None,
     ):
         if getattr(self, 'detailed_thinking', False):
-            system_message = "detailed thinking on\n\n" + (system_message or "")
+            system_message = DETAILED_THINKING_PREFIX + (system_message or "")
 
         return self._get_chat_result(
             runnable=runnable,
