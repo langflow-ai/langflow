@@ -3,7 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "NestedComponent",
+  "user should be able to use nested component",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
