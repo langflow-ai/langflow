@@ -16,7 +16,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -37,7 +37,7 @@ on:
         description: "Test suites to run (JSON array)"
         required: false
         type: string
-        default: '[]'
+        default: "[]"
       release:
         description: "Whether this is a release build"
         required: false
@@ -195,12 +195,12 @@ jobs:
 
           echo "Total tests to run: $TEST_COUNT"
 
-          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 10
+          # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 15
           SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
           if [ $SHARD_COUNT -lt 1 ]; then
             SHARD_COUNT=1
-          elif [ $SHARD_COUNT -gt 10 ]; then
-            SHARD_COUNT=10
+          elif [ $SHARD_COUNT -gt 15 ]; then
+            SHARD_COUNT=15
           fi
 
           # Create the matrix combinations string

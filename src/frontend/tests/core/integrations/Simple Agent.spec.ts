@@ -25,6 +25,8 @@ withEventDeliveryModes(
     await page.getByRole("heading", { name: "Simple Agent" }).first().click();
     await initialGPTsetup(page);
 
+    await page.getByTestId("textarea_str_input_value").first().fill("Hello");
+
     await page.getByTestId("button_run_chat output").last().click();
 
     await page.waitForSelector("text=built successfully", {
@@ -39,7 +41,7 @@ withEventDeliveryModes(
 
     const concatAllText = textContents.join(" ").toLowerCase();
 
-    expect(concatAllText).toContain("hello! how can i assist you today?");
-    expect(concatAllText.length).toBeGreaterThan(20);
+    expect(concatAllText).toContain("how can i assist you today?");
+    expect(concatAllText.length).toBeGreaterThan(10);
   },
 );

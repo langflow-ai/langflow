@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-B7MqV",
+            "id": "CombineText-UhwCk",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -15,19 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-2Ncws",
+            "id": "CombineText-UYD3B",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-B7MqV{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-B7MqVœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-2Ncws{œfieldNameœ:œtext2œ,œidœ:œCombineText-2Ncwsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-UhwCk{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-UhwCkœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-CombineText-UYD3B{œfieldNameœ:œtext2œ,œidœ:œCombineText-UYD3Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-B7MqV",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-B7MqVœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-2Ncws",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-2Ncwsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-UhwCk",
+        "sourceHandle": "{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-UhwCkœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-UYD3B",
+        "targetHandle": "{œfieldNameœ:œtext2œ,œidœ:œCombineText-UYD3Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -35,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-bSTG4",
+            "id": "ChatInput-DenBp",
             "name": "message",
             "output_types": [
               "Message"
@@ -43,19 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-2Ncws",
+            "id": "CombineText-UYD3B",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-bSTG4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-2Ncws{œfieldNameœ:œtext1œ,œidœ:œCombineText-2Ncwsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-DenBp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DenBpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-CombineText-UYD3B{œfieldNameœ:œtext1œ,œidœ:œCombineText-UYD3Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-bSTG4",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-bSTG4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-2Ncws",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-2Ncwsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-DenBp",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DenBpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-UYD3B",
+        "targetHandle": "{œfieldNameœ:œtext1œ,œidœ:œCombineText-UYD3Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -63,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "CombineText",
-            "id": "CombineText-2Ncws",
+            "id": "CombineText-UYD3B",
             "name": "combined_text",
             "output_types": [
               "Message"
@@ -71,19 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "SambaNovaModel-67RaX",
+            "id": "SambaNovaModel-C2STy",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-CombineText-2Ncws{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-2Ncwsœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-67RaX{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-67RaXœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-CombineText-UYD3B{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-UYD3Bœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}-SambaNovaModel-C2STy{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-C2STyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "CombineText-2Ncws",
-        "sourceHandle": "{œdataTypeœ: œCombineTextœ, œidœ: œCombineText-2Ncwsœ, œnameœ: œcombined_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "SambaNovaModel-67RaX",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œSambaNovaModel-67RaXœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "CombineText-UYD3B",
+        "sourceHandle": "{œdataTypeœ:œCombineTextœ,œidœ:œCombineText-UYD3Bœ,œnameœ:œcombined_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "SambaNovaModel-C2STy",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œSambaNovaModel-C2STyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -91,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "SambaNovaModel",
-            "id": "SambaNovaModel-67RaX",
+            "id": "SambaNovaModel-C2STy",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -99,7 +99,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-BjiRE",
+            "id": "ChatOutput-mcsys",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -108,12 +108,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-SambaNovaModel-67RaX{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-67RaXœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-BjiRE{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-BjiREœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-SambaNovaModel-C2STy{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-C2STyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-mcsys{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mcsysœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "SambaNovaModel-67RaX",
-        "sourceHandle": "{œdataTypeœ: œSambaNovaModelœ, œidœ: œSambaNovaModel-67RaXœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-BjiRE",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-BjiREœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "SambaNovaModel-C2STy",
+        "sourceHandle": "{œdataTypeœ:œSambaNovaModelœ,œidœ:œSambaNovaModel-C2STyœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-mcsys",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-mcsysœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -121,7 +121,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-bSTG4",
+            "id": "ChatInput-DenBp",
             "name": "message",
             "output_types": [
               "Message"
@@ -129,19 +129,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-8O2Iy",
+            "id": "Agent-vRl5Z",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-bSTG4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-8O2Iy{œfieldNameœ:œinput_valueœ,œidœ:œAgent-8O2Iyœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-DenBp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DenBpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-vRl5Z{œfieldNameœ:œinput_valueœ,œidœ:œAgent-vRl5Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-bSTG4",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-bSTG4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-8O2Iy",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-8O2Iyœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-DenBp",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DenBpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-vRl5Z",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-vRl5Zœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -149,7 +149,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-8O2Iy",
+            "id": "Agent-vRl5Z",
             "name": "response",
             "output_types": [
               "Message"
@@ -157,19 +157,19 @@
           },
           "targetHandle": {
             "fieldName": "text2",
-            "id": "CombineText-B7MqV",
+            "id": "CombineText-UhwCk",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-8O2Iy{œdataTypeœ:œAgentœ,œidœ:œAgent-8O2Iyœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-B7MqV{œfieldNameœ:œtext2œ,œidœ:œCombineText-B7MqVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-vRl5Z{œdataTypeœ:œAgentœ,œidœ:œAgent-vRl5Zœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-UhwCk{œfieldNameœ:œtext2œ,œidœ:œCombineText-UhwCkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-8O2Iy",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-8O2Iyœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-B7MqV",
-        "targetHandle": "{œfieldNameœ: œtext2œ, œidœ: œCombineText-B7MqVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-vRl5Z",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-vRl5Zœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-UhwCk",
+        "targetHandle": "{œfieldNameœ:œtext2œ,œidœ:œCombineText-UhwCkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -177,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "TavilySearchComponent",
-            "id": "TavilySearchComponent-yRkVZ",
+            "id": "TavilySearchComponent-j7cWG",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -185,19 +185,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-8O2Iy",
+            "id": "Agent-vRl5Z",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-TavilySearchComponent-yRkVZ{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-yRkVZœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-8O2Iy{œfieldNameœ:œtoolsœ,œidœ:œAgent-8O2Iyœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-TavilySearchComponent-j7cWG{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-j7cWGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-vRl5Z{œfieldNameœ:œtoolsœ,œidœ:œAgent-vRl5Zœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "TavilySearchComponent-yRkVZ",
-        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-yRkVZœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-8O2Iy",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-8O2Iyœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "TavilySearchComponent-j7cWG",
+        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-j7cWGœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-vRl5Z",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-vRl5Zœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -205,7 +205,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "URL",
-            "id": "URL-1uKdC",
+            "id": "URL-DbLUv",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -213,19 +213,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-fvvwn",
+            "id": "Agent-ncbSY",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-URL-1uKdC{œdataTypeœ:œURLœ,œidœ:œURL-1uKdCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-fvvwn{œfieldNameœ:œtoolsœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-URL-DbLUv{œdataTypeœ:œURLœ,œidœ:œURL-DbLUvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ncbSY{œfieldNameœ:œtoolsœ,œidœ:œAgent-ncbSYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "URL-1uKdC",
-        "sourceHandle": "{œdataTypeœ: œURLœ, œidœ: œURL-1uKdCœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-fvvwn",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-fvvwnœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "URL-DbLUv",
+        "sourceHandle": "{œdataTypeœ:œURLœ,œidœ:œURL-DbLUvœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-ncbSY",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-ncbSYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -233,7 +233,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "YfinanceComponent",
-            "id": "YfinanceComponent-LaBhV",
+            "id": "YfinanceComponent-4OUL0",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -241,19 +241,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-fvvwn",
+            "id": "Agent-ncbSY",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-YfinanceComponent-LaBhV{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-LaBhVœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-fvvwn{œfieldNameœ:œtoolsœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-YfinanceComponent-4OUL0{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-4OUL0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-ncbSY{œfieldNameœ:œtoolsœ,œidœ:œAgent-ncbSYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "YfinanceComponent-LaBhV",
-        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-LaBhVœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-fvvwn",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-fvvwnœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "YfinanceComponent-4OUL0",
+        "sourceHandle": "{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-4OUL0œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "target": "Agent-ncbSY",
+        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-ncbSYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
       {
         "animated": false,
@@ -261,7 +261,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-bSTG4",
+            "id": "ChatInput-DenBp",
             "name": "message",
             "output_types": [
               "Message"
@@ -269,19 +269,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-fvvwn",
+            "id": "Agent-ncbSY",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-bSTG4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-bSTG4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-fvvwn{œfieldNameœ:œinput_valueœ,œidœ:œAgent-fvvwnœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-DenBp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DenBpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-ncbSY{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ncbSYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-bSTG4",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-bSTG4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-fvvwn",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-fvvwnœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-DenBp",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-DenBpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Agent-ncbSY",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-ncbSYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -289,7 +289,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-fvvwn",
+            "id": "Agent-ncbSY",
             "name": "response",
             "output_types": [
               "Message"
@@ -297,25 +297,25 @@
           },
           "targetHandle": {
             "fieldName": "text1",
-            "id": "CombineText-B7MqV",
+            "id": "CombineText-UhwCk",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Agent-fvvwn{œdataTypeœ:œAgentœ,œidœ:œAgent-fvvwnœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-B7MqV{œfieldNameœ:œtext1œ,œidœ:œCombineText-B7MqVœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Agent-ncbSY{œdataTypeœ:œAgentœ,œidœ:œAgent-ncbSYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-CombineText-UhwCk{œfieldNameœ:œtext1œ,œidœ:œCombineText-UhwCkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Agent-fvvwn",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-fvvwnœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "CombineText-B7MqV",
-        "targetHandle": "{œfieldNameœ: œtext1œ, œidœ: œCombineText-B7MqVœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Agent-ncbSY",
+        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-ncbSYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "CombineText-UhwCk",
+        "targetHandle": "{œfieldNameœ:œtext1œ,œidœ:œCombineText-UhwCkœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ChatInput-bSTG4",
+          "id": "ChatInput-DenBp",
           "node": {
             "base_classes": [
               "Message"
@@ -609,10 +609,10 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-bSTG4",
+        "id": "ChatInput-DenBp",
         "measured": {
-          "height": 66,
-          "width": 192
+          "height": 74,
+          "width": 216
         },
         "position": {
           "x": -777.5771293156841,
@@ -623,7 +623,7 @@
       },
       {
         "data": {
-          "id": "TavilySearchComponent-yRkVZ",
+          "id": "TavilySearchComponent-j7cWG",
           "node": {
             "base_classes": [
               "Data",
@@ -690,7 +690,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "TAVILY_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -977,10 +977,10 @@
           "type": "TavilySearchComponent"
         },
         "dragging": false,
-        "id": "TavilySearchComponent-yRkVZ",
+        "id": "TavilySearchComponent-j7cWG",
         "measured": {
-          "height": 437,
-          "width": 320
+          "height": 489,
+          "width": 360
         },
         "position": {
           "x": -682.4849400136196,
@@ -991,10 +991,13 @@
       },
       {
         "data": {
-          "id": "YfinanceComponent-LaBhV",
+          "description": "Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+          "display_name": "Yahoo Finance",
+          "id": "YfinanceComponent-4OUL0",
           "node": {
             "base_classes": [
               "Data",
+              "DataFrame",
               "Message"
             ],
             "beta": false,
@@ -1012,7 +1015,6 @@
             "frozen": false,
             "icon": "trending-up",
             "legacy": false,
-            "lf_version": "1.2.0",
             "metadata": {},
             "minimized": false,
             "output_types": [],
@@ -1024,6 +1026,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -1052,7 +1055,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import ast\nimport pprint\nfrom enum import Enum\n\nimport yfinance as yf\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DropdownInput, IntInput, MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass YahooFinanceMethod(Enum):\n    GET_INFO = \"get_info\"\n    GET_NEWS = \"get_news\"\n    GET_ACTIONS = \"get_actions\"\n    GET_ANALYSIS = \"get_analysis\"\n    GET_BALANCE_SHEET = \"get_balance_sheet\"\n    GET_CALENDAR = \"get_calendar\"\n    GET_CASHFLOW = \"get_cashflow\"\n    GET_INSTITUTIONAL_HOLDERS = \"get_institutional_holders\"\n    GET_RECOMMENDATIONS = \"get_recommendations\"\n    GET_SUSTAINABILITY = \"get_sustainability\"\n    GET_MAJOR_HOLDERS = \"get_major_holders\"\n    GET_MUTUALFUND_HOLDERS = \"get_mutualfund_holders\"\n    GET_INSIDER_PURCHASES = \"get_insider_purchases\"\n    GET_INSIDER_TRANSACTIONS = \"get_insider_transactions\"\n    GET_INSIDER_ROSTER_HOLDERS = \"get_insider_roster_holders\"\n    GET_DIVIDENDS = \"get_dividends\"\n    GET_CAPITAL_GAINS = \"get_capital_gains\"\n    GET_SPLITS = \"get_splits\"\n    GET_SHARES = \"get_shares\"\n    GET_FAST_INFO = \"get_fast_info\"\n    GET_SEC_FILINGS = \"get_sec_filings\"\n    GET_RECOMMENDATIONS_SUMMARY = \"get_recommendations_summary\"\n    GET_UPGRADES_DOWNGRADES = \"get_upgrades_downgrades\"\n    GET_EARNINGS = \"get_earnings\"\n    GET_INCOME_STMT = \"get_income_stmt\"\n\n\nclass YahooFinanceSchema(BaseModel):\n    symbol: str = Field(..., description=\"The stock symbol to retrieve data for.\")\n    method: YahooFinanceMethod = Field(YahooFinanceMethod.GET_INFO, description=\"The type of data to retrieve.\")\n    num_news: int | None = Field(5, description=\"The number of news articles to retrieve.\")\n\n\nclass YfinanceComponent(Component):\n    display_name = \"Yahoo Finance\"\n    description = \"\"\"Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \\\nto access financial data and market information from Yahoo Finance.\"\"\"\n    icon = \"trending-up\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"symbol\",\n            display_name=\"Stock Symbol\",\n            info=\"The stock symbol to retrieve data for (e.g., AAPL, GOOG).\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"method\",\n            display_name=\"Data Method\",\n            info=\"The type of data to retrieve.\",\n            options=list(YahooFinanceMethod),\n            value=\"get_news\",\n        ),\n        IntInput(\n            name=\"num_news\",\n            display_name=\"Number of News\",\n            info=\"The number of news articles to retrieve (only applicable for get_news).\",\n            value=5,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n    ]\n\n    def run_model(self) -> list[Data]:\n        return self.fetch_content()\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = \"\"\n        for item in data:\n            result_string += item.text + \"\\n\"\n        self.status = result_string\n        return Message(text=result_string)\n\n    def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:\n        try:\n            if method == YahooFinanceMethod.GET_INFO:\n                result = ticker.info\n            elif method == YahooFinanceMethod.GET_NEWS:\n                result = ticker.news[:num_news]\n            else:\n                result = getattr(ticker, method.value)()\n            return pprint.pformat(result)\n        except Exception as e:\n            error_message = f\"Error retrieving data: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            return self._yahoo_finance_tool(\n                self.symbol,\n                YahooFinanceMethod(self.method),\n                self.num_news,\n            )\n        except ToolException:\n            raise\n        except Exception as e:\n            error_message = f\"Unexpected error: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def _yahoo_finance_tool(\n        self,\n        symbol: str,\n        method: YahooFinanceMethod,\n        num_news: int | None = 5,\n    ) -> list[Data]:\n        ticker = yf.Ticker(symbol)\n        result = self._fetch_yfinance_data(ticker, method, num_news)\n\n        if method == YahooFinanceMethod.GET_NEWS:\n            data_list = [\n                Data(text=f\"{article['title']}: {article['link']}\", data=article)\n                for article in ast.literal_eval(result)\n            ]\n        else:\n            data_list = [Data(text=result, data={\"result\": result})]\n\n        return data_list\n"
+                "value": "import ast\nimport pprint\nfrom enum import Enum\n\nimport yfinance as yf\nfrom langchain_core.tools import ToolException\nfrom loguru import logger\nfrom pydantic import BaseModel, Field\n\nfrom langflow.custom import Component\nfrom langflow.inputs import DropdownInput, IntInput, MessageTextInput\nfrom langflow.io import Output\nfrom langflow.schema import Data, DataFrame\nfrom langflow.schema.message import Message\n\n\nclass YahooFinanceMethod(Enum):\n    GET_INFO = \"get_info\"\n    GET_NEWS = \"get_news\"\n    GET_ACTIONS = \"get_actions\"\n    GET_ANALYSIS = \"get_analysis\"\n    GET_BALANCE_SHEET = \"get_balance_sheet\"\n    GET_CALENDAR = \"get_calendar\"\n    GET_CASHFLOW = \"get_cashflow\"\n    GET_INSTITUTIONAL_HOLDERS = \"get_institutional_holders\"\n    GET_RECOMMENDATIONS = \"get_recommendations\"\n    GET_SUSTAINABILITY = \"get_sustainability\"\n    GET_MAJOR_HOLDERS = \"get_major_holders\"\n    GET_MUTUALFUND_HOLDERS = \"get_mutualfund_holders\"\n    GET_INSIDER_PURCHASES = \"get_insider_purchases\"\n    GET_INSIDER_TRANSACTIONS = \"get_insider_transactions\"\n    GET_INSIDER_ROSTER_HOLDERS = \"get_insider_roster_holders\"\n    GET_DIVIDENDS = \"get_dividends\"\n    GET_CAPITAL_GAINS = \"get_capital_gains\"\n    GET_SPLITS = \"get_splits\"\n    GET_SHARES = \"get_shares\"\n    GET_FAST_INFO = \"get_fast_info\"\n    GET_SEC_FILINGS = \"get_sec_filings\"\n    GET_RECOMMENDATIONS_SUMMARY = \"get_recommendations_summary\"\n    GET_UPGRADES_DOWNGRADES = \"get_upgrades_downgrades\"\n    GET_EARNINGS = \"get_earnings\"\n    GET_INCOME_STMT = \"get_income_stmt\"\n\n\nclass YahooFinanceSchema(BaseModel):\n    symbol: str = Field(..., description=\"The stock symbol to retrieve data for.\")\n    method: YahooFinanceMethod = Field(YahooFinanceMethod.GET_INFO, description=\"The type of data to retrieve.\")\n    num_news: int | None = Field(5, description=\"The number of news articles to retrieve.\")\n\n\nclass YfinanceComponent(Component):\n    display_name = \"Yahoo Finance\"\n    description = \"\"\"Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \\\nto access financial data and market information from Yahoo Finance.\"\"\"\n    icon = \"trending-up\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"symbol\",\n            display_name=\"Stock Symbol\",\n            info=\"The stock symbol to retrieve data for (e.g., AAPL, GOOG).\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"method\",\n            display_name=\"Data Method\",\n            info=\"The type of data to retrieve.\",\n            options=list(YahooFinanceMethod),\n            value=\"get_news\",\n        ),\n        IntInput(\n            name=\"num_news\",\n            display_name=\"Number of News\",\n            info=\"The number of news articles to retrieve (only applicable for get_news).\",\n            value=5,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"fetch_content\"),\n        Output(display_name=\"Text\", name=\"text\", method=\"fetch_content_text\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def run_model(self) -> list[Data]:\n        return self.fetch_content()\n\n    def fetch_content_text(self) -> Message:\n        data = self.fetch_content()\n        result_string = \"\"\n        for item in data:\n            result_string += item.text + \"\\n\"\n        self.status = result_string\n        return Message(text=result_string)\n\n    def _fetch_yfinance_data(self, ticker: yf.Ticker, method: YahooFinanceMethod, num_news: int | None) -> str:\n        try:\n            if method == YahooFinanceMethod.GET_INFO:\n                result = ticker.info\n            elif method == YahooFinanceMethod.GET_NEWS:\n                result = ticker.news[:num_news]\n            else:\n                result = getattr(ticker, method.value)()\n            return pprint.pformat(result)\n        except Exception as e:\n            error_message = f\"Error retrieving data: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def fetch_content(self) -> list[Data]:\n        try:\n            return self._yahoo_finance_tool(\n                self.symbol,\n                YahooFinanceMethod(self.method),\n                self.num_news,\n            )\n        except ToolException:\n            raise\n        except Exception as e:\n            error_message = f\"Unexpected error: {e}\"\n            logger.debug(error_message)\n            self.status = error_message\n            raise ToolException(error_message) from e\n\n    def _yahoo_finance_tool(\n        self,\n        symbol: str,\n        method: YahooFinanceMethod,\n        num_news: int | None = 5,\n    ) -> list[Data]:\n        ticker = yf.Ticker(symbol)\n        result = self._fetch_yfinance_data(ticker, method, num_news)\n\n        if method == YahooFinanceMethod.GET_NEWS:\n            data_list = [\n                Data(text=f\"{article['title']}: {article['link']}\", data=article)\n                for article in ast.literal_eval(result)\n            ]\n        else:\n            data_list = [Data(text=result, data={\"result\": result})]\n\n        return data_list\n\n    def as_dataframe(self) -> DataFrame:\n        \"\"\"Convert the Yahoo search results to a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the search results.\n        \"\"\"\n        data = self.fetch_content()\n        return DataFrame(data)\n"
               },
               "method": {
                 "_input_type": "DropdownInput",
@@ -1108,6 +1111,7 @@
                 "info": "The number of news articles to retrieve (only applicable for get_news).",
                 "list": false,
                 "list_add_label": "Add More",
+                "load_from_db": false,
                 "name": "num_news",
                 "placeholder": "",
                 "required": false,
@@ -1251,6 +1255,14 @@
                     "tags": [
                       "YfinanceComponent-fetch_content_text"
                     ]
+                  },
+                  {
+                    "description": "as_dataframe() - Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) to access financial data and market information from Yahoo Finance.",
+                    "name": "YfinanceComponent-as_dataframe",
+                    "status": true,
+                    "tags": [
+                      "YfinanceComponent-as_dataframe"
+                    ]
                   }
                 ]
               }
@@ -1261,21 +1273,21 @@
           "type": "YfinanceComponent"
         },
         "dragging": false,
-        "id": "YfinanceComponent-LaBhV",
+        "id": "YfinanceComponent-4OUL0",
         "measured": {
-          "height": 519,
-          "width": 320
+          "height": 581,
+          "width": 360
         },
         "position": {
-          "x": -585.7556355375972,
-          "y": -373.57917338885125
+          "x": -569.2623156750083,
+          "y": -297.11014493503006
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "CombineText-B7MqV",
+          "id": "CombineText-UhwCk",
           "node": {
             "base_classes": [
               "Message"
@@ -1411,10 +1423,10 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-B7MqV",
+        "id": "CombineText-UhwCk",
         "measured": {
-          "height": 415,
-          "width": 320
+          "height": 464,
+          "width": 360
         },
         "position": {
           "x": 340.2356972211369,
@@ -1425,7 +1437,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-BjiRE",
+          "id": "ChatOutput-mcsys",
           "node": {
             "base_classes": [
               "Message"
@@ -1720,10 +1732,10 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-BjiRE",
+        "id": "ChatOutput-mcsys",
         "measured": {
-          "height": 66,
-          "width": 192
+          "height": 74,
+          "width": 216
         },
         "position": {
           "x": 1915.4342657794896,
@@ -1734,7 +1746,7 @@
       },
       {
         "data": {
-          "id": "CombineText-2Ncws",
+          "id": "CombineText-UYD3B",
           "node": {
             "base_classes": [
               "Message"
@@ -1870,10 +1882,10 @@
           "type": "CombineText"
         },
         "dragging": false,
-        "id": "CombineText-2Ncws",
+        "id": "CombineText-UYD3B",
         "measured": {
-          "height": 415,
-          "width": 320
+          "height": 464,
+          "width": 360
         },
         "position": {
           "x": 738.8545176038866,
@@ -1884,7 +1896,7 @@
       },
       {
         "data": {
-          "id": "URL-1uKdC",
+          "id": "URL-DbLUv",
           "node": {
             "base_classes": [
               "Data",
@@ -1919,6 +1931,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -2162,10 +2175,10 @@
           "type": "URL"
         },
         "dragging": false,
-        "id": "URL-1uKdC",
+        "id": "URL-DbLUv",
         "measured": {
-          "height": 590,
-          "width": 320
+          "height": 660,
+          "width": 360
         },
         "position": {
           "x": -572.0477930604186,
@@ -2176,7 +2189,7 @@
       },
       {
         "data": {
-          "id": "note-4TLGl",
+          "id": "note-EEPLl",
           "node": {
             "description": "# Financial Assistant Agents \n\nThe Financial Assistant Agent retrieves content and writes reports about financial queries.\n\n## Prerequisites\n\n* [Tavily AI Search key](https://docs.tavily.com/welcome)\n* [SambaNova API key](https://cloud.sambanova.ai/) \n\n## Quickstart\n\n1. In both **Agent** components and **SambaNova** component, add your SambaNova API key. \nIn the **Model Provider** field, select **Sambanova**, and select a model.\n3. In the **Tavily Search** component, add your **Tavily API key**.\n4. Click the **Playground** and ask `Why did Nvidia stock drop in January?`",
             "display_name": "",
@@ -2189,10 +2202,10 @@
         },
         "dragging": false,
         "height": 630,
-        "id": "note-4TLGl",
+        "id": "note-EEPLl",
         "measured": {
           "height": 630,
-          "width": 479
+          "width": 482
         },
         "position": {
           "x": -1119.9423274254439,
@@ -2205,7 +2218,7 @@
       },
       {
         "data": {
-          "id": "SambaNovaModel-67RaX",
+          "id": "SambaNovaModel-C2STy",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -2280,7 +2293,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2288,7 +2301,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "SAMBANOVA_API_KEY"
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -2508,10 +2521,10 @@
           "type": "SambaNovaModel"
         },
         "dragging": false,
-        "id": "SambaNovaModel-67RaX",
+        "id": "SambaNovaModel-C2STy",
         "measured": {
-          "height": 656,
-          "width": 320
+          "height": 588,
+          "width": 360
         },
         "position": {
           "x": 1198.0223558351377,
@@ -2522,7 +2535,7 @@
       },
       {
         "data": {
-          "id": "Agent-8O2Iy",
+          "id": "Agent-vRl5Z",
           "node": {
             "base_classes": [
               "Message"
@@ -2705,7 +2718,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -2713,7 +2726,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "SAMBANOVA_API_KEY"
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -3159,10 +3172,10 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-8O2Iy",
+        "id": "Agent-vRl5Z",
         "measured": {
-          "height": 624,
-          "width": 320
+          "height": 698,
+          "width": 360
         },
         "position": {
           "x": -114.7705455447527,
@@ -3173,7 +3186,7 @@
       },
       {
         "data": {
-          "id": "Agent-fvvwn",
+          "id": "Agent-ncbSY",
           "node": {
             "base_classes": [
               "Message"
@@ -3356,7 +3369,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -3364,7 +3377,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "SAMBANOVA_API_KEY"
               },
               "base_url": {
                 "_input_type": "StrInput",
@@ -3810,10 +3823,10 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-fvvwn",
+        "id": "Agent-ncbSY",
         "measured": {
-          "height": 624,
-          "width": 320
+          "height": 698,
+          "width": 360
         },
         "position": {
           "x": -77.82588111053366,
@@ -3824,9 +3837,9 @@
       }
     ],
     "viewport": {
-      "x": 874.6841085054481,
-      "y": 289.5843457571535,
-      "zoom": 0.7065898257947951
+      "x": 768.0200563163473,
+      "y": 679.33501500431,
+      "zoom": 0.46253091516926326
     }
   },
   "description": "Financial assistant chatbot that uses specialized agents to research for financial information",
