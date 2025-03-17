@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../../../../../components/ui/table";
-import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
+import { LoaderCircle, Trash2 } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { Badge } from "../../../../../../components/ui/badge";
 import { Switch } from "../../../../../../components/ui/switch";
@@ -187,13 +187,11 @@ export default function SchedulerTable({ schedulers, onRefresh }: SchedulerTable
                             disabled={loading[scheduler.id]}
                           >
                             {loading[scheduler.id] ? (
-                              <ForwardedIconComponent
-                                name="Loader2"
+                              <LoaderCircle
                                 className="h-4 w-4 animate-spin"
                               />
                             ) : (
-                              <ForwardedIconComponent
-                                name="Trash"
+                              <Trash2
                                 className="h-4 w-4 text-destructive"
                               />
                             )}

@@ -3,7 +3,7 @@ import SchedulerPageHeaderComponent from "./components/SchedulerPageHeader";
 import SchedulerTable from "./components/SchedulerTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../components/ui/card";
 import { Skeleton } from "../../../../components/ui/skeleton";
-import ForwardedIconComponent from "../../../../components/common/genericIconComponent";
+import { Activity, AlertCircle, CalendarClock, ListChecks, LoaderCircle, RefreshCw } from "lucide-react";
 import { Button } from "../../../../components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -54,17 +54,18 @@ export default function SchedulerPage() {
           disabled={isRefreshing}
           className="transition-all duration-200 ease-in-out"
         >
-          <ForwardedIconComponent
-            name={isRefreshing ? "Loader2" : "RefreshCw"}
-            className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
-          />
+          {isRefreshing ? (
+            <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-2" />
+          )}
           {isRefreshing ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
 
       {(isSchedulersError || isStatusError) && (
         <Alert variant="destructive" className="mb-4">
-          <ForwardedIconComponent name="AlertCircle" className="h-4 w-4" />
+          <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
             {isSchedulersError && `Failed to load schedulers: ${schedulersError?.message || 'Unknown error'}`}
@@ -77,7 +78,7 @@ export default function SchedulerPage() {
         <StatusCard
           title="Scheduler Status"
           value={schedulerStatus?.service_status === "running" ? "Running" : "Stopped"}
-          icon="Activity"
+          icon={Activity}
           description="The scheduler service is responsible for running flows at scheduled times."
           variant={schedulerStatus?.service_status === "running" ? "success" : "destructive"}
           isLoading={isLoadingStatus}
@@ -85,7 +86,7 @@ export default function SchedulerPage() {
         <StatusCard
           title="Active Schedulers"
           value={schedulerStatus?.job_count?.toString() || "0"}
-          icon="CalendarClock"
+          icon={CalendarClock}
           description="Number of active scheduled jobs."
           variant="default"
           isLoading={isLoadingStatus}
@@ -93,7 +94,7 @@ export default function SchedulerPage() {
         <StatusCard
           title="Total Schedulers"
           value={schedulers.length.toString()}
-          icon="ListChecks"
+          icon={ListChecks}
           description="Total number of schedulers configured."
           variant="default"
           isLoading={isLoadingSchedulers}
@@ -110,10 +111,7 @@ export default function SchedulerPage() {
               </CardDescription>
             </div>
             {isLoadingSchedulers && (
-              <ForwardedIconComponent
-                name="Loader2"
-                className="h-5 w-5 animate-spin text-muted-foreground"
-              />
+              <LoaderCircle className="h-5 w-5 animate-spin text-muted-foreground" />
             )}
           </CardHeader>
           <CardContent>

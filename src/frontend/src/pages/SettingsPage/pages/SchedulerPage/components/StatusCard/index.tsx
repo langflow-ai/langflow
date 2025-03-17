@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../../../components/ui/card";
 import { Skeleton } from "../../../../../../components/ui/skeleton";
-import ForwardedIconComponent from "../../../../../../components/common/genericIconComponent";
+import { LucideIcon } from "lucide-react";
 
 interface StatusCardProps {
   title: string;
   value: string;
-  icon: string;
+  icon: LucideIcon;
   description?: string;
   variant?: "default" | "success" | "destructive";
   isLoading?: boolean;
@@ -14,7 +14,7 @@ interface StatusCardProps {
 export default function StatusCard({
   title,
   value,
-  icon,
+  icon: Icon,
   description,
   variant = "default",
   isLoading = false,
@@ -34,10 +34,7 @@ export default function StatusCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <ForwardedIconComponent
-          name={icon}
-          className="h-4 w-4 text-muted-foreground"
-        />
+        <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         {isLoading ? (

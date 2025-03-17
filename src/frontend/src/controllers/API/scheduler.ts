@@ -11,8 +11,22 @@ export async function getSchedulers(flowId?: string): Promise<SchedulerType[]> {
     },
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to get schedulers");
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to get schedulers");
+      } else {
+        // Handle HTML or other non-JSON responses
+        const text = await response.text();
+        throw new Error("Failed to get schedulers: Server returned non-JSON response");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to get schedulers: Unknown error");
+    }
   }
   return await response.json();
 }
@@ -25,8 +39,22 @@ export async function getScheduler(id: string): Promise<SchedulerType> {
     },
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to get scheduler");
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to get scheduler");
+      } else {
+        // Handle HTML or other non-JSON responses
+        const text = await response.text();
+        throw new Error("Failed to get scheduler: Server returned non-JSON response");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to get scheduler: Unknown error");
+    }
   }
   return await response.json();
 }
@@ -42,8 +70,22 @@ export async function createScheduler(
     body: JSON.stringify(scheduler),
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to create scheduler");
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to create scheduler");
+      } else {
+        // Handle HTML or other non-JSON responses
+        const text = await response.text();
+        throw new Error("Failed to create scheduler: Server returned non-JSON response");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to create scheduler: Unknown error");
+    }
   }
   return await response.json();
 }
@@ -60,8 +102,22 @@ export async function updateScheduler(
     body: JSON.stringify(scheduler),
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to update scheduler");
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to update scheduler");
+      } else {
+        // Handle HTML or other non-JSON responses
+        const text = await response.text();
+        throw new Error("Failed to update scheduler: Server returned non-JSON response");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to update scheduler: Unknown error");
+    }
   }
   return await response.json();
 }
@@ -74,8 +130,22 @@ export async function deleteScheduler(id: string): Promise<void> {
     },
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to delete scheduler");
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to delete scheduler");
+      } else {
+        // Handle HTML or other non-JSON responses
+        const text = await response.text();
+        throw new Error("Failed to delete scheduler: Server returned non-JSON response");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to delete scheduler: Unknown error");
+    }
   }
 }
 
@@ -87,8 +157,22 @@ export async function getSchedulerStatus(): Promise<any> {
     },
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to get scheduler status");
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to get scheduler status");
+      } else {
+        // Handle HTML or other non-JSON responses
+        const text = await response.text();
+        throw new Error("Failed to get scheduler status: Server returned non-JSON response");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to get scheduler status: Unknown error");
+    }
   }
   return await response.json();
 }
@@ -104,8 +188,22 @@ export async function getNextRunTimes(flowId?: string): Promise<any> {
     },
   });
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || "Failed to get next run times");
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to get next run times");
+      } else {
+        // Handle HTML or other non-JSON responses
+        const text = await response.text();
+        throw new Error("Failed to get next run times: Server returned non-JSON response");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to get next run times: Unknown error");
+    }
   }
   return await response.json();
 } 
