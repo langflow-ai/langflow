@@ -79,6 +79,7 @@ export default function ApiModal({
                 size="icon"
                 className="h-8 px-3"
                 onClick={() => setOpenTweaks(true)}
+                data-testid="tweaks-button"
               >
                 <IconComponent
                   name="SlidersHorizontal"
