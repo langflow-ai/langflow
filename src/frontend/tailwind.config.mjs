@@ -366,6 +366,9 @@ const config = {
           "&::-webkit-scrollbar-thumb:hover": {
             backgroundColor: "hsl(var(--placeholder-foreground))",
           },
+          "&::-webkit-scrollbar-corner": {
+            backgroundColor: "transparent",
+          },
           cursor: "auto",
         },
         ".dark .theme-attribution .react-flow__attribution": {

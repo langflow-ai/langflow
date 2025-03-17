@@ -1,7 +1,9 @@
 import { AIMLIcon } from "@/icons/AIML";
+import { BWPythonIcon } from "@/icons/BW python";
 import { DuckDuckGoIcon } from "@/icons/DuckDuckGo";
 import { ExaIcon } from "@/icons/Exa";
 import { GleanIcon } from "@/icons/Glean";
+import { JSIcon } from "@/icons/JSicon";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { MilvusIcon } from "@/icons/Milvus";
 import Perplexity from "@/icons/Perplexity/Perplexity";
@@ -60,6 +62,7 @@ import {
   Code2,
   CodeXml,
   Cog,
+  Columns2,
   Combine,
   Command,
   Compass,
@@ -82,6 +85,7 @@ import {
   EyeOff,
   File,
   FileClock,
+  FileCode2,
   FileDown,
   FileQuestion,
   FileSearch,
@@ -612,6 +616,7 @@ export const nodeIconsLucide: iconsType = {
   ListFlows: Group,
   ClearMessageHistory: FileClock,
   Python: PythonIcon,
+  BWPython: BWPythonIcon,
   AzureChatOpenAi: AzureIcon,
   Ollama: OllamaIcon,
   ChatOllama: OllamaIcon,
@@ -972,6 +977,9 @@ export const nodeIconsLucide: iconsType = {
   ThumbDownIconCustom,
   ThumbUpIconCustom,
   Serper: SerperIcon,
+  javascript: JSIcon,
+  FileCode2,
+  Columns2,
   ScrapeGraphAI: ScrapeGraph,
   ScrapeGraph: ScrapeGraph,
   ScrapeGraphSmartScraperApi: ScrapeGraph,

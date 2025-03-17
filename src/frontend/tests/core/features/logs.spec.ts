@@ -39,7 +39,7 @@ test(
       filledApiKey = await page.getByTestId("remove-icon-badge").count();
     }
 
-    await page.getByTestId("icon-ChevronDown").click();
+    await page.getByTestId("icon-ChevronDown").first().click();
     await page.getByText("Logs").click();
     await page.getByText("No Data Available", { exact: true }).isVisible();
     await page.keyboard.press("Escape");
@@ -68,7 +68,7 @@ test(
     await page
       .getByText("Chat Output built successfully", { exact: true })
       .isVisible();
-    await page.getByTestId("icon-ChevronDown").click();
+    await page.getByTestId("icon-ChevronDown").first().click();
     await page.getByText("Logs").click();
 
     await page.getByText("timestamp").first().isVisible();

@@ -1,4 +1,4 @@
-import { AllNodeType, FlowType } from "@/types/flow";
+import { AllNodeType, FlowType, TweaksType } from "@/types/flow";
 import { GetCodesType } from "@/types/tweaks";
 import { tabsArrayType } from "../../components";
 
@@ -22,7 +22,14 @@ export type TweaksStoreType = {
     flow: FlowType,
     getCodes: GetCodesType,
   ) => void;
+  newInitialSetup: (nodes: AllNodeType[]) => void;
   refreshTabs: () => void;
   autoLogin: boolean;
   flow: FlowType | null;
+  updateTweaks: () => void;
+  tweaks: {
+    [key: string]: {
+      [key: string]: any;
+    };
+  };
 };

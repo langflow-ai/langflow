@@ -139,6 +139,8 @@ export type FlowStoreType = {
   getFilterEdge: any[];
   onConnect: (connection: Connection) => void;
   unselectAll: () => void;
+  playgroundPage: boolean;
+  setPlaygroundPage: (playgroundPage: boolean) => void;
   buildFlow: ({
     startNodeId,
     stopNodeId,
