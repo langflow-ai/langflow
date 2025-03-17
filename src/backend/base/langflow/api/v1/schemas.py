@@ -4,7 +4,14 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
 
 from langflow.graph.schema import RunOutputs
 from langflow.schema import dotdict
@@ -377,6 +384,8 @@ class ConfigResponse(BaseModel):
     health_check_max_retries: int
     max_file_size_upload: int
     webhook_polling_interval: int
+    public_flow_cleanup_interval: int
+    public_flow_expiration: int
     event_delivery: Literal["polling", "streaming"]
 
 
