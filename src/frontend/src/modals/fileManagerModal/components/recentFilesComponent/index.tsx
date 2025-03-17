@@ -83,7 +83,9 @@ export default function RecentFilesComponent({
           <ImportButtonComponent variant="small" />
         </div> */}
       </div>
-      <div className={`flex h-80 min-h-80 flex-col gap-1 overflow-y-auto`}>
+      <div
+        className={`flex h-80 min-h-80 flex-col gap-1 overflow-y-auto overflow-x-hidden`}
+      >
         {searchResults.length > 0 ? (
           <FilesRendererComponent
             files={searchResults

@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -44,18 +45,18 @@ export default function FileRendererComponent({
     <div
       key={index}
       className={cn(
-        "flex items-center justify-between rounded-lg py-2",
+        "flex w-full items-center justify-between gap-2 overflow-hidden rounded-lg py-2",
         handleFileSelect ? "cursor-pointer px-3 hover:bg-accent" : "",
       )}
       onClick={() => {
         if (!file.progress) handleFileSelect?.(file.path);
       }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex w-full items-center gap-4 overflow-hidden">
         {handleFileSelect && (
           <div
             className={cn(
-              "flex",
+              "flex shrink-0",
               file.progress !== undefined &&
                 "pointer-events-none cursor-not-allowed",
             )}
@@ -68,7 +69,7 @@ export default function FileRendererComponent({
             />
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 overflow-hidden">
           {file.progress !== undefined && file.progress !== -1 ? (
             <div className="flex h-6 items-center justify-center text-xs font-semibold text-muted-foreground">
               {Math.round(file.progress * 100)}%
@@ -109,20 +110,29 @@ export default function FileRendererComponent({
           ) : (
             <span
               className={cn(
-                "flex cursor-text items-center gap-2 text-sm font-medium",
+                "flex flex-1 items-center gap-2 overflow-hidden text-sm font-medium",
                 file.progress !== undefined &&
                   file.progress === -1 &&
                   "pointer-events-none text-placeholder-foreground",
               )}
               onDoubleClick={(e) => {
                 e.stopPropagation();
-                if (!file.progress) {
+                if (!file.progress && !handleRemove) {
                   setOpenRename(true);
                 }
               }}
             >
-              {file.name}.{type}
-              <span className="text-xs font-normal text-muted-foreground">
+              <ShadTooltip content={`${file.name}.${type}`} side="bottom">
+                <span
+                  className={cn(
+                    "w-full cursor-text overflow-hidden truncate",
+                    handleRemove && "cursor-default",
+                  )}
+                >
+                  {file.name}.{type}
+                </span>
+              </ShadTooltip>
+              <span className="shrink-0 cursor-default text-xs font-normal text-muted-foreground">
                 {formatFileSize(file.size)}
               </span>
             </span>
@@ -147,46 +157,48 @@ export default function FileRendererComponent({
           )}
         </div>
       </div>
-      {handleRemove ? (
-        <Button
-          size="iconMd"
-          variant="ghost"
-          className="hover:bg-accent"
-          data-testid={`remove-file-button-${file.name}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRemove?.(file.path);
-          }}
-        >
-          <ForwardedIconComponent
-            name="X"
-            className="h-5 w-5 shrink-0 text-muted-foreground"
-          />
-        </Button>
-      ) : file.progress === undefined ? (
-        <FilesContextMenuComponent
-          handleRename={handleOpenRename}
-          file={file}
-          simplified
-        >
+      <div className="flex shrink-0 items-center gap-2">
+        {handleRemove ? (
           <Button
             size="iconMd"
-            data-testid={`context-menu-button-${file.name}`}
             variant="ghost"
-            className="hover:bg-secondary-foreground/5"
+            className="hover:bg-accent"
+            data-testid={`remove-file-button-${file.name}`}
             onClick={(e) => {
               e.stopPropagation();
+              handleRemove?.(file.path);
             }}
           >
             <ForwardedIconComponent
-              name="EllipsisVertical"
-              className="h-5 w-5 shrink-0"
+              name="X"
+              className="h-5 w-5 shrink-0 text-muted-foreground"
             />
           </Button>
-        </FilesContextMenuComponent>
-      ) : (
-        <></>
-      )}
+        ) : file.progress === undefined ? (
+          <FilesContextMenuComponent
+            handleRename={handleOpenRename}
+            file={file}
+            simplified
+          >
+            <Button
+              size="iconMd"
+              data-testid={`context-menu-button-${file.name}`}
+              variant="ghost"
+              className="hover:bg-secondary-foreground/5"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <ForwardedIconComponent
+                name="EllipsisVertical"
+                className="h-5 w-5 shrink-0"
+              />
+            </Button>
+          </FilesContextMenuComponent>
+        ) : (
+          <></>
+        )}
+      </div>
     </div>
   );
 }
