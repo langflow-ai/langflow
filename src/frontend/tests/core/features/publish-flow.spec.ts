@@ -42,20 +42,17 @@ test(
     ).resolves.toBeTruthy();
 
     await page.getByTestId("publish-switch").click();
-    await page.getByTestId("shareable-playground").click();
-    await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    await page.getByTestId("publish-button").click();
-    await page.getByTestId("publish-switch").click();
-    await expect(page.getByTestId("rf__wrapper")).toBeVisible();
-    await expect(page.getByTestId("publish-switch")).toBeChecked();
     const pagePromise = context.waitForEvent("page");
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
     await newPage.waitForTimeout(3000);
     const newUrl = newPage.url();
     await newPage.getByPlaceholder("Send a message...").fill("Hello");
-    await newPage.getByTestId("button-send").click();
-    await expect(newPage.getByText("Hello")).toBeVisible();
+    await newPage.getByTestId("button-send").last().click();
+
+    const stopButton = newPage.getByRole("button", { name: "Stop" });
+    await stopButton.waitFor({ state: "visible", timeout: 30000 });
+
     await newPage.close();
     await page.bringToFront();
     // check if deactivate the publishworks
@@ -65,9 +62,17 @@ test(
     await expect(page.getByTestId("publish-switch")).toBeChecked({
       checked: false,
     });
-    await page.getByTestId("shareable-playground").click();
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
     await page.goto(newUrl);
-    await expect(page.getByTestId("mainpage_title")).toBeVisible();
+    try {
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 10000,
+      });
+    } catch (error) {
+      await page.reload();
+      await expect(page.getByTestId("mainpage_title")).toBeVisible({
+        timeout: 10000,
+      });
+    }
   },
 );

@@ -40,6 +40,8 @@ export const useGetBuildsQuery: useQueryFunctionType<
     {
       placeholderData: keepPreviousData,
       refetchOnWindowFocus: false,
+      retry: 0,
+      retryDelay: 0,
     },
   );
 
