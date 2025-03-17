@@ -33,6 +33,7 @@ from .input_mixin import (
 class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TABLE
     is_list: bool = True
+    input_types: list[str] = ["DataFrame", "Table"]
 
     @field_validator("value")
     @classmethod
@@ -93,7 +94,7 @@ class DataInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin)
 
 
 class DataFrameInput(HandleInput, InputTraceMixin, ListableInputMixin, ToolModeMixin):
-    input_types: list[str] = ["DataFrame"]
+    input_types: list[str] = ["DataFrame", "Table"]
 
 
 class PromptInput(BaseInputMixin, ListableInputMixin, InputTraceMixin, ToolModeMixin):
