@@ -1,4 +1,6 @@
 import pytest
+from pydantic import ValidationError
+
 from langflow.inputs.inputs import (
     BoolInput,
     CodeInput,
@@ -24,7 +26,6 @@ from langflow.inputs.inputs import (
 )
 from langflow.inputs.utils import instantiate_input
 from langflow.schema.message import Message
-from pydantic import ValidationError
 
 
 def test_table_input_valid():
@@ -258,7 +259,7 @@ def test_tab_input_valid(test_id, options, value, expected_options, expected_val
             "too_many_options",
             ["Tab1", "Tab2", "Tab3", "Tab4"],
             "Tab1",
-            True,
+            ValidationError,
         ),
         (
             "option_too_long",
@@ -268,20 +269,20 @@ def test_tab_input_valid(test_id, options, value, expected_options, expected_val
                 "Tab3",
             ],
             "Tab1",
-            True,
+            ValidationError,
         ),
         (
             "non_string_value",
             ["Tab1", "Tab2", "Tab3"],
             123,
-            True,
+            TypeError,
         ),
     ],
 )
 def test_tab_input_invalid(test_id, options, value, error_expected):
     """Test TabInput validation with invalid inputs."""
     if error_expected:
-        with pytest.raises(ValidationError):
+        with pytest.raises(error_expected):
             TabInput(
                 name=f"invalid_tab_{test_id}",
                 options=options,

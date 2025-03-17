@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
 from pandas import DataFrame
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from langflow.inputs.validators import CoalesceBool
 from langflow.schema.data import Data
@@ -479,18 +479,22 @@ class TabInput(BaseInputMixin, TabMixin, MetadataTraceMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.TAB
     options: list[str] = Field(default_factory=list)
 
-    @field_validator("value")
+    @model_validator(mode="after")
     @classmethod
-    def validate_value(cls, v: str, info) -> str:
+    def validate_value(cls, values):
         """Validates the value to ensure it's one of the tab values."""
-        if v and not isinstance(v, str):
-            msg = f"TabInput value must be a string. Got {type(v).__name__}."
+        options = values.options  # Agora temos certeza de que options está disponível
+        value = values.value
+
+        if not isinstance(value, str):
+            msg = f"TabInput value must be a string. Got {type(value).__name__}."
+            raise TypeError(msg)
+
+        if value not in options and value != "":
+            msg = f"TabInput value must be one of the following: {options}. Got: '{value}'"
             raise ValueError(msg)
-        # Check if value is one of the options
-        if v not in info.data["options"]:
-            msg = f"TabInput value must be one of the following: {info.data['options']}. Got: '{v}'"
-            raise ValueError(msg)
-        return v
+
+        return values
 
 
 class MultiselectInput(BaseInputMixin, ListableInputMixin, DropDownMixin, MetadataTraceMixin, ToolModeMixin):
