@@ -52,8 +52,8 @@ class MistralAIModelComponent(LCModelComponent):
         FloatInput(
             name="temperature",
             display_name="Temperature",
-            advanced=False,
-            value=0.5,
+            value=0.1,
+            advanced=True,
         ),
         IntInput(
             name="max_retries",
