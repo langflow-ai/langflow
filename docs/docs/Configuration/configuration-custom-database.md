@@ -74,3 +74,50 @@ services:
       - POSTGRES_DB=langflow
 ```
 
+
+## Connect multiple Langflow containers to PostgreSQL
+
+When deploying multiple Langflow containers, use a single PostgreSQL database to serve multiple Langflow runtime containers for horizontal scaling of Langflow without increased complexity.
+
+To connect multiple Langflow containers to the same PostgreSQL database, all Langflow containers should use the same `LANGFLOW_DATABASE_URL`.
+
+1. Add multiple Langflow runtimes to your `docker-compose.yml` file:
+```yaml
+   services:
+     langflow-1:
+       image: langflowai/langflow-backend:latest
+       environment:
+         - LANGFLOW_DATABASE_URL=postgresql://langflow:password@postgres:5432/langflow
+
+     langflow-2:
+       image: langflowai/langflow-backend:latest
+       environment:
+         - LANGFLOW_DATABASE_URL=postgresql://langflow:password@postgres:5432/langflow
+```
+
+2. To manage your database credentials using environment variables, create a `.env` file with the following values.
+   ```text
+   POSTGRES_USER=langflow
+   POSTGRES_PASSWORD=your_secure_password
+   POSTGRES_DB=langflow
+   POSTGRES_HOST=postgres
+   POSTGRES_PORT=5432
+   ```
+
+3. Reference the `.env` values in your `docker-compose.yml`:
+   ```yaml
+   services:
+     langflow-1:
+       environment:
+         - LANGFLOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+
+     langflow-2:
+       environment:
+         - LANGFLOW_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+   ```
+
+4. Run `docker compose up` to deploy the containers locally.
+
+
+
+
