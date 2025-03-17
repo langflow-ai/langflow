@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import types
 from typing import TYPE_CHECKING, Any
 
@@ -169,6 +170,9 @@ class OpikTracer(BaseTracer):
             return None
 
         from opik.integrations.langchain import OpikTracer as LangchainOpikTracer
+
+        # Set project name for the langchain integration
+        os.environ["OPIK_PROJECT_NAME"] = self._project_name
 
         return LangchainOpikTracer(distributed_headers=self._distributed_headers)
 
