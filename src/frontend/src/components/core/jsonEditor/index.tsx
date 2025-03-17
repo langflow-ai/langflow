@@ -1,4 +1,5 @@
 import { jsonquery } from "@jsonquerylang/jsonquery";
+import { edit } from "ace-builds";
 import { Check } from "lucide-react";
 import { KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
@@ -334,6 +335,12 @@ const JsonEditor = ({
       } catch (error) {
         console.error("Error applying initial filter:", error);
       }
+    }
+
+    // Ensure the container has the correct dimensions before creating the editor
+    if (containerRef.current) {
+      containerRef.current.style.width = width;
+      containerRef.current.style.height = height;
     }
 
     const editor = createJSONEditor({
