@@ -155,7 +155,7 @@ export const FilesPage = () => {
       valueFormatter: (params) => {
         return params.data.progress
           ? ""
-          : new Date(params.value).toLocaleString();
+          : new Date(params.value + "Z").toLocaleString();
       },
       editable: false,
       flex: 1,
