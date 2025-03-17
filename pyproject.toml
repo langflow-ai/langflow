@@ -115,6 +115,7 @@ dependencies = [
     "apify-client>=1.8.1",
     "pylint>=3.3.4",
     "ruff>=0.9.7",
+    "openai-agents>=0.0.4",
 ]
 
 [dependency-groups]
