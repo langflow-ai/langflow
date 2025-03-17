@@ -2702,7 +2702,7 @@
               "path": {
                 "_input_type": "FileInput",
                 "advanced": false,
-                "display_name": "Path",
+                "display_name": "Files",
                 "dynamic": false,
                 "fileTypes": [
                   "txt",
