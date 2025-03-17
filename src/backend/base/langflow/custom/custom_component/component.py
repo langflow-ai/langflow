@@ -155,8 +155,7 @@ class Component(CustomComponent):
         self._reset_all_output_values()
         if self.inputs is not None:
             self.map_inputs(self.inputs)
-        if self.outputs is not None:
-            self.map_outputs(self.outputs)
+        self.map_outputs()
 
         # Final setup
         self._set_output_types(list(self._outputs_map.values()))
@@ -405,7 +404,7 @@ class Component(CustomComponent):
             msg = f"Output {name} not found in {self.__class__.__name__}"
             raise ValueError(msg)
 
-    def map_outputs(self, outputs: list[Output]) -> None:
+    def map_outputs(self) -> None:
         """Maps the given list of outputs to the component.
 
         Args:
@@ -417,6 +416,19 @@ class Component(CustomComponent):
         Returns:
             None
         """
+        # override outputs (generated from the class code) with vertex outputs
+        # if they exist (generated from the frontend)
+        outputs = []
+        if self._vertex and self._vertex.outputs:
+            for output in self._vertex.outputs:
+                try:
+                    output_ = Output(**output)
+                    outputs.append(output_)
+                except ValidationError as e:
+                    msg = f"Invalid output: {e}"
+                    raise ValueError(msg) from e
+        else:
+            outputs = self.outputs
         for output in outputs:
             if output.name is None:
                 msg = "Output name cannot be None."
@@ -980,8 +992,9 @@ class Component(CustomComponent):
             and self._vertex.graph.flow_id is not None
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
-
+        result = output.apply_options(result)
         output.value = result
+
         return result
 
     def _build_artifact(self, result):
