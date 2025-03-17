@@ -85,21 +85,6 @@ export default function FilesContextMenuComponent({
             />
             Rename
           </DropdownMenuItem>
-          {/* <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSelectOptionsChange("replace");
-            }}
-            className="cursor-pointer"
-            data-testid="btn-edit-flow"
-          >
-            <ForwardedIconComponent
-              name="Replace"
-              aria-hidden="true"
-              className="mr-2 h-4 w-4"
-            />
-            Replace
-          </DropdownMenuItem> */}
           <DropdownMenuItem
             onClick={(e) => {
               e.stopPropagation();
