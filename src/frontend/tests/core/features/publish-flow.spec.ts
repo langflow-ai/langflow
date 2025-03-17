@@ -26,8 +26,12 @@ test(
     await page.waitForSelector('[data-testid="inputsChat Input"]', {
       timeout: 3000,
     });
-    await page.getByTestId("inputsChat Input").hover({ timeout: 3000 });
-    await page.getByTestId("add-component-button-chat-input").click();
+    await page
+      .getByTestId("inputsChat Input")
+      .hover({ timeout: 3000 })
+      .then(async () => {
+        await page.getByTestId("add-component-button-chat-input").click();
+      });
 
     await adjustScreenView(page);
     await page.getByTestId("publish-button").click();
