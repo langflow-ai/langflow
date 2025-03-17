@@ -138,6 +138,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
+
+            # Start the scheduler service
+            from langflow.services.deps import get_scheduler_service
+            scheduler_service = get_scheduler_service()
+            await scheduler_service.start()
+
             yield
 
         except Exception as exc:
@@ -150,6 +156,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             if sync_flows_from_fs_task:
                 sync_flows_from_fs_task.cancel()
                 await asyncio.wait([sync_flows_from_fs_task])
+
+            # Stop the scheduler service
+            from langflow.services.deps import get_scheduler_service
+            scheduler_service = get_scheduler_service()
+            await scheduler_service.stop()
+
             await teardown_services()
             await logger.complete()
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
