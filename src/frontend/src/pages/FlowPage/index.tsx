@@ -12,8 +12,13 @@ import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import Page from "./components/PageComponent";
 import { FlowSidebarComponent } from "./components/flowSidebarComponent";
+import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
+import { useTypesStore } from "@/stores/typesStore";
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
+  const types = useTypesStore((state) => state.types);
+
+  const { isFetched: typesLoaded } = useGetTypes({ enabled: Object.keys(types).length <= 0 });
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);

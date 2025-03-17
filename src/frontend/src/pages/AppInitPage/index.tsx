@@ -24,15 +24,11 @@ export function AppInitPage() {
   const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
-  const { isFetched: typesLoaded } = useGetTypes({ enabled: isFetched });
-  useGetGlobalVariables({ enabled: typesLoaded });
-  useGetTagsQuery({ enabled: typesLoaded });
-  useGetFoldersQuery({
-    enabled: typesLoaded,
-  });
-  const { isFetched: isExamplesFetched } = useGetBasicExamplesQuery({
-    enabled: typesLoaded,
-  });
+  // const { isFetched: typesLoaded } = useGetTypes({ enabled: isFetched });
+  useGetGlobalVariables();
+  useGetTagsQuery();
+  useGetFoldersQuery();
+  const { isFetched: isExamplesFetched } = useGetBasicExamplesQuery();
 
   useEffect(() => {
     if (isFetched) {
@@ -44,13 +40,13 @@ export function AppInitPage() {
     //need parent component with width and height
     <>
       {isLoaded ? (
-        (isLoading || !isFetched || !isExamplesFetched || !typesLoaded) && (
+        (isLoading || !isFetched || !isExamplesFetched) && (
           <LoadingPage overlay />
         )
       ) : (
         <CustomLoadingPage />
       )}
-      {isFetched && isExamplesFetched && typesLoaded && <Outlet />}
+      {isFetched && isExamplesFetched && <Outlet />}
     </>
   );
 }
