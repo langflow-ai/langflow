@@ -44,7 +44,7 @@ COPY ./flows/*.json /app/flows/
 
 An example [Dockerfile](https://github.com/langflow-ai/langflow-helm-charts/blob/main/examples/langflow-runtime/docker/Dockerfile) for bundling flows is hosted in the Langflow Helm Charts repository.
 
-For a step-by-step example, see [Build applications in Langflow](/platform-build-application).
+For a step-by-step example, see Build Applications in Langflow in the Platform guide.
 
 For more on building the Langflow docker image and pushing it to Docker Hub, see [Package your flow as a docker image](/deployment-docker#package-your-flow-as-a-docker-image).
 
