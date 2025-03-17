@@ -235,6 +235,19 @@ class Data(BaseModel):
     def __eq__(self, /, other):
         return isinstance(other, Data) and self.data == other.data
 
+    def filter_data(self, filter_str: str) -> "Data":
+        """Filters the data dictionary based on the filter string.
+
+        Args:
+            filter_str (str): The filter string to apply to the data dictionary.
+
+        Returns:
+            Data: The filtered Data.
+        """
+        from langflow.template.utils import apply_json_filter
+
+        return apply_json_filter(self.data, filter_str)
+
 
 def custom_serializer(obj):
     if isinstance(obj, datetime):
@@ -246,6 +259,8 @@ def custom_serializer(obj):
         return str(obj)
     if isinstance(obj, BaseModel):
         return obj.model_dump()
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
     # Add more custom serialization rules as needed
     msg = f"Type {type(obj)} not serializable"
     raise TypeError(msg)

@@ -6,35 +6,8 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "ArXivComponent",
-            "id": "ArXivComponent-LChQN",
-            "name": "papers",
-            "output_types": [
-              "Data"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "data",
-            "id": "LoopComponent-3vpc1",
-            "inputTypes": [
-              "Data"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "xy-edge__ArXivComponent-LChQN{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-LChQNœ,œnameœ:œpapersœ,œoutput_typesœ:[œDataœ]}-LoopComponent-3vpc1{œfieldNameœ:œdataœ,œidœ:œLoopComponent-3vpc1œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "ArXivComponent-LChQN",
-        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-LChQNœ, œnameœ: œpapersœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-3vpc1",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-3vpc1œ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-3vpc1",
+            "id": "LoopComponent-QhsXW",
             "name": "item",
             "output_types": [
               "Data"
@@ -42,18 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-Pf12J",
+            "id": "ParseData-x6wkY",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-3vpc1{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-3vpc1œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-Pf12J{œfieldNameœ:œdataœ,œidœ:œParseData-Pf12Jœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-3vpc1",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-3vpc1œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-Pf12J",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-Pf12Jœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-LoopComponent-QhsXW{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-QhsXWœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-x6wkY{œfieldNameœ:œdataœ,œidœ:œParseData-x6wkYœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-QhsXW",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-QhsXWœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-x6wkY",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-x6wkYœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -61,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-Pf12J",
+            "id": "ParseData-x6wkY",
             "name": "text",
             "output_types": [
               "Message"
@@ -69,18 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "AnthropicModel-beO6B",
+            "id": "AnthropicModel-uuAY6",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ParseData-Pf12J{œdataTypeœ:œParseDataœ,œidœ:œParseData-Pf12Jœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-beO6B{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-beO6Bœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParseData-Pf12J",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-Pf12Jœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "AnthropicModel-beO6B",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-beO6Bœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-x6wkY{œdataTypeœ:œParseDataœ,œidœ:œParseData-x6wkYœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-AnthropicModel-uuAY6{œfieldNameœ:œinput_valueœ,œidœ:œAnthropicModel-uuAY6œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-x6wkY",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-x6wkYœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "AnthropicModel-uuAY6",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAnthropicModel-uuAY6œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -88,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "AnthropicModel",
-            "id": "AnthropicModel-beO6B",
+            "id": "AnthropicModel-uuAY6",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -96,18 +71,19 @@
           },
           "targetHandle": {
             "fieldName": "message",
-            "id": "MessagetoData-QRSBb",
+            "id": "MessagetoData-9Kbcj",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__AnthropicModel-beO6B{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-beO6Bœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-QRSBb{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-QRSBbœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "AnthropicModel-beO6B",
-        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-beO6Bœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "MessagetoData-QRSBb",
-        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-QRSBbœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-AnthropicModel-uuAY6{œdataTypeœ:œAnthropicModelœ,œidœ:œAnthropicModel-uuAY6œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-MessagetoData-9Kbcj{œfieldNameœ:œmessageœ,œidœ:œMessagetoData-9Kbcjœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "AnthropicModel-uuAY6",
+        "sourceHandle": "{œdataTypeœ: œAnthropicModelœ, œidœ: œAnthropicModel-uuAY6œ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "MessagetoData-9Kbcj",
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œMessagetoData-9Kbcjœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -115,7 +91,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "MessagetoData",
-            "id": "MessagetoData-QRSBb",
+            "id": "MessagetoData-9Kbcj",
             "name": "data",
             "output_types": [
               "Data"
@@ -123,18 +99,19 @@
           },
           "targetHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-3vpc1",
+            "id": "LoopComponent-QhsXW",
             "name": "item",
             "output_types": [
               "Data"
             ]
           }
         },
-        "id": "xy-edge__MessagetoData-QRSBb{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-QRSBbœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-3vpc1{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-3vpc1œ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
-        "source": "MessagetoData-QRSBb",
-        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-QRSBbœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
-        "target": "LoopComponent-3vpc1",
-        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-3vpc1œ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
+        "id": "reactflow__edge-MessagetoData-9Kbcj{œdataTypeœ:œMessagetoDataœ,œidœ:œMessagetoData-9Kbcjœ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-QhsXW{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-QhsXWœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "selected": false,
+        "source": "MessagetoData-9Kbcj",
+        "sourceHandle": "{œdataTypeœ: œMessagetoDataœ, œidœ: œMessagetoData-9Kbcjœ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "LoopComponent-QhsXW",
+        "targetHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-QhsXWœ, œnameœ: œitemœ, œoutput_typesœ: [œDataœ]}"
       },
       {
         "animated": false,
@@ -142,7 +119,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LoopComponent",
-            "id": "LoopComponent-3vpc1",
+            "id": "LoopComponent-QhsXW",
             "name": "done",
             "output_types": [
               "Data"
@@ -150,18 +127,19 @@
           },
           "targetHandle": {
             "fieldName": "data",
-            "id": "ParseData-igEkj",
+            "id": "ParseData-NpCtQ",
             "inputTypes": [
               "Data"
             ],
             "type": "other"
           }
         },
-        "id": "xy-edge__LoopComponent-3vpc1{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-3vpc1œ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-igEkj{œfieldNameœ:œdataœ,œidœ:œParseData-igEkjœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
-        "source": "LoopComponent-3vpc1",
-        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-3vpc1œ, œnameœ: œdoneœ, œoutput_typesœ: [œDataœ]}",
-        "target": "ParseData-igEkj",
-        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-igEkjœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-LoopComponent-QhsXW{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-QhsXWœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-NpCtQ{œfieldNameœ:œdataœ,œidœ:œParseData-NpCtQœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "LoopComponent-QhsXW",
+        "sourceHandle": "{œdataTypeœ: œLoopComponentœ, œidœ: œLoopComponent-QhsXWœ, œnameœ: œdoneœ, œoutput_typesœ: [œDataœ]}",
+        "target": "ParseData-NpCtQ",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œParseData-NpCtQœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -169,7 +147,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ParseData",
-            "id": "ParseData-igEkj",
+            "id": "ParseData-NpCtQ",
             "name": "text",
             "output_types": [
               "Message"
@@ -177,7 +155,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-UZgon",
+            "id": "ChatOutput-Uq5M0",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -186,11 +164,12 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__ParseData-igEkj{œdataTypeœ:œParseDataœ,œidœ:œParseData-igEkjœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-UZgon{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-UZgonœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ParseData-igEkj",
-        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-igEkjœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-UZgon",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-UZgonœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ParseData-NpCtQ{œdataTypeœ:œParseDataœ,œidœ:œParseData-NpCtQœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Uq5M0{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Uq5M0œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ParseData-NpCtQ",
+        "sourceHandle": "{œdataTypeœ: œParseDataœ, œidœ: œParseData-NpCtQœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-Uq5M0",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Uq5M0œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -198,7 +177,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-m10vc",
+            "id": "ChatInput-doR66",
             "name": "message",
             "output_types": [
               "Message"
@@ -206,24 +185,50 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "ArXivComponent-LChQN",
+            "id": "ArXivComponent-Vwek5",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "xy-edge__ChatInput-m10vc{œdataTypeœ:œChatInputœ,œidœ:œChatInput-m10vcœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-LChQN{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-LChQNœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-m10vc",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-m10vcœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ArXivComponent-LChQN",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-LChQNœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-doR66{œdataTypeœ:œChatInputœ,œidœ:œChatInput-doR66œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ArXivComponent-Vwek5{œfieldNameœ:œsearch_queryœ,œidœ:œArXivComponent-Vwek5œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-doR66",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-doR66œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ArXivComponent-Vwek5",
+        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œArXivComponent-Vwek5œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+      },
+      {
+        "data": {
+          "sourceHandle": {
+            "dataType": "ArXivComponent",
+            "id": "ArXivComponent-Vwek5",
+            "name": "data",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "LoopComponent-QhsXW",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          }
+        },
+        "id": "xy-edge__ArXivComponent-Vwek5{œdataTypeœ:œArXivComponentœ,œidœ:œArXivComponent-Vwek5œ,œnameœ:œdataœ,œoutput_typesœ:[œDataœ]}-LoopComponent-QhsXW{œfieldNameœ:œdataœ,œidœ:œLoopComponent-QhsXWœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "source": "ArXivComponent-Vwek5",
+        "sourceHandle": "{œdataTypeœ: œArXivComponentœ, œidœ: œArXivComponent-Vwek5œ, œnameœ: œdataœ, œoutput_typesœ: [œDataœ]}",
+        "target": "LoopComponent-QhsXW",
+        "targetHandle": "{œfieldNameœ: œdataœ, œidœ: œLoopComponent-QhsXWœ, œinputTypesœ: [œDataœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ArXivComponent-LChQN",
+          "id": "ArXivComponent-Vwek5",
           "node": {
             "base_classes": [
               "Data"
@@ -251,13 +256,26 @@
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Papers",
+                "display_name": "Data",
                 "method": "search_papers",
-                "name": "papers",
+                "name": "data",
                 "selected": "Data",
                 "tool_mode": true,
                 "types": [
                   "Data"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "DataFrame",
+                "method": "as_dataframe",
+                "name": "dataframe",
+                "selected": "DataFrame",
+                "tool_mode": true,
+                "types": [
+                  "DataFrame"
                 ],
                 "value": "__UNDEFINED__"
               }
@@ -281,7 +299,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "import urllib.request\nfrom urllib.parse import urlparse\nfrom xml.etree.ElementTree import Element\n\nfrom defusedxml.ElementTree import fromstring\n\nfrom langflow.custom import Component\nfrom langflow.io import DropdownInput, IntInput, MessageTextInput, Output\nfrom langflow.schema import Data\n\n\nclass ArXivComponent(Component):\n    display_name = \"arXiv\"\n    description = \"Search and retrieve papers from arXiv.org\"\n    icon = \"arXiv\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"The search query for arXiv papers (e.g., 'quantum computing')\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Field\",\n            info=\"The field to search in\",\n            options=[\"all\", \"title\", \"abstract\", \"author\", \"cat\"],  # cat is for category\n            value=\"all\",\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of results to return\",\n            value=10,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Papers\", name=\"papers\", method=\"search_papers\"),\n    ]\n\n    def build_query_url(self) -> str:\n        \"\"\"Build the arXiv API query URL.\"\"\"\n        base_url = \"http://export.arxiv.org/api/query?\"\n\n        # Build the search query\n        search_query = f\"{self.search_type}:{self.search_query}\"\n\n        # URL parameters\n        params = {\n            \"search_query\": search_query,\n            \"max_results\": str(self.max_results),\n        }\n\n        # Convert params to URL query string\n        query_string = \"&\".join([f\"{k}={urllib.parse.quote(str(v))}\" for k, v in params.items()])\n\n        return base_url + query_string\n\n    def parse_atom_response(self, response_text: str) -> list[dict]:\n        \"\"\"Parse the Atom XML response from arXiv.\"\"\"\n        # Parse XML safely using defusedxml\n        root = fromstring(response_text)\n\n        # Define namespace dictionary for XML parsing\n        ns = {\"atom\": \"http://www.w3.org/2005/Atom\", \"arxiv\": \"http://arxiv.org/schemas/atom\"}\n\n        papers = []\n        # Process each entry (paper)\n        for entry in root.findall(\"atom:entry\", ns):\n            paper = {\n                \"id\": self._get_text(entry, \"atom:id\", ns),\n                \"title\": self._get_text(entry, \"atom:title\", ns),\n                \"summary\": self._get_text(entry, \"atom:summary\", ns),\n                \"published\": self._get_text(entry, \"atom:published\", ns),\n                \"updated\": self._get_text(entry, \"atom:updated\", ns),\n                \"authors\": [author.find(\"atom:name\", ns).text for author in entry.findall(\"atom:author\", ns)],\n                \"arxiv_url\": self._get_link(entry, \"alternate\", ns),\n                \"pdf_url\": self._get_link(entry, \"related\", ns),\n                \"comment\": self._get_text(entry, \"arxiv:comment\", ns),\n                \"journal_ref\": self._get_text(entry, \"arxiv:journal_ref\", ns),\n                \"primary_category\": self._get_category(entry, ns),\n                \"categories\": [cat.get(\"term\") for cat in entry.findall(\"atom:category\", ns)],\n            }\n            papers.append(paper)\n\n        return papers\n\n    def _get_text(self, element: Element, path: str, ns: dict) -> str | None:\n        \"\"\"Safely extract text from an XML element.\"\"\"\n        el = element.find(path, ns)\n        return el.text.strip() if el is not None and el.text else None\n\n    def _get_link(self, element: Element, rel: str, ns: dict) -> str | None:\n        \"\"\"Get link URL based on relation type.\"\"\"\n        for link in element.findall(\"atom:link\", ns):\n            if link.get(\"rel\") == rel:\n                return link.get(\"href\")\n        return None\n\n    def _get_category(self, element: Element, ns: dict) -> str | None:\n        \"\"\"Get primary category.\"\"\"\n        cat = element.find(\"arxiv:primary_category\", ns)\n        return cat.get(\"term\") if cat is not None else None\n\n    def search_papers(self) -> list[Data]:\n        \"\"\"Search arXiv and return results.\"\"\"\n        try:\n            # Build the query URL\n            url = self.build_query_url()\n\n            # Validate URL scheme and host\n            parsed_url = urlparse(url)\n            if parsed_url.scheme not in {\"http\", \"https\"}:\n                error_msg = f\"Invalid URL scheme: {parsed_url.scheme}\"\n                raise ValueError(error_msg)\n            if parsed_url.hostname != \"export.arxiv.org\":\n                error_msg = f\"Invalid host: {parsed_url.hostname}\"\n                raise ValueError(error_msg)\n\n            # Create a custom opener that only allows http/https schemes\n            class RestrictedHTTPHandler(urllib.request.HTTPHandler):\n                def http_open(self, req):\n                    return super().http_open(req)\n\n            class RestrictedHTTPSHandler(urllib.request.HTTPSHandler):\n                def https_open(self, req):\n                    return super().https_open(req)\n\n            # Build opener with restricted handlers\n            opener = urllib.request.build_opener(RestrictedHTTPHandler, RestrictedHTTPSHandler)\n            urllib.request.install_opener(opener)\n\n            # Make the request with validated URL using restricted opener\n            response = opener.open(url)\n            response_text = response.read().decode(\"utf-8\")\n\n            # Parse the response\n            papers = self.parse_atom_response(response_text)\n\n            # Convert to Data objects\n            results = [Data(data=paper) for paper in papers]\n            self.status = results\n        except (urllib.error.URLError, ValueError) as e:\n            error_data = Data(data={\"error\": f\"Request error: {e!s}\"})\n            self.status = error_data\n            return [error_data]\n        else:\n            return results\n"
+                "value": "import urllib.request\nfrom urllib.parse import urlparse\nfrom xml.etree.ElementTree import Element\n\nfrom defusedxml.ElementTree import fromstring\n\nfrom langflow.custom import Component\nfrom langflow.io import DropdownInput, IntInput, MessageTextInput, Output\nfrom langflow.schema import Data, DataFrame\n\n\nclass ArXivComponent(Component):\n    display_name = \"arXiv\"\n    description = \"Search and retrieve papers from arXiv.org\"\n    icon = \"arXiv\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"search_query\",\n            display_name=\"Search Query\",\n            info=\"The search query for arXiv papers (e.g., 'quantum computing')\",\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Field\",\n            info=\"The field to search in\",\n            options=[\"all\", \"title\", \"abstract\", \"author\", \"cat\"],  # cat is for category\n            value=\"all\",\n        ),\n        IntInput(\n            name=\"max_results\",\n            display_name=\"Max Results\",\n            info=\"Maximum number of results to return\",\n            value=10,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Data\", name=\"data\", method=\"search_papers\"),\n        Output(display_name=\"DataFrame\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    def build_query_url(self) -> str:\n        \"\"\"Build the arXiv API query URL.\"\"\"\n        base_url = \"http://export.arxiv.org/api/query?\"\n\n        # Build the search query\n        search_query = f\"{self.search_type}:{self.search_query}\"\n\n        # URL parameters\n        params = {\n            \"search_query\": search_query,\n            \"max_results\": str(self.max_results),\n        }\n\n        # Convert params to URL query string\n        query_string = \"&\".join([f\"{k}={urllib.parse.quote(str(v))}\" for k, v in params.items()])\n\n        return base_url + query_string\n\n    def parse_atom_response(self, response_text: str) -> list[dict]:\n        \"\"\"Parse the Atom XML response from arXiv.\"\"\"\n        # Parse XML safely using defusedxml\n        root = fromstring(response_text)\n\n        # Define namespace dictionary for XML parsing\n        ns = {\"atom\": \"http://www.w3.org/2005/Atom\", \"arxiv\": \"http://arxiv.org/schemas/atom\"}\n\n        papers = []\n        # Process each entry (paper)\n        for entry in root.findall(\"atom:entry\", ns):\n            paper = {\n                \"id\": self._get_text(entry, \"atom:id\", ns),\n                \"title\": self._get_text(entry, \"atom:title\", ns),\n                \"summary\": self._get_text(entry, \"atom:summary\", ns),\n                \"published\": self._get_text(entry, \"atom:published\", ns),\n                \"updated\": self._get_text(entry, \"atom:updated\", ns),\n                \"authors\": [author.find(\"atom:name\", ns).text for author in entry.findall(\"atom:author\", ns)],\n                \"arxiv_url\": self._get_link(entry, \"alternate\", ns),\n                \"pdf_url\": self._get_link(entry, \"related\", ns),\n                \"comment\": self._get_text(entry, \"arxiv:comment\", ns),\n                \"journal_ref\": self._get_text(entry, \"arxiv:journal_ref\", ns),\n                \"primary_category\": self._get_category(entry, ns),\n                \"categories\": [cat.get(\"term\") for cat in entry.findall(\"atom:category\", ns)],\n            }\n            papers.append(paper)\n\n        return papers\n\n    def _get_text(self, element: Element, path: str, ns: dict) -> str | None:\n        \"\"\"Safely extract text from an XML element.\"\"\"\n        el = element.find(path, ns)\n        return el.text.strip() if el is not None and el.text else None\n\n    def _get_link(self, element: Element, rel: str, ns: dict) -> str | None:\n        \"\"\"Get link URL based on relation type.\"\"\"\n        for link in element.findall(\"atom:link\", ns):\n            if link.get(\"rel\") == rel:\n                return link.get(\"href\")\n        return None\n\n    def _get_category(self, element: Element, ns: dict) -> str | None:\n        \"\"\"Get primary category.\"\"\"\n        cat = element.find(\"arxiv:primary_category\", ns)\n        return cat.get(\"term\") if cat is not None else None\n\n    def search_papers(self) -> list[Data]:\n        \"\"\"Search arXiv and return results.\"\"\"\n        try:\n            # Build the query URL\n            url = self.build_query_url()\n\n            # Validate URL scheme and host\n            parsed_url = urlparse(url)\n            if parsed_url.scheme not in {\"http\", \"https\"}:\n                error_msg = f\"Invalid URL scheme: {parsed_url.scheme}\"\n                raise ValueError(error_msg)\n            if parsed_url.hostname != \"export.arxiv.org\":\n                error_msg = f\"Invalid host: {parsed_url.hostname}\"\n                raise ValueError(error_msg)\n\n            # Create a custom opener that only allows http/https schemes\n            class RestrictedHTTPHandler(urllib.request.HTTPHandler):\n                def http_open(self, req):\n                    return super().http_open(req)\n\n            class RestrictedHTTPSHandler(urllib.request.HTTPSHandler):\n                def https_open(self, req):\n                    return super().https_open(req)\n\n            # Build opener with restricted handlers\n            opener = urllib.request.build_opener(RestrictedHTTPHandler, RestrictedHTTPSHandler)\n            urllib.request.install_opener(opener)\n\n            # Make the request with validated URL using restricted opener\n            response = opener.open(url)\n            response_text = response.read().decode(\"utf-8\")\n\n            # Parse the response\n            papers = self.parse_atom_response(response_text)\n\n            # Convert to Data objects\n            results = [Data(data=paper) for paper in papers]\n            self.status = results\n        except (urllib.error.URLError, ValueError) as e:\n            error_data = Data(data={\"error\": f\"Request error: {e!s}\"})\n            self.status = error_data\n            return [error_data]\n        else:\n            return results\n\n    def as_dataframe(self) -> DataFrame:\n        \"\"\"Convert the Arxiv search results to a DataFrame.\n\n        Returns:\n            DataFrame: A DataFrame containing the search results.\n        \"\"\"\n        data = self.search_papers()\n        if isinstance(data, list):\n            return DataFrame(data=[d.data for d in data])\n        return DataFrame(data=[data.data])\n"
               },
               "max_results": {
                 "_input_type": "IntInput",
@@ -357,10 +375,10 @@
           "type": "ArXivComponent"
         },
         "dragging": false,
-        "id": "ArXivComponent-LChQN",
+        "id": "ArXivComponent-Vwek5",
         "measured": {
-          "height": 395,
-          "width": 320
+          "height": 495,
+          "width": 360
         },
         "position": {
           "x": 81.59312530546094,
@@ -371,7 +389,7 @@
       },
       {
         "data": {
-          "id": "LoopComponent-3vpc1",
+          "id": "LoopComponent-QhsXW",
           "node": {
             "base_classes": [
               "Data"
@@ -474,10 +492,10 @@
           "type": "LoopComponent"
         },
         "dragging": false,
-        "id": "LoopComponent-3vpc1",
+        "id": "LoopComponent-QhsXW",
         "measured": {
-          "height": 280,
-          "width": 320
+          "height": 314,
+          "width": 360
         },
         "position": {
           "x": 517.2087344858119,
@@ -488,7 +506,7 @@
       },
       {
         "data": {
-          "id": "ParseData-Pf12J",
+          "id": "ParseData-x6wkY",
           "node": {
             "base_classes": [
               "Data",
@@ -639,10 +657,10 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "id": "ParseData-Pf12J",
+        "id": "ParseData-x6wkY",
         "measured": {
-          "height": 342,
-          "width": 320
+          "height": 383,
+          "width": 360
         },
         "position": {
           "x": 996.5733307455723,
@@ -653,7 +671,7 @@
       },
       {
         "data": {
-          "id": "AnthropicModel-beO6B",
+          "id": "AnthropicModel-uuAY6",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -741,7 +759,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": "ANTHROPIC_API_KEY"
+                "value": ""
               },
               "base_url": {
                 "_input_type": "MessageTextInput",
@@ -783,7 +801,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nimport requests\nfrom loguru import logger\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=\"https://api.anthropic.com\",\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens_to_sample=self.max_tokens,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n            for model in model_ids:\n                model_with_tool = ChatAnthropic(\n                    model=self.model_name,\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=self.base_url,\n                )\n                if not self.supports_tool_calling(model_with_tool):\n                    model_ids.remove(model)\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
+                "value": "from typing import Any\n\nimport requests\nfrom loguru import logger\n\nfrom langflow.base.models.anthropic_constants import ANTHROPIC_MODELS\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput\nfrom langflow.schema.dotdict import dotdict\n\n\nclass AnthropicModelComponent(LCModelComponent):\n    display_name = \"Anthropic\"\n    description = \"Generate text using Anthropic Chat&Completion LLMs with prefill support.\"\n    icon = \"Anthropic\"\n    name = \"AnthropicModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            value=4096,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            options=ANTHROPIC_MODELS,\n            refresh_button=True,\n            value=ANTHROPIC_MODELS[0],\n            combobox=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"Anthropic API Key\",\n            info=\"Your Anthropic API key.\",\n            value=None,\n            required=True,\n            real_time_refresh=True,\n        ),\n        SliderInput(\n            name=\"temperature\",\n            display_name=\"Temperature\",\n            value=0.1,\n            info=\"Run inference with this temperature. Must by in the closed interval [0.0, 1.0].\",\n            range_spec=RangeSpec(min=0, max=1, step=0.01),\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"base_url\",\n            display_name=\"Anthropic API URL\",\n            info=\"Endpoint of the Anthropic API. Defaults to 'https://api.anthropic.com' if not specified.\",\n            value=\"https://api.anthropic.com\",\n            real_time_refresh=True,\n        ),\n        BoolInput(\n            name=\"tool_model_enabled\",\n            display_name=\"Enable Tool Models\",\n            info=(\n                \"Select if you want to use models that can work with tools. If yes, only those models will be shown.\"\n            ),\n            advanced=False,\n            value=False,\n            real_time_refresh=True,\n        ),\n        MessageTextInput(\n            name=\"prefill\", display_name=\"Prefill\", info=\"Prefill text to guide the model's response.\", advanced=True\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        try:\n            from langchain_anthropic.chat_models import ChatAnthropic\n        except ImportError as e:\n            msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n            raise ImportError(msg) from e\n        try:\n            output = ChatAnthropic(\n                model=self.model_name,\n                anthropic_api_key=self.api_key,\n                max_tokens_to_sample=self.max_tokens,\n                temperature=self.temperature,\n                anthropic_api_url=self.base_url,\n                streaming=self.stream,\n            )\n        except Exception as e:\n            msg = \"Could not connect to Anthropic API.\"\n            raise ValueError(msg) from e\n\n        return output\n\n    def get_models(self, tool_model_enabled: bool | None = None) -> list[str]:\n        try:\n            import anthropic\n\n            client = anthropic.Anthropic(api_key=self.api_key)\n            models = client.models.list(limit=20).data\n            model_ids = [model.id for model in models]\n        except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n            logger.exception(f\"Error getting model names: {e}\")\n            model_ids = ANTHROPIC_MODELS\n        if tool_model_enabled:\n            try:\n                from langchain_anthropic.chat_models import ChatAnthropic\n            except ImportError as e:\n                msg = \"langchain_anthropic is not installed. Please install it with `pip install langchain_anthropic`.\"\n                raise ImportError(msg) from e\n            for model in model_ids:\n                model_with_tool = ChatAnthropic(\n                    model=self.model_name,\n                    anthropic_api_key=self.api_key,\n                    anthropic_api_url=self.base_url,\n                )\n                if not self.supports_tool_calling(model_with_tool):\n                    model_ids.remove(model)\n        return model_ids\n\n    def _get_exception_message(self, exception: Exception) -> str | None:\n        \"\"\"Get a message from an Anthropic exception.\n\n        Args:\n            exception (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from anthropic import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(exception, BadRequestError):\n            message = exception.body.get(\"error\", {}).get(\"message\")\n            if message:\n                return message\n        return None\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):\n        if field_name in {\"base_url\", \"model_name\", \"tool_model_enabled\", \"api_key\"} and field_value:\n            try:\n                if len(self.api_key) == 0:\n                    ids = ANTHROPIC_MODELS\n                else:\n                    try:\n                        ids = self.get_models(tool_model_enabled=self.tool_model_enabled)\n                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:\n                        logger.exception(f\"Error getting model names: {e}\")\n                        ids = ANTHROPIC_MODELS\n                build_config[\"model_name\"][\"options\"] = ids\n                build_config[\"model_name\"][\"value\"] = ids[0]\n            except Exception as e:\n                msg = f\"Error getting model names: {e}\"\n                raise ValueError(msg) from e\n        return build_config\n"
               },
               "input_value": {
                 "_input_type": "MessageInput",
@@ -881,7 +899,7 @@
               },
               "stream": {
                 "_input_type": "BoolInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Stream",
                 "dynamic": false,
                 "info": "Stream the response from the model. Streaming works only in Chat.",
@@ -923,7 +941,7 @@
               },
               "temperature": {
                 "_input_type": "SliderInput",
-                "advanced": false,
+                "advanced": true,
                 "display_name": "Temperature",
                 "dynamic": false,
                 "info": "Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
@@ -975,10 +993,10 @@
           "type": "AnthropicModel"
         },
         "dragging": false,
-        "id": "AnthropicModel-beO6B",
+        "id": "AnthropicModel-uuAY6",
         "measured": {
-          "height": 801,
-          "width": 320
+          "height": 896,
+          "width": 360
         },
         "position": {
           "x": 1493.0259340837038,
@@ -989,7 +1007,7 @@
       },
       {
         "data": {
-          "id": "MessagetoData-QRSBb",
+          "id": "MessagetoData-9Kbcj",
           "node": {
             "base_classes": [
               "Data"
@@ -1080,10 +1098,10 @@
           "type": "MessagetoData"
         },
         "dragging": false,
-        "id": "MessagetoData-QRSBb",
+        "id": "MessagetoData-9Kbcj",
         "measured": {
-          "height": 230,
-          "width": 320
+          "height": 257,
+          "width": 360
         },
         "position": {
           "x": 1863.8805295746977,
@@ -1094,7 +1112,7 @@
       },
       {
         "data": {
-          "id": "ParseData-igEkj",
+          "id": "ParseData-NpCtQ",
           "node": {
             "base_classes": [
               "Data",
@@ -1245,10 +1263,10 @@
           "type": "ParseData"
         },
         "dragging": false,
-        "id": "ParseData-igEkj",
+        "id": "ParseData-NpCtQ",
         "measured": {
-          "height": 342,
-          "width": 320
+          "height": 383,
+          "width": 360
         },
         "position": {
           "x": 982.6945056277784,
@@ -1259,7 +1277,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-UZgon",
+          "id": "ChatOutput-Uq5M0",
           "node": {
             "base_classes": [
               "Message"
@@ -1554,10 +1572,10 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-UZgon",
+        "id": "ChatOutput-Uq5M0",
         "measured": {
-          "height": 66,
-          "width": 192
+          "height": 74,
+          "width": 216
         },
         "position": {
           "x": 1498.3739454769902,
@@ -1568,7 +1586,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-m10vc",
+          "id": "ChatInput-doR66",
           "node": {
             "base_classes": [
               "Message"
@@ -1862,10 +1880,10 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-m10vc",
+        "id": "ChatInput-doR66",
         "measured": {
-          "height": 66,
-          "width": 192
+          "height": 74,
+          "width": 216
         },
         "position": {
           "x": -235.49853728839307,
@@ -1876,7 +1894,7 @@
       },
       {
         "data": {
-          "id": "note-g4YbJ",
+          "id": "note-MMi4A",
           "node": {
             "description": "### 💡 Add your Anthropic API key here 👇",
             "display_name": "",
@@ -1889,10 +1907,10 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-g4YbJ",
+        "id": "note-MMi4A",
         "measured": {
           "height": 324,
-          "width": 358
+          "width": 361
         },
         "position": {
           "x": 1479.4278434913201,
@@ -1905,7 +1923,7 @@
       },
       {
         "data": {
-          "id": "note-e6tLL",
+          "id": "note-CBAXQ",
           "node": {
             "description": "# **Langflow Loop Component Template - ArXiv search result Translator** \nThis template translates research paper summaries on ArXiv into Portuguese and summarizes them. \n Using **Langflow’s looping mechanism**, the template iterates through multiple research papers, translates them with the **Anthropic** model component, and outputs an aggregated version of all translated papers.  \n\n## Quickstart \n 1. Add your Anthropic API key to the **Anthropic** component. \n2. In the **Playground**, enter a query related to a research topic (for example, “Quantum Computing Advancements”).  \n\n  The flow fetches a list of research papers from ArXiv matching the query. Each paper in the retrieved list is processed one-by-one using the Langflow **Loop component**. \n\n  The abstract of each paper is translated into Portuguese by the **Anthropic** model component. \n\n Once all papers are translated, the system aggregates them into a **single structured output**.",
             "display_name": "",
@@ -1916,10 +1934,10 @@
         },
         "dragging": false,
         "height": 647,
-        "id": "note-e6tLL",
+        "id": "note-CBAXQ",
         "measured": {
           "height": 647,
-          "width": 577
+          "width": 580
         },
         "position": {
           "x": -890.9006297459302,
@@ -1932,9 +1950,9 @@
       }
     ],
     "viewport": {
-      "x": 440.1573282533791,
-      "y": 190.151319158377,
-      "zoom": 0.21962836650867892
+      "x": 379.5589874665091,
+      "y": 421.54787373656177,
+      "zoom": 0.4567705571748025
     }
   },
   "description": "This template iterates over search results using LoopComponent and translates each result into Portuguese automatically. 🚀",
