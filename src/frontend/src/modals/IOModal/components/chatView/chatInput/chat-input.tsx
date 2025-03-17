@@ -166,7 +166,7 @@ export default function ChatInput({
   if (noInput) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center">
-        <div className="flex w-full flex-col items-center justify-center gap-3 rounded-md border border-input bg-muted p-2 py-4">
+        <div className="border-input bg-muted flex w-full flex-col items-center justify-center gap-3 rounded-md border p-2 py-4">
           {!isBuilding ? (
             <Button
               data-testid="button-send"
@@ -184,7 +184,7 @@ export default function ChatInput({
               onClick={stopBuilding}
               data-testid="button-stop"
               unstyled
-              className="form-modal-send-button cursor-pointer bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input"
+              className="form-modal-send-button bg-muted text-foreground hover:bg-secondary-hover dark:hover:bg-input cursor-pointer"
             >
               <div className="flex items-center gap-2 rounded-md text-[14px] font-medium">
                 Stop
@@ -211,7 +211,7 @@ export default function ChatInput({
 
   return (
     <div className="flex w-full flex-col-reverse">
-      <div className="flex w-full flex-col rounded-md border border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary">
+      <div className="border-input hover:border-muted-foreground has-[:focus]:border-primary flex w-full flex-col rounded-md border p-4 focus:border-[1.75px]">
         <TextAreaWrapper
           isBuilding={isBuilding}
           checkSendingOk={checkSendingOk}

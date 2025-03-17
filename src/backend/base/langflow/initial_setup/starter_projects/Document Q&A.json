@@ -1081,7 +1081,7 @@
                 "advanced": true,
                 "display_name": "Server File Path",
                 "dynamic": false,
-                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types.",
+                "info": "Data object with a 'file_path' property pointing to server file or a Message object with a path to the file. Supersedes 'Path' but supports same file types.",
                 "input_types": [
                   "Data",
                   "Message"
