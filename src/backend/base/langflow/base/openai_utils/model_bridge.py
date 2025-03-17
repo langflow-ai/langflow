@@ -1,31 +1,23 @@
-import asyncio
-import os
 import uuid
-from typing import Any, AsyncIterator, Dict, List, Optional, Union
+from collections.abc import AsyncIterator
+from typing import Any
 
 from agents import (
-    Agent,
     AgentOutputSchema,
     Handoff,
     Model,
     ModelResponse,
     ModelSettings,
     ModelTracing,
-    Runner,
     Tool,
-    function_tool,
     set_tracing_disabled,
 )
-from agents.items import ResponseOutputMessage, ResponseOutputText, TResponseStreamEvent
+from agents.items import ResponseFunctionToolCall, ResponseOutputMessage, ResponseOutputText
 from agents.stream_events import RawResponsesStreamEvent
 from agents.usage import Usage
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.tools import Tool as LCTool
-from langchain_openai import ChatOpenAI
 
-# Use environment variables or set them in your code
-MODEL_NAME = os.getenv("EXAMPLE_MODEL_NAME") or "gpt-4o-mini"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY_TEST")
+from langflow.logging import logger
 
 # Disable tracing if needed (or set up LangSmith/Langfuse tracing as desired)
 set_tracing_disabled(disabled=True)
@@ -106,15 +98,16 @@ class LangChainModelBridge(Model):
             parameters = {}
 
             # Extract parameters from the tool's schema if available
-            if hasattr(tool, "parameter_schema") and tool.parameter_schema:
-                if hasattr(tool.parameter_schema, "properties"):
-                    parameters = {
-                        "type": "object",
-                        "properties": tool.parameter_schema.properties,
-                        "required": tool.parameter_schema.required
-                        if hasattr(tool.parameter_schema, "required")
-                        else [],
-                    }
+            if (
+                hasattr(tool, "parameter_schema")
+                and tool.parameter_schema
+                and hasattr(tool.parameter_schema, "properties")
+            ):
+                parameters = {
+                    "type": "object",
+                    "properties": tool.parameter_schema.properties,
+                    "required": tool.parameter_schema.required if hasattr(tool.parameter_schema, "required") else [],
+                }
 
             # Create OpenAI tool format that LangChain expects
             lc_tool = {
@@ -153,24 +146,149 @@ class LangChainModelBridge(Model):
 
     def _convert_to_model_response(self, langchain_response):
         """Convert LangChain response to OpenAI Agents ModelResponse format."""
-        # Create a ResponseOutputText object with the content
-        text_content = ResponseOutputText(
-            text=langchain_response.content,
-            annotations=[],  # Empty list of annotations
-            type="output_text",  # Required type field
-        )
+        # Extract content from the LangChain response
+        content = ""
+        tool_calls = []
 
-        # Create a ResponseOutputMessage object with all required fields
-        message = ResponseOutputMessage(
-            id=str(uuid.uuid4()),  # Generate a unique ID
-            content=[text_content],
-            role="assistant",
-            status="completed",  # One of: "in_progress", "completed", "incomplete"
-            type="message",  # Required type field
-        )
+        # Handle AIMessage response
+        if isinstance(langchain_response, AIMessage):
+            # Extract content
+            content = langchain_response.content if langchain_response.content else ""
+
+            # Check for function calls in additional_kwargs
+            if hasattr(langchain_response, "additional_kwargs") and langchain_response.additional_kwargs:
+                # Handle function_call in additional_kwargs (OpenAI format)
+                if "function_call" in langchain_response.additional_kwargs:
+                    function_call = langchain_response.additional_kwargs["function_call"]
+                    tool_calls.append(
+                        {
+                            "name": function_call.get("name", "unknown_tool"),
+                            "args": function_call.get("arguments", "{}"),
+                        }
+                    )
+
+                # Handle tool_calls in additional_kwargs (newer OpenAI format)
+                elif "tool_calls" in langchain_response.additional_kwargs:
+                    for tool_call in langchain_response.additional_kwargs["tool_calls"]:
+                        if "function" in tool_call:
+                            function_info = tool_call["function"]
+                            tool_calls.append(
+                                {
+                                    "name": function_info.get("name", "unknown_tool"),
+                                    "args": function_info.get("arguments", "{}"),
+                                }
+                            )
+
+            # Check for tool_calls attribute (LangChain format)
+            if hasattr(langchain_response, "tool_calls") and langchain_response.tool_calls:
+                for tool_call in langchain_response.tool_calls:
+                    if isinstance(tool_call, dict):
+                        tool_calls.append(
+                            {"name": tool_call.get("name", "unknown_tool"), "args": tool_call.get("args", {})}
+                        )
+
+        # Handle dict response with tool_calls
+        elif isinstance(langchain_response, dict):
+            if langchain_response.get("content"):
+                content = langchain_response["content"]
+
+            if langchain_response.get("tool_calls"):
+                tool_calls = langchain_response["tool_calls"]
+
+            # Check for function_call in the dict (OpenAI format)
+            if langchain_response.get("function_call"):
+                function_call = langchain_response["function_call"]
+                tool_calls.append(
+                    {"name": function_call.get("name", "unknown_tool"), "args": function_call.get("arguments", "{}")}
+                )
+
+        # Handle string response
+        elif isinstance(langchain_response, str):
+            content = langchain_response
+
+        # Handle other response types
+        else:
+            if hasattr(langchain_response, "content"):
+                content = langchain_response.content if langchain_response.content else ""
+
+            if hasattr(langchain_response, "tool_calls"):
+                tool_calls = langchain_response.tool_calls
+
+        # Process tool calls if present
+        if tool_calls:
+            # Create a response with tool calls
+            output_content = []
+
+            # Add text content if available
+            if content:
+                text_content = ResponseOutputText(
+                    text=content,
+                    annotations=[],
+                    type="output_text",
+                )
+                output_content.append(text_content)
+
+            # Add tool calls
+            for tool_call in tool_calls:
+                tool_name = tool_call.get("name", "unknown_tool")
+
+                # Handle both dict and string arguments
+                tool_args = tool_call.get("args", {})
+                if isinstance(tool_args, str):
+                    args_str = tool_args
+                else:
+                    # Convert args dict to JSON string
+                    import json
+
+                    args_str = json.dumps(tool_args)
+
+                call_id = str(uuid.uuid4())
+
+                tool_call_output = ResponseFunctionToolCall(
+                    id=str(uuid.uuid4()),
+                    call_id=call_id,
+                    name=tool_name,
+                    arguments=args_str,
+                    type="function_call",
+                    status="completed",
+                )
+                output_content.append(tool_call_output)
+
+                # If content is empty but we have tool calls, add a default message
+                if not content and not any(isinstance(item, ResponseOutputText) for item in output_content):
+                    default_text = f"I'll use the {tool_name} tool to help answer your question."
+                    text_content = ResponseOutputText(
+                        text=default_text,
+                        annotations=[],
+                        type="output_text",
+                    )
+                    output_content.insert(0, text_content)  # Insert at beginning
+
+            # Create message with tool calls
+            message = ResponseOutputMessage(
+                id=str(uuid.uuid4()),
+                content=[output_content[0]],  # Only include the text content
+                role="assistant",
+                status="completed",
+                type="message",
+            )
+        else:
+            # Create a simple text response
+            text_content = ResponseOutputText(
+                text=content,
+                annotations=[],
+                type="output_text",
+            )
+
+            message = ResponseOutputMessage(
+                id=str(uuid.uuid4()),
+                content=[text_content],
+                role="assistant",
+                status="completed",
+                type="message",
+            )
 
         # Create a simple usage object
-        # In a real implementation, you might want to extract token usage from langchain_response.response_metadata
         usage = Usage(input_tokens=0, output_tokens=0, total_tokens=0)
 
         # Create and return the ModelResponse
@@ -188,10 +306,12 @@ class LangChainModelBridge(Model):
         return RawResponsesStreamEvent(data=stream_event)
 
 
-
-
 # def example_basic():
-#     llm = ChatOpenAI(model_name=MODEL_NAME, temperature=0, api_key=OPENAI_API_KEY)
+#     import os
+
+#     from langchain_openai import ChatOpenAI
+
+#     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0, api_key=os.getenv("OPENAI_API_KEY_TEST"))
 
 #     # Create the bridge to use with OpenAI Agents
 #     langchain_model_bridge = LangChainModelBridge(llm)
@@ -214,5 +334,49 @@ class LangChainModelBridge(Model):
 #     result = asyncio.run(Runner.run(triage_agent, input="hi how are you?"))
 #     print(result.final_output)
 
+
+# async def example_with_tools():
+#     import os
+
+#     from agents import Agent, Runner, function_tool
+#     from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+
+#     # Create a function tool for testing
+#     @function_tool
+#     def get_weather(city: str) -> str:
+#         result = f"The weather in {city} is sunny."
+#         logger.info(f"Tool called with city={city}, returning: {result}")
+#         return result
+
+#     # Try to use OpenAI if API key is available, otherwise use a fake LLM
+#     api_key = os.getenv("OPENAI_API_KEY_TEST")
+
+#     # Use ChatOpenAI if API key is available
+#     from langchain_openai import ChatOpenAI
+
+#     logger.info("Using ChatOpenAI with API key")
+#     llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0, api_key=api_key)
+
+#     # Create the bridge to use with OpenAI Agents
+#     langchain_model_bridge = LangChainModelBridge(llm)
+
+#     # Create an agent with the model
+#     agent = Agent(
+#         name="Weather Agent",
+#         instructions="You are a helpful agent that can check the weather.",
+#         tools=[get_weather],
+#         model=langchain_model_bridge,
+#     )
+
+#     # Run the agent
+#     logger.info("Running agent...")
+#     result = await Runner.run(agent, input="What's the weather in Tokyo?")
+#     logger.info(f"Result: {result}")
+#     logger.info(f"Final output: {result.final_output}")
+
+
 # if __name__ == "__main__":
-#     example_basic()
+#     import asyncio
+
+#     # asyncio.run(example_with_tools())
+#     # example_basic()
