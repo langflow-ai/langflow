@@ -6,6 +6,11 @@ test(
   { tag: ["@release", "@workspace", "@api"] },
 
   async ({ page }) => {
+    test.skip(
+      !process?.env?.OPENAI_API_KEY,
+      "OPENAI_API_KEY required to run this test",
+    );
+
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -15,6 +20,23 @@ test(
     await expect(page.getByTestId("voice-button")).toBeVisible();
 
     await page.getByTestId("voice-button").click();
+
+    try {
+      const apiKeyInput = page.getByTestId("popover-anchor-openai-api-key");
+
+      const isVisible = await apiKeyInput
+        .isVisible({ timeout: 2000 })
+        .catch(() => false);
+
+      if (isVisible) {
+        await apiKeyInput.fill(process.env.OPENAI_API_KEY || "");
+        await page
+          .getByTestId("voice-assistant-settings-modal-save-button")
+          .click();
+      }
+    } catch (e) {
+      console.log(e);
+    }
 
     await expect(page.getByTestId("voice-assistant-container")).toBeVisible();
     await page.getByTestId("voice-assistant-settings-icon").click();

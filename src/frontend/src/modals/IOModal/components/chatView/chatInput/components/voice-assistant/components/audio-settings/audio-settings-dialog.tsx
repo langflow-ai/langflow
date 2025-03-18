@@ -329,6 +329,7 @@ const SettingsVoiceModal = ({
                       variant="primary"
                       size="md"
                       className="w-full"
+                      data-testid="voice-assistant-settings-modal-cancel-button"
                     >
                       Cancel
                     </Button>
@@ -337,6 +338,7 @@ const SettingsVoiceModal = ({
                       className="w-full"
                       disabled={!openaiApiKey}
                       size="md"
+                      data-testid="voice-assistant-settings-modal-save-button"
                     >
                       {isEditingOpenAIKey ? "Update" : "Save"}
                     </Button>
