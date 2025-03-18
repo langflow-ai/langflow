@@ -49,7 +49,7 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
   or "Additional" instructions, and they may likewise be superceded by those same other rules.
 "Additional" instructions may be empty. When relevant, they override "Default" instructions,
   but never "Permanent" instructions.
-  
+
 [PERMANENT] The following instructions are to be considered "Permanent"
 * When the user's query necessitates use of one of the enumerated tools, call the execute_flow
   function to assist, and pass in the user's entire query as the input parameter, and use that
@@ -68,7 +68,7 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
   succeeded or failed.
 * Never provide URLs in repsonses, but you may use URLs in tool calls or when processing those
   URLs' content.
-  
+
 [ADDITIONAL] The following instructions are to be considered only "Additional"
 """
 
@@ -100,9 +100,9 @@ default_openai_realtime_session = {
 openai_realtime_session = {}
 
 # Create a global dictionary to store queues for each session
-message_queues = defaultdict(asyncio.Queue)
+message_queues: dict[str, asyncio.Queue] = defaultdict(asyncio.Queue)
 # Track active message processing tasks
-message_tasks = {}
+message_tasks: dict[str, asyncio.Task] = {}
 
 
 async def get_flow_desc_from_db(flow_id: str) -> Flow:
@@ -119,8 +119,7 @@ async def get_flow_desc_from_db(flow_id: str) -> Flow:
 
 def pcm16_to_float_array(pcm_data):
     values = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32)
-    normalized = values / 32768.0  # Normalize to -1.0 to 1.0
-    return normalized
+    return values / 32768.0  # Normalize to -1.0 to 1.0
 
 
 async def text_chunker_with_timeout(chunks, timeout=0.3):
@@ -290,9 +289,11 @@ async def flow_as_tool_websocket(
     try:
         await client_websocket.accept()
         token = client_websocket.cookies.get("access_token_lf")
+        current_user = None
         if token:
             current_user = await get_current_user_by_jwt(token, session)
-        else:
+
+        if current_user is None:
             current_user = await api_key_security(Security(api_key_query), Security(api_key_header))
             if current_user is None:
                 await client_websocket.send_json(
@@ -302,14 +303,14 @@ async def flow_as_tool_websocket(
                         "message": "You must pass a valid Langflow token or cookie.",
                     }
                 )
+                return
 
         variable_service = get_variable_service()
         try:
-            openai_key = await variable_service.get_variable(
+            openai_key_value = await variable_service.get_variable(
                 user_id=current_user.id, name="OPENAI_API_KEY", field="openai_api_key", session=session
             )
-        except (InvalidToken, ValueError):
-            openai_key = os.getenv("OPENAI_API_KEY")
+            openai_key = openai_key_value if openai_key_value is not None else os.getenv("OPENAI_API_KEY", "")
             if not openai_key or openai_key == "dummy":
                 await client_websocket.send_json(
                     {
@@ -320,10 +321,8 @@ async def flow_as_tool_websocket(
                     }
                 )
                 return
-        except Exception as e:
+        except Exception:
             logger.error("exception")
-            print(e)
-            print(traceback.format_exc())
 
         try:
             flow_description = await get_flow_desc_from_db(flow_id)
@@ -359,7 +358,7 @@ async def flow_as_tool_websocket(
             await openai_ws.send(json.dumps(session_update))
 
             # Setup for VAD processing.
-            vad_queue = asyncio.Queue()
+            vad_queue: asyncio.Queue = asyncio.Queue()
             vad_audio_buffer = bytearray()
             bot_speaking_flag = [False]
             vad = webrtcvad.Vad(mode=3)
@@ -382,9 +381,7 @@ async def flow_as_tool_websocket(
                                 has_speech = True
                                 logger.trace("!", end="")
                                 if bot_speaking_flag[0]:
-                                    print("\nBarge-in detected!", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                                     await openai_ws.send(json.dumps({"type": "response.cancel"}))
-                                    print("bot speaking false")
                                     bot_speaking_flag[0] = False
                         except Exception as e:
                             logger.error(f"[ERROR] VAD processing failed: {e}")
@@ -399,16 +396,27 @@ async def flow_as_tool_websocket(
 
             shared_state = {"last_event_type": None, "event_count": 0}
 
+
             def log_event(event, direction: str) -> None:
                 event_type = event["type"]
+
+                # Ensure shared_state has necessary keys initialized
+                if "last_event_type" not in shared_state:
+                    shared_state["last_event_type"] = None
+                if "event_count" not in shared_state:
+                    shared_state["event_count"] = 0
+
                 if event_type != shared_state["last_event_type"]:
-                    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    print(f"\n  {timestamp} --  {direction} {event_type} ", end="", flush=True)
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     shared_state["last_event_type"] = event_type
                     shared_state["event_count"] = 0
-                shared_state["event_count"] += 1
+
+                # Explicitly convert to integer if needed
+                current_count = int(shared_state["event_count"]) if shared_state["event_count"] is not None else 0
+                shared_state["event_count"] = current_count + 1
+
                 if event_type == "error":
-                    print(event)
+                    pass
 
             def send_event(websocket, event, loop, direction) -> None:
                 asyncio.run_coroutine_threadsafe(
@@ -419,28 +427,30 @@ async def flow_as_tool_websocket(
 
             def pass_through(from_dict, to_dict, keys):
                 for key in keys:
-                    if key in from_dict.keys():
+                    if key in from_dict:
                         to_dict[key] = from_dict[key]
 
             def merge(from_dict, to_dict, keys):
                 for key in keys:
                     if key in from_dict:
                         if not isinstance(from_dict[key], str):
-                            raise ValueError(f"Only string values are supported for merge. Issue with key: {key}")
+                            msg = f"Only string values are supported for merge. Issue with key: {key}"
+                            raise ValueError(msg)
                         new_value = from_dict[key]
 
                         if key not in to_dict:
                             to_dict[key] = new_value
                         else:
                             if not isinstance(to_dict[key], str):
-                                raise ValueError(f"Only string values are supported for merge. Issue with key: {key}")
+                                msg = f"Only string values are supported for merge. Issue with key: {key}"
+                                raise ValueError(msg)
                             old_value = to_dict[key]
 
                             to_dict[key] = f"{old_value}\n{new_value}"
 
             def warn_if_present(dict, keys):
                 for key in keys:
-                    if key in dict.keys():
+                    if key in dict:
                         logger.warning(f"Removing key {key} from session.update.")
 
             def update_global_session(from_session):
@@ -457,14 +467,14 @@ async def flow_as_tool_websocket(
                 )
 
             # --- Spawn a text delta queue and task for TTS ---
-            text_delta_queue = asyncio.Queue()
+            text_delta_queue: asyncio.Queue = asyncio.Queue()
             text_delta_task = None  # Will hold our background task.
 
             async def process_text_deltas(async_q: asyncio.Queue):
                 """Transfer text deltas from the async queue to a synchronous queue,
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
                 """
-                sync_q = queue.Queue()
+                sync_q: queue.Queue = queue.Queue()
 
                 async def transfer_text_deltas():
                     while True:
@@ -507,9 +517,8 @@ async def flow_as_tool_websocket(
 
                             event = {"type": "response.done"}
                             send_event(client_websocket, event, main_loop, "↓")
-                        except Exception as e:
-                            print(e)
-                            print(traceback.format_exc())
+                        except Exception:
+                            pass
 
                     new_loop.run_until_complete(run_tts())
                     new_loop.close()
@@ -519,7 +528,7 @@ async def flow_as_tool_websocket(
             async def forward_to_openai() -> None:
                 global use_elevenlabs, elevenlabs_voice, openai_realtime_session
                 try:
-                    num_audio_samples = 0
+                    num_audio_samples = 0  # Initialize as an integer instead of None
                     while True:
                         message_text = await client_websocket.receive_text()
                         msg = json.loads(message_text)
@@ -528,6 +537,7 @@ async def flow_as_tool_websocket(
                             base64_data = msg.get("audio", "")
                             if not base64_data:
                                 continue
+                            # Ensure we're adding to an integer
                             num_audio_samples += len(base64_data)
                             event = {"type": "input_audio_buffer.append", "audio": base64_data}
                             await openai_ws.send(json.dumps(event))
@@ -573,7 +583,7 @@ async def flow_as_tool_websocket(
                         do_forward = True
                         # Don't forward response.done if using elevenlabs to the client
                         do_forward = do_forward and not (event_type == "response.done" and use_elevenlabs)
-                        do_forward = do_forward and not (event_type.find("flow.") == 0)
+                        do_forward = do_forward and event_type.find("flow.") != 0
                         if do_forward:
                             await client_websocket.send_text(data)
 
@@ -587,7 +597,6 @@ async def flow_as_tool_websocket(
                             if use_elevenlabs:
                                 await text_delta_queue.put(None)
                                 text_delta_task = None
-                                print(f"\n      bot response: {event.get('text')}")
 
                                 try:
                                     message_text = event.get("text", "")
@@ -597,7 +606,6 @@ async def flow_as_tool_websocket(
                                     logger.error(traceback.format_exc())
 
                         elif event_type == "response.output_item.added":
-                            print("Bot speaking = True")
                             bot_speaking_flag[0] = True
                             item = event.get("item", {})
                             if item.get("type") == "function_call":
@@ -611,7 +619,6 @@ async def flow_as_tool_websocket(
                             except Exception as e:
                                 logger.error(f"Error saving message to database: {e}")
                                 logger.error(traceback.format_exc())
-                            print("Bot speaking = False")
                             bot_speaking_flag[0] = False
                         elif event_type == "response.function_call_arguments.delta":
                             function_call_args += event.get("delta", "")
@@ -634,7 +641,7 @@ async def flow_as_tool_websocket(
                                 function_call_args = ""
                         elif event_type == "response.audio.delta":
                             # there are no audio deltas from OpenAI if ElevenLabs is used (because modality = ["text"]).
-                            audio_delta = event.get("delta", "")
+                            event.get("delta", "")
                         elif event_type == "conversation.item.input_audio_transcription.completed":
                             try:
                                 message_text = event.get("transcript", "")
@@ -644,13 +651,13 @@ async def flow_as_tool_websocket(
                                 logger.error(f"Error saving message to database: {e}")
                                 logger.error(traceback.format_exc())
                         elif event_type == "error":
-                            print(event)
+                            pass
                         else:
                             await client_websocket.send_text(data)
                         log_event(event, "↓")
 
-                except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
-                    print(f"Websocket exception: {e}")
+                except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError):
+                    pass
 
             def _blocking_tts(elevenlabs_client, text, client_websocket, loop):
                 try:
@@ -670,9 +677,8 @@ async def flow_as_tool_websocket(
                         )
                         # Optionally, wait for the send to complete.
                         future.result()
-                except Exception as e:
-                    print(e)
-                    print(traceback.format_exc())
+                except Exception:
+                    pass
 
             if barge_in_enabled:
                 asyncio.create_task(process_vad_audio())
@@ -747,7 +753,6 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
                     return None
             except Exception as e:
                 logger.error(f"Exception getting ElevenLabs API key: {e}")
-                print(traceback.format_exc())
                 return None
 
         if elevenlabs_key:
@@ -811,6 +816,5 @@ def extract_transcript(json_data):
                 return content_item.get("transcript", "")
 
         return ""
-    except Exception as e:
-        print(f"Error extracting transcript: {e}")
+    except Exception:
         return ""

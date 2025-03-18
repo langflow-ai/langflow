@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 import pydantic
 from anyio import BrokenResourceError
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -235,7 +235,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
 
         db_service = get_db_service()
         collected_results = []
-        async with db_service.with_session() as async_session:
+        async with db_service.with_session():
             try:
                 progress_task = asyncio.create_task(send_progress_updates())
 
@@ -356,4 +356,4 @@ async def handle_messages(request: Request):
         await sse.handle_post_message(request.scope, request.receive, request._send)
     except BrokenResourceError as e:
         logger.info("MCP Server disconnected")
-        raise ValueError(status_code=404, detail=f"MCP Server disconnected, error: {e}")
+        raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}")

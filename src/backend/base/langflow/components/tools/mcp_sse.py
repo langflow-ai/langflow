@@ -35,6 +35,7 @@ class MCPSseClient:
     async def _connect_with_timeout(
         self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
     ):
+        """Connect to the SSE server with timeout."""
         sse_transport = await self.exit_stack.enter_async_context(
             sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
         )
@@ -62,16 +63,6 @@ class MCPSseClient:
             error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
             raise TimeoutError(error_message) from err
         return response.tools
-
-    async def _connect_with_timeout(
-        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
-    ):
-        sse_transport = await self.exit_stack.enter_async_context(
-            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
-        )
-        self.sse, self.write = sse_transport
-        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
-        await self.session.initialize()
 
 
 class MCPSse(Component):

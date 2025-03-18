@@ -1,7 +1,10 @@
+# mypy: ignore-errors
 import ast
 import asyncio
 import contextlib
+import importlib
 import inspect
+import os
 import re
 import traceback
 from typing import Any
@@ -591,8 +594,7 @@ async def load_custom_component(component_name: str, components_paths: list[str]
             # Convert to component template
             from langflow.interface.custom_component import get_custom_component_template
 
-            template = get_custom_component_template(component_class)
-            return template
+            return get_custom_component_template(component_class)
     except Exception as e:
         logger.error(f"Error loading custom component {component_name}: {e!s}")
 
@@ -614,8 +616,8 @@ async def load_regular_component(component_type: str, component_name: str, compo
                 # Use importlib to dynamically import the module
                 spec = importlib.util.spec_from_file_location(module_name, module_path)
                 if spec and spec.loader:
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
+                    module = importlib.util.module_from_spec(spec)  # type: ignore[attr-defined]
+                    spec.loader.exec_module(module)  # type: ignore[attr-defined]
 
                     # Extract the component template if available
                     if hasattr(module, "template"):

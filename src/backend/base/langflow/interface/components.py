@@ -49,7 +49,7 @@ async def aget_component_metadata(components_paths: list[str]):
     """Get just the metadata for all components without loading full templates."""
     # This builds a skeleton of the all_types_dict with just basic component info
 
-    components_dict = {"components": {}}
+    components_dict: dict = {"components": {}}
 
     # Get all component types
     component_types = await discover_component_types(components_paths)
@@ -112,7 +112,7 @@ async def discover_component_types(components_paths: list[str]) -> list[str]:
 
     component_types.update(standard_types)
 
-    return sorted(list(component_types))
+    return sorted(component_types)
 
 
 async def discover_component_names(component_type: str, components_paths: list[str]) -> list[str]:
@@ -129,7 +129,7 @@ async def discover_component_names(component_type: str, components_paths: list[s
                     component_name = filename[:-3]  # Remove .py extension
                     component_names.add(component_name)
 
-    return sorted(list(component_names))
+    return sorted(component_names)
 
 
 async def get_component_minimal_metadata(component_type: str, component_name: str, components_paths: list[str]):
@@ -217,7 +217,7 @@ async def load_single_component(component_type: str, component_name: str, compon
 
 
 # Also add a utility function to load specific component types
-async def get_type_dict(component_type: str, settings_service: SettingsService = None):
+async def get_type_dict(component_type: str, settings_service: SettingsService | None = None):
     """Get a specific component type dictionary, loading if needed."""
     global all_types_dict_cache
 
@@ -231,14 +231,16 @@ async def get_type_dict(component_type: str, settings_service: SettingsService =
     if all_types_dict_cache is None:
         await get_and_cache_all_types_dict(settings_service)
 
-    # If the component type exists in the cache, return it
-    if component_type in all_types_dict_cache.get("components", {}):
-        # If in lazy mode, ensure all components of this type are fully loaded
-        if settings_service.settings.lazy_load_components:
-            for component_name in list(all_types_dict_cache["components"][component_type].keys()):
-                await ensure_component_loaded(component_type, component_name, settings_service)
+    # Add null checks before accessing properties
+    if all_types_dict_cache and "components" in all_types_dict_cache:
+        # If the component type exists in the cache, return it
+        if component_type in all_types_dict_cache["components"]:
+            # If in lazy mode, ensure all components of this type are fully loaded
+            if settings_service.settings.lazy_load_components:
+                for component_name in list(all_types_dict_cache["components"][component_type].keys()):
+                    await ensure_component_loaded(component_type, component_name, settings_service)
 
-        return all_types_dict_cache["components"][component_type]
+            return all_types_dict_cache["components"][component_type]
 
     return {}
 
