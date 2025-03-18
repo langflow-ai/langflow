@@ -5,19 +5,19 @@ services:
   langflow:
     build:
       context: ..
-      dockerfile: docker/dev.Dockerfile
-    image: dev-langflow
+      dockerfile: docker/build_and_push.Dockerfile
+    image: langflow
     container_name: dev-langflow
-    restart: always
     ports:
       - "7860:7860"
       - "3000:3000"
     environment:
       - PYTHONDONTWRITEBYTECODE=1
+      - COLUMNS=200
+      - FORCE_COLOR=1
       - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
       - LANGFLOW_SUPERUSER=langflow
       - LANGFLOW_SUPERUSER_PASSWORD=langflow
-      - LANGFLOW_CONFIG_DIR=/var/lib/langflow
     env_file:
       - ../.env
     volumes:
@@ -39,4 +39,3 @@ services:
       - "5432:5432"
     networks:
       -  dev-langflow
-

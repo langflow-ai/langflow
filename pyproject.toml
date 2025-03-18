@@ -115,6 +115,7 @@ dependencies = [
     "apify-client>=1.8.1",
     "pylint>=3.3.4",
     "ruff>=0.9.7",
+    "aiosqlite>=0.21.0",
 ]
 
 [dependency-groups]
@@ -205,9 +206,8 @@ nv-ingest = [
 ]
 
 postgresql = [
-  "sqlalchemy[postgresql_psycopg2binary]",
-    "sqlalchemy[postgresql_psycopg]",
-
+  "sqlalchemy[postgresql_psycopg]",
+  "psycopg[binary]"
 ]
 
 [project.scripts]

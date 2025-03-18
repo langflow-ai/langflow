@@ -1,94 +1,53 @@
-# syntax=docker/dockerfile:1
-# Keep this syntax directive! It's used to enable Docker BuildKit
+FROM python:3.12.3-slim
 
-################################
-# BUILDER-BASE
-# Used to build deps + create our virtual environment
-################################
+# Definir variáveis de ambiente
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    LANGFLOW_HOST=0.0.0.0 \
+    LANGFLOW_PORT=7860
 
-# 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
-# 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
-
-# Install the project into `/app`
-WORKDIR /app
-
-# Enable bytecode compilation
-ENV UV_COMPILE_BYTECODE=1
-
-# Copy from the cache instead of linking since it's a mounted volume
-ENV UV_LINK_MODE=copy
-
+# Instalar dependências necessárias
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
-    # deps for building python deps
     build-essential \
     git \
-    # npm
     npm \
-    # gcc
     gcc \
-
+    libpq-dev \
+    postgresql-client \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=README.md,target=README.md \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
-    --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
-    --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable --extra postgresql
+# Instalar uv
+RUN pip install uv
 
-COPY ./src /app/src
-
-COPY src/frontend /tmp/src/frontend
-WORKDIR /tmp/src/frontend
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci \
-    && npm run build \
-    && cp -r build /app/src/backend/langflow/frontend \
-    && rm -rf /tmp/src/frontend
-
+# Configurar diretório de trabalho
 WORKDIR /app
-COPY ./pyproject.toml /app/pyproject.toml
-COPY ./uv.lock /app/uv.lock
-COPY ./README.md /app/README.md
 
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable --extra postgresql
+# Copiar arquivos de projeto necessários
+COPY pyproject.toml uv.lock README.md ./
+COPY src ./src/
 
-################################
-# RUNTIME
-# Setup user, utilities and copy the virtual environment only
-################################
-FROM python:3.12.3-slim AS runtime
+# Compilar o frontend
+WORKDIR /app/src/frontend
+RUN npm ci && \
+    npm run build && \
+    mkdir -p /app/src/backend/langflow/frontend && \
+    cp -r build /app/src/backend/langflow/frontend
 
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install git -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
+# Voltar ao diretório principal
+WORKDIR /app
 
-COPY --from=builder --chown=1000 /app/.venv /app/.venv
+# Instalar dependências Python com uv (sem ambiente virtual)
+RUN uv pip install --system -e ".[postgresql]" && \
+    pip install psycopg2-binary psycopg "psycopg[binary,pool]" && \
+    pip list | grep psycopg
 
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
-
-LABEL org.opencontainers.image.title=langflow
-LABEL org.opencontainers.image.authors=['Langflow']
-LABEL org.opencontainers.image.licenses=MIT
-LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
-LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
-
+# Configurar usuário não-root para segurança
+RUN useradd -m user -u 1000
 USER user
-WORKDIR /app
 
-ENV LANGFLOW_HOST=0.0.0.0
-ENV LANGFLOW_PORT=7860
-
+# Comando para iniciar a aplicação
 CMD ["langflow", "run"]
