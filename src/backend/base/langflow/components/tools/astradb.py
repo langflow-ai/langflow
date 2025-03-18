@@ -1,5 +1,6 @@
 import os
 from typing import Any
+from dateutil.parser import parse
 
 from astrapy import Collection, DataAPIClient, Database
 from langchain.pydantic_v1 import BaseModel, Field, create_model
@@ -113,6 +114,15 @@ class AstraDBToolComponent(LCToolComponent):
                     "type": "boolean",
                     "edit_mode": EditMode.INLINE,
                     "description": ("Indicate if the field is mandatory."),
+                    "options": ["True", "False"],
+                    "default": "False",
+                },
+                {
+                    "name": "is_date",
+                    "display_name": "Is Date",
+                    "type": "boolean",
+                    "edit_mode": EditMode.INLINE,
+                    "description": ("Indicate if the field is a date, datetime or timestamp."),
                     "options": ["True", "False"],
                     "default": "False",
                 },
@@ -301,8 +311,12 @@ class AstraDBToolComponent(LCToolComponent):
                     filters[filter_key] = {**filters.get(filter_key, {}),
                         filter_setting["operator"]: value.split(",") if isinstance(value, str) else value
                     }
+                elif filter_setting["is_date"] == True:
+                    filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: parse(value)}
                 else:
                     filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: value}
+        print("astradb_filters")
+        print(filters)
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
