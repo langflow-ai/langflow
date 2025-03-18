@@ -69,6 +69,9 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         path = self.get_persist_directory()
         path.mkdir(parents=True, exist_ok=True)
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
