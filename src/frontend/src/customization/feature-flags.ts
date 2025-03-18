@@ -8,3 +8,6 @@ export const ENABLE_MVPS = false;
 export const ENABLE_CUSTOM_PARAM = false;
 export const ENABLE_INTEGRATIONS = false;
 export const ENABLE_DATASTAX_LANGFLOW = false;
+export const ENABLE_FILE_MANAGEMENT = true;
+export const ENABLE_PUBLISH = true;
+export const ENABLE_WIDGET = true;

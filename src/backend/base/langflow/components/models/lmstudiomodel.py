@@ -75,7 +75,12 @@ class LMStudioModelComponent(LCModelComponent):
             advanced=True,
             value="LMSTUDIO_API_KEY",
         ),
-        FloatInput(name="temperature", display_name="Temperature", value=0.1),
+        FloatInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            advanced=True,
+        ),
         IntInput(
             name="seed",
             display_name="Seed",

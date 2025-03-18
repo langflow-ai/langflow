@@ -9,8 +9,9 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByText("API", { exact: true }).click();
-    await page.getByRole("tab", { name: "Python API" }).click();
+    await page.getByTestId("publish-button").click();
+    await page.getByTestId("api-access-item").click();
+    await page.getByRole("tab", { name: "Python" }).click();
     await page.getByTestId("icon-Copy").click();
     const handle = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),
