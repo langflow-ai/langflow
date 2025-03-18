@@ -2,7 +2,10 @@ import { ProfileIcon } from "@/components/core/appHeaderComponent/components/Pro
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
-import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import {
+  ENABLE_DATASTAX_LANGFLOW,
+  ENABLE_PUBLISH,
+} from "@/customization/feature-flags";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -31,6 +34,7 @@ export default function ChatMessage({
   lastMessage,
   updateChat,
   closeChat,
+  playgroundPage,
 }: chatMessagePropsType): JSX.Element {
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
@@ -277,8 +281,10 @@ export default function ChatMessage({
                   ) : (
                     <ForwardedIconComponent name={chat.properties.icon} />
                   )
-                ) : !ENABLE_DATASTAX_LANGFLOW ? (
+                ) : !ENABLE_DATASTAX_LANGFLOW && !playgroundPage ? (
                   <ProfileIcon />
+                ) : playgroundPage ? (
+                  <ForwardedIconComponent name="User" />
                 ) : (
                   <CustomProfileIcon />
                 )}
@@ -301,7 +307,7 @@ export default function ChatMessage({
                 }
               >
                 {chat.sender_name}
-                {chat.properties?.source && (
+                {chat.properties?.source && !playgroundPage && (
                   <div className="text-[13px] font-normal text-muted-foreground">
                     {chat.properties?.source.source}
                   </div>
@@ -310,6 +316,7 @@ export default function ChatMessage({
             </div>
             {chat.content_blocks && chat.content_blocks.length > 0 && (
               <ContentBlockDisplay
+                playgroundPage={playgroundPage}
                 contentBlocks={chat.content_blocks}
                 isLoading={
                   chatMessage === "" &&
