@@ -50,10 +50,10 @@ except ImportError:
     ELEVENLABS_AVAILABLE = False
 
     # Create dummy classes to avoid errors
-    class ElevenLabs: # type: ignore[no-redef]
+    class ElevenLabs:  # type: ignore[no-redef]
         pass
-    
-    class ApiError(Exception): # type: ignore[no-redef]
+
+    class ApiError(Exception):  # type: ignore[no-redef]
         pass
 
 
