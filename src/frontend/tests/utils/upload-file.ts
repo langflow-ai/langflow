@@ -5,6 +5,18 @@ import fs from "fs";
 import { generateRandomFilename } from "./generate-filename";
 
 export async function uploadFile(page: Page, fileName: string) {
+  const fileManagement = await page
+    .getByTestId("button_open_file_management")
+    ?.isVisible();
+
+  if (!fileManagement) {
+    const fileChooserPromise = page.waitForEvent("filechooser");
+    await page.getByTestId("button_upload_file").click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(path.join(__dirname, `../assets/${fileName}`));
+    await page.getByText(fileName).isVisible();
+    return;
+  }
   await page.getByTestId("button_open_file_management").first().click();
   const drag = await page.getByTestId("drag-files-component");
   const sourceFileName = generateRandomFilename();
