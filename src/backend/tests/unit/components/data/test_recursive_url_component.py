@@ -119,7 +119,7 @@ class TestRecursiveURLComponent(ComponentTestBaseWithoutClient):
 
         # Mock different content for each URL
         mock_recursive_loader.side_effect = [
-            [Mock(page_content=f"content{i+1}", metadata={"source": url})] for i, url in enumerate(urls)
+            [Mock(page_content=f"content{i + 1}", metadata={"source": url})] for i, url in enumerate(urls)
         ]
 
         # Test fetch_content
@@ -128,7 +128,7 @@ class TestRecursiveURLComponent(ComponentTestBaseWithoutClient):
 
         for i, item in enumerate(content):
             assert item.source == urls[i], f"Expected '{urls[i]}', got '{item.source}'"
-            assert item.text == f"content{i+1}"
+            assert item.text == f"content{i + 1}"
 
     @patch("langflow.components.data.RecursiveURLComponent.ensure_url")
     def test_recursive_url_component_error_handling(self, mock_recursive_loader):
