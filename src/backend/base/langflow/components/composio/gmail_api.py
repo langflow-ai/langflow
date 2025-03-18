@@ -31,51 +31,51 @@ class GmailAPIComponent(LCToolComponent):
     _actions_data: dict = {
         "GMAIL_SEND_EMAIL": {
             "display_name": "Send Email",
-            "actions": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "parameters": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
         },
         "GMAIL_FETCH_EMAILS": {
             "display_name": "Fetch Emails",
-            "actions": ["max_results", "query"],
+            "parameters": ["max_results", "query"],
         },
         "GMAIL_GET_PROFILE": {
             "display_name": "Get User Profile",
-            "actions": [],
+            "parameters": [],
         },
         "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID": {
             "display_name": "Get Email By ID",
-            "actions": ["message_id"],
+            "parameters": ["message_id"],
         },
         "GMAIL_CREATE_EMAIL_DRAFT": {
             "display_name": "Create Draft Email",
-            "actions": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
+            "parameters": ["recipient_email", "subject", "body", "cc", "bcc", "is_html"],
         },
         "GMAIL_FETCH_MESSAGE_BY_THREAD_ID": {
             "display_name": "Get Message By Thread ID",
-            "actions": ["thread_id"],
+            "parameters": ["thread_id"],
         },
         "GMAIL_LIST_THREADS": {
             "display_name": "List Email Threads",
-            "actions": ["max_results", "query"],
+            "parameters": ["max_results", "query"],
         },
         "GMAIL_REPLY_TO_THREAD": {
             "display_name": "Reply To Thread",
-            "actions": ["thread_id", "message_body", "recipient_email"],
+            "parameters": ["thread_id", "message_body", "recipient_email"],
         },
         "GMAIL_LIST_LABELS": {
             "display_name": "List Email Labels",
-            "actions": [],
+            "parameters": [],
         },
         "GMAIL_CREATE_LABEL": {
             "display_name": "Create Email Label",
-            "actions": ["label_name"],
+            "parameters": ["label_name"],
         },
         "GMAIL_GET_PEOPLE": {
             "display_name": "Get Contacts",
-            "actions": [],
+            "parameters": [],
         },
         "GMAIL_REMOVE_LABEL": {
             "display_name": "Delete Email Label",
-            "actions": ["label_id"],
+            "parameters": ["label_id"],
         },
     }
 
@@ -317,7 +317,7 @@ class GmailAPIComponent(LCToolComponent):
             enum_name = getattr(Action, action_key)
             params = {}
             if action_key in self._actions_data:
-                for field in self._actions_data[action_key]["actions"]:
+                for field in self._actions_data[action_key]["parameters"]:
                     value = getattr(self, field)
 
                     # Skip empty values
@@ -351,7 +351,7 @@ class GmailAPIComponent(LCToolComponent):
     def show_hide_fields(self, build_config: dict, field_value: Any):
         all_fields = set()
         for action_data in self._actions_data.values():
-            all_fields.update(action_data["actions"])
+            all_fields.update(action_data["parameters"])
 
         for field in all_fields:
             build_config[field]["show"] = False
@@ -369,7 +369,7 @@ class GmailAPIComponent(LCToolComponent):
                     break
 
         if action_key in self._actions_data:
-            for field in self._actions_data[action_key]["actions"]:
+            for field in self._actions_data[action_key]["parameters"]:
                 build_config[field]["show"] = True
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
@@ -382,7 +382,7 @@ class GmailAPIComponent(LCToolComponent):
 
                 all_fields = set()
                 for action_data in self._actions_data.values():
-                    all_fields.update(action_data["actions"])
+                    all_fields.update(action_data["parameters"])
                 for field in all_fields:
                     build_config[field]["show"] = False
 
