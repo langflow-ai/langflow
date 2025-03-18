@@ -25,7 +25,6 @@ def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
     return samples_16k.tobytes()
 
 
-
 # def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
 #    """
 #    Convert one 20ms chunk (960 bytes @ 24kHz) to 20ms @ 16kHz (640 bytes).

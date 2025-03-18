@@ -396,7 +396,6 @@ async def flow_as_tool_websocket(
 
             shared_state = {"last_event_type": None, "event_count": 0}
 
-
             def log_event(event, direction: str) -> None:
                 event_type = event["type"]
 
