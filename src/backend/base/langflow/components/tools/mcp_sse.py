@@ -48,18 +48,30 @@ class MCPSseClient:
         if headers is None:
             headers = {}
         url = await self.pre_check_redirect(url)
-
         try:
             await asyncio.wait_for(
                 self._connect_with_timeout(url, headers, timeout_seconds, sse_read_timeout_seconds),
                 timeout=timeout_seconds,
             )
             # List available tools
+            if self.session is None:
+                msg = "Session not initialized"
+                raise ValueError(msg)
             response = await self.session.list_tools()
         except asyncio.TimeoutError as err:
             error_message = f"Connection to {url} timed out after {timeout_seconds} seconds"
             raise TimeoutError(error_message) from err
         return response.tools
+
+    async def _connect_with_timeout(
+        self, url: str, headers: dict[str, str] | None, timeout_seconds: int, sse_read_timeout_seconds: int
+    ):
+        sse_transport = await self.exit_stack.enter_async_context(
+            sse_client(url, headers, timeout_seconds, sse_read_timeout_seconds)
+        )
+        self.sse, self.write = sse_transport
+        self.session = await self.exit_stack.enter_async_context(ClientSession(self.sse, self.write))
+        await self.session.initialize()
 
 
 class MCPSse(Component):

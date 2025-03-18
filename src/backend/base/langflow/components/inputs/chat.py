@@ -66,6 +66,7 @@ class ChatInput(ChatComponent):
             info="Files to be sent with the message.",
             advanced=True,
             is_list=True,
+            temp_file=True,
         ),
         MessageTextInput(
             name="background_color",

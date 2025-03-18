@@ -14,6 +14,14 @@ type MarkdownFieldProps = {
   isAudioMessage?: boolean;
 };
 
+// Function to replace <think> tags with a placeholder before markdown processing
+const preprocessChatMessage = (text: string): string => {
+  // Replace <think> tags with `<span class="think-tag">think:</span>`
+  return text
+    .replace(/<think>/g, "`<think>`")
+    .replace(/<\/think>/g, "`</think>`");
+};
+
 export const MarkdownField = ({
   chat,
   isEmpty,
@@ -21,6 +29,9 @@ export const MarkdownField = ({
   editedFlag,
   isAudioMessage,
 }: MarkdownFieldProps) => {
+  // Process the chat message to handle <think> tags
+  const processedChatMessage = preprocessChatMessage(chatMessage);
+
   return (
     <div className="w-full items-baseline gap-2">
       <Markdown
@@ -58,6 +69,11 @@ export const MarkdownField = ({
                 if (content[0] === "▍") {
                   return <span className="form-modal-markdown-span"></span>;
                 }
+
+                // Specifically handle <think> tags that were wrapped in backticks
+                if (content === "<think>" || content === "</think>") {
+                  return <span>{content}</span>;
+                }
               }
 
               const match = /language-(\w+)/.exec(className || "");
@@ -76,7 +92,9 @@ export const MarkdownField = ({
           },
         }}
       >
-        {isEmpty && !chat.stream_url ? EMPTY_OUTPUT_SEND_MESSAGE : chatMessage}
+        {isEmpty && !chat.stream_url
+          ? EMPTY_OUTPUT_SEND_MESSAGE
+          : processedChatMessage}
       </Markdown>
       {editedFlag}
     </div>
