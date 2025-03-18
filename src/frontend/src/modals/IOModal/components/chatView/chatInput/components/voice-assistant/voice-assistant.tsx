@@ -111,8 +111,10 @@ export function VoiceAssistant({
   }, [globalVariables]);
 
   const elevenLabsApiKeyGlobalVariable = useMemo(() => {
-    return variables?.find((variable) => variable === "ELEVENLABS_API_KEY");
-  }, [variables, addKey]);
+    return globalVariables?.find(
+      (variable) => variable.name === "ELEVENLABS_API_KEY",
+    );
+  }, [globalVariables]);
 
   const hasElevenLabsApiKeyEnv = useMemo(() => {
     return Boolean(process.env?.ELEVENLABS_API_KEY);
@@ -225,14 +227,22 @@ export function VoiceAssistant({
     });
     setIsRecording(false);
   };
-  11;
-  const handleSaveApiKey = async (apiKey: string, variableName: string) => {
-    if (isEditingOpenAIKey && openaiApiKeyGlobalVariable) {
+
+  const handleSaveApiKey = async (
+    apiKey: string,
+    variableName: string,
+    elevenLabsKey: boolean,
+  ) => {
+    const updateOpenAiKey = isEditingOpenAIKey && openaiApiKeyGlobalVariable;
+
+    if (updateOpenAiKey || elevenLabsKey) {
       await updateVariable.mutateAsync(
         {
           name: variableName,
           value: apiKey,
-          id: openaiApiKeyGlobalVariable?.id,
+          id: elevenLabsKey
+            ? elevenLabsApiKeyGlobalVariable?.id!
+            : openaiApiKeyGlobalVariable?.id!,
         },
         {
           onSuccess: () => {
@@ -292,12 +302,6 @@ export function VoiceAssistant({
     const saveApiKey = openaiApiKey && openaiApiKey !== "OPENAI_API_KEY";
     const saveElevenLabsApiKey =
       elevenLabsApiKey && elevenLabsApiKey !== "ELEVENLABS_API_KEY";
-    const hasOpenAIApiKeySaved =
-      hasOpenAIAPIKey && openaiApiKey && openaiApiKey !== "OPENAI_API_KEY";
-    const hasElevenLabsApiKeySaved =
-      hasElevenLabsApiKey &&
-      elevenLabsApiKey &&
-      elevenLabsApiKey !== "ELEVENLABS_API_KEY";
 
     if (open) {
       stopRecording();
@@ -325,28 +329,12 @@ export function VoiceAssistant({
       }
     }
 
-    if (hasElevenLabsApiKeySaved) {
-      setErrorData({
-        title: "There's already an API key saved",
-        list: ["Please select your ELEVENLABS_API_KEY"],
-      });
-      return;
-    }
-
-    if (hasOpenAIApiKeySaved) {
-      setErrorData({
-        title: "There's already an API key saved",
-        list: ["Please select your OPENAI_API_KEY"],
-      });
-      return;
-    }
-
     if (saveApiKey) {
-      await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY");
+      await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY", false);
     }
 
-    if (saveElevenLabsApiKey) {
-      await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY");
+    if (saveElevenLabsApiKey && !open) {
+      await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY", true);
     }
   };
 
@@ -368,7 +356,7 @@ export function VoiceAssistant({
   }, [preferredLanguage]);
 
   const handleClickSaveOpenAIApiKey = async (openaiApiKey: string) => {
-    await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY");
+    await handleSaveApiKey(openaiApiKey, "OPENAI_API_KEY", false);
   };
 
   return (
@@ -420,7 +408,7 @@ export function VoiceAssistant({
           <div>
             <SettingsVoiceModal
               userOpenaiApiKey={openaiApiKey}
-              userElevenLabsApiKey={elevenLabsApiKeyGlobalVariable}
+              userElevenLabsApiKey={elevenLabsApiKeyGlobalVariable?.name}
               hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}
               setShowSettingsModal={handleSetShowSettingsModal}
               hasOpenAIAPIKey={hasOpenAIAPIKey}

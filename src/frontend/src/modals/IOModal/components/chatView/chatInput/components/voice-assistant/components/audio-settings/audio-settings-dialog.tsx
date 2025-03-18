@@ -325,7 +325,7 @@ const SettingsVoiceModal = ({
                 {!showAllSettings && (
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => onOpenChangeDropdownMenu(false)}
+                      onClick={() => setIsEditingOpenAIKey(false)}
                       variant="primary"
                       size="md"
                       className="w-full"

@@ -74,7 +74,7 @@ const MicrophoneSelect = ({
       data-testid="voice-assistant-settings-modal-microphone-select"
     >
       <span className="flex w-full items-center text-sm">
-        Input
+        Audio Input
         <ShadTooltip content="Select which microphone to use for voice input">
           <div>
             <IconComponent
