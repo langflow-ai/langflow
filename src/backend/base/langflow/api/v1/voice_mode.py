@@ -10,7 +10,7 @@ import traceback
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -43,16 +43,19 @@ from langflow.utils.voice_utils import (
 try:
     from elevenlabs.client import ElevenLabs
     from elevenlabs.core.api_error import ApiError
+
     ELEVENLABS_AVAILABLE = True
 except ImportError:
     logger.warning("ElevenLabs package not installed. Voice synthesis features will be limited.")
     ELEVENLABS_AVAILABLE = False
+
     # Create dummy classes to avoid errors
     class ElevenLabs:
         pass
-    
+
     class ApiError(Exception):
         pass
+
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -577,7 +580,7 @@ async def flow_as_tool_websocket(
                 if not ELEVENLABS_AVAILABLE:
                     logger.warning("ElevenLabs package not installed. Voice synthesis features will be limited.")
                     return
-                
+
                 sync_q: queue.Queue = queue.Queue()
 
                 async def transfer_text_deltas():
