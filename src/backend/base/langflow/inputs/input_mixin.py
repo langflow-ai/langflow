@@ -139,6 +139,7 @@ class DatabaseLoadMixin(BaseModel):
 class FileMixin(BaseModel):
     file_path: list[str] | str | None = Field(default="")
     file_types: list[str] = Field(default=[], alias="fileTypes")
+    temp_file: bool = Field(default=False)
 
     @field_validator("file_path")
     @classmethod

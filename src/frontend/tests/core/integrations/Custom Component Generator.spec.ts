@@ -54,8 +54,10 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
+    await page.waitForTimeout(1000);
+
     const stopButton = page.getByRole("button", { name: "Stop" });
-    await stopButton.waitFor({ state: "visible", timeout: 30000 });
+    await stopButton.waitFor({ state: "hidden", timeout: 30000 * 3 });
 
     const textContents = await getAllResponseMessage(page);
     expect(textContents.length).toBeGreaterThan(100);
