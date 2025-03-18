@@ -5,7 +5,7 @@ from langchain_community.vectorstores import Vectara
 from langflow.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from langflow.helpers.data import docs_to_data
 from langflow.io import HandleInput, IntInput, SecretStrInput, StrInput
-from langflow.schema import Data
+from langflow.schema import Data, DataFrame
 
 if TYPE_CHECKING:
     from langchain_community.vectorstores import Vectara
@@ -58,12 +58,16 @@ class VectaraVectorStoreComponent(LCVectorStoreComponent):
 
     def _add_documents_to_vector_store(self, vector_store: "Vectara") -> None:
         """Adds documents to the Vector Store."""
-        if not self.ingest_data:
+        ingest_data: list | Data | DataFrame = self.ingest_data
+        if not ingest_data:
             self.status = "No documents to add to Vectara"
             return
 
+        # Convert DataFrame to Data if needed using parent's method
+        ingest_data = self._prepare_ingest_data()
+
         documents = []
-        for _input in self.ingest_data or []:
+        for _input in ingest_data or []:
             if isinstance(_input, Data):
                 documents.append(_input.to_lc_document())
             else:
