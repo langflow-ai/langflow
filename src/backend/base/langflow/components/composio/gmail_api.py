@@ -191,16 +191,18 @@ class GmailAPIComponent(LCToolComponent):
             info="The ID of the Gmail label",
             show=False,
         ),
-        MessageTextInput(
+        StrInput(
             name="cc",
             display_name="CC",
-            info="Email addresses to CC (Carbon Copy) in the email, separated by commas",
+            is_list=True,
+            info="Email addresses to CC (Carbon Copy) in the email",
             show=False,
         ),
-        MessageTextInput(
+        StrInput(
             name="bcc",
             display_name="BCC",
-            info="Email addresses to BCC (Blid Carbon Copy) in the email, separated by commas",
+            is_list=True,
+            info="Email addresses to BCC (Blind Carbon Copy) in the email",
             show=False,
         ),
         BoolInput(
@@ -216,9 +218,10 @@ class GmailAPIComponent(LCToolComponent):
             info="Token for retrieving the next page of results",
             show=False,
         ),
-        MessageTextInput(
+         StrInput(
             name="label_ids",
             display_name="Label Ids",
+            is_list=True,
             info="Comma-separated list of label IDs to filter messages",
             show=False,
         ),
@@ -322,9 +325,6 @@ class GmailAPIComponent(LCToolComponent):
 
                     if value is None or value == "":
                         continue
-
-                    if field in ["cc", "bcc", "label_ids"] and value:
-                        value = [item.strip() for item in value.split(",")]
 
                     if field in self._bool_variables:
                         value = bool(value)
