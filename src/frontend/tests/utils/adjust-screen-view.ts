@@ -3,7 +3,7 @@ import { Page } from "playwright/test";
 export async function adjustScreenView(
   page: Page,
   {
-    numberOfZoomOut = 3,
+    numberOfZoomOut = 1,
   }: {
     numberOfZoomOut?: number;
   } = {},
