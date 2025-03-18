@@ -14,10 +14,9 @@ steps:
         "--build-arg", "GID=${_FRONTEND_GID}",
         "--tag", "${_IMAGE_FRONTEND}:${SHORT_SHA}",
         "--tag", "${_IMAGE_FRONTEND}:latest",
-        "-f", "build_and_push_frontend.Dockerfile",
+        "-f", "docker/frontend/build_and_push_frontend.Dockerfile",
         "."
       ]
-    dir: "docker/frontend"
   # Step 2: Push the frontend image with specific SHA tag
   - name: "gcr.io/cloud-builders/docker"
     id: PushFrontendImage
@@ -41,7 +40,6 @@ steps:
         "-f", "docker/build_and_push_backend_only.Dockerfile",
         "."
       ]
-    dir: "docker"
   # Step 4: Push the backend image with specific SHA tag
   - name: "gcr.io/cloud-builders/docker"
     id: PushBackendImage
