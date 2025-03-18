@@ -30,7 +30,7 @@ steps:
     args:
       [
         "build",
-        "--build-arg", "BUILDER_BASE_IMAGE=ghcr.io/astral-sh/uv@sha256:031ddbc79275e351a43cbb66f64d8cd314cc78c3878898f4ab4f147b092e8e2d",
+        "--build-arg", "BUILDER_BASE_IMAGE=ghcr.io/astral-sh/uv@sha256:8b2699bdfcbf3de3199688c16e4295dd5412f4edd3b995e8a45eebf84f42c044",
         "--build-arg", "PYTHON_IMAGE=python@sha256:aaa3f8cb64dd64e5f8cb6e58346bdcfa410a108324b0f28f1a7cc5964355b211",
         "--build-arg", "DEFAULT_BACKEND_PORT=7860",
         "--build-arg", "DEFAULT_BACKEND_HOST=0.0.0.0",
