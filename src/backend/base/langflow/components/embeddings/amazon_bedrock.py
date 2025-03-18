@@ -1,11 +1,11 @@
+from langflow.base.embeddings.model import LCEmbeddingsModel
 from langflow.base.models.aws_constants import AWS_EMBEDDING_MODEL_IDS, AWS_REGIONS
-from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import Embeddings
 from langflow.inputs import SecretStrInput
-from langflow.io import DropdownInput, MessageTextInput, Output
+from langflow.io import DropdownInput, MessageTextInput
 
 
-class AmazonBedrockEmbeddingsComponent(LCModelComponent):
+class AmazonBedrockEmbeddingsComponent(LCEmbeddingsModel):
     display_name: str = "Amazon Bedrock Embeddings"
     description: str = "Generate embeddings using Amazon Bedrock models."
     icon = "Amazon"
@@ -65,10 +65,6 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             advanced=True,
             info="The URL of the AWS Bedrock endpoint to use.",
         ),
-    ]
-
-    outputs = [
-        Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
 
     def build_embeddings(self) -> Embeddings:
