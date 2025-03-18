@@ -2,11 +2,10 @@
 import ast
 import asyncio
 import contextlib
-import importlib
 import inspect
-import os
 import re
 import traceback
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -572,57 +571,123 @@ async def get_all_types_dict(components_paths: list[str]):
 
 
 async def get_single_component_dict(component_type: str, component_name: str, components_paths: list[str]):
-    """Load a single component and return its full template dictionary."""
-    # This function needs to know how to load different component types
-
-    # For custom components, we need to load the full component class
-    if component_type == "custom_components":
-        return await load_custom_component(component_name, components_paths)
-
-    # For regular components, we need to load the component module
-    return await load_regular_component(component_type, component_name, components_paths)
-
-
-async def load_custom_component(component_name: str, components_paths: list[str]):
-    """Load a custom component by name."""
-    from langflow.interface.custom_component import get_custom_component_from_name
-
-    try:
-        # Try to load the custom component
-        component_class = get_custom_component_from_name(component_name)
-        if component_class:
-            # Convert to component template
-            from langflow.interface.custom_component import get_custom_component_template
-
-            return get_custom_component_template(component_class)
-    except Exception as e:
-        logger.error(f"Error loading custom component {component_name}: {e!s}")
-
-    return None
-
-
-async def load_regular_component(component_type: str, component_name: str, components_paths: list[str]):
-    """Load a regular (non-custom) component by type and name."""
-    # This is a placeholder for the actual implementation
-    # The actual implementation would depend on how components are loaded in your system
-
+    """Get a single component dictionary."""
     # For example, if components are loaded by importing Python modules:
     for base_path in components_paths:
-        module_path = os.path.join(base_path, component_type, f"{component_name}.py")
-        if os.path.exists(module_path):
+        module_path = Path(base_path) / component_type / f"{component_name}.py"
+        if module_path.exists():
             # Try to import the module
             module_name = f"langflow.components.{component_type}.{component_name}"
             try:
-                # Use importlib to dynamically import the module
+                # This is a simplified example - actual implementation may vary
+                import importlib.util
                 spec = importlib.util.spec_from_file_location(module_name, module_path)
                 if spec and spec.loader:
-                    module = importlib.util.module_from_spec(spec)  # type: ignore[attr-defined]
-                    spec.loader.exec_module(module)  # type: ignore[attr-defined]
-
-                    # Extract the component template if available
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
                     if hasattr(module, "template"):
                         return module.template
-            except Exception as e:
-                logger.error(f"Error importing component {module_path}: {e!s}")
+            except ImportError as e:
+                logger.error(f"Import error loading component {module_path}: {e!s}")
+            except AttributeError as e:
+                logger.error(f"Attribute error loading component {module_path}: {e!s}")
+            except ValueError as e:
+                logger.error(f"Value error loading component {module_path}: {e!s}")
+            except (KeyError, IndexError) as e:
+                logger.error(f"Data structure error loading component {module_path}: {e!s}")
+            except RuntimeError as e:
+                logger.error(f"Runtime error loading component {module_path}: {e!s}")
+                logger.debug("Full traceback for runtime error", exc_info=True)
+            except OSError as e:
+                logger.error(f"OS error loading component {module_path}: {e!s}")
 
+    # If we get here, the component wasn't found or couldn't be loaded
+    return None
+
+
+async def load_custom_component(component_name: str, components_paths: list[str]):
+    """Load a custom component by name.
+
+    Args:
+        component_name: Name of the component to load
+        components_paths: List of paths to search for components
+    """
+    from langflow.interface.custom_component import get_custom_component_from_name
+
+    try:
+        # First try to get the component from the registered components
+        component_class = get_custom_component_from_name(component_name)
+        if component_class:
+            # Define the function locally if it's not imported
+            def get_custom_component_template(component_cls):
+                """Get template for a custom component class."""
+                # This is a simplified implementation - adjust as needed
+                if hasattr(component_cls, "get_template"):
+                    return component_cls.get_template()
+                if hasattr(component_cls, "template"):
+                    return component_cls.template
+                return None
+
+            return get_custom_component_template(component_class)
+
+        # If not found in registered components, search in the provided paths
+        for path in components_paths:
+            # Try to find the component in different category directories
+            base_path = Path(path)
+            if base_path.exists() and base_path.is_dir():
+                # Search for the component in all subdirectories
+                for category_dir in base_path.iterdir():
+                    if category_dir.is_dir():
+                        component_file = category_dir / f"{component_name}.py"
+                        if component_file.exists():
+                            # Try to import the module
+                            module_name = f"langflow.components.{category_dir.name}.{component_name}"
+                            try:
+                                import importlib.util
+                                spec = importlib.util.spec_from_file_location(module_name, component_file)
+                                if spec and spec.loader:
+                                    module = importlib.util.module_from_spec(spec)
+                                    spec.loader.exec_module(module)
+                                    if hasattr(module, "template"):
+                                        return module.template
+                                    if hasattr(module, "get_template"):
+                                        return module.get_template()
+                            except ImportError as e:
+                                logger.error(f"Import error loading component {component_file}: {e!s}")
+                                logger.debug("Import error traceback", exc_info=True)
+                            except AttributeError as e:
+                                logger.error(f"Attribute error loading component {component_file}: {e!s}")
+                                logger.debug("Attribute error traceback", exc_info=True)
+                            except (ValueError, TypeError) as e:
+                                logger.error(f"Value/Type error loading component {component_file}: {e!s}")
+                                logger.debug("Value/Type error traceback", exc_info=True)
+                            except (KeyError, IndexError) as e:
+                                logger.error(f"Data structure error loading component {component_file}: {e!s}")
+                                logger.debug("Data structure error traceback", exc_info=True)
+                            except RuntimeError as e:
+                                logger.error(f"Runtime error loading component {component_file}: {e!s}")
+                                logger.debug("Runtime error traceback", exc_info=True)
+                            except OSError as e:
+                                logger.error(f"OS error loading component {component_file}: {e!s}")
+                                logger.debug("OS error traceback", exc_info=True)
+
+    except ImportError as e:
+        logger.error(f"Import error loading custom component {component_name}: {e!s}")
+        return None
+    except AttributeError as e:
+        logger.error(f"Attribute error loading custom component {component_name}: {e!s}")
+        return None
+    except ValueError as e:
+        logger.error(f"Value error loading custom component {component_name}: {e!s}")
+        return None
+    except (KeyError, IndexError) as e:
+        logger.error(f"Data structure error loading custom component {component_name}: {e!s}")
+        return None
+    except RuntimeError as e:
+        logger.error(f"Runtime error loading custom component {component_name}: {e!s}")
+        logger.debug("Full traceback for runtime error", exc_info=True)
+        return None
+
+    # If we get here, the component wasn't found in any of the paths
+    logger.warning(f"Component {component_name} not found in any of the provided paths")
     return None

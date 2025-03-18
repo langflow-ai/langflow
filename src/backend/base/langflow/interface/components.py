@@ -213,8 +213,34 @@ async def load_single_component(component_type: str, component_name: str, compon
         # Delegate to a more specific function that knows how to load
         # a single component of a specific type
         return await get_single_component_dict(component_type, component_name, components_paths)
-    except Exception as e:
-        logger.error(f"Error loading component {component_type}:{component_name}: {e!s}")
+    except (ImportError, ModuleNotFoundError) as e:
+        # Handle issues with importing the component or its dependencies
+        logger.error(f"Import error loading component {component_type}:{component_name}: {e!s}")
+        return None
+    except (AttributeError, TypeError) as e:
+        # Handle issues with component structure or type errors
+        logger.error(f"Component structure error for {component_type}:{component_name}: {e!s}")
+        return None
+    except FileNotFoundError as e:
+        # Handle missing files
+        logger.error(f"File not found for component {component_type}:{component_name}: {e!s}")
+        return None
+    except ValueError as e:
+        # Handle invalid values or configurations
+        logger.error(f"Invalid configuration for component {component_type}:{component_name}: {e!s}")
+        return None
+    except (KeyError, IndexError) as e:
+        # Handle data structure access errors
+        logger.error(f"Data structure error for component {component_type}:{component_name}: {e!s}")
+        return None
+    except RuntimeError as e:
+        # Handle runtime errors
+        logger.error(f"Runtime error loading component {component_type}:{component_name}: {e!s}")
+        logger.debug("Full traceback for runtime error", exc_info=True)
+        return None
+    except OSError as e:
+        # Handle OS-related errors (file system, permissions, etc.)
+        logger.error(f"OS error loading component {component_type}:{component_name}: {e!s}")
         return None
 
 

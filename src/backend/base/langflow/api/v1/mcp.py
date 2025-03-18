@@ -49,7 +49,17 @@ if False:
 
     logger.debug("MCP module loaded - debug logging enabled")
 
-enable_progress_notifications = None
+class MCPConfig:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.enable_progress_notifications = None
+        return cls._instance
+
+def get_mcp_config():
+    return MCPConfig()
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -185,9 +195,10 @@ async def handle_list_tools():
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     """Handle tool execution requests."""
-    global enable_progress_notifications
-    if enable_progress_notifications is None:
-        enable_progress_notifications = get_settings_service().settings.mcp_server_enable_progress_notifications
+    mcp_config = get_mcp_config()
+    if mcp_config.enable_progress_notifications is None:
+        settings_service = get_settings_service()
+        mcp_config.enable_progress_notifications = settings_service.settings.mcp_server_enable_progress_notifications
     try:
         session = await anext(get_session())
         background_tasks = BackgroundTasks()
@@ -203,7 +214,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         processed_inputs = dict(arguments)
 
         # Initial progress notification
-        if enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
+        if mcp_config.enable_progress_notifications and (progress_token := server.request_context.meta.progressToken):
             await server.request_context.session.send_progress_notification(
                 progress_token=progress_token, progress=0.0, total=1.0
             )
@@ -214,7 +225,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
         )
 
         async def send_progress_updates():
-            if not (enable_progress_notifications and server.request_context.meta.progressToken):
+            if not (mcp_config.enable_progress_notifications and server.request_context.meta.progressToken):
                 return
 
             try:
@@ -227,7 +238,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
                     await asyncio.sleep(1.0)
             except asyncio.CancelledError:
                 # Send final 100% progress
-                if enable_progress_notifications:
+                if mcp_config.enable_progress_notifications:
                     await server.request_context.session.send_progress_notification(
                         progress_token=progress_token, progress=1.0, total=1.0
                     )
@@ -282,7 +293,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[types.TextContent
     except Exception as e:
         context = server.request_context
         # Send error progress if there's an exception
-        if enable_progress_notifications and (progress_token := context.meta.progressToken):
+        if mcp_config.enable_progress_notifications and (progress_token := context.meta.progressToken):
             await server.request_context.session.send_progress_notification(
                 progress_token=progress_token, progress=1.0, total=1.0
             )
@@ -356,4 +367,4 @@ async def handle_messages(request: Request):
         await sse.handle_post_message(request.scope, request.receive, request._send)
     except BrokenResourceError as e:
         logger.info("MCP Server disconnected")
-        raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}")
+        raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}") from e
