@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 import webrtcvad
@@ -14,7 +16,9 @@ def test_resample_24k_to_16k_valid_frame():
     """Test that valid 960-byte frames (20ms @ 24kHz) resample to 640 bytes (20ms @ 16kHz)."""
     # Generate a fake 20ms @ 24kHz frame (960 bytes)
     duration_samples_24k = int(0.02 * SAMPLE_RATE_24K)  # 480 samples
-    fake_frame_24k = (np.random.rand(duration_samples_24k) * 32767).astype(np.int16)
+    # Use the newer numpy random Generator
+    rng = np.random.default_rng()
+    fake_frame_24k = (rng.random(duration_samples_24k) * 32767).astype(np.int16)
     frame_24k_bytes = fake_frame_24k.tobytes()
 
     assert len(frame_24k_bytes) == BYTES_PER_24K_FRAME  # 960
@@ -29,9 +33,8 @@ def test_resample_24k_to_16k_valid_frame():
 def test_resample_24k_to_16k_invalid_frame():
     """Test that passing an invalid size frame raises a ValueError."""
     invalid_frame = b"\x00\x01" * 100  # only 200 bytes, not 960
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError, match="Expected exactly"):
         _ = resample_24k_to_16k(invalid_frame)
-    assert "Expected exactly" in str(exc_info.value)
 
 
 def test_webrtcvad_silence_detection():
@@ -58,7 +61,8 @@ def test_webrtcvad_silence_detection():
 
 
 def test_webrtcvad_with_real_data():
-    """End-to-end test:
+    """End-to-end test.
+
     - Load or generate 24kHz audio
     - Break into 20ms frames
     - Resample to 16k
@@ -66,11 +70,13 @@ def test_webrtcvad_with_real_data():
     This test is approximate, since random audio won't always be "speech."
     In real usage, you'd store a known test file that has some speech portion.
     """
-    sample_audio_24k_raw = open("../data/debug_incoming_24k.raw", "rb")
+    input_file = Path("../data/debug_incoming_24k.raw")
+    output_file = Path("../data/debug_resampled_16k.raw")
 
     vad = webrtcvad.Vad(mode=2)
 
-    raw_data_24k = sample_audio_24k_raw.read()
+    with input_file.open("rb") as sample_audio_24k_raw:
+        raw_data_24k = sample_audio_24k_raw.read()
 
     # We'll chunk into 20ms frames (960 bytes each).
     frame_size_24k = BYTES_PER_24K_FRAME  # 960
@@ -88,7 +94,7 @@ def test_webrtcvad_with_real_data():
         if is_speech:
             speech_count += 1
 
-    with open("../data/debug_resampled_16k.raw", "wb") as f:
+    with output_file.open("wb") as f:
         f.write(resampled_all)
     # Just log or assert something about speech_count.
     # With random data, we can't be sure. For real speech, we'd expect
