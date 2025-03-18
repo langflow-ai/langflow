@@ -32,11 +32,12 @@ export default function ChatInput({
   files,
   setFiles,
   isDragging,
+  playgroundPage,
 }: ChatInputType): JSX.Element {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { validateFileSize } = useFileSizeValidator(setErrorData);
+  const { validateFileSize } = useFileSizeValidator();
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const chatValue = useUtilityStore((state) => state.chatValueStore);
@@ -49,6 +50,10 @@ export default function ChatInput({
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement> | ClipboardEvent,
   ) => {
+    if (playgroundPage) {
+      return;
+    }
+
     let file: File | null = null;
 
     if ("clipboardData" in event) {
@@ -69,7 +74,14 @@ export default function ChatInput({
     if (file) {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
-      if (!validateFileSize(file)) {
+      try {
+        validateFileSize(file);
+      } catch (e) {
+        if (e instanceof Error) {
+          setErrorData({
+            title: e.message,
+          });
+        }
         return;
       }
 
@@ -238,15 +250,17 @@ export default function ChatInput({
           ))}
         </div>
         <div className="flex w-full items-end justify-between">
-          <div className={isBuilding ? "cursor-not-allowed" : ""}>
-            <UploadFileButton
-              isBuilding={isBuilding}
-              fileInputRef={fileInputRef}
-              handleFileChange={handleFileChange}
-              handleButtonClick={handleButtonClick}
-            />
-          </div>
-          <div className="">
+          {!playgroundPage && (
+            <div className={isBuilding ? "cursor-not-allowed" : ""}>
+              <UploadFileButton
+                isBuilding={isBuilding}
+                fileInputRef={fileInputRef}
+                handleFileChange={handleFileChange}
+                handleButtonClick={handleButtonClick}
+              />
+            </div>
+          )}
+          <div className={playgroundPage ? "ml-auto" : ""}>
             <ButtonSendWrapper
               send={send}
               noInput={noInput}

@@ -40,13 +40,12 @@ def has_api_terms(word: str):
 
 def remove_api_keys(flow: dict):
     """Remove api keys from flow data."""
-    if flow.get("data") and flow["data"].get("nodes"):
-        for node in flow["data"]["nodes"]:
-            node_data = node.get("data").get("node")
-            template = node_data.get("template")
-            for value in template.values():
-                if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
-                    value["value"] = None
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data").get("node")
+        template = node_data.get("template")
+        for value in template.values():
+            if isinstance(value, dict) and has_api_terms(value["name"]) and value.get("password"):
+                value["value"] = None
 
     return flow
 
@@ -155,35 +154,37 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     # Get flow name
     if "flow_name" not in kwargs:
         flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
-        kwargs["flow_name"] = flow_name
+    else:
+        flow_name = kwargs["flow_name"]
     str_flow_id = str(flow_id)
-    graph = Graph.from_payload(payload, str_flow_id, **kwargs)
+    session_id = kwargs.get("session_id") or str_flow_id
+
+    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
             msg = f"Vertex {vertex_id} not found"
             raise ValueError(msg)
         if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": str_flow_id}, overwrite=True)
+            vertex.update_raw_params({"session_id": session_id}, overwrite=True)
 
-    run_id = uuid.uuid4()
-    graph.set_run_id(run_id)
-    graph.set_run_name()
+    graph.session_id = session_id
     await graph.initialize_run()
     return graph
 
 
-async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession):
+async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession, **kwargs):
     """Build and cache the graph."""
     flow: Flow | None = await session.get(Flow, flow_id)
     if not flow or not flow.data:
         msg = "Invalid flow ID"
         raise ValueError(msg)
-    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, user_id=str(flow.user_id))
+    kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
+    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
 
 
-async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService):
-    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session)
+async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService, **kwargs):
+    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session, **kwargs)
     await chat_service.set_cache(str(flow_id), graph)
     return graph
 
@@ -302,3 +303,63 @@ def custom_params(
     if page is None and size is None:
         return None
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
+
+
+async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | None) -> tuple[User, uuid.UUID]:
+    """Verify a public flow request and generate a deterministic flow ID.
+
+    This utility function:
+    1. Checks that a client_id cookie is provided
+    2. Verifies the flow exists and is marked as PUBLIC
+    3. Creates a deterministic UUID based on client_id and original flow_id
+    4. Retrieves the flow owner user for permission purposes
+
+    This function is used to support public flow endpoints that don't require
+    authentication but still need to operate within the permission model.
+
+    Args:
+        flow_id: The original flow ID to verify
+        client_id: The client ID from the request cookie
+
+    Returns:
+        tuple: (flow owner user, deterministic flow ID for tracking)
+
+    Raises:
+        HTTPException:
+            - 400 if no client_id is provided
+            - 403 if flow doesn't exist or isn't public
+            - 403 if unable to retrieve the flow owner user
+            - 403 if user is not found for public flow
+    """
+    if not client_id:
+        raise HTTPException(status_code=400, detail="No client_id cookie found")
+
+    # Check if the flow is public
+    async with session_scope() as session:
+        from sqlmodel import select
+
+        from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+
+        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+        if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:
+            raise HTTPException(status_code=403, detail="Flow is not public")
+
+    # Create a new flow ID using the client_id and flow_id
+    new_id = f"{client_id}_{flow_id}"
+    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
+
+    # Get the user associated with the flow
+    try:
+        from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
+
+        user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
+
+    except Exception as exc:
+        logger.exception(f"Error getting user for public flow {flow_id}")
+        raise HTTPException(status_code=403, detail="Flow is not accessible") from exc
+
+    if not user:
+        msg = f"User not found for public flow {flow_id}"
+        raise HTTPException(status_code=403, detail=msg)
+
+    return user, new_flow_id

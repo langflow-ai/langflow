@@ -23,20 +23,25 @@ from pydantic_core import PydanticSerializationError
 from rich import print as rprint
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router, router, router_v2
+from langflow.api import health_check_router, log_router, router
 from langflow.initial_setup.setup import (
     check_need_initialize,
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
     load_bundles_from_urls,
     load_flows_from_directory,
+    sync_flows_from_fs,
     set_initialized_version,
 )
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
 from langflow.logging.logger import configure
 from langflow.middleware import ContentSizeLimitMiddleware
-from langflow.services.deps import get_queue_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_queue_service,
+    get_settings_service,
+    get_telemetry_service,
+)
 from langflow.services.utils import initialize_services, teardown_services
 
 if TYPE_CHECKING:
@@ -120,6 +125,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             rprint("[bold green]Starting Langflow...[/bold green]")
 
         temp_dirs: list[TemporaryDirectory] = []
+        sync_flows_from_fs_task = None
         try:
             need_initialize = await check_need_initialize(version)
             rprint(f"[bold green]Need initialize: {need_initialize}[/bold green]")
@@ -135,6 +141,7 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
             await load_flows_from_directory()
+            sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
@@ -149,6 +156,9 @@ def get_lifespan(*, fix_migration=False, version=None):
         finally:
             # Clean shutdown
             logger.info("Cleaning up resources...")
+            if sync_flows_from_fs_task:
+                sync_flows_from_fs_task.cancel()
+                await asyncio.wait([sync_flows_from_fs_task])
             await teardown_services()
             await logger.complete()
             temp_dir_cleanups = [asyncio.to_thread(temp_dir.cleanup) for temp_dir in temp_dirs]
@@ -252,7 +262,6 @@ def create_app():
         router.include_router(mcp_router)
 
     app.include_router(router)
-    app.include_router(router_v2)
     app.include_router(health_check_router)
     app.include_router(log_router)
 
@@ -273,6 +282,7 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
     return app
 
 
