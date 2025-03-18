@@ -147,6 +147,10 @@ jobs:
           mv build langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}
           cd langflow-drafts
 
+          # Records the repository that originally triggered the build so we can post back
+          # comments upon clean up of a stale draft if it still has an open pull request.
+          echo "${{ github.event.repository.full_name }}" > ${{ steps.extract_branch.outputs.draft_directory }}/.github_source_repository
+
           s3_params=(
             # Hide upload progress for a cleaner sync log
             --no-progress
@@ -161,6 +165,19 @@ jobs:
           echo "Deploying draft to S3." |& tee -a $GITHUB_WORKSPACE/deploy.log
           echo "aws s3 sync . s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts ${s3_params[@]}" |& tee -a $GITHUB_WORKSPACE/deploy.log
           aws s3 sync . "s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts" "${s3_params[@]}" |& tee -a $GITHUB_WORKSPACE/deploy.log
+
+          # Update .github_source_repository file metadata to mark last modified time of the draft.
+          # This will allow us to later determine if a draft is stale and needs to be cleaned up.
+          echo "Marking last modified time of the draft." |& tee -a $GITHUB_WORKSPACE/deploy.log
+          echo "aws s3 cp --metadata '{\"touched\": \"now\"}' \
+            s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/.github_source_repository \
+            s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/.github_source_repository" \
+            |& tee -a $GITHUB_WORKSPACE/deploy.log
+
+          aws s3 cp --metadata '{ "touched": "now" }' \
+            s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/.github_source_repository \
+            s3://${{ vars.DOCS_DRAFT_S3_BUCKET_NAME }}/langflow-drafts/${{ steps.extract_branch.outputs.draft_directory }}/.github_source_repository \
+            |& tee -a $GITHUB_WORKSPACE/deploy.log
 
       - name: Invalidate CloudFront Cache
         if: success()
