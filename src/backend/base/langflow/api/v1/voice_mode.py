@@ -10,6 +10,7 @@ import traceback
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -104,7 +105,7 @@ class VoiceConfig:
             "tools": [],
             "tool_choice": "auto",
         }
-        self.openai_realtime_session = {}
+        self.openai_realtime_session: dict[str, Any] = {}
 
     def get_session_dict(self):
         """Return a copy of the default session dictionary with current settings."""
