@@ -66,7 +66,7 @@ export default function PlaygroundPage() {
       );
       if (
         (inputs.length === 0 && outputs.length === 0) ||
-        currentSavedFlow?.access_type !== "public"
+        currentSavedFlow?.access_type !== "PUBLIC"
       ) {
         // redirect to the home page
         navigate("/");

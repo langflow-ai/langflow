@@ -13,7 +13,7 @@ interface IPatchUpdateFlow {
   folder_id?: string | null | undefined;
   endpoint_name?: string | null | undefined;
   locked?: boolean | null | undefined;
-  access_type?: "public" | "private" | "protected";
+  access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
 }
 
 export const usePatchUpdateFlow: useMutationFunctionType<
