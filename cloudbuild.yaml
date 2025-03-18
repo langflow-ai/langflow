@@ -3,7 +3,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     id: BuildFrontendImage
     env:
-      - BUILDPLATFORM=linux/amd64
+      - 'BUILDPLATFORM=linux/amd64'
     args:
       [
         "build",
@@ -26,7 +26,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     id: BuildBackendImage
     env:
-      - BUILDPLATFORM=linux/amd64
+      - 'BUILDPLATFORM=linux/amd64'
     args:
       [
         "build",
