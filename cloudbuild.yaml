@@ -2,6 +2,8 @@ steps:
   # Step 1: Build the Frontend Docker image
   - name: "gcr.io/cloud-builders/docker"
     id: BuildFrontendImage
+    env:
+      - BUILDPLATFORM=linux/amd64
     args:
       [
         "build",
@@ -23,6 +25,8 @@ steps:
   # Step 3: Build the backend Docker image
   - name: "gcr.io/cloud-builders/docker"
     id: BuildBackendImage
+    env:
+      - BUILDPLATFORM=linux/amd64
     args:
       [
         "build",
