@@ -227,6 +227,9 @@ class Settings(BaseSettings):
     event_delivery: Literal["polling", "streaming"] = "polling"
     """How to deliver build events to the frontend. Can be 'polling' or 'streaming'."""
 
+    initialize_once_every_version: bool = False
+    """If set to True, Langflow will only initialize the service once in the same version"""
+
     @field_validator("dev")
     @classmethod
     def set_dev(cls, value):

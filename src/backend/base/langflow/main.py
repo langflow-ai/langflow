@@ -25,10 +25,12 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from langflow.api import health_check_router, log_router, router, router_v2
 from langflow.initial_setup.setup import (
+    check_need_initialize,
     create_or_update_starter_projects,
     initialize_super_user_if_needed,
     load_bundles_from_urls,
     load_flows_from_directory,
+    set_initialized_version,
 )
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
@@ -119,18 +121,25 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         temp_dirs: list[TemporaryDirectory] = []
         try:
-            await initialize_services(fix_migration=fix_migration)
+            need_initialize = await check_need_initialize(version)
+            rprint(f"[bold green]Need initialize: {need_initialize}[/bold green]")
+
+            await initialize_services(fix_migration=fix_migration, need_initialize=need_initialize)
             setup_llm_caching()
-            await initialize_super_user_if_needed()
+            if need_initialize:
+                await initialize_super_user_if_needed()
             temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
             get_settings_service().settings.components_path.extend(bundles_components_paths)
             all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
-            await create_or_update_starter_projects(all_types_dict)
+            if need_initialize:
+                await create_or_update_starter_projects(all_types_dict)
             telemetry_service.start()
             await load_flows_from_directory()
             queue_service = get_queue_service()
             if not queue_service.is_started():  # Start if not already started
                 queue_service.start()
+            # write initialized version to file
+            await set_initialized_version(version)
             yield
 
         except Exception as exc:
