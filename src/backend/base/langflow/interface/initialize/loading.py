@@ -116,7 +116,7 @@ async def update_params_with_load_from_db_fields(
 
         try:
             key = await custom_component.get_variables(params[field], field)
-        except Exception as e:  # Catch all exceptions
+        except Exception as e:
             if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
                 if not fallback_to_env_vars:
                     raise
