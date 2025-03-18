@@ -1,7 +1,7 @@
 steps:
   # Step 1: Build the Frontend Docker image
   - name: "gcr.io/cloud-builders/docker"
-    id: Build
+    id: BuildFrontendImage
     args:
       [
         "build",
@@ -18,11 +18,11 @@ steps:
     dir: "docker/frontend"
   # Step 2: Push the frontend image with specific SHA tag
   - name: "gcr.io/cloud-builders/docker"
-    id: Push
+    id: PushFrontendImage
     args: ["push", "${_IMAGE_FRONTEND}:${SHORT_SHA}"]
   # Step 3: Build the backend Docker image
   - name: "gcr.io/cloud-builders/docker"
-    id: BuildBase
+    id: BuildBackendImage
     args:
       [
         "build",
@@ -40,7 +40,7 @@ steps:
     dir: "docker"
   # Step 4: Push the backend image with specific SHA tag
   - name: "gcr.io/cloud-builders/docker"
-    id: Push
+    id: PushBackendImage
     args: ["push", "${_IMAGE_BACKEND}:${SHORT_SHA}"]
 images:
     - "${_IMAGE_FRONTEND}:${SHORT_SHA}"
