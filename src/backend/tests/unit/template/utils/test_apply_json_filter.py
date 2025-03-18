@@ -80,11 +80,16 @@ def test_complex_nested_access(data):
 
 
 # Test array operations on objects
-@given(data=st.lists(st.dictionaries(
-    keys=st.text(min_size=1).filter(lambda s: s.strip() and not any(c in s for c in "\r\n\t")),
-    values=st.integers(),
-    min_size=1),
-    min_size=1))
+@given(
+    data=st.lists(
+        st.dictionaries(
+            keys=st.text(min_size=1).filter(lambda s: s.strip() and not any(c in s for c in "\r\n\t")),
+            values=st.integers(),
+            min_size=1,
+        ),
+        min_size=1,
+    )
+)
 def test_array_object_operations(data):
     if data and all(data):
         key = next(iter(data[0]))

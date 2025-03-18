@@ -117,11 +117,12 @@ class BaseFileComponent(Component, ABC):
     _base_inputs = [
         FileInput(
             name="path",
-            display_name="Path",
+            display_name="Files",
             fileTypes=[],  # Dynamically set in __init__
             info="",  # Dynamically set in __init__
             required=False,
-            value="",
+            list=True,
+            value=[],
         ),
         HandleInput(
             name="file_path",

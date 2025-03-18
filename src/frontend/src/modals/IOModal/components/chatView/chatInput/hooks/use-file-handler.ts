@@ -8,6 +8,7 @@ import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-uplo
 import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { FilePreviewType } from "@/types/components";
+import { formatFileSize } from "@/utils/stringManipulation";
 import { useState } from "react";
 import ShortUniqueId from "short-unique-id";
 
@@ -23,7 +24,7 @@ export const useFileHandler = (currentFlowId: string) => {
       const fileExtension = file.name.split(".").pop()?.toLowerCase();
       if (file.size > maxFileSizeUpload) {
         setErrorData({
-          title: INVALID_FILE_SIZE_ALERT(maxFileSizeUpload / 1024 / 1024),
+          title: INVALID_FILE_SIZE_ALERT(formatFileSize(maxFileSizeUpload)),
         });
         return;
       }

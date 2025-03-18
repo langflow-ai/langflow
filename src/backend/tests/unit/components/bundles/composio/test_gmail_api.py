@@ -186,7 +186,6 @@ class TestGmailAPIComponent(ComponentTestBaseWithoutClient):
         assert result["auth_link"]["show"] is True
         assert result["auth_link"]["value"] == "https://auth.example.com"
 
-
     def test_show_hide_fields(self):
         # Create component
         component = GmailAPIComponent()

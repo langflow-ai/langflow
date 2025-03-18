@@ -26,7 +26,7 @@ const HomePage = ({ type }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
-  const handleFileDrop = useFileDrop("flows");
+
   const [flowType, setFlowType] = useState<"flows" | "components">(type);
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
@@ -77,10 +77,25 @@ const HomePage = ({ type }) => {
     flows?.find((flow) => flow.folder_id === (folderId ?? myCollectionId)) ===
     undefined;
 
+  const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
+
+  useEffect(() => {
+    if (
+      !isEmptyFolder &&
+      flows?.find(
+        (flow) =>
+          flow.folder_id === (folderId ?? myCollectionId) &&
+          flow.is_component === (flowType === "components"),
+      ) === undefined
+    ) {
+      setFlowType(flowType === "flows" ? "components" : "flows");
+    }
+  }, [isEmptyFolder]);
+
   return (
     <CardsWrapComponent
       onFileDrop={handleFileDrop}
-      dragMessage={`Drag your ${folderName} here`}
+      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"

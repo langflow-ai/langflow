@@ -53,6 +53,9 @@ export type ToggleComponentType = {
 
 export type FileComponentType = {
   fileTypes: Array<string>;
+  file_path?: string | string[];
+  isList?: boolean;
+  tempFile?: boolean;
 };
 
 export type PromptAreaComponentType = {

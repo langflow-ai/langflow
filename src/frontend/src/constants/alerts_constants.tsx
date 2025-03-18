@@ -63,5 +63,5 @@ export const DEL_KEY_SUCCESS_ALERT_PLURAL = "Success! Keys deleted!";
 export const FLOW_BUILD_SUCCESS_ALERT = `Flow built successfully`;
 export const SAVE_SUCCESS_ALERT = "Changes saved successfully!";
 export const INVALID_FILE_SIZE_ALERT = (maxSizeMB) => {
-  return `The file size is too large. Please select a file smaller than ${maxSizeMB}MB.`;
+  return `The file size is too large. Please select a file smaller than ${maxSizeMB}.`;
 };

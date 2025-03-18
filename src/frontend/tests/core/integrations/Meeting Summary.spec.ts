@@ -1,11 +1,9 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -48,18 +46,7 @@ withEventDeliveryModes(
       .nth(3)
       .fill(process.env.ASSEMBLYAI_API_KEY ?? "");
 
-    const audioFilePath = path.join(
-      __dirname,
-      "../../assets/test_audio_file.wav",
-    );
-    await page.getByTestId("button_upload_file").click();
-
-    const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("button_upload_file").click();
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(audioFilePath);
-
-    await page.waitForTimeout(2000);
+    await uploadFile(page, "test_audio_file.wav");
 
     await page.getByTestId("button_run_chat output").last().click();
 

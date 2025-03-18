@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { uploadFile } from "../../utils/upload-file";
 
 test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
@@ -34,18 +35,7 @@ test(
     const userQuestion = "What is this image?";
     await page.getByTestId("textarea_str_input_value").fill(userQuestion);
 
-    const filePath = "tests/assets/chain.png";
-
-    await page.click('[data-testid="button_upload_file"]');
-
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      page.click('[data-testid="button_upload_file"]'),
-    ]);
-
-    await fileChooser.setFiles(filePath);
-
-    await page.keyboard.press("Escape");
+    await uploadFile(page, "chain.png");
 
     await page.getByTestId("button_run_chat output").click();
     await page.getByText("built successfully").last().click({

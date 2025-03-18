@@ -21,7 +21,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   const [filePath, setFilePath] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const { validateFileSize } = useFileSizeValidator(setErrorData);
+  const { validateFileSize } = useFileSizeValidator();
 
   useEffect(() => {
     if (filePath) {
@@ -78,7 +78,14 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
 
   const upload = async (file) => {
     if (file) {
-      if (!validateFileSize(file)) {
+      try {
+        validateFileSize(file);
+      } catch (e) {
+        if (e instanceof Error) {
+          setErrorData({
+            title: e.message,
+          });
+        }
         return;
       }
       // Check if a file was selected

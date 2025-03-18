@@ -238,7 +238,7 @@ function BaseModal({
   const contentClasses = cn(
     minWidth,
     height,
-    "flex flex-col flex-1 overflow-hidden",
+    "flex flex-col flex-1 overflow-hidden max-h-[98dvh]",
     className,
   );
 
@@ -260,6 +260,7 @@ function BaseModal({
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
           <DialogContent
+            onClick={(e) => e.stopPropagation()}
             onOpenAutoFocus={(event) => event.preventDefault()}
             onEscapeKeyDown={onEscapeKeyDown}
             className={contentClasses}

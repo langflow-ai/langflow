@@ -26,7 +26,11 @@ const useFileDrop = (type?: string) => {
           uploadFlow({
             files,
             isComponent:
-              type === "component" ? true : type === "flow" ? false : undefined,
+              type === "components"
+                ? true
+                : type === "flows"
+                  ? false
+                  : undefined,
           })
             .then(() => {
               setSuccessData({
