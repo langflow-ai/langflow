@@ -105,7 +105,7 @@ class LCVectorStoreComponent(Component):
         """Prepares ingest_data by converting DataFrame to Data if needed."""
         ingest_data: list | Data | DataFrame = self.ingest_data
         if not ingest_data:
-            return [ingest_data]
+            return []
 
         if not isinstance(ingest_data, list):
             ingest_data = [ingest_data]
