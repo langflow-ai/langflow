@@ -9,6 +9,7 @@ class AlterMetadataComponent(Component):
     description = "Adds/Removes Metadata Dictionary on inputs"
     icon = "merge"
     name = "AlterMetadata"
+    legacy = True
 
     inputs = [
         HandleInput(
