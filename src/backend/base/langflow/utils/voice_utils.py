@@ -37,7 +37,7 @@ def resample_24k_to_16k(frame_24k_bytes):
 
     # Resample from 24kHz to 16kHz (2/3 ratio)
     # For a 20ms frame, we go from 480 samples to 320 samples
-    frame_16k = resample(frame_24k, int(len(frame_24k) * 2/3))
+    frame_16k = resample(frame_24k, int(len(frame_24k) * 2 / 3))
 
     # Convert back to int16 and then to bytes
     frame_16k = frame_16k.astype(np.int16)
