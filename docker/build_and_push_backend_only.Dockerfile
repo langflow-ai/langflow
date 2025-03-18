@@ -24,6 +24,16 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# Install system dependencies
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install --no-install-recommends -y \
+    build-essential=12.9 \
+    ca-certificates=20230311 \
+    gcc=4:12.2.0-3 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install the project dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
@@ -32,7 +42,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/README.md,target=src/backend/base/README.md \
     --mount=type=bind,source=src/backend/base/uv.lock,target=src/backend/base/uv.lock \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
-    uv sync --frozen --no-install-project --no-editable --extra postgresql
+    cd src/backend/base && uv sync --frozen --no-install-project --no-dev --no-editable --extra postgresql
 
 # Copy only the backend src code into the image
 COPY ./src /app/src
@@ -42,7 +52,7 @@ COPY ./README.md /app/README.md
 
 # Install the project's dependencies in non-editable mode
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable --extra postgresql
+    uv sync --frozen --no-dev --no-editable --extra postgresql
 
 ################################
 # RUNTIME
