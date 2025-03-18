@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import os
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -11,33 +11,36 @@ from langflow.custom.utils import abuild_custom_components
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
-# Cache variables
-all_types_dict_cache = None
-_fully_loaded_components = {}
+# Create a class to manage component cache instead of using globals
+class ComponentCache:
+    def __init__(self):
+        self.all_types_dict: dict[str, Any] | None = None
+        self.fully_loaded_components: dict[str, bool] = {}
+
+# Singleton instance
+component_cache = ComponentCache()
 
 
 async def get_and_cache_all_types_dict(
     settings_service: SettingsService,
 ):
     """Get and cache the types dictionary, with partial loading support."""
-    global all_types_dict_cache
-
-    if all_types_dict_cache is None:
+    if component_cache.all_types_dict is None:
         logger.debug("Building langchain types dict")
 
         if settings_service.settings.lazy_load_components:
             # Partial loading mode - just load component metadata
             logger.debug("Using partial component loading")
-            all_types_dict_cache = await aget_component_metadata(settings_service.settings.components_path)
+            component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
         else:
             # Traditional full loading
-            all_types_dict_cache = await aget_all_types_dict(settings_service.settings.components_path)
+            component_cache.all_types_dict = await aget_all_types_dict(settings_service.settings.components_path)
 
         # Log loading stats
-        component_count = sum(len(comps) for comps in all_types_dict_cache.get("components", {}).values())
+        component_count = sum(len(comps) for comps in component_cache.all_types_dict.get("components", {}).values())
         logger.debug(f"Loaded {component_count} components")
 
-    return all_types_dict_cache
+    return component_cache.all_types_dict
 
 
 async def aget_all_types_dict(components_paths: list[str]):
@@ -78,17 +81,17 @@ async def aget_component_metadata(components_paths: list[str]):
 
 async def discover_component_types(components_paths: list[str]) -> list[str]:
     """Discover available component types by scanning directories."""
-    component_types = set()
+    component_types: set[str] = set()
 
     for path in components_paths:
-        if not os.path.exists(path):
+        path_obj = Path(path)
+        if not path_obj.exists():
             continue
 
-        for item in os.listdir(path):
-            item_path = os.path.join(path, item)
+        for item in path_obj.iterdir():
             # Only include directories that don't start with _ or .
-            if os.path.isdir(item_path) and not item.startswith(("_", ".")):
-                component_types.add(item)
+            if item.is_dir() and not item.name.startswith(("_", ".")):
+                component_types.add(item.name)
 
     # Add known types that might not be in directories
     standard_types = {
@@ -117,16 +120,16 @@ async def discover_component_types(components_paths: list[str]) -> list[str]:
 
 async def discover_component_names(component_type: str, components_paths: list[str]) -> list[str]:
     """Discover component names for a specific type by scanning directories."""
-    component_names = set()
+    component_names: set[str] = set()
 
     for path in components_paths:
-        type_dir = os.path.join(path, component_type)
+        type_dir = Path(path) / component_type
 
-        if os.path.exists(type_dir):
-            for filename in os.listdir(type_dir):
+        if type_dir.exists():
+            for filename in type_dir.iterdir():
                 # Get Python files that don't start with __
-                if filename.endswith(".py") and not filename.startswith("__"):
-                    component_name = filename[:-3]  # Remove .py extension
+                if filename.name.endswith(".py") and not filename.name.startswith("__"):
+                    component_name = filename.name[:-3]  # Remove .py extension
                     component_names.add(component_name)
 
     return sorted(component_names)
@@ -154,8 +157,8 @@ async def get_component_minimal_metadata(component_type: str, component_name: st
     # Try to find the file to verify it exists
     component_path = None
     for path in components_paths:
-        candidate_path = os.path.join(path, component_type, f"{component_name}.py")
-        if os.path.exists(candidate_path):
+        candidate_path = Path(path) / component_type / f"{component_name}.py"
+        if candidate_path.exists():
             component_path = candidate_path
             break
 
@@ -167,21 +170,20 @@ async def get_component_minimal_metadata(component_type: str, component_name: st
 
 async def ensure_component_loaded(component_type: str, component_name: str, settings_service: SettingsService):
     """Ensure a component is fully loaded if it was only partially loaded."""
-    global all_types_dict_cache, _fully_loaded_components
-
     # If already fully loaded, return immediately
     component_key = f"{component_type}:{component_name}"
-    if component_key in _fully_loaded_components:
+    if component_key in component_cache.fully_loaded_components:
         return
 
     # If we don't have a cache or the component doesn't exist in the cache, nothing to do
-    if not all_types_dict_cache or not all_types_dict_cache.get("components", {}).get(component_type, {}).get(
-        component_name
-    ):
+    if (not component_cache.all_types_dict or
+        "components" not in component_cache.all_types_dict or
+        component_type not in component_cache.all_types_dict["components"] or
+        component_name not in component_cache.all_types_dict["components"][component_type]):
         return
 
     # Check if component is marked for lazy loading
-    if all_types_dict_cache["components"][component_type][component_name].get("lazy_loaded", False):
+    if component_cache.all_types_dict["components"][component_type][component_name].get("lazy_loaded", False):
         logger.debug(f"Fully loading component {component_type}:{component_name}")
 
         # Load just this specific component
@@ -191,13 +193,13 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
 
         if full_component:
             # Replace the stub with the fully loaded component
-            all_types_dict_cache["components"][component_type][component_name] = full_component
+            component_cache.all_types_dict["components"][component_type][component_name] = full_component
             # Remove lazy_loaded flag if it exists
-            if "lazy_loaded" in all_types_dict_cache["components"][component_type][component_name]:
-                del all_types_dict_cache["components"][component_type][component_name]["lazy_loaded"]
+            if "lazy_loaded" in component_cache.all_types_dict["components"][component_type][component_name]:
+                del component_cache.all_types_dict["components"][component_type][component_name]["lazy_loaded"]
 
             # Mark as fully loaded
-            _fully_loaded_components[component_key] = True
+            component_cache.fully_loaded_components[component_key] = True
             logger.debug(f"Component {component_type}:{component_name} fully loaded")
         else:
             logger.warning(f"Failed to fully load component {component_type}:{component_name}")
@@ -219,8 +221,6 @@ async def load_single_component(component_type: str, component_name: str, compon
 # Also add a utility function to load specific component types
 async def get_type_dict(component_type: str, settings_service: SettingsService | None = None):
     """Get a specific component type dictionary, loading if needed."""
-    global all_types_dict_cache
-
     if settings_service is None:
         # Import here to avoid circular imports
         from langflow.services.deps import get_settings_service
@@ -228,19 +228,20 @@ async def get_type_dict(component_type: str, settings_service: SettingsService |
         settings_service = get_settings_service()
 
     # Make sure all_types_dict is loaded (at least partially)
-    if all_types_dict_cache is None:
+    if component_cache.all_types_dict is None:
         await get_and_cache_all_types_dict(settings_service)
 
-    # Add null checks before accessing properties
-    if all_types_dict_cache and "components" in all_types_dict_cache:
-        # If the component type exists in the cache, return it
-        if component_type in all_types_dict_cache["components"]:
-            # If in lazy mode, ensure all components of this type are fully loaded
-            if settings_service.settings.lazy_load_components:
-                for component_name in list(all_types_dict_cache["components"][component_type].keys()):
-                    await ensure_component_loaded(component_type, component_name, settings_service)
+    # Check if component type exists in the cache
+    if (component_cache.all_types_dict and
+        "components" in component_cache.all_types_dict and
+        component_type in component_cache.all_types_dict["components"]):
 
-            return all_types_dict_cache["components"][component_type]
+        # If in lazy mode, ensure all components of this type are fully loaded
+        if settings_service.settings.lazy_load_components:
+            for component_name in list(component_cache.all_types_dict["components"][component_type].keys()):
+                await ensure_component_loaded(component_type, component_name, settings_service)
+
+        return component_cache.all_types_dict["components"][component_type]
 
     return {}
 
@@ -267,7 +268,10 @@ async def aget_all_components(components_paths, *, as_dict=False):
 
 def get_all_components(components_paths, *, as_dict=False):
     """Get all components names combining native and custom components."""
-    all_types_dict = get_all_types_dict(components_paths)
+    # Import here to avoid circular imports
+    from langflow.custom.utils import build_custom_components
+
+    all_types_dict = build_custom_components(components_paths=components_paths)
     components = [] if not as_dict else {}
     for category in all_types_dict.values():
         for component in category.values():

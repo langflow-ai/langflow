@@ -1,5 +1,6 @@
 import asyncio
 import base64
+from pathlib import Path
 
 import numpy as np
 from scipy.signal import resample
@@ -61,7 +62,13 @@ async def write_audio_to_file(audio_base64: str, filename: str = "output_audio.r
     try:
         audio_bytes = base64.b64decode(audio_base64)
         # Use asyncio.to_thread to perform file I/O without blocking the event loop
-        await asyncio.to_thread(lambda: open(filename, "ab").write(audio_bytes))
+        await asyncio.to_thread(_write_bytes_to_file, audio_bytes, filename)
         logger.info(f"Wrote {len(audio_bytes)} bytes to {filename}")
-    except Exception as e:
+    except (OSError, base64.binascii.Error) as e:
         logger.error(f"Error writing audio to file: {e}")
+
+
+def _write_bytes_to_file(data: bytes, filename: str) -> None:
+    """Helper function to write bytes to a file using a context manager."""
+    with Path(filename).open("ab") as f:
+        f.write(data)
