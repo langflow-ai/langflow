@@ -403,14 +403,15 @@ const SettingsVoiceModal = ({
                       handleSetVoice={handleSetVoice}
                       allVoices={allVoices}
                     />
-
-                    <MicrophoneSelect
-                      selectedMicrophone={selectedMicrophone}
-                      handleSetMicrophone={handleSetMicrophone}
-                      microphones={microphones}
-                      setMicrophones={setMicrophones}
-                      setSelectedMicrophone={setSelectedMicrophone}
-                    />
+                    {microphones?.length > 0 && (
+                      <MicrophoneSelect
+                        selectedMicrophone={selectedMicrophone}
+                        handleSetMicrophone={handleSetMicrophone}
+                        microphones={microphones}
+                        setMicrophones={setMicrophones}
+                        setSelectedMicrophone={setSelectedMicrophone}
+                      />
+                    )}
 
                     <LanguageSelect
                       language={currentLanguage}

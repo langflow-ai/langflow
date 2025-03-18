@@ -18,7 +18,7 @@ export const useStartRecording = async (
     const preferredLanguage =
       localStorage.getItem("lf_preferred_language") || "en-US";
 
-    const stream = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator?.mediaDevices?.getUserMedia({
       audio: {
         noiseSuppression: true,
         echoCancellation: true,
@@ -32,8 +32,8 @@ export const useStartRecording = async (
     if (!audioContextRef.current) return;
 
     microphoneRef.current =
-      audioContextRef.current.createMediaStreamSource(stream);
-    analyserRef.current = audioContextRef.current.createAnalyser();
+      audioContextRef?.current?.createMediaStreamSource(stream);
+    analyserRef.current = audioContextRef?.current?.createAnalyser();
     analyserRef.current.fftSize = 2048;
     microphoneRef.current.connect(analyserRef.current);
 

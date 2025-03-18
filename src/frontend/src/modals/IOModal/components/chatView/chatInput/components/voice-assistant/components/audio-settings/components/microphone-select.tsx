@@ -28,10 +28,10 @@ const MicrophoneSelect = ({
   useEffect(() => {
     const getMicrophones = async () => {
       try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        await navigator?.mediaDevices?.getUserMedia({ audio: true });
 
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioInputDevices = devices.filter(
+        const devices = await navigator?.mediaDevices?.enumerateDevices();
+        const audioInputDevices = devices?.filter(
           (device) => device.kind === "audioinput",
         );
         setMicrophones(audioInputDevices);
@@ -58,10 +58,10 @@ const MicrophoneSelect = ({
 
     getMicrophones();
 
-    navigator.mediaDevices.addEventListener("devicechange", getMicrophones);
+    navigator?.mediaDevices?.addEventListener("devicechange", getMicrophones);
 
     return () => {
-      navigator.mediaDevices.removeEventListener(
+      navigator?.mediaDevices?.removeEventListener(
         "devicechange",
         getMicrophones,
       );
@@ -92,7 +92,7 @@ const MicrophoneSelect = ({
         </SelectTrigger>
         <SelectContent className="max-h-[200px]">
           <SelectGroup>
-            {microphones.map((device) => (
+            {microphones?.map((device) => (
               <SelectItem key={device.deviceId} value={device.deviceId}>
                 <div className="max-w-[220px] truncate text-left">
                   {device.label ||
@@ -100,7 +100,7 @@ const MicrophoneSelect = ({
                 </div>
               </SelectItem>
             ))}
-            {microphones.length === 0 && (
+            {microphones?.length === 0 && (
               <SelectItem value="no-microphones" disabled>
                 No microphones found
               </SelectItem>
