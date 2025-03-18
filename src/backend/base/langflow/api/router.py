@@ -8,6 +8,7 @@ from langflow.api.v1 import (
     files_router,
     flows_router,
     folders_router,
+    keycloak_router,
     login_router,
     monitor_router,
     starter_projects_router,
@@ -34,6 +35,7 @@ router.include_router(flows_router)
 router.include_router(users_router)
 router.include_router(api_key_router)
 router.include_router(login_router)
+router.include_router(keycloak_router)
 router.include_router(variables_router)
 router.include_router(files_router)
 router.include_router(monitor_router)

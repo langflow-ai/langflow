@@ -119,7 +119,7 @@
   },
   "proxy": "http://127.0.0.1:7860",
   "devDependencies": {
-    "@playwright/test": "^1.44.1",
+    "@playwright/test": "^1.51.0",
     "@swc/cli": "^0.5.2",
     "@swc/core": "^1.6.1",
     "@tailwindcss/typography": "^0.5.13",

@@ -68,15 +68,15 @@ export default defineConfig({
     //     },
     //   },
     // },
-    // {
-    //   name: "safari",
-    //   use: {
-    //     ...devices["Desktop Safari"],
-    //     launchOptions: {
-    //       // headless: false,
-    //     },
-    //   },
-    // },
+    {
+      name: "safari",
+      use: {
+        ...devices["Desktop Safari"],
+        launchOptions: {
+          // headless: false,
+        },
+      },
+    },
     // {
     //   name: "arc",
     //   use: {
@@ -107,7 +107,16 @@ export default defineConfig({
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
-        LANGFLOW_AUTO_LOGIN: "true",
+        LANGFLOW_AUTO_LOGIN: "false",
+        LANGFLOW_KEYCLOAK_ENABLED: "true",
+        LANGFLOW_KEYCLOAK_SERVER_URL: "https://login.kubert.tekstackapps.com",
+        LANGFLOW_KEYCLOAK_REALM: "ops",
+        LANGFLOW_KEYCLOAK_CLIENT_ID: "langflow",
+        LANGFLOW_KEYCLOAK_CLIENT_SECRET: "2WfsYTjXsOpuJbDA2UTnvTWfuyBSPdXS",
+        LANGFLOW_KEYCLOAK_REDIRECT_URI: "http://localhost:3000/keycloak/callback",
+        LANGFLOW_KEYCLOAK_ADMIN_ROLE: "kubert-langflow-admin",
+        LANGFLOW_KEYCLOAK_FORCE_SSO: "true",
+        LANGFLOW_LOG_LEVEL:"debug"
       },
       stdout: "ignore",
 

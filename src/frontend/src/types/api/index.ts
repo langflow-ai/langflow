@@ -166,6 +166,9 @@ export type Users = {
   profile_image: string;
   create_at: Date;
   updated_at: Date;
+  is_keycloak_user?: boolean;
+  is_deleted?: boolean;
+  deleted_at?: Date;
 };
 
 export type Component = {

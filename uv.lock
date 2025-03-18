@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -221,7 +222,7 @@ wheels = [
 
 [[package]]
 name = "anthropic"
-version = "0.46.0"
+version = "0.49.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -232,9 +233,9 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/68/3b4c045edf6dc6933895e8f279cc77c7684874c8aba46a4e6241c8b147cf/anthropic-0.46.0.tar.gz", hash = "sha256:eac3d43271d02321a57c3ca68aca84c3d58873e8e72d1433288adee2d46b745b", size = 202191 }
+sdist = { url = "https://files.pythonhosted.org/packages/86/e3/a88c8494ce4d1a88252b9e053607e885f9b14d0a32273d47b727cbee4228/anthropic-0.49.0.tar.gz", hash = "sha256:c09e885b0f674b9119b4f296d8508907f6cff0009bc20d5cf6b35936c40b4398", size = 210016 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/6f/346beae0375df5f6907230bc63d557ef5d7659be49250ac5931a758322ae/anthropic-0.46.0-py3-none-any.whl", hash = "sha256:1445ec9be78d2de7ea51b4d5acd3574e414aea97ef903d0ecbb57bec806aaa49", size = 223228 },
+    { url = "https://files.pythonhosted.org/packages/76/74/5d90ad14d55fbe3f9c474fdcb6e34b4bed99e3be8efac98734a5ddce88c1/anthropic-0.49.0-py3-none-any.whl", hash = "sha256:bbc17ad4e7094988d2fa86b87753ded8dce12498f4b85fe5810f208f454a8375", size = 243368 },
 ]
 
 [[package]]
@@ -441,6 +442,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-property"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a7/12/900eb34b3af75c11b69d6b78b74ec0fd1ba489376eceb3785f787d1a0a1d/async_property-0.2.2.tar.gz", hash = "sha256:17d9bd6ca67e27915a75d92549df64b5c7174e9dc806b30a3934dc4ff0506380", size = 16523 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/80/9f608d13b4b3afcebd1dd13baf9551c95fc424d6390e4b1cfd7b1810cd06/async_property-0.2.2-py2.py3-none-any.whl", hash = "sha256:8924d792b5843994537f8ed411165700b27b2bd966cefc4daeefc1253442a9d7", size = 9546 },
+]
+
+[[package]]
 name = "async-timeout"
 version = "4.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -642,14 +652,14 @@ wheels = [
 
 [[package]]
 name = "blockbuster"
-version = "1.5.21"
+version = "1.5.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "forbiddenfruit" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/02/b6c2b76aae6ce9bbd88e1018e7848c311dc2fa8fc65ffb06c7d585050944/blockbuster-1.5.21.tar.gz", hash = "sha256:ddc533e383e8120925d686d2322216c98ea3bcbb58324afd9f870c9684d6ef97", size = 51187 }
+sdist = { url = "https://files.pythonhosted.org/packages/07/cd/19a5c7cef4ded0d5cab07c3df2195d8f599c33e7c18a362ce059d87ea79a/blockbuster-1.5.23.tar.gz", hash = "sha256:ede6302307e700a60518c99caccfea159485382648e0158131e3506d4ff7b49c", size = 51198 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/5a/5fc4906d7e4466343c8cf4d2348ae01b277f8479136c0f47acd92dbe56a1/blockbuster-1.5.21-py3-none-any.whl", hash = "sha256:71059f331f1c22237ebf0501d9de52e97f21cb682b4cca4a93cf966701480a34", size = 13179 },
+    { url = "https://files.pythonhosted.org/packages/35/5f/7991d1f3b8d91eddabf883bc52f88f7d8c8f556be0d50ee8b0fa078be8a9/blockbuster-1.5.23-py3-none-any.whl", hash = "sha256:cf4d9df51d0ba5ac9b0f14594a456e42b7a49dcc35819c6b36805ac285b1f6fe", size = 13199 },
 ]
 
 [[package]]
@@ -3788,6 +3798,19 @@ wheels = [
 ]
 
 [[package]]
+name = "jwcrypto"
+version = "1.5.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/db/870e5d5fb311b0bcf049630b5ba3abca2d339fd5e13ba175b4c13b456d08/jwcrypto-1.5.6.tar.gz", hash = "sha256:771a87762a0c081ae6166958a954f80848820b2ab066937dc8b8379d65b1b039", size = 87168 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/58/4a1880ea64032185e9ae9f63940c9327c6952d5584ea544a8f66972f2fda/jwcrypto-1.5.6-py3-none-any.whl", hash = "sha256:150d2b0ebbdb8f40b77f543fb44ffd2baeff48788be71f67f03566692fd55789", size = 92520 },
+]
+
+[[package]]
 name = "kombu"
 version = "5.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3847,17 +3870,16 @@ wheels = [
 
 [[package]]
 name = "langchain-anthropic"
-version = "0.3.0"
+version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anthropic" },
-    { name = "defusedxml" },
     { name = "langchain-core" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/b4/5b54844307decc73416be757dbeba1e4cd62e0cd7e9d6e1b7e30eb17ab4d/langchain_anthropic-0.3.0.tar.gz", hash = "sha256:f9b5cbdbf2d5b3432f78f056e474efb10a2c1e37f9a471d3aceb50a0d9f945df", size = 20619 }
+sdist = { url = "https://files.pythonhosted.org/packages/be/0a/7ccb79c41575b04266fc4def50f41d0a4689361421d82a14350d9d5e783e/langchain_anthropic-0.3.9.tar.gz", hash = "sha256:e8012d7986ad1d8412df6914c56f3c0d2797f231766a03bb1ad22cc7023e6e1d", size = 42205 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/bb/8f1cb2c5ab344484cbecd1009c84ed70cd7d8a1df58196b5a35bb7fb4da1/langchain_anthropic-0.3.0-py3-none-any.whl", hash = "sha256:96b74a9adfcc092cc2ae137d4189ca50e8f5ad9635618024f7c98d8f9fc1076a", size = 22152 },
+    { url = "https://files.pythonhosted.org/packages/b9/27/258565b4a487fca7db363ea95765e6f1f00c23baa83dc4ec19a009213658/langchain_anthropic-0.3.9-py3-none-any.whl", hash = "sha256:adbbfaf3ce9798d46fb43d6fc01105630238f375dc6043d35d0aafab61fdbb71", size = 24414 },
 ]
 
 [[package]]
@@ -3946,7 +3968,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "0.3.37"
+version = "0.3.43"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -3957,9 +3979,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/86/1d/692541c2ff9d8d7c847638f1244bddbb773c984fbfbe1728ad5f100222b7/langchain_core-0.3.37.tar.gz", hash = "sha256:cda8786e616caa2f68f7cc9e811b9b50e3b63fb2094333318b348e5961a7ea01", size = 527209 }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/18/26255368f56d2749709fc2884c521d64471f32118ce09dfc677e0596be20/langchain_core-0.3.43.tar.gz", hash = "sha256:bec60f4f5665b536434ff747b8f23375a812e82cfa529f519b54cc1e7a94a875", size = 529403 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/f5/9ce2a94bc49b64c0bf53b17524d5fc5c926070e911b11d489979d47d5491/langchain_core-0.3.37-py3-none-any.whl", hash = "sha256:8202fd6506ce139a3a1b1c4c3006216b1c7fffa40bdd1779f7d2c67f75eb5f79", size = 413717 },
+    { url = "https://files.pythonhosted.org/packages/20/0e/ddf9f5dc46b178df5c101666bb3bc7fc526d68cd81cdd60cbe1b6b438b30/langchain_core-0.3.43-py3-none-any.whl", hash = "sha256:caa6bc1f4c6ab71d3c2e400f8b62e1cd6dc5ac2c37e03f12f3e2c60befd5b273", size = 415421 },
 ]
 
 [[package]]
@@ -4313,6 +4335,7 @@ dependencies = [
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
     { name = "pymongo" },
+    { name = "python-keycloak" },
     { name = "pytube" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "qdrant-client" },
@@ -4445,7 +4468,7 @@ requires-dist = [
     { name = "json-repair", specifier = "==0.30.3" },
     { name = "kubernetes", specifier = "==31.0.0" },
     { name = "langchain", specifier = "==0.3.10" },
-    { name = "langchain-anthropic", specifier = "==0.3.0" },
+    { name = "langchain-anthropic", specifier = "==0.3.9" },
     { name = "langchain-astradb", specifier = "==0.5.2" },
     { name = "langchain-aws", specifier = "==0.2.7" },
     { name = "langchain-chroma", specifier = "==0.1.4" },
@@ -4493,6 +4516,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = "==2.4.0" },
     { name = "pymilvus", extras = ["bulk-writer", "model"], marker = "extra == 'nv-ingest'", specifier = "==2.5.0" },
     { name = "pymongo", specifier = "==4.10.1" },
+    { name = "python-keycloak", specifier = ">=5.3.1" },
     { name = "python-pptx", marker = "extra == 'nv-ingest'", specifier = "==0.6.23" },
     { name = "pytube", specifier = "==15.0.0" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
@@ -4519,11 +4543,12 @@ requires-dist = [
     { name = "youtube-transcript-api", specifier = "==0.6.3" },
     { name = "zep-python", specifier = "==2.0.2" },
 ]
+provides-extras = ["deploy", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.20,<1.6" },
+    { name = "blockbuster", specifier = ">=1.5.23,<1.6" },
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
     { name = "httpx", specifier = ">=0.27.0" },
@@ -4777,6 +4802,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "validators", specifier = ">=0.34.0" },
 ]
+provides-extras = ["postgresql", "deploy", "local", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -7735,6 +7761,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8e/a0/c49687cf40cb6128ea4e0559855aff92cd5ebd1a60a31c08526818c0e51e/python-jose-3.4.0.tar.gz", hash = "sha256:9a9a40f418ced8ecaf7e3b28d69887ceaa76adad3bcaa6dae0d9e596fec1d680", size = 92145 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/63/b0/2586ea6b6fd57a994ece0b56418cbe93fff0efb85e2c9eb6b0caf24a4e37/python_jose-3.4.0-py2.py3-none-any.whl", hash = "sha256:9c9f616819652d109bd889ecd1e15e9a162b9b94d682534c9c2146092945b78f", size = 34616 },
+]
+
+[[package]]
+name = "python-keycloak"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiofiles" },
+    { name = "async-property" },
+    { name = "deprecation" },
+    { name = "httpx" },
+    { name = "jwcrypto" },
+    { name = "requests" },
+    { name = "requests-toolbelt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a5/c6/31e37ad279444cbe6631b264808d22cacc15f03cfd222666c8b1c06092af/python_keycloak-5.3.1.tar.gz", hash = "sha256:e4bbdbdddc480d64c6211095d633bea025028eb895aa83ccdc44f90ab70eff28", size = 67379 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/a9/1da758a068b5435c51ad946a8b6e8fc80660354c77d596afe1a0daff1fa9/python_keycloak-5.3.1-py3-none-any.whl", hash = "sha256:d3167d788add29d6cb3fda0629ee0f453fac9f6ee35241938488dbf9ac0635bb", size = 75745 },
 ]
 
 [[package]]

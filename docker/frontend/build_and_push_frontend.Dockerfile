@@ -4,26 +4,53 @@
 ################################
 # BUILDER-BASE
 ################################
+ARG NODE_IMAGE=node:22.14-bookworm-slim
+ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:alpine3.21-perl
 
-# 1. force platform to the current architecture to increase build speed time on multi-platform builds
-FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim AS builder-base
-COPY src/frontend /frontend
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS builder-base
 
-RUN cd /frontend && npm install && npm run build
+# Set the working directory
+WORKDIR /frontend
+
+# Copy package files and install dependencies
+# This creates a separate layer for dependencies that won't change often
+COPY src/frontend/package*.json ./
+RUN npm ci --no-audit --no-fund
+
+# Build the frontend
+COPY src/frontend ./
+RUN npm run build
 
 ################################
 # RUNTIME
 ################################
-FROM nginxinc/nginx-unprivileged:stable-bookworm-perl AS runtime
+FROM ${NGINX_IMAGE} AS runtime
 
-LABEL org.opencontainers.image.title=langflow-frontend
-LABEL org.opencontainers.image.authors=['Langflow']
-LABEL org.opencontainers.image.licenses=MIT
-LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
-LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
+ARG DEFAULT_FRONTEND_PORT=8080
+ENV FRONTEND_PORT=${DEFAULT_FRONTEND_PORT} \
+    DEBUG=false \
+    NGINX_LOG_FORMAT=default \
+    NGINX_CUSTOM_LOG_FORMAT=""
 
-COPY --from=builder-base --chown=nginx /frontend/build /usr/share/nginx/html
-COPY --chown=nginx ./docker/frontend/start-nginx.sh /start-nginx.sh
-COPY --chown=nginx ./docker/frontend/default.conf.template /etc/nginx/conf.d/default.conf.template
+# Add metadata
+LABEL org.opencontainers.image.title=langflow-frontend \
+      org.opencontainers.image.authors=['Langflow'] \
+      org.opencontainers.image.licenses=MIT \
+      org.opencontainers.image.url=https://github.com/langflow-ai/langflow \
+      org.opencontainers.image.source=https://github.com/langflow-ai/langflow
+
+# Copy only the build artifacts from builder stage
+COPY --from=builder-base --chown=nginx:nginx /frontend/build /usr/share/nginx/html
+
+# Copy configuration files
+COPY --chown=nginx:nginx ./docker/frontend/start-nginx.sh /start-nginx.sh
+COPY --chown=nginx:nginx ./docker/frontend/default.conf.template /etc/nginx/conf.d/default.conf.template
+
+# Set execute permission
 RUN chmod +x /start-nginx.sh
+
+# Define the volume for the cache and temp directories
+VOLUME [ "/tmp"]
+
+EXPOSE ${DEFAULT_FRONTEND_PORT}
 ENTRYPOINT ["/start-nginx.sh"]

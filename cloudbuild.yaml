@@ -1,0 +1,53 @@
+steps:
+  # Step 1: Build the Frontend Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    id: Build
+    args:
+      [
+        "build",
+        "--build-arg", "NODE_IMAGE=node@sha256:6bba748696297138f802735367bc78fea5cfe3b85019c74d2a930bc6c6b2fac4",
+        "--build-arg", "NGINX_IMAGE=nginx@sha256:cd14fa3c19833c6fed66e07ec98d4d193b0080c19be452b4cdb4e086c929b778",
+        "--build-arg", "DEFAULT_FRONTEND_PORT=8080",
+        "--build-arg", "UID=${_FRONTEND_UID}",
+        "--build-arg", "GID=${_FRONTEND_GID}",
+        "--tag", "${_IMAGE_FRONTEND}:${SHORT_SHA}",
+        "--tag", "${_IMAGE_FRONTEND}:latest",
+        "-f", "build_and_push_frontend.Dockerfile",
+        "."
+      ]
+    dir: "docker/frontend"
+  # Step 2: Push the frontend image with specific SHA tag
+  - name: "gcr.io/cloud-builders/docker"
+    id: Push
+    args: ["push", "${_IMAGE_FRONTEND}:${SHORT_SHA}"]
+  # Step 3: Build the backend Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    id: BuildBase
+    args:
+      [
+        "build",
+        "--build-arg", "BUILDER_BASE_IMAGE=ghcr.io/astral-sh/uv@sha256:031ddbc79275e351a43cbb66f64d8cd314cc78c3878898f4ab4f147b092e8e2d",
+        "--build-arg", "PYTHON_IMAGE=python@sha256:aaa3f8cb64dd64e5f8cb6e58346bdcfa410a108324b0f28f1a7cc5964355b211",
+        "--build-arg", "DEFAULT_BACKEND_PORT=7860",
+        "--build-arg", "DEFAULT_BACKEND_HOST=0.0.0.0",
+        "--build-arg", "UID=${_BACKEND_UID}",
+        "--build-arg", "GID=${_BACKEND_GID}",
+        "--tag", "${_IMAGE_BACKEND}:${SHORT_SHA}",
+        "--tag", "${_IMAGE_BACKEND}:latest",
+        "-f", "docker/build_and_push_backend_only.Dockerfile",
+        "."
+      ]
+    dir: "docker"
+  # Step 4: Push the backend image with specific SHA tag
+  - name: "gcr.io/cloud-builders/docker"
+    id: Push
+    args: ["push", "${_IMAGE_BACKEND}:${SHORT_SHA}"]
+images:
+    - "${_IMAGE_FRONTEND}:${SHORT_SHA}"
+    - "${_IMAGE_FRONTEND}:latest"
+    - "${_IMAGE_BACKEND}:${SHORT_SHA}"
+    - "${_IMAGE_BACKEND}:latest"
+options:
+    logging: CLOUD_LOGGING_ONLY
+    pool:
+        name: projects/tcinc-dev/locations/northamerica-northeast2/workerPools/kubert-pool

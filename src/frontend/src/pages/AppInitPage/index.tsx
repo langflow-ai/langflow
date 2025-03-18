@@ -1,38 +1,30 @@
 import { useGetAutoLogin } from "@/controllers/API/queries/auth";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
-import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
-import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
-import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
-import { useGetTagsQuery } from "@/controllers/API/queries/store";
-import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { useGetVersionQuery } from "@/controllers/API/queries/version";
 import { CustomLoadingPage } from "@/customization/components/custom-loading-page";
 import { useCustomPrimaryLoading } from "@/customization/hooks/use-custom-primary-loading";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { LoadingPage } from "../LoadingPage";
 
 export function AppInitPage() {
   const dark = useDarkStore((state) => state.dark);
   const refreshStars = useDarkStore((state) => state.refreshStars);
   const isLoading = useFlowsManagerStore((state) => state.isLoading);
+  const location = useLocation();
+  const isKeycloakCallback = location.pathname.includes('keycloak/callback');
 
   const { isFetched: isLoaded } = useCustomPrimaryLoading();
 
-  const { isFetched } = useGetAutoLogin({ enabled: isLoaded });
+  // Only enable auto login if we're not in the Keycloak callback flow
+  const { isFetched } = useGetAutoLogin({ 
+    enabled: isLoaded && !isKeycloakCallback 
+  });
+
   useGetVersionQuery({ enabled: isFetched });
   useGetConfig({ enabled: isFetched });
-  const { isFetched: typesLoaded } = useGetTypes({ enabled: isFetched });
-  useGetGlobalVariables({ enabled: typesLoaded });
-  useGetTagsQuery({ enabled: typesLoaded });
-  useGetFoldersQuery({
-    enabled: typesLoaded,
-  });
-  const { isFetched: isExamplesFetched } = useGetBasicExamplesQuery({
-    enabled: typesLoaded,
-  });
 
   useEffect(() => {
     if (isFetched) {
@@ -48,17 +40,20 @@ export function AppInitPage() {
     }
   }, [dark]);
 
+  // Always allow rendering of children when in Keycloak callback
+  const shouldRenderOutlet = isFetched || isKeycloakCallback;
+
   return (
     //need parent component with width and height
     <>
       {isLoaded ? (
-        (isLoading || !isFetched || !isExamplesFetched || !typesLoaded) && (
+        (isLoading || (!shouldRenderOutlet && !isKeycloakCallback)) && (
           <LoadingPage overlay />
         )
       ) : (
         <CustomLoadingPage />
       )}
-      {isFetched && isExamplesFetched && typesLoaded && <Outlet />}
+      {shouldRenderOutlet && <Outlet />}
     </>
   );
 }

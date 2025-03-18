@@ -19,6 +19,8 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
 
+    await page.waitForTimeout(500);
+
     await page.waitForSelector('[data-testid="inputsChat Input"]', {
       timeout: 2000,
     });
