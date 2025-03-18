@@ -30,8 +30,8 @@ from langflow.initial_setup.setup import (
     initialize_super_user_if_needed,
     load_bundles_from_urls,
     load_flows_from_directory,
-    sync_flows_from_fs,
     set_initialized_version,
+    sync_flows_from_fs,
 )
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.interface.utils import setup_llm_caching
