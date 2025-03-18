@@ -25,6 +25,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 # Install system dependencies
+SHELL [ "/bin/bash", "-c" ]
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install --no-install-recommends -y \
