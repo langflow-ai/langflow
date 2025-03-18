@@ -16,14 +16,32 @@ BYTES_PER_24K_FRAME = int(SAMPLE_RATE_24K * FRAME_DURATION_MS / 1000) * BYTES_PE
 BYTES_PER_16K_FRAME = int(VAD_SAMPLE_RATE_16K * FRAME_DURATION_MS / 1000) * BYTES_PER_SAMPLE
 
 
-def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
-    # Convert bytes to NumPy array
-    samples_24k = np.frombuffer(frame_24k_bytes, dtype=np.int16)
-    # Resample from 24kHz -> 16kHz
-    samples_16k = resample(samples_24k, 320)
-    # Convert back to int16
-    samples_16k = np.rint(samples_16k).astype(np.int16)
-    return samples_16k.tobytes()
+def resample_24k_to_16k(frame_24k_bytes):
+    """Resample a 20ms frame from 24kHz to 16kHz.
+
+    Args:
+        frame_24k_bytes: A bytes object containing 20ms of 24kHz audio (960 bytes)
+
+    Returns:
+        A bytes object containing 20ms of 16kHz audio (640 bytes)
+
+    Raises:
+        ValueError: If the input frame is not exactly 960 bytes
+    """
+    if len(frame_24k_bytes) != BYTES_PER_24K_FRAME:
+        msg = f"Expected exactly {BYTES_PER_24K_FRAME} bytes for 24kHz frame, got {len(frame_24k_bytes)}"
+        raise ValueError(msg)
+
+    # Convert bytes to numpy array of int16
+    frame_24k = np.frombuffer(frame_24k_bytes, dtype=np.int16)
+
+    # Resample from 24kHz to 16kHz (2/3 ratio)
+    # For a 20ms frame, we go from 480 samples to 320 samples
+    frame_16k = resample(frame_24k, int(len(frame_24k) * 2/3))
+
+    # Convert back to int16 and then to bytes
+    frame_16k = frame_16k.astype(np.int16)
+    return frame_16k.tobytes()
 
 
 # def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:

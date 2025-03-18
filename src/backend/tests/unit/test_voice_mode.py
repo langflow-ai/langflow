@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -63,24 +62,25 @@ def test_webrtcvad_silence_detection():
 def test_webrtcvad_with_real_data():
     """End-to-end test.
 
-    - Load or generate 24kHz audio
+    - Generate synthetic 24kHz audio
     - Break into 20ms frames
     - Resample to 16k
     - Check how many frames VAD detects as speech.
     This test is approximate, since random audio won't always be "speech."
-    In real usage, you'd store a known test file that has some speech portion.
     """
-    input_file = Path("../data/debug_incoming_24k.raw")
-    output_file = Path("../data/debug_resampled_16k.raw")
+    # Instead of reading from a file, generate synthetic audio
+    # Create 1 second of random audio data at 24kHz
+    num_samples = SAMPLE_RATE_24K  # 1 second
+    rng = np.random.default_rng(seed=42)  # Use a fixed seed for reproducibility
 
-    vad = webrtcvad.Vad(mode=2)
+    # Generate random audio (this won't be detected as speech, but that's fine for testing)
+    raw_data_24k = (rng.random(num_samples) * 32767).astype(np.int16).tobytes()
 
-    with input_file.open("rb") as sample_audio_24k_raw:
-        raw_data_24k = sample_audio_24k_raw.read()
-
-    # We'll chunk into 20ms frames (960 bytes each).
+    # We'll chunk into 20ms frames (960 bytes each)
     frame_size_24k = BYTES_PER_24K_FRAME  # 960
     total_frames = len(raw_data_24k) // frame_size_24k
+
+    vad = webrtcvad.Vad(mode=2)
 
     resampled_all = bytearray()
     speech_count = 0
@@ -94,11 +94,9 @@ def test_webrtcvad_with_real_data():
         if is_speech:
             speech_count += 1
 
-    with output_file.open("wb") as f:
-        f.write(resampled_all)
-    # Just log or assert something about speech_count.
-    # With random data, we can't be sure. For real speech, we'd expect
-    # speech_count to be > 0 for frames containing speech.
-    # We won't do a strict assertion here, but in real tests,
-    # you'd compare the speech_count to an expected ratio.
-    # e.g., assert 0 < speech_count < total_frames
+    # For random noise, we expect very few frames to be detected as speech
+    # We're not making a strict assertion, just verifying the process works
+    assert len(resampled_all) == (total_frames * BYTES_PER_16K_FRAME)
+
+    # Log the speech detection rate
+    speech_count / total_frames if total_frames > 0 else 0
