@@ -2,6 +2,8 @@ steps:
   # Step 1: Build the Frontend Docker image
   - name: "gcr.io/cloud-builders/docker"
     id: BuildFrontendImage
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
       [
         "build",
@@ -10,7 +12,6 @@ steps:
         "--build-arg", "DEFAULT_FRONTEND_PORT=8080",
         "--build-arg", "UID=${_FRONTEND_UID}",
         "--build-arg", "GID=${_FRONTEND_GID}",
-        "--build-arg", "BUILDPLATFORM=linux/amd64",
         "--tag", "${_IMAGE_FRONTEND}:${SHORT_SHA}",
         "--tag", "${_IMAGE_FRONTEND}:latest",
         "-f", "build_and_push_frontend.Dockerfile",
@@ -25,13 +26,12 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     id: BuildBackendImage
     env:
-      - 'BUILDPLATFORM=linux/amd64'
+      - 'DOCKER_BUILDKIT=1'
     args:
       [
         "build",
         "--build-arg", "BUILDER_BASE_IMAGE=ghcr.io/astral-sh/uv@sha256:031ddbc79275e351a43cbb66f64d8cd314cc78c3878898f4ab4f147b092e8e2d",
         "--build-arg", "PYTHON_IMAGE=python@sha256:aaa3f8cb64dd64e5f8cb6e58346bdcfa410a108324b0f28f1a7cc5964355b211",
-        "--build-arg", "BUILDPLATFORM=linux/amd64",
         "--build-arg", "DEFAULT_BACKEND_PORT=7860",
         "--build-arg", "DEFAULT_BACKEND_HOST=0.0.0.0",
         "--build-arg", "UID=${_BACKEND_UID}",
@@ -53,5 +53,7 @@ images:
     - "${_IMAGE_BACKEND}:latest"
 options:
     logging: CLOUD_LOGGING_ONLY
+    env:
+      - DOCKER_CLI_EXPERIMENTAL=enabled
     pool:
         name: projects/tcinc-dev/locations/northamerica-northeast2/workerPools/kubert-pool
