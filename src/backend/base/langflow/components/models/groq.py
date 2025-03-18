@@ -6,7 +6,7 @@ from langflow.base.models.groq_constants import GROQ_MODELS
 from langflow.base.models.model import LCModelComponent
 from langflow.field_typing import LanguageModel
 from langflow.field_typing.range_spec import RangeSpec
-from langflow.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from langflow.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 
 
 class GroqModel(LCModelComponent):
@@ -34,18 +34,13 @@ class GroqModel(LCModelComponent):
             info="The maximum number of tokens to generate.",
             advanced=True,
         ),
-        FloatInput(
-            name="temperature",
-            display_name="Temperature",
-            info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
-            value=0.1,
-        ),
         SliderInput(
             name="temperature",
             display_name="Temperature",
             value=0.1,
             info="Run inference with this temperature. Must by in the closed interval [0.0, 1.0].",
             range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
         ),
         IntInput(
             name="n",

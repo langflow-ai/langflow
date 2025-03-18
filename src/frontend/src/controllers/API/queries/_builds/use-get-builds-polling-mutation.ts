@@ -180,7 +180,11 @@ export const useGetBuildsMutation: useMutationFunctionType<
     ["useGetBuildsMutation"],
     (payload: IGetBuilds) =>
       startPolling(payload) ?? Promise.reject("Failed to start polling"),
-    options,
+    {
+      ...options,
+      retry: 0,
+      retryDelay: 0,
+    },
   );
 
   return mutation;

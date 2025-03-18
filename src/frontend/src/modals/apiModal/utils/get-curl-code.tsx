@@ -68,3 +68,56 @@ export function getCurlWebhookCode({
   -d '{"any": "data"}'
   `.trim();
 }
+
+export function getNewCurlCode({
+  flowId,
+  isAuthenticated,
+  input_value,
+  input_type,
+  output_type,
+  tweaksObject,
+  activeTweaks,
+}: {
+  flowId: string;
+  isAuthenticated: boolean;
+  input_value: string;
+  input_type: string;
+  output_type: string;
+  tweaksObject: any;
+  activeTweaks: boolean;
+}): string {
+  const host = window.location.host;
+  const protocol = window.location.protocol;
+  const apiUrl = `${protocol}//${host}/api/v1/run/${flowId}`;
+
+  const tweaksString =
+    tweaksObject && activeTweaks ? JSON.stringify(tweaksObject, null, 2) : "{}";
+
+  // Construct the payload
+  const payload = {
+    input_value: input_value,
+    output_type: output_type,
+    input_type: input_type,
+    ...(activeTweaks && tweaksObject
+      ? { tweaks: JSON.parse(tweaksString) }
+      : {}),
+  };
+
+  return `${
+    isAuthenticated
+      ? `# Get API key from environment variable
+if [ -z "$LANGFLOW_API_KEY" ]; then
+  echo "Error: LANGFLOW_API_KEY environment variable not found. Please set your API key in the environment variables."
+fi
+`
+      : ""
+  }curl --request POST \\
+  --url '${apiUrl}?stream=false' \\
+  --header 'Content-Type: application/json' \\${
+    isAuthenticated
+      ? `
+  --header "x-api-key: $LANGFLOW_API_KEY" \\`
+      : ""
+  }
+  --data '${JSON.stringify(payload, null, 2)}'`;
+}

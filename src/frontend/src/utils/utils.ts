@@ -469,7 +469,20 @@ export const logHasMessage = (
   if (Array.isArray(outputs) && outputs.length > 0) {
     return outputs.some((outputLog) => outputLog?.message);
   }
-  return outputs?.message;
+  return !!outputs?.message;
+};
+
+export const logFirstMessage = (
+  data: VertexDataTypeAPI,
+  outputName: string | undefined,
+) => {
+  if (!outputName || !data?.outputs) return false;
+  for (const key of Object.keys(data.outputs)) {
+    if (logHasMessage(data, key)) {
+      return key === outputName;
+    }
+  }
+  return false;
 };
 
 export const logTypeIsUnknown = (
@@ -782,3 +795,63 @@ export const stringToBool = (str) => (str === "false" ? false : true);
 export const filterNullOptions = (opts: any[]): any[] => {
   return opts.filter((opt) => opt !== null && opt !== undefined);
 };
+
+/**
+ * Gets a cookie value by its name
+ * @param {string} name - The name of the cookie to retrieve
+ * @returns {string | undefined} The cookie value if found, undefined otherwise
+ */
+export function getCookie(name: string): string | undefined {
+  const cookie = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+
+  if (cookie) {
+    return cookie.split("=")[1];
+  }
+  return undefined;
+}
+
+/**
+ * Interface for cookie options
+ */
+export interface CookieOptions {
+  path?: string;
+  domain?: string;
+  maxAge?: number;
+  expires?: Date;
+  secure?: boolean;
+  sameSite?: "Strict" | "Lax" | "None";
+}
+
+/**
+ * Sets a cookie with the specified name, value, and optional configuration
+ * @param {string} name - The name of the cookie
+ * @param {string} value - The value to store in the cookie
+ * @param {CookieOptions} options - Optional configuration for the cookie
+ */
+export function setCookie(
+  name: string,
+  value: string,
+  options: CookieOptions = {},
+): void {
+  const {
+    path = "/",
+    domain,
+    maxAge,
+    expires,
+    secure = true,
+    sameSite = "Strict",
+  } = options;
+
+  let cookieString = `${name}=${encodeURIComponent(value)}`;
+
+  if (path) cookieString += `; path=${path}`;
+  if (domain) cookieString += `; domain=${domain}`;
+  if (maxAge) cookieString += `; max-age=${maxAge}`;
+  if (expires) cookieString += `; expires=${expires.toUTCString()}`;
+  if (secure) cookieString += "; secure";
+  if (sameSite) cookieString += `; SameSite=${sameSite}`;
+
+  document.cookie = cookieString;
+}

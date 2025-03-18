@@ -44,8 +44,8 @@ const Content: React.FC<ContentProps> = ({
   return (
     <div
       className={cn(
-        `flex w-full flex-grow flex-col transition-all duration-300`,
-        overflowHidden ? "overflow-hidden" : "overflow-visible",
+        `flex flex-1 flex-col rounded-md transition-all duration-300`,
+        overflowHidden ? "overflow-hidden" : "overflow-auto",
         className,
       )}
     >
@@ -73,7 +73,7 @@ const Trigger: React.FC<TriggerProps> = ({
 
 const Header: React.FC<{
   children: ReactNode;
-  description: string | JSX.Element | null;
+  description?: string | JSX.Element | null;
   clampDescription?: number;
 }> = ({
   children,
@@ -85,11 +85,13 @@ const Header: React.FC<{
       <DialogTitle className="line-clamp-1 flex items-center pb-0.5 text-base">
         {children}
       </DialogTitle>
-      <DialogDescription
-        className={`line-clamp-${clampDescription ?? 2} text-sm`}
-      >
-        {description}
-      </DialogDescription>
+      {description && (
+        <DialogDescription
+          className={`line-clamp-${clampDescription ?? 2} text-sm`}
+        >
+          {description}
+        </DialogDescription>
+      )}
     </DialogHeader>
   );
 };
@@ -166,6 +168,7 @@ interface BaseModalProps {
   setOpen?: (open: boolean) => void;
   size?:
     | "x-small"
+    | "retangular"
     | "smaller"
     | "small"
     | "medium"
@@ -176,6 +179,7 @@ interface BaseModalProps {
     | "large-h-full"
     | "templates"
     | "small-h-full"
+    | "medium-small-tall"
     | "medium-h-full"
     | "md-thin"
     | "sm-thin"
@@ -188,6 +192,7 @@ interface BaseModalProps {
   type?: "modal" | "dialog" | "full-screen";
   onSubmit?: () => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  closeButtonClassName?: string;
 }
 function BaseModal({
   className,
@@ -199,6 +204,7 @@ function BaseModal({
   type = "dialog",
   onSubmit,
   onEscapeKeyDown,
+  closeButtonClassName,
 }: BaseModalProps) {
   const headerChild = React.Children.toArray(children).find(
     (child) => (child as React.ReactElement).type === Header,
@@ -232,9 +238,11 @@ function BaseModal({
   const contentClasses = cn(
     minWidth,
     height,
-    "flex flex-col duration-300 overflow-hidden",
+    "flex flex-col flex-1 overflow-hidden max-h-[98dvh]",
     className,
   );
+
+  const formClasses = "flex flex-col flex-1 gap-6 overflow-hidden";
 
   //UPDATE COLORS AND STYLE CLASSSES
   return (
@@ -245,14 +253,18 @@ function BaseModal({
           <ModalContent className={contentClasses}>{modalContent}</ModalContent>
         </Modal>
       ) : type === "full-screen" ? (
-        <div className="min-h-full w-full flex-1">{modalContent}</div>
+        <div className="min-h-full w-full flex-1 overflow-hidden">
+          {modalContent}
+        </div>
       ) : (
         <Dialog open={open} onOpenChange={setOpen}>
           {triggerChild}
           <DialogContent
+            onClick={(e) => e.stopPropagation()}
             onOpenAutoFocus={(event) => event.preventDefault()}
             onEscapeKeyDown={onEscapeKeyDown}
             className={contentClasses}
+            closeButtonClassName={closeButtonClassName}
           >
             {onSubmit ? (
               <Form.Root
@@ -260,7 +272,7 @@ function BaseModal({
                   event.preventDefault();
                   onSubmit();
                 }}
-                className="flex h-full flex-col gap-6"
+                className={formClasses}
               >
                 {modalContent}
               </Form.Root>
