@@ -58,6 +58,7 @@ export default function Dropdown({
   const [openDialog, setOpenDialog] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [filteredOptions, setFilteredOptions] = useState(validOptions);
+  const [filteredMetadata, setFilteredMetadata] = useState(optionsMetaData);
   const [refreshOptions, setRefreshOptions] = useState(false);
   const refButton = useRef<HTMLButtonElement>(null);
 
@@ -94,8 +95,21 @@ export default function Dropdown({
     const value = event.target.value;
     const searchValues = fuse.search(value);
     const filtered = searchValues.map((search) => search.item);
-    if (!filtered.includes(value) && combobox && value) filtered.push(value);
+
+    // Update filteredOptions with the search results
     setFilteredOptions(value ? filtered : validOptions);
+
+    // Update filteredMetadata to match the filtered options
+    if (value && optionsMetaData) {
+      const newMetadata = filtered.map((option) => {
+        const originalIndex = validOptions.indexOf(option);
+        return optionsMetaData[originalIndex];
+      });
+      setFilteredMetadata(newMetadata);
+    } else {
+      setFilteredMetadata(optionsMetaData);
+    }
+
     setCustomValue(value);
   };
 
@@ -313,37 +327,37 @@ export default function Dropdown({
                   data-testid={`${option}-${index}-option`}
                 >
                   <div className="flex w-full items-center gap-2">
-                    {optionsMetaData?.[index]?.icon && (
+                    {filteredMetadata?.[index]?.icon && (
                       <ForwardedIconComponent
-                        name={optionsMetaData?.[index]?.icon || "Unknown"}
+                        name={filteredMetadata?.[index]?.icon || "Unknown"}
                         className="h-4 w-4 shrink-0 text-primary"
                       />
                     )}
                     <div
                       className={cn("flex truncate", {
                         "flex-col":
-                          optionsMetaData && optionsMetaData?.length > 0,
-                        "w-full pl-2": !optionsMetaData?.[index]?.icon,
+                          filteredMetadata && filteredMetadata?.length > 0,
+                        "w-full pl-2": !filteredMetadata?.[index]?.icon,
                       })}
                     >
                       <div className="flex truncate">
                         {option}{" "}
                         <span
                           className={`flex items-center pl-2 text-xs ${getStatusColor(
-                            optionsMetaData?.[index]?.status,
+                            filteredMetadata?.[index]?.status,
                           )}`}
                         >
                           <LoadingTextComponent
-                            text={optionsMetaData?.[
+                            text={filteredMetadata?.[
                               index
                             ]?.status?.toLowerCase()}
                           />
                         </span>
                       </div>
-                      {optionsMetaData && optionsMetaData?.length > 0 ? (
+                      {filteredMetadata && filteredMetadata?.length > 0 ? (
                         <div className="flex w-full items-center text-muted-foreground">
                           {Object.entries(
-                            filterMetadataKeys(optionsMetaData?.[index] || {}),
+                            filterMetadataKeys(filteredMetadata?.[index] || {}),
                           )
                             .filter(
                               ([key, value]) =>
@@ -408,7 +422,7 @@ export default function Dropdown({
       }
     >
       <Command>
-        {filteredOptions?.length > 0 && renderSearchInput()}
+        {options?.length > 0 && renderSearchInput()}
         {renderOptionsList()}
       </Command>
     </PopoverContentDropdown>
