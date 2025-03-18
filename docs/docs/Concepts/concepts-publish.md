@@ -53,7 +53,6 @@ The response content depends on your flow. Make sure the endpoint returns a succ
 </TabItem>
 </Tabs>
 
-
 ### Temporary overrides
 
 The **Temporary overrides** tab displays the available parameters for your flow.
@@ -202,4 +201,6 @@ Props with the type JSON need to be passed as stringified JSONs, with the format
 The **Shareable playground** exposes your Langflow application's **Playground** at the `/public_flow/{flow-id}` endpoint.
 
 You can share this endpoint publicly using a sharing platform like [Ngrok](https://ngrok.com/docs/getting-started/?os=macos) or [zrok](https://docs.zrok.io/docs/getting-started).
+
+If you're using **Datastax Langflow**, you can share the URL with any users within your **Organization**.
 
