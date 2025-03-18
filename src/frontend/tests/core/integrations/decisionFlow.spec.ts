@@ -38,7 +38,7 @@ test(
     await page
       .getByTestId("inputsChat Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await zoomOut(page);
+    await zoomOut(page, 6);
 
     //---------------------------------- CREATE LIST
     await page.getByTestId("sidebar-search-input").click();
@@ -100,13 +100,11 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 350, y: 100 },
       });
-    await zoomOut(page, 1);
     await page
       .getByTestId("processingData to Message")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 50, y: 300 },
       });
-    await zoomOut(page, 2);
 
     //---------------------------------- PASS
     await page.getByTestId("sidebar-search-input").click();
@@ -150,7 +148,6 @@ test(
     await page.waitForSelector('[data-testid="logicPass"]', {
       timeout: 500,
     });
-    zoomOut(page, 2);
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
