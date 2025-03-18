@@ -93,7 +93,6 @@ def test_webrtcvad_with_real_data():
     # Just log or assert something about speech_count.
     # With random data, we can't be sure. For real speech, we'd expect
     # speech_count to be > 0 for frames containing speech.
-    print(f"Detected speech frames: {speech_count} / {total_frames}")
     # We won't do a strict assertion here, but in real tests,
     # you'd compare the speech_count to an expected ratio.
     # e.g., assert 0 < speech_count < total_frames

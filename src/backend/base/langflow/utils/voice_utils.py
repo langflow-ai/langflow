@@ -22,9 +22,8 @@ def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
     samples_16k = resample(samples_24k, 320)
     # Convert back to int16
     samples_16k = np.rint(samples_16k).astype(np.int16)
-    frame_16k_bytes = samples_16k.tobytes()
+    return samples_16k.tobytes()
 
-    return frame_16k_bytes
 
 
 # def resample_24k_to_16k(frame_24k_bytes: bytes) -> bytes:
