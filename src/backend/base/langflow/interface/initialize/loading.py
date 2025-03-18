@@ -116,11 +116,14 @@ async def update_params_with_load_from_db_fields(
 
         try:
             key = await custom_component.get_variables(params[field], field)
-        except ValueError as e:
+        except Exception as e:  # Catch all exceptions
             if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
-                raise
-            logger.debug(str(e))
-            key = None
+                if not fallback_to_env_vars:
+                    raise
+                key = None
+            else:
+                logger.debug(str(e))
+                key = None
 
         if fallback_to_env_vars and key is None:
             key = os.getenv(params[field])
@@ -132,6 +135,8 @@ async def update_params_with_load_from_db_fields(
         params[field] = key if key is not None else None
         if key is None:
             logger.warning(f"Could not get value for {field}. Setting it to None.")
+            if not fallback_to_env_vars:
+                raise ValueError(f"Variable for {field} not found and fallback is disabled.")
 
     return params
 
