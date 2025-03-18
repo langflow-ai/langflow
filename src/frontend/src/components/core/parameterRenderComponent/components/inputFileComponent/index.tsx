@@ -27,6 +27,7 @@ export default function InputFileComponent({
   disabled,
   fileTypes,
   isList,
+  tempFile = false,
   editNode = false,
   id,
 }: InputProps<string, FileComponentType>): JSX.Element {
@@ -196,75 +197,78 @@ export default function InputFileComponent({
     <div className="w-full">
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2.5">
-          {ENABLE_FILE_MANAGEMENT && files ? (
-            <div className="relative flex w-full flex-col gap-2">
-              <div className="flex flex-col">
-                <FilesRendererComponent
-                  files={files.filter((file) =>
-                    selectedFiles.includes(file.path),
-                  )}
-                  handleRemove={(path) => {
-                    const newSelectedFiles = selectedFiles.filter(
-                      (file) => file !== path,
-                    );
+          {ENABLE_FILE_MANAGEMENT && !tempFile ? (
+            files && (
+              <div className="relative flex w-full flex-col gap-2">
+                <div className="flex flex-col">
+                  <FilesRendererComponent
+                    files={files.filter((file) =>
+                      selectedFiles.includes(file.path),
+                    )}
+                    handleRemove={(path) => {
+                      const newSelectedFiles = selectedFiles.filter(
+                        (file) => file !== path,
+                      );
+                      handleOnNewValue({
+                        value: isList
+                          ? newSelectedFiles.map(
+                              (file) =>
+                                files.find((f) => f.path === file)?.name,
+                            )
+                          : (files.find((f) => f.path == newSelectedFiles[0]) ??
+                            ""),
+                        file_path: isList
+                          ? newSelectedFiles
+                          : (newSelectedFiles[0] ?? ""),
+                      });
+                    }}
+                  />
+                </div>
+                <FileManagerModal
+                  files={files}
+                  selectedFiles={selectedFiles}
+                  handleSubmit={(selectedFiles) => {
                     handleOnNewValue({
                       value: isList
-                        ? newSelectedFiles.map(
+                        ? selectedFiles.map(
                             (file) => files.find((f) => f.path === file)?.name,
                           )
-                        : (files.find((f) => f.path == newSelectedFiles[0]) ??
-                          ""),
+                        : (files.find((f) => f.path == selectedFiles[0]) ?? ""),
                       file_path: isList
-                        ? newSelectedFiles
-                        : (newSelectedFiles[0] ?? ""),
+                        ? selectedFiles
+                        : (selectedFiles[0] ?? ""),
                     });
                   }}
-                />
+                  disabled={isDisabled}
+                  types={fileTypes}
+                  isList={isList}
+                >
+                  {(selectedFiles.length === 0 || isList) && (
+                    <Button
+                      disabled={isDisabled}
+                      variant={selectedFiles.length !== 0 ? "ghost" : "default"}
+                      size={selectedFiles.length !== 0 ? "iconMd" : "default"}
+                      className={cn(
+                        selectedFiles.length !== 0 &&
+                          "hit-area-icon absolute -top-8 right-0",
+                        "font-semibold",
+                      )}
+                      data-testid="button_open_file_management"
+                    >
+                      {selectedFiles.length !== 0 ? (
+                        <ForwardedIconComponent
+                          name="Plus"
+                          className="icon-size"
+                          strokeWidth={ICON_STROKE_WIDTH}
+                        />
+                      ) : (
+                        <div>Select file{isList ? "s" : ""}</div>
+                      )}
+                    </Button>
+                  )}
+                </FileManagerModal>
               </div>
-              <FileManagerModal
-                files={files}
-                selectedFiles={selectedFiles}
-                handleSubmit={(selectedFiles) => {
-                  handleOnNewValue({
-                    value: isList
-                      ? selectedFiles.map(
-                          (file) => files.find((f) => f.path === file)?.name,
-                        )
-                      : (files.find((f) => f.path == selectedFiles[0]) ?? ""),
-                    file_path: isList
-                      ? selectedFiles
-                      : (selectedFiles[0] ?? ""),
-                  });
-                }}
-                disabled={isDisabled}
-                types={fileTypes}
-                isList={isList}
-              >
-                {(selectedFiles.length === 0 || isList) && (
-                  <Button
-                    disabled={isDisabled}
-                    variant={selectedFiles.length !== 0 ? "ghost" : "default"}
-                    size={selectedFiles.length !== 0 ? "iconMd" : "default"}
-                    className={cn(
-                      selectedFiles.length !== 0 &&
-                        "hit-area-icon absolute -top-8 right-0",
-                      "font-semibold",
-                    )}
-                    data-testid="button_open_file_management"
-                  >
-                    {selectedFiles.length !== 0 ? (
-                      <ForwardedIconComponent
-                        name="Plus"
-                        className="icon-size"
-                        strokeWidth={ICON_STROKE_WIDTH}
-                      />
-                    ) : (
-                      <div>Select file{isList ? "s" : ""}</div>
-                    )}
-                  </Button>
-                )}
-              </FileManagerModal>
-            </div>
+            )
           ) : (
             <div className="relative flex w-full">
               <div className="w-full">
