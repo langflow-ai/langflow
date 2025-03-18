@@ -53,7 +53,7 @@ This component concatenates two text sources into a single text chunk using a sp
 |message |Message |A [Message](/concepts-objects#message-object) object containing the combined text.
 
 
-## Create data
+## Create Data
 
 :::important
 This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.1.3.

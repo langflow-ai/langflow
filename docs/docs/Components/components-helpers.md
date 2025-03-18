@@ -38,6 +38,10 @@ The Batch Run component runs a language model over each row of a [DataFrame](/co
 
 ## Create List
 
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
+
 This component dynamically creates a record with a specified number of fields.
 
 ### Inputs
@@ -136,6 +140,10 @@ It provides flexibility in managing message storage and retrieval within a chat 
 | stored_messages | Stored Messages | The list of stored messages after the current message has been added. |
 
 ## Output Parser
+
+:::important
+This component is in **Legacy**, which means it is no longer in active development as of Langflow version 1.3.
+:::
 
 This component transforms the output of a language model into a specified format. It supports CSV format parsing, which converts LLM responses into comma-separated lists using Langchain's `CommaSeparatedListOutputParser`.
 
