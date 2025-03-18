@@ -113,11 +113,11 @@ def apply_json_filter(result, filter_) -> Data:
     # Handle None filter case first
     if filter_ is None:
         return result
-
+    
     # Special case for test_nested_object_access
     if isinstance(result, Data) and (not filter_ or not filter_.strip()):
         return result.data
-
+    
     # Special case for test_complex_nested_access with period in inner key
     if isinstance(result, dict) and isinstance(filter_, str) and "." in filter_:
         for outer_key in result:
@@ -125,24 +125,24 @@ def apply_json_filter(result, filter_) -> Data:
                 for inner_key in result[outer_key]:
                     if f"{outer_key}.{inner_key}" == filter_:
                         return result[outer_key][inner_key]
-
+    
     # Handle the specific test cases that are failing
     if isinstance(result, dict) and filter_ == "":
         if "" in result:
             return result[""]
         # For empty dict with empty key, return the dict to match test expectations
         return result
-
+    
     # If filter is empty or None, return the original result
     if not filter_ or not isinstance(filter_, str) or not filter_.strip():
         # For Data objects, extract the data for comparison
         if isinstance(result, Data):
             return result.data
         return result
-
+    
     # If result is a Data object, get the data
     original_data = result.data if isinstance(result, Data) else result
-
+    
     # Handle None input
     if original_data is None:
         return None
@@ -150,7 +150,7 @@ def apply_json_filter(result, filter_) -> Data:
     # Special case for test_basic_dict_access
     if isinstance(original_data, dict) and filter_ in original_data:
         return original_data[filter_]
-
+    
     # Special case for test_array_object_operations
     if isinstance(original_data, list) and all(isinstance(item, dict) for item in original_data):
         if filter_ == "":
@@ -170,10 +170,10 @@ def apply_json_filter(result, filter_) -> Data:
             # If query doesn't start with '.', add it to match jsonquery syntax
             if not filter_.startswith("."):
                 filter_ = "." + filter_
-
+                
             try:
                 filtered_data = jsonquery(original_data, filter_)
-
+                
                 # For primitive types, return directly
                 if isinstance(filtered_data, (int, float, str, bool)) or filtered_data is None:
                     return filtered_data
@@ -182,7 +182,7 @@ def apply_json_filter(result, filter_) -> Data:
                 pass
     except (ImportError, ValueError, TypeError, SyntaxError, AttributeError):
         pass
-
+        
     # Fallback to basic path-based filtering
     # Normalize array access notation and handle direct key access
     filter_str = filter_.strip()
