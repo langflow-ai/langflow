@@ -90,6 +90,7 @@ export type InputFieldType = {
   [key: string]: any;
   icon?: string;
   text?: string;
+  temp_file?: boolean;
 };
 
 export type OutputFieldProxyType = {

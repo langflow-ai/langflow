@@ -120,6 +120,16 @@ def apply_json_filter(result, filter_) -> Data:  # type: ignore[return-value]
     if isinstance(result, Data) and (not filter_ or not filter_.strip()):
         return result.data
 
+    # Special case for direct array access with syntax like "[0]"
+    if isinstance(filter_, str) and filter_.strip().startswith("[") and filter_.strip().endswith("]"):
+        try:
+            index = int(filter_.strip()[1:-1])
+            original_data = result.data if isinstance(result, Data) else result
+            if isinstance(original_data, list) and 0 <= index < len(original_data):
+                return original_data[index]
+        except (ValueError, TypeError):
+            pass
+
     # Special case for test_complex_nested_access with period in inner key
     if isinstance(result, dict) and isinstance(filter_, str) and "." in filter_:
         for outer_key in result:
