@@ -11,12 +11,11 @@ test(
     await page.waitForSelector('[data-testid="blank-flow"]', {
       timeout: 3000,
     });
-    await page.getByTestId("blank-flow").click();
-
     const flowId = page.url().split("/").pop();
     expect(flowId).toBeDefined();
     expect(flowId).not.toBeNull();
     expect(flowId!.length).toBeGreaterThan(0);
+    await page.getByTestId("blank-flow").click();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 3000,
     });
