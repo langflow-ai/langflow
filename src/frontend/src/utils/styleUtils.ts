@@ -1,3 +1,4 @@
+import { GooglecalendarIcon } from "../icons/Googlecalendar";
 import { AIMLIcon } from "@/icons/AIML";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { BWPythonIcon } from "@/icons/BW python";
@@ -559,6 +560,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Googlecalendar", name: "googlecalendar", icon: "Googlecalendar" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   // Add apify
   { display_name: "Apify", name: "apify", icon: "Apify" },
@@ -645,6 +647,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Googlecalendar: GooglecalendarIcon,
   Gmail: GmailIcon,
   LMStudio: LMStudioIcon,
   Notify: Bell,
