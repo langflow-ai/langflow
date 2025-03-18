@@ -48,10 +48,10 @@ except ImportError:
     logger.warning("ElevenLabs package not installed. Voice synthesis features will be limited.")
     ELEVENLABS_AVAILABLE = False
     # Create dummy classes to avoid errors
-    class ElevenLabs:
+    class ElevenLabs: # type: ignore[no-redef]
         pass
     
-    class ApiError(Exception):
+    class ApiError(Exception): # type: ignore[no-redef]
         pass
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
