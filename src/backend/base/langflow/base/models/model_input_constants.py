@@ -91,8 +91,8 @@ def _get_openai_inputs_and_fields():
 
         for input_ in openai_inputs:
             if input_.name == "model":
-                input_.options.append("o3-mini") 
-                input_.value = "gpt-4-turbo"  
+                input_.options.append("o3-mini")
+                input_.value = "gpt-4-turbo"
 
     except ImportError as e:
         msg = "OpenAI is not installed. Please install it with `pip install langchain-openai`."
