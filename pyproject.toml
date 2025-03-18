@@ -115,6 +115,8 @@ dependencies = [
     "apify-client>=1.8.1",
     "pylint>=3.3.4",
     "ruff>=0.9.7",
+    "langchain-graph-retriever==0.6.1",
+    "graph-retriever==0.6.1",
 ]
 
 [dependency-groups]
@@ -158,6 +160,7 @@ dev = [
     "hypothesis>=6.123.17",
     "locust>=2.32.9",
     "pytest-rerunfailures>=15.0",
+    "faker>=37.0.0",
 ]
 
 [tool.uv.sources]
