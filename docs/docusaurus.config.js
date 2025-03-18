@@ -12,7 +12,7 @@ const config = {
     "Langflow is a low-code app builder for RAG and multi-agent AI applications.",
   favicon: "img/favicon.ico",
   url: "https://docs.langflow.org",
-  baseUrl: "/",
+  baseUrl: process.env.BASE_URL ? process.env.BASE_URL : "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   onBrokenAnchors: "warn",
@@ -37,7 +37,7 @@ const config = {
         docs: {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
-          sidebarCollapsed: false,
+          sidebarCollapsed: true,
           beforeDefaultRemarkPlugins: [
             [
               remarkCodeHike,

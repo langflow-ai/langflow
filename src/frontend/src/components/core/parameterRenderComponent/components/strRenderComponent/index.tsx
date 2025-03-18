@@ -1,7 +1,9 @@
 import { InputProps, StrRenderComponentType } from "../../types";
+import CopyFieldAreaComponent from "../copyFieldAreaComponent";
 import DropdownComponent from "../dropdownComponent";
 import InputGlobalComponent from "../inputGlobalComponent";
 import TextAreaComponent from "../textAreaComponent";
+import WebhookFieldComponent from "../webhookFieldComponent";
 
 export function StrRenderComponent({
   templateData,
@@ -10,25 +12,43 @@ export function StrRenderComponent({
   placeholder,
   ...baseInputProps
 }: InputProps<string, StrRenderComponentType>) {
-  const { handleOnNewValue, id, isToolMode } = baseInputProps;
+  const { handleOnNewValue, id, isToolMode, nodeInformationMetadata } =
+    baseInputProps;
 
-  if (!templateData.options) {
-    return templateData.multiline ? (
-      <TextAreaComponent
-        {...baseInputProps}
-        // password={templateData.password}
-        updateVisibility={() => {
-          if (templateData.password !== undefined) {
-            handleOnNewValue(
-              { password: !templateData.password },
-              { skipSnapshot: true },
-            );
-          }
-        }}
-        id={`textarea_${id}`}
-        isToolMode={isToolMode}
-      />
-    ) : (
+  const noOptions = !templateData.options;
+  const isMultiline = templateData.multiline;
+  const copyField = templateData.copy_field;
+  const hasOptions = !!templateData.options;
+  const isWebhook = nodeInformationMetadata?.nodeType === "webhook";
+
+  if (noOptions) {
+    if (isMultiline) {
+      if (isWebhook) {
+        return <WebhookFieldComponent {...baseInputProps} />;
+      }
+
+      if (copyField) {
+        return <CopyFieldAreaComponent {...baseInputProps} />;
+      }
+
+      return (
+        <TextAreaComponent
+          {...baseInputProps}
+          updateVisibility={() => {
+            if (templateData.password !== undefined) {
+              handleOnNewValue(
+                { password: !templateData.password },
+                { skipSnapshot: true },
+              );
+            }
+          }}
+          id={`textarea_${id}`}
+          isToolMode={isToolMode}
+        />
+      );
+    }
+
+    return (
       <InputGlobalComponent
         {...baseInputProps}
         password={templateData.password}
@@ -41,7 +61,7 @@ export function StrRenderComponent({
     );
   }
 
-  if (!!templateData.options) {
+  if (hasOptions) {
     return (
       <DropdownComponent
         {...baseInputProps}

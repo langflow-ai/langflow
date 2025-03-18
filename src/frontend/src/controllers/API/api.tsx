@@ -1,4 +1,4 @@
-import { LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
+import { IS_AUTO_LOGIN, LANGFLOW_ACCESS_TOKEN } from "@/constants/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -46,9 +46,12 @@ function ApiInterceptor() {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        for (const [key, value] of Object.entries(customHeaders)) {
-          config.headers[key] = value;
+        if (!isExternalURL(url)) {
+          for (const [key, value] of Object.entries(customHeaders)) {
+            config.headers[key] = value;
+          }
         }
+
         return [url, config];
       },
     });
@@ -62,9 +65,12 @@ function ApiInterceptor() {
         const isAuthenticationError =
           error?.response?.status === 403 || error?.response?.status === 401;
 
-        if (isAuthenticationError) {
+        if (isAuthenticationError && !IS_AUTO_LOGIN) {
           if (autoLogin !== undefined && !autoLogin) {
-            if (error?.config?.url?.includes("github")) {
+            if (
+              error?.config?.url?.includes("github") ||
+              error?.config?.url?.includes("public")
+            ) {
               return Promise.reject(error);
             }
             const stillRefresh = checkErrorCount();
@@ -111,6 +117,23 @@ function ApiInterceptor() {
         return isDomainAllowed || isEndpointAllowed;
       } catch (e) {
         // Invalid URL
+        return false;
+      }
+    };
+
+    // Check for external url which we don't want to add custom headers to
+    const isExternalURL = (url: string): boolean => {
+      const EXTERNAL_DOMAINS = [
+        "https://raw.githubusercontent.com",
+        "https://api.github.com",
+        "https://api.segment.io",
+        "https://cdn.sprig.com",
+      ];
+
+      try {
+        const parsedURL = new URL(url);
+        return EXTERNAL_DOMAINS.some((domain) => parsedURL.origin === domain);
+      } catch (e) {
         return false;
       }
     };
@@ -237,6 +260,7 @@ export type StreamingRequestParams = {
   body?: object;
   onError?: (statusCode: number) => void;
   onNetworkError?: (error: Error) => void;
+  buildController: AbortController;
 };
 
 async function performStreamingRequest({
@@ -246,18 +270,18 @@ async function performStreamingRequest({
   body,
   onError,
   onNetworkError,
+  buildController,
 }: StreamingRequestParams) {
   let headers = {
     "Content-Type": "application/json",
     // this flag is fundamental to ensure server stops tasks when client disconnects
     Connection: "close",
   };
-  const controller = new AbortController();
-  useFlowStore.getState().setBuildController(controller);
+
   const params = {
     method: method,
     headers: headers,
-    signal: controller.signal,
+    signal: buildController.signal,
   };
   if (body) {
     params["body"] = JSON.stringify(body);
@@ -298,7 +322,7 @@ async function performStreamingRequest({
           }
           const shouldContinue = await onData(data);
           if (!shouldContinue) {
-            controller.abort();
+            buildController.abort();
             return;
           }
         } else {

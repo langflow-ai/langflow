@@ -1,11 +1,10 @@
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import ChainLogo from "@/assets/logo.svg?react";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
-import { ENABLE_NEW_LOGO } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { v5 as uuidv5 } from "uuid";
 import useTabVisibility from "../../../../shared/hooks/use-tab-visibility";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -33,10 +32,15 @@ export default function ChatView({
   visibleSession,
   focusChat,
   closeChat,
+  playgroundPage,
 }: chatViewProps): JSX.Element {
   const flowPool = useFlowStore((state) => state.flowPool);
   const inputs = useFlowStore((state) => state.inputs);
-  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const clientId = useUtilityStore((state) => state.clientId);
+  let realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowId = playgroundPage
+    ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
+    : realFlowId;
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessageType[] | undefined>(
     undefined,
@@ -173,23 +177,17 @@ export default function ChatView({
                   key={`${chat.id}-${index}`}
                   updateChat={updateChat}
                   closeChat={closeChat}
+                  playgroundPage={playgroundPage}
                 />
               ))}
             </>
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center">
               <div className="flex flex-col items-center justify-center gap-4 p-8">
-                {ENABLE_NEW_LOGO ? (
-                  <LangflowLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                ) : (
-                  <ChainLogo
-                    title="Langflow logo"
-                    className="h-10 w-10 scale-[1.5]"
-                  />
-                )}
+                <LangflowLogo
+                  title="Langflow logo"
+                  className="h-10 w-10 scale-[1.5]"
+                />
                 <div className="flex flex-col items-center justify-center">
                   <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
                     New chat
@@ -221,6 +219,7 @@ export default function ChatView({
       </div>
       <div className="m-auto w-full max-w-[768px] md:w-5/6">
         <ChatInput
+          playgroundPage={!!playgroundPage}
           noInput={!inputTypes.includes("ChatInput")}
           sendMessage={({ repeat, files }) => {
             sendMessage({ repeat, files });

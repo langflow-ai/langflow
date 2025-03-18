@@ -52,6 +52,7 @@ export type APIClassType = {
   flow?: FlowType;
   field_order?: string[];
   tool_mode?: boolean;
+  type?: string;
   [key: string]:
     | Array<string>
     | string
@@ -84,9 +85,12 @@ export type InputFieldType = {
   refresh_button_text?: string;
   combobox?: boolean;
   info?: string;
+  options?: string[];
+  active_tab?: number;
   [key: string]: any;
   icon?: string;
   text?: string;
+  temp_file?: boolean;
 };
 
 export type OutputFieldProxyType = {
@@ -103,6 +107,7 @@ export type OutputFieldType = {
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
+  options?: { [key: string]: any };
 };
 export type errorsTypeAPI = {
   function: { errors: Array<string> };
