@@ -49,6 +49,7 @@ if False:
 
     logger.debug("MCP module loaded - debug logging enabled")
 
+
 class MCPConfig:
     _instance = None
 
@@ -58,8 +59,10 @@ class MCPConfig:
             cls._instance.enable_progress_notifications = None
         return cls._instance
 
+
 def get_mcp_config():
     return MCPConfig()
+
 
 router = APIRouter(prefix="/mcp", tags=["mcp"])
 

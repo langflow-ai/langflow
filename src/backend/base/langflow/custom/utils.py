@@ -581,6 +581,7 @@ async def get_single_component_dict(component_type: str, component_name: str, co
             try:
                 # This is a simplified example - actual implementation may vary
                 import importlib.util
+
                 spec = importlib.util.spec_from_file_location(module_name, module_path)
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
@@ -644,6 +645,7 @@ async def load_custom_component(component_name: str, components_paths: list[str]
                             module_name = f"langflow.components.{category_dir.name}.{component_name}"
                             try:
                                 import importlib.util
+
                                 spec = importlib.util.spec_from_file_location(module_name, component_file)
                                 if spec and spec.loader:
                                     module = importlib.util.module_from_spec(spec)
