@@ -193,6 +193,9 @@ ignore = [
 "langflow/api/v1/*" = [
     "TCH", # FastAPI needs to evaluate types at runtime
 ]
+"langflow/api/v2/*" = [
+    "TCH", # FastAPI needs to evaluate types at runtime
+]
 "langflow/{components/tools/python_code_structured_tool.py,custom/code_parser/code_parser.py,utils/validate.py}" = [
     "S102", # Use of exec
 ]
