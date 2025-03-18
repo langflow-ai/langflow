@@ -21,7 +21,7 @@ http {
     scgi_temp_path        /tmp/scgi_temp;
 
     # Include dynamically generated logging configuration
-    include /etc/nginx/conf.d/dynamic/logging.conf;
+    include /nginx-access-log/logging.conf;
 
     error_log /var/log/nginx/error.log ${ERROR_LOG_LEVEL};
 

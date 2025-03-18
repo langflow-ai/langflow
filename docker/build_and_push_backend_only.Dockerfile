@@ -85,6 +85,9 @@ COPY ./docker/backend_only_entrypoint.sh /entrypoint.sh
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install tini=0.19.0-1 -y \
+    && apt-get install --no-install-recommends -y \
+        libpq-dev=15.12-0+deb12u2 \
+        postgresql-client=15+248 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && addgroup --gid ${GID} langflow \

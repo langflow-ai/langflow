@@ -52,7 +52,7 @@ dependencies = [
     "pytube==15.0.0",
     "dspy-ai==2.5.41",
     "assemblyai==0.35.1",
-    "litellm==1.63.11",
+    "litellm==1.60.2",
     "chromadb==0.5.23",
     "zep-python==2.0.2",
     "youtube-transcript-api==0.6.3",

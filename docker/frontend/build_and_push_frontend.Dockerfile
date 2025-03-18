@@ -27,6 +27,8 @@ RUN npm run build
 FROM ${NGINX_IMAGE} AS runtime
 
 ARG DEFAULT_FRONTEND_PORT=8080
+ARG UID=10000
+ARG GID=10000
 ENV FRONTEND_PORT=${DEFAULT_FRONTEND_PORT} \
     DEBUG=false \
     NGINX_LOG_FORMAT=default \
@@ -46,8 +48,16 @@ COPY --from=builder-base --chown=nginx:nginx /frontend/build /usr/share/nginx/ht
 COPY --chown=nginx:nginx ./docker/frontend/start-nginx.sh /start-nginx.sh
 COPY --chown=nginx:nginx ./docker/frontend/default.conf.template /etc/nginx/conf.d/default.conf.template
 
+# Switch to root user to create dir and set permissions
+USER root
+
 # Set execute permission
-RUN chmod +x /start-nginx.sh
+RUN chmod +x /start-nginx.sh && \
+    mkdir -p /nginx-access-log && \
+    chown -R ${UID}:${GID} /nginx-access-log
+
+# Switch back to the nginx user
+USER ${UID}
 
 # Define the volume for the cache and temp directories
 VOLUME [ "/tmp"]

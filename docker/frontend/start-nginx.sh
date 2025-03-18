@@ -25,9 +25,8 @@ if [ -z "$ERROR_LOG_LEVEL" ]; then
 fi
 
 # Write logging configuration
-mkdir -p /etc/nginx/conf.d/dynamic
-echo "$LOG_FORMAT_CONF" > /etc/nginx/conf.d/dynamic/logging.conf
-echo "$ACCESS_LOG_FORMAT" >> /etc/nginx/conf.d/dynamic/logging.conf
+echo "$LOG_FORMAT_CONF" > /nginx-access-log/logging.conf
+echo "$ACCESS_LOG_FORMAT" >> /nginx-access-log/logging.conf
 
 # Check and set environment variables
 if [ -z "$BACKEND_URL" ]; then
