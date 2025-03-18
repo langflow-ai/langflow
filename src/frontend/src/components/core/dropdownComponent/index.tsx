@@ -422,7 +422,8 @@ export default function Dropdown({
       }
     >
       <Command>
-        {filteredOptions?.length > 0 && renderSearchInput()}
+        {(options?.length > 0 || filteredOptions?.length > 0) &&
+          renderSearchInput()}
         {renderOptionsList()}
       </Command>
     </PopoverContentDropdown>
