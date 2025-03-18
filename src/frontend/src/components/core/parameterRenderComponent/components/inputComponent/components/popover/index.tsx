@@ -122,7 +122,7 @@ const getInputClassName = (
 ) => {
   return cn(
     "popover-input nodrag w-full truncate px-1 pr-4",
-    editNode && "px-2",
+    editNode && "pl-2 pr-6",
     editNode && disabled && "h-fit w-fit",
     disabled &&
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
