@@ -4,7 +4,7 @@ import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import {
   EDIT_TEXT_PLACEHOLDER,
-  TEXT_DIALOG_SUBTITLE,
+  TEXT_DIALOG_TITLE,
 } from "../../constants/constants";
 import { textModalPropsType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
@@ -45,17 +45,17 @@ export default function ComponentTextModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header description={TEXT_DIALOG_SUBTITLE}>
+      <BaseModal.Header>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
-            <span className="pr-2" data-testid="modal-title">
-              {TEXT_DIALOG_SUBTITLE}
-            </span>
             <IconComponent
               name={"FileText"}
-              className="h-6 w-6 pl-1 text-primary"
+              className="h-6 w-6 pr-1 text-primary"
               aria-hidden="true"
             />
+            <span className="pl-2" data-testid="modal-title">
+              {TEXT_DIALOG_TITLE}
+            </span>
           </div>
           {password !== undefined && (
             <div>

@@ -164,7 +164,7 @@ export const FLOW_NOT_BUILT_DESCRIPTION =
  * The base text for subtitle of Text Dialog
  * @constant
  */
-export const TEXT_DIALOG_SUBTITLE = "Edit text content.";
+export const TEXT_DIALOG_TITLE = "Edit text content";
 
 /**
  * The base text for subtitle of Import Dialog
