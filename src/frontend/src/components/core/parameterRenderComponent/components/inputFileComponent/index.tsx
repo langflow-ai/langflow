@@ -158,7 +158,7 @@ export default function InputFileComponent({
   ).filter((value) => value !== "");
 
   useEffect(() => {
-    if (files !== undefined) {
+    if (files !== undefined && !tempFile) {
       if (isList) {
         if (
           Array.isArray(value) &&
