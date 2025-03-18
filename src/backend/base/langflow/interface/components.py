@@ -11,11 +11,13 @@ from langflow.custom.utils import abuild_custom_components
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
 
+
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
     def __init__(self):
         self.all_types_dict: dict[str, Any] | None = None
         self.fully_loaded_components: dict[str, bool] = {}
+
 
 # Singleton instance
 component_cache = ComponentCache()
@@ -176,10 +178,12 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
         return
 
     # If we don't have a cache or the component doesn't exist in the cache, nothing to do
-    if (not component_cache.all_types_dict or
-        "components" not in component_cache.all_types_dict or
-        component_type not in component_cache.all_types_dict["components"] or
-        component_name not in component_cache.all_types_dict["components"][component_type]):
+    if (
+        not component_cache.all_types_dict
+        or "components" not in component_cache.all_types_dict
+        or component_type not in component_cache.all_types_dict["components"]
+        or component_name not in component_cache.all_types_dict["components"][component_type]
+    ):
         return
 
     # Check if component is marked for lazy loading
@@ -258,10 +262,11 @@ async def get_type_dict(component_type: str, settings_service: SettingsService |
         await get_and_cache_all_types_dict(settings_service)
 
     # Check if component type exists in the cache
-    if (component_cache.all_types_dict and
-        "components" in component_cache.all_types_dict and
-        component_type in component_cache.all_types_dict["components"]):
-
+    if (
+        component_cache.all_types_dict
+        and "components" in component_cache.all_types_dict
+        and component_type in component_cache.all_types_dict["components"]
+    ):
         # If in lazy mode, ensure all components of this type are fully loaded
         if settings_service.settings.lazy_load_components:
             for component_name in list(component_cache.all_types_dict["components"][component_type].keys()):

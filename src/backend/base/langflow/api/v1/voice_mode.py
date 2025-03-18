@@ -75,6 +75,7 @@ Your instructions will be divided into three mutually exclusive sections: "Perma
 [ADDITIONAL] The following instructions are to be considered only "Additional"
 """
 
+
 # Replace the global Config class with a proper singleton pattern
 class VoiceConfig:
     _instance = None
@@ -114,9 +115,11 @@ class VoiceConfig:
         """Return a copy of the default session dictionary with current settings."""
         return dict(self.default_openai_realtime_session)
 
+
 # Replace the global config with an instance accessor
 def get_voice_config():
     return VoiceConfig()
+
 
 # Create a global dictionary to store queues for each session
 message_queues: dict[str, asyncio.Queue] = defaultdict(asyncio.Queue)
@@ -694,9 +697,7 @@ async def flow_as_tool_websocket(
 
                                 try:
                                     message_text = event.get("text", "")
-                                    await add_message_to_db(
-                                        message_text, session, flow_id, session_id, "Machine", "AI"
-                                    )
+                                    await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
                                 except ValueError as e:
                                     logger.error(f"Error saving message to database (ValueError): {e}")
                                     logger.error(traceback.format_exc())
@@ -715,9 +716,7 @@ async def flow_as_tool_websocket(
                             try:
                                 transcript = extract_transcript(event)
                                 if transcript and transcript.strip():
-                                    await add_message_to_db(
-                                        transcript, session, flow_id, session_id, "Machine", "AI"
-                                    )
+                                    await add_message_to_db(transcript, session, flow_id, session_id, "Machine", "AI")
                             except ValueError as e:
                                 logger.error(f"Error saving message to database (ValueError): {e}")
                                 logger.error(traceback.format_exc())
@@ -757,9 +756,7 @@ async def flow_as_tool_websocket(
                             try:
                                 message_text = event.get("transcript", "")
                                 if message_text and message_text.strip():
-                                    await add_message_to_db(
-                                        message_text, session, flow_id, session_id, "User", "User"
-                                    )
+                                    await add_message_to_db(message_text, session, flow_id, session_id, "User", "User")
                             except ValueError as e:
                                 logger.error(f"Error saving message to database (ValueError): {e}")
                                 logger.error(traceback.format_exc())
@@ -909,6 +906,7 @@ class ElevenLabsClientManager:
                 cls._instance = ElevenLabs(api_key=cls._api_key)
 
         return cls._instance
+
 
 # Update the get_or_create_elevenlabs_client function to use the new manager
 async def get_or_create_elevenlabs_client(user_id=None, session=None):
