@@ -167,7 +167,7 @@ This component uploads files to an S3 bucket using AWS credentials. It supports 
 | aws_access_key_id | AWS Access Key ID | AWS Access key ID (required). |
 | aws_secret_access_key | AWS Secret Key | AWS Secret Key (required). |
 | bucket_name | Bucket Name | Name of the S3 bucket to upload to. |
-| strategy | Strategy for file upload | Choose between "Store Data" or "Store Original File". Store Data parses and stores the source file as LangFlow data, while Store Original File uploads the source file as is. |
+| strategy | Strategy for file upload | Choose between "Store Data" or "Store Original File". Store Data parses and stores the source file as Langflow data, while Store Original File uploads the source file as-is. |
 | data_inputs | Data Inputs | The data to upload (required). |
 | s3_prefix | S3 Prefix | Prefix for all files in S3 (advanced). |
 | strip_path | Strip Path | Removes path from file path (advanced). |

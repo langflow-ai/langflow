@@ -40,6 +40,7 @@ module.exports = {
         "Concepts/concepts-flows",
         "Concepts/concepts-objects",
         "Concepts/concepts-publish",
+        "Concepts/concepts-file-management",
       ],
     },
     {
@@ -47,6 +48,7 @@ module.exports = {
       label: "Components",
       items: [
         "Components/components-agents",
+        "Components/components-bundles",
         "Components/components-custom-components",
         "Components/components-data",
         "Components/components-embedding-models",
