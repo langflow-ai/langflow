@@ -7,12 +7,12 @@ steps:
     args:
       [
         "build",
-        "--progress=plain",
         "--build-arg", "NODE_IMAGE=node@sha256:bac8ff0b5302b06924a5e288fb4ceecef9c8bb0bb92515985d2efdc3a2447052",
         "--build-arg", "NGINX_IMAGE=nginxinc/nginx-unprivileged@sha256:119e9d5975ee8a7e20fa30a9a95f63b9fc21c7fca1e866c7966151f6f4df7526",
         "--build-arg", "DEFAULT_FRONTEND_PORT=8080",
         "--build-arg", "UID=${_FRONTEND_UID}",
         "--build-arg", "GID=${_FRONTEND_GID}",
+        "--platform", "linux/amd64",
         "--tag", "${_IMAGE_FRONTEND}:${SHORT_SHA}",
         "--tag", "${_IMAGE_FRONTEND}:latest",
         "-f", "docker/frontend/build_and_push_frontend.Dockerfile",
@@ -30,13 +30,13 @@ steps:
     args:
       [
         "build",
-        "--progress=plain",
         "--build-arg", "BUILDER_BASE_IMAGE=ghcr.io/astral-sh/uv@sha256:031ddbc79275e351a43cbb66f64d8cd314cc78c3878898f4ab4f147b092e8e2d",
         "--build-arg", "PYTHON_IMAGE=python@sha256:aaa3f8cb64dd64e5f8cb6e58346bdcfa410a108324b0f28f1a7cc5964355b211",
         "--build-arg", "DEFAULT_BACKEND_PORT=7860",
         "--build-arg", "DEFAULT_BACKEND_HOST=0.0.0.0",
         "--build-arg", "UID=${_BACKEND_UID}",
         "--build-arg", "GID=${_BACKEND_GID}",
+        "--platform", "linux/amd64",
         "--tag", "${_IMAGE_BACKEND}:${SHORT_SHA}",
         "--tag", "${_IMAGE_BACKEND}:latest",
         "-f", "docker/build_and_push_backend_only.Dockerfile",

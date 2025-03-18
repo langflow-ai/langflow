@@ -24,17 +24,6 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Install system dependencies
-SHELL [ "/bin/bash", "-c" ]
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
-    build-essential=12.9 \
-    ca-certificates=20230311 \
-    gcc=4:12.2.0-3 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install the project dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
