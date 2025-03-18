@@ -58,7 +58,7 @@ export function getCustomParameterTitle({
   title: string;
   nodeId: string;
   isFlexView: boolean;
-  required: boolean;
+  required?: boolean;
 }) {
   return (
     <div className={cn(isFlexView && "max-w-56 truncate")}>

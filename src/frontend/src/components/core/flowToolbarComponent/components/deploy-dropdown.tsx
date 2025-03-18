@@ -16,6 +16,7 @@ import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import { cn } from "@/utils/utils";
 import { useState } from "react";
 
 export default function PublishDropdown() {
@@ -138,9 +139,10 @@ export default function PublishDropdown() {
             }
           >
             <div
-              className={
-                !hasIO ? "cursor-not-allowed" : "" + "flex items-center"
-              }
+              className={cn(
+                !hasIO ? "cursor-not-allowed" : "",
+                "flex items-center",
+              )}
             >
               <DropdownMenuItem
                 data-testid="shareable-playground"
@@ -167,6 +169,7 @@ export default function PublishDropdown() {
                   data-testid="publish-switch"
                   className="scale-[85%]"
                   checked={isPublished}
+                  disabled={!hasIO}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
