@@ -10,7 +10,7 @@ import traceback
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -19,8 +19,6 @@ import sqlalchemy.exc
 import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
-from elevenlabs.client import ElevenLabs
-from elevenlabs.core.api_error import ApiError
 from fastapi import APIRouter, BackgroundTasks, Security
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -40,6 +38,21 @@ from langflow.utils.voice_utils import (
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
+
+# Try to import ElevenLabs, but make it optional
+try:
+    from elevenlabs.client import ElevenLabs
+    from elevenlabs.core.api_error import ApiError
+    ELEVENLABS_AVAILABLE = True
+except ImportError:
+    logger.warning("ElevenLabs package not installed. Voice synthesis features will be limited.")
+    ELEVENLABS_AVAILABLE = False
+    # Create dummy classes to avoid errors
+    class ElevenLabs:
+        pass
+    
+    class ApiError(Exception):
+        pass
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -561,6 +574,10 @@ async def flow_as_tool_websocket(
 
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
                 """
+                if not ELEVENLABS_AVAILABLE:
+                    logger.warning("ElevenLabs package not installed. Voice synthesis features will be limited.")
+                    return
+                
                 sync_q: queue.Queue = queue.Queue()
 
                 async def transfer_text_deltas():
