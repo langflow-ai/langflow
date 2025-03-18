@@ -320,15 +320,12 @@ class GmailAPIComponent(LCToolComponent):
                 for field in self._actions_data[action_key]["parameters"]:
                     value = getattr(self, field)
 
-                    # Skip empty values
                     if value is None or value == "":
                         continue
 
-                    # Handle comma-separated fields that should be converted to lists
                     if field in ["cc", "bcc", "label_ids"] and value:
                         value = [item.strip() for item in value.split(",")]
 
-                    # Handle boolean fields
                     if field in self._bool_variables:
                         value = bool(value)
 
