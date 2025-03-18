@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langflow.custom import Component
 from langflow.io import DataInput, HandleInput, IntInput, MultilineInput, Output
 from langflow.schema import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.utils.data_structure import get_data_structure
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class LambdaFilterComponent(Component):
@@ -37,7 +39,10 @@ class LambdaFilterComponent(Component):
         MultilineInput(
             name="filter_instruction",
             display_name="Instructions",
-            info="Natural language instructions for how to filter or transform the data using a lambda function. Example: Filter the data to only include items where the 'status' is 'active'.",
+            info=(
+                "Natural language instructions for how to filter or transform the data using a lambda function. "
+                "Example: Filter the data to only include items where the 'status' is 'active'."
+            ),
             value="Filter the data to...",
             required=True,
         ),
@@ -75,8 +80,9 @@ class LambdaFilterComponent(Component):
         return {k: get_data_structure(v) for k, v in data.items()}
 
     def _validate_lambda(self, lambda_text: str) -> bool:
-        # TODO: Add validations
-        return True
+        """Validate the provided lambda function text."""
+        # Return False if the lambda function does not start with 'lambda' or does not contain a colon
+        return lambda_text.strip().startswith("lambda") and ":" in lambda_text
 
     async def filter_data(self) -> list[Data]:
         self.log(str(self.data))
@@ -96,24 +102,29 @@ class LambdaFilterComponent(Component):
 
         # For large datasets, sample from head and tail
         if len(dump) > self.max_size:
-            data_sample = f"Data is too long to display... \n\n First lines (head): {dump[:sample_size]} \n\n Last lines (tail): {dump[-sample_size:]}"
+            data_sample = (
+                f"Data is too long to display... \n\n First lines (head): {dump[:sample_size]} \n\n"
+                f" Last lines (tail): {dump[-sample_size:]})"
+            )
         else:
             data_sample = dump
 
         self.log(data_sample)
 
-        prompt = f"""Given this data structure and examples, create a Python lambda function that implements the following instruction:
+        prompt = f"""Given this data structure and examples, create a Python lambda function that
+                    implements the following instruction:
 
-Data Structure:
-{dump_structure}
+                    Data Structure:
+                    {dump_structure}
 
-Example Items:
-{data_sample}
+                    Example Items:
+                    {data_sample}
 
-Instruction: {instruction}
+                    Instruction: {instruction}
 
-Return ONLY the lambda function and nothing else. No need for ```python or whatever. Just a string starting with lambda.
-"""
+                    Return ONLY the lambda function and nothing else. No need for ```python or whatever.
+                    Just a string starting with lambda.
+                    """
 
         response = await llm.ainvoke(prompt)
         response_text = response.content if hasattr(response, "content") else str(response)
@@ -122,17 +133,19 @@ Return ONLY the lambda function and nothing else. No need for ```python or whate
         # Extract lambda using regex
         lambda_match = re.search(r"lambda\s+\w+\s*:.*?(?=\n|$)", response_text)
         if not lambda_match:
-            raise ValueError(f"Could not find lambda in response: {response_text}")
+            msg = f"Could not find lambda in response: {response_text}"
+            raise ValueError(msg)
 
         lambda_text = lambda_match.group().strip()
         self.log(lambda_text)
 
         # Validation is commented out as requested
         if not self._validate_lambda(lambda_text):
-            raise ValueError(f"Invalid lambda format: {lambda_text}")
+            msg = f"Invalid lambda format: {lambda_text}"
+            raise ValueError(msg)
 
         # Create and apply the function
-        fn: Callable[[Any], Any] = eval(lambda_text)
+        fn: Callable[[Any], Any] = eval(lambda_text)  # noqa: S307
 
         # Apply the lambda function to the data
         processed_data = fn(data)
