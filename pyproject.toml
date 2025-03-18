@@ -117,6 +117,8 @@ dependencies = [
     "apify-client>=1.8.1",
     "pylint>=3.3.4",
     "ruff>=0.9.7",
+    "langchain-graph-retriever==0.6.1",
+    "graph-retriever==0.6.1",
 ]
 
 [dependency-groups]
@@ -163,6 +165,7 @@ dev = [
     "scrapegraph-py>=1.10.2",
     "pydantic-ai>=0.0.19",
     "elevenlabs>=1.52.0",
+    "faker>=37.0.0",
 ]
 
 [tool.uv.sources]

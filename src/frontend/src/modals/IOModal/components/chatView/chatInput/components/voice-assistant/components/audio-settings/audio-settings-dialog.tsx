@@ -363,7 +363,7 @@ const SettingsVoiceModal = ({
 
                       <InputComponent
                         isObjectOption={false}
-                        password={false}
+                        password
                         nodeStyle
                         popoverWidth="16rem"
                         placeholder={getPlaceholder(
@@ -394,6 +394,7 @@ const SettingsVoiceModal = ({
                         }
                         setSelectedOption={setElevenLabsApiKey}
                         commandWidth="11rem"
+                        blockAddNewGlobalVariable
                       />
                     </div>
 

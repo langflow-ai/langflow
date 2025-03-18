@@ -128,6 +128,7 @@ const getInputClassName = (
   disabled: boolean,
   password: boolean,
   selectedOptions: string[],
+  blockAddNewGlobalVariable: boolean = false,
 ) => {
   return cn(
     "popover-input nodrag w-full truncate px-1 pr-4",
@@ -136,6 +137,7 @@ const getInputClassName = (
     disabled &&
       "disabled:text-muted disabled:opacity-100 placeholder:disabled:text-muted-foreground",
     password && "text-clip pr-14",
+    blockAddNewGlobalVariable && "text-clip pr-8",
     selectedOptions?.length >= 0 && "cursor-default",
   );
 };
@@ -183,6 +185,7 @@ const CustomInputPopover = ({
   autoFocus,
   popoverWidth,
   commandWidth,
+  blockAddNewGlobalVariable,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
@@ -280,6 +283,7 @@ const CustomInputPopover = ({
                 disabled,
                 password,
                 selectedOptions,
+                blockAddNewGlobalVariable,
               )}
               placeholder={
                 selectedOptions?.length > 0 || selectedOption ? "" : placeholder
