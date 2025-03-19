@@ -43,9 +43,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="collection_name", display_name="Collection Name", required=True),
         StrInput(name="index_name", display_name="Index Name", required=True),
         *LCVectorStoreComponent.inputs,
-        HandleInput(
-            name="embedding", display_name="Embedding", input_types=["Embeddings"]
-        ),
+        HandleInput(name="embedding", display_name="Embedding", input_types=["Embeddings"]),
         IntInput(
             name="number_of_results",
             display_name="Number of Results",
@@ -68,16 +66,12 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             client_cert_path = None
             try:
                 client_cert = self.mongodb_atlas_client_cert.replace(" ", "\n")
-                client_cert = client_cert.replace(
-                    "-----BEGIN\nPRIVATE\nKEY-----", "-----BEGIN PRIVATE KEY-----"
-                )
+                client_cert = client_cert.replace("-----BEGIN\nPRIVATE\nKEY-----", "-----BEGIN PRIVATE KEY-----")
                 client_cert = client_cert.replace(
                     "-----END\nPRIVATE\nKEY-----\n-----BEGIN\nCERTIFICATE-----",
                     "-----END PRIVATE KEY-----\n-----BEGIN CERTIFICATE-----",
                 )
-                client_cert = client_cert.replace(
-                    "-----END\nCERTIFICATE-----", "-----END CERTIFICATE-----"
-                )
+                client_cert = client_cert.replace("-----END\nCERTIFICATE-----", "-----END CERTIFICATE-----")
                 with tempfile.NamedTemporaryFile(delete=False) as client_cert_file:
                     client_cert_file.write(client_cert.encode("utf-8"))
                     client_cert_path = client_cert_file.name
@@ -140,8 +134,7 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             )
             for doc in docs:
                 doc.metadata = {
-                    key: str(value) if isinstance(value, ObjectId) else value
-                    for key, value in doc.metadata.items()
+                    key: str(value) if isinstance(value, ObjectId) else value for key, value in doc.metadata.items()
                 }
 
             data = docs_to_data(docs)

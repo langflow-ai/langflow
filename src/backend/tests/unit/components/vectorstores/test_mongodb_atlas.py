@@ -2,11 +2,11 @@ import os
 from typing import Any
 
 import pytest
-from pymongo.operations import SearchIndexModel
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 from langflow.components.vectorstores.mongodb_atlas import MongoVectorStoreComponent
 from langflow.schema.data import Data
+from pymongo.operations import SearchIndexModel
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -24,7 +24,6 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-
         return {
             "mongodb_atlas_cluster_uri": os.getenv("MONGODB_ATLAS_URI"),
             "db_name": "test_db",
@@ -55,9 +54,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             },
         ]
 
-    def __create_search_index(
-        self, vector_store: MongoDBAtlasVectorSearch, default_kwargs: dict[str, Any]
-    ) -> None:
+    def __create_search_index(self, vector_store: MongoDBAtlasVectorSearch, default_kwargs: dict[str, Any]) -> None:
         """Create a vector search index if it doesn't exist."""
         try:
             index_definition = SearchIndexModel(
@@ -117,9 +114,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
     ) -> None:
         """Test creating a collection with data."""
         test_texts = ["test data 1", "test data 2", "something completely different"]
-        default_kwargs["ingest_data"] = [
-            Data(data={"text": text}) for text in test_texts
-        ]
+        default_kwargs["ingest_data"] = [Data(data={"text": text}) for text in test_texts]
 
         component: MongoVectorStoreComponent = component_class().set(**default_kwargs)
         vector_store = component.build_vector_store()
@@ -142,9 +137,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
             "Machine learning models process data",
             "The lazy dog sleeps all day long",
         ]
-        default_kwargs["ingest_data"] = [
-            Data(data={"text": text, "metadata": {}}) for text in test_data
-        ]
+        default_kwargs["ingest_data"] = [Data(data={"text": text, "metadata": {}}) for text in test_data]
         default_kwargs["number_of_results"] = 2
 
         # Create and initialize the component
