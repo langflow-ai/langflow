@@ -29,7 +29,6 @@ from langflow.services.database import models
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.utils import Result, TableResults
 from langflow.services.deps import get_settings_service
-from langflow.services.utils import teardown_superuser
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -470,6 +469,8 @@ class DatabaseService(Service):
             await conn.run_sync(self._create_db_and_tables)
 
     async def teardown(self) -> None:
+        from langflow.services.utils import teardown_superuser
+
         logger.debug("Tearing down database")
         try:
             settings_service = get_settings_service()
