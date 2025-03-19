@@ -123,7 +123,7 @@ Archive formats (for bundling multiple files):
 | Name | Display Name | Info |
 |------|--------------|------|
 | data | Data | Parsed content of the file as a [Data](/concepts-objects) object. |
-| dataframe | DataFrame | File content as a [DataFrame](/concepts-objects#dataframe) object. |
+| dataframe | DataFrame | File content as a [DataFrame](/concepts-objects#dataframe-object) object. |
 | message | Message | File content as a Message object. |
 
 ## Gmail Loader
@@ -268,7 +268,7 @@ This component fetches content from one or more URLs, processes the content, and
 |------|--------------|------|
 | data | Data | List of [Data](/concepts-objects) objects containing fetched content and metadata. |
 | text | Text | Fetched content as formatted text, with applied separators and cleaning. |
-| dataframe | DataFrame | Content formatted as a [Data](/concepts-objects#dataframe) object. |
+| dataframe | DataFrame | Content formatted as a [Data](/concepts-objects#dataframe-object) object. |
 
 ## Webhook
 
