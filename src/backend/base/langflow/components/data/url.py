@@ -132,13 +132,13 @@ class URLComponent(Component):
 
             data = [Data(text=doc.page_content, **doc.metadata) for doc in all_docs]
             self.status = data
+            return data
 
         except Exception as e:
             msg = f"Error loading documents: {e!s}"
             logger.exception(msg)
             raise ValueError(msg) from e
 
-        return data
 
     def fetch_content_text(self) -> Message:
         """Load documents and return their text content."""

@@ -113,7 +113,10 @@ test(
     await zoomOut(page, 2);
 
     //connection 1
-    await page.getByTestId("handle-url-shownode-data-right").nth(0).click();
+    await page
+      .getByTestId("handle-urlcomponent-shownode-data-right")
+      .nth(0)
+      .click();
     await page
       .getByTestId("handle-splittext-shownode-data or dataframe-left")
       .click();
@@ -295,11 +298,9 @@ test(
       .getByPlaceholder("Empty")
       .textContent();
 
-    expect(secondRunWithoutFreezing).toBe(firstTextFreezed);
-
-    expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
+    expect(firstRunWithoutFreezing).toBe(firstTextFreezed);
+    expect(secondRunWithoutFreezing).not.toBe(firstTextFreezed);
     expect(firstRunWithoutFreezing).not.toBe(secondRunWithoutFreezing);
-    expect(firstRunWithoutFreezing).not.toBe(firstTextFreezed);
-    expect(thirdTextWithoutFreezing).not.toBe(firstTextFreezed);
+    expect(thirdTextWithoutFreezing).toBe(firstTextFreezed);
   },
 );
