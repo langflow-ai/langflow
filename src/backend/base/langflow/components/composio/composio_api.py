@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from typing import Any
 
-from composio import App
+from composio import Action, App
 
 # Third-party imports
 from composio.client.collections import AppAuthScheme
@@ -57,6 +57,7 @@ class ComposioAPIComponent(LCToolComponent):
             placeholder="Create a new repository",
             info="The use case for the tool",
             real_time_refresh=True,
+            advanced=True,
         ),
         SortableListInput(
             name="actions",
@@ -201,21 +202,23 @@ class ComposioAPIComponent(LCToolComponent):
             build_config["actions"]["helper_text"] = "Successfully Authenticated! Select an action."
             build_config["actions"]["helper_text_metadata"] = {"icon": "Check", "variant": "success"}
 
-        if field_name == "use_case":
+        if field_name == "use_case" or (field_name == "tool_name" and field_value):
             toolset = ComposioToolSet(api_key=self.api_key)
+            connected_apps = [app for app in toolset.get_connected_accounts() if app.status == "ACTIVE"]
 
             # Get the list of actions available
-            actions = toolset.find_actions_by_use_case(
-                use_case=field_value,
-                advanced=True,
-            )
+            all_actions = list(Action.all())
+            authenticated_actions = sorted([
+                action for action in all_actions
+                if action.app.lower() in [app.appName.lower() for app in connected_apps]
+            ], key=lambda x: x.name)
 
             # Return the list of action names
             build_config["actions"]["options"] = [
                 {
                     "name": action.name,
                 }
-                for action in actions
+                for action in authenticated_actions
             ]
 
         return build_config
