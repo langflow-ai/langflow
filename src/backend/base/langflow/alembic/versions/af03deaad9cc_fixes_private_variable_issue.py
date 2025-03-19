@@ -1,8 +1,8 @@
 """Fixes Private variable issue
 
-Revision ID: b53514fbde6e
+Revision ID: af03deaad9cc
 Revises: f3b2d1f1002d
-Create Date: 2025-03-18 21:14:44.863704
+Create Date: 2025-03-18 21:28:39.562111
 
 """
 from typing import Sequence, Union
@@ -15,7 +15,7 @@ from langflow.utils import migration
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b53514fbde6e'
+revision: str = 'af03deaad9cc'
 down_revision: Union[str, None] = 'f3b2d1f1002d'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
