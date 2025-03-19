@@ -9,7 +9,7 @@ export function LoadingPage({ overlay = false }: { overlay?: boolean }) {
         overlay && "fixed left-0 top-0 z-[999]",
       )}
     >
-      <LoadingComponent remSize={50} />
+      <LoadingComponent remSize={100} />
     </div>
   );
 }
