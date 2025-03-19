@@ -475,7 +475,7 @@ async def flow_as_tool_websocket(
                     shared_state["event_count"] = 0
 
                 if event_type != shared_state["last_event_type"]:
-                    logger.debug(f"{_direction} {event_type}")
+                    logger.debug(f"Event (session - {session_id}): {_direction} {event_type}")
                     shared_state["last_event_type"] = event_type
                     shared_state["event_count"] = 0
 
