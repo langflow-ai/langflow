@@ -27,6 +27,21 @@ class GooglecalendarAPIComponent(LCToolComponent):
     icon = "Googlecalendar"
     documentation: str = "https://docs.composio.dev"
 
+    _display_to_enum_map = {
+        "Update Google Event": "GOOGLECALENDAR_UPDATE_EVENT",
+        "Remove Attendee from Event": "GOOGLECALENDAR_REMOVE_ATTENDEE",
+        "Get Current Date and Time": "GOOGLECALENDAR_GET_CURRENT_DATE_TIME",
+        "Quick Add Event": "GOOGLECALENDAR_QUICK_ADD",
+        "List Google Calendars": "GOOGLECALENDAR_LIST_CALENDARS",
+        "Find Event": "GOOGLECALENDAR_FIND_EVENT",
+        "Create Event": "GOOGLECALENDAR_CREATE_EVENT",
+        "Find Free Slots": "GOOGLECALENDAR_FIND_FREE_SLOTS",
+        "Patch Calendar": "GOOGLECALENDAR_PATCH_CALENDAR",
+        "Fetch Google Calendar": "GOOGLECALENDAR_GET_CALENDAR",
+        "Delete Event": "GOOGLECALENDAR_DELETE_EVENT",
+        "Duplicate Calendar": "GOOGLECALENDAR_DUPLICATE_CALENDAR"
+    }
+
     _actions_data: dict = {
         "GOOGLECALENDAR_UPDATE_EVENT": {
             "display_name": "Update Google Event",
@@ -732,18 +747,12 @@ class GooglecalendarAPIComponent(LCToolComponent):
         toolset = self._build_wrapper()
 
         try:
-            action_key = self.action
-            if action_key not in self._actions_data:
-                for key, data in self._actions_data.items():
-                    if data["display_name"] == action_key:
-                        action_key = key
-                        break
-
+            action_key = self._display_to_enum_map.get(self.action)
+            
             enum_name = getattr(Action, action_key)
             params = {}
             if action_key in self._actions_data:
                 for field in self._actions_data[action_key]["parameters"]:
-                    # Get the parameter name without the enum prefix
                     param_name = field.split("-", 1)[1] if "-" in field else field
                     value = getattr(self, field)
 
@@ -782,13 +791,8 @@ class GooglecalendarAPIComponent(LCToolComponent):
             else:
                 build_config[field]["value"] = ""
 
-        action_key = field_value
-        if action_key not in self._actions_data:
-            for key, data in self._actions_data.items():
-                if data["display_name"] == action_key:
-                    action_key = key
-                    break
-
+        action_key = self._display_to_enum_map.get(field_value)
+        
         if action_key in self._actions_data:
             for field in self._actions_data[action_key]["parameters"]:
                 build_config[field]["show"] = True
@@ -814,9 +818,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
             self.show_hide_fields(build_config, field_value)
 
         if hasattr(self, "api_key") and self.api_key != "":
-            googlecalendar_display_names = [
-                self._actions_data[action]["display_name"] for action in list(self._actions_data.keys())
-            ]
+            googlecalendar_display_names = list(self._display_to_enum_map.keys())
             build_config["action"]["options"] = googlecalendar_display_names
 
             try:
