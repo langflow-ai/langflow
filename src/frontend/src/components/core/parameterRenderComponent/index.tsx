@@ -234,6 +234,8 @@ export function ParameterRenderComponent({
             searchCategory={templateData?.search_category}
             buttonMetadata={templateData?.button_metadata}
             connectionLink={templateData?.connection_link}
+          />
+        );
       case "tab":
         return (
           <TabComponent
