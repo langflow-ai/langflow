@@ -19,6 +19,7 @@ import sqlalchemy.exc
 import webrtcvad
 import websockets
 from cryptography.fernet import InvalidToken
+from elevenlabs.client import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks, Security
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -38,24 +39,6 @@ from langflow.utils.voice_utils import (
     VAD_SAMPLE_RATE_16K,
     resample_24k_to_16k,
 )
-
-# Try to import ElevenLabs, but make it optional
-try:
-    from elevenlabs.client import ElevenLabs
-    from elevenlabs.core.api_error import ApiError
-
-    ELEVENLABS_AVAILABLE = True
-except ImportError:
-    logger.warning("ElevenLabs package not installed. Voice synthesis features will be limited.")
-    ELEVENLABS_AVAILABLE = False
-
-    # Create dummy classes to avoid errors
-    class ElevenLabs:  # type: ignore[no-redef]
-        pass
-
-    class ApiError(Exception):  # type: ignore[no-redef]
-        pass
-
 
 router = APIRouter(prefix="/voice", tags=["Voice"])
 
@@ -386,7 +369,7 @@ async def flow_as_tool_websocket(
                         "message": "You must pass a valid Langflow token or cookie.",
                     }
                 )
-                return None
+                return
 
         variable_service = get_variable_service()
         try:
@@ -404,17 +387,11 @@ async def flow_as_tool_websocket(
                         "global variable.",
                     }
                 )
-                return None
-        except (InvalidToken, ValueError) as e:
+                return
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Error with API key: {e}")
-            return None
-        except (KeyError, AttributeError) as e:
-            logger.error(f"Exception getting OpenAI API key: {e}")
-            return None
-        except (RuntimeError, OSError):  # Replace blind Exception with specific exceptions
-            logger.error("Exception getting OpenAI API key")
             logger.error(traceback.format_exc())
-            return None
+            return
 
         try:
             flow_description = await get_flow_desc_from_db(flow_id)
@@ -428,19 +405,10 @@ async def flow_as_tool_websocket(
                     "required": ["input"],
                 },
             }
-        except ValueError as e:
+        except Exception as e:  # noqa: BLE001
             await client_websocket.send_json({"error": f"Failed to load flow: {e!s}"})
             logger.error(f"Failed to load flow: {e}")
-            return None
-        except (KeyError, AttributeError, TypeError) as e:
-            await client_websocket.send_json({"error": f"Failed to load flow: {e!s}"})
-            logger.error(f"Failed to load flow: {e}")
-            return None
-        except (RuntimeError, OSError) as e:
-            await client_websocket.send_json({"error": f"Failed to load flow: {e!s}"})
-            logger.error(f"Failed to load flow: {e}")
-            logger.error(traceback.format_exc())
-            return None
+            return
 
         url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview"
         headers = {
@@ -484,11 +452,8 @@ async def flow_as_tool_websocket(
                                 if bot_speaking_flag[0]:
                                     await openai_ws.send(json.dumps({"type": "response.cancel"}))
                                     bot_speaking_flag[0] = False
-                        except ValueError as e:
+                        except Exception as e:  # noqa: BLE001
                             logger.error(f"[ERROR] VAD processing failed (ValueError): {e}")
-                            continue
-                        except (RuntimeError, OSError) as e:
-                            logger.error(f"[ERROR] VAD processing failed: {e}")
                             continue
                     if has_speech:
                         last_speech_time = datetime.now(tz=timezone.utc)
@@ -577,10 +542,6 @@ async def flow_as_tool_websocket(
 
                 then run the ElevenLabs TTS call (which expects a sync generator) in a separate thread.
                 """
-                if not ELEVENLABS_AVAILABLE:
-                    logger.warning("ElevenLabs package not installed. Voice synthesis features will be limited.")
-                    return
-
                 sync_q: queue.Queue = queue.Queue()
 
                 async def transfer_text_deltas():
@@ -625,12 +586,8 @@ async def flow_as_tool_websocket(
 
                             event = {"type": "response.done"}
                             send_event(client_websocket, event, main_loop, "↓")
-                        except ValueError as e:
+                        except Exception as e:  # noqa: BLE001
                             logger.error(f"Error in TTS processing (ValueError): {e}")
-                        except ApiError as e:
-                            logger.error(f"Error in TTS processing (APIError): {e}")
-                        except (RuntimeError, OSError, requests.RequestException, Exception) as e:
-                            logger.error(f"Error in TTS processing: {e}")
 
                     new_loop.run_until_complete(run_tts())
                     new_loop.close()
@@ -809,28 +766,15 @@ async def flow_as_tool_websocket(
                 # Make sure to clean up the task
                 if vad_task and not vad_task.done():
                     vad_task.cancel()
-    except ValueError as e:
+    except Exception as e:  # noqa: BLE001
         logger.error(f"Value error: {e}")
         logger.error(traceback.format_exc())
-    except (WebSocketDisconnect, websockets.ConnectionClosedOK, websockets.ConnectionClosedError) as e:
-        logger.info(f"WebSocket connection closed: {e}")
-    except (KeyError, AttributeError, TypeError) as e:
-        logger.error(f"Error fetching ElevenLabs voices: {e}")
-        logger.error(traceback.format_exc())
-        return {"error": str(e)}
     finally:
         # Ensure that the client websocket is closed.
         try:
             await client_websocket.close()
-        except ValueError as e:
-            logger.error(f"Error closing client websocket (ValueError): {e}")
-        except websockets.exceptions.WebSocketException as e:
-            logger.error(f"Error closing client websocket (WebSocketException): {e}")
-        except ConnectionError as e:
-            logger.error(f"Error closing client websocket (ConnectionError): {e}")
-        except (RuntimeError, OSError) as e:
-            # Replace blind Exception with specific exceptions
-            logger.error(f"Error closing client websocket: {e}")
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Error closing client websocket : {e}")
             logger.error(traceback.format_exc())
         logger.info("Client websocket cleanup complete.")
 
@@ -957,16 +901,8 @@ async def process_message_queue(queue_key, session):
 
             if message_queues[queue_key].empty():
                 break
-    except asyncio.CancelledError:
-        logger.debug(f"Message queue processor for {queue_key} was cancelled")
-    except asyncio.QueueEmpty as e:
-        logger.error(f"Queue error in message processor for {queue_key}: {e}")
-    except sqlalchemy.exc.SQLAlchemyError as e:
-        logger.error(f"Database error in message processor for {queue_key}: {e}")
-        logger.error(traceback.format_exc())
-    except (RuntimeError, OSError) as e:
-        # More specific exceptions instead of blind Exception
-        logger.error(f"Error in message queue processor for {queue_key}: {e}")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"Message queue processor for {queue_key} was cancelled: {e}")
         logger.error(traceback.format_exc())
 
 
