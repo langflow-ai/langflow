@@ -56,9 +56,6 @@ def upgrade() -> None:
         # Update existing rows to set deleted_at to NULL
         op.execute('UPDATE "user" SET deleted_at = NULL')
 
-        # Make deleted_at nullable after setting default values
-        op.alter_column("user", "deleted_at", nullable=False)
-
 
 def downgrade() -> None:
     # Check if columns exist before trying to drop them

@@ -82,14 +82,19 @@ ENV LANGFLOW_HOST=${DEFAULT_BACKEND_HOST} \
 COPY ./docker/backend_only_entrypoint.sh /entrypoint.sh
 
 # Install system dependencies
-RUN apt-get update \
+# updated zlib1g to fix CVE-2023-45853
+RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.d/trixie.list \
+    && echo 'APT::Default-Release "bookworm";' > /etc/apt/apt.conf.d/99defaultrelease \
+    && apt-get update \
     && apt-get upgrade -y \
     && apt-get install tini=0.19.0-1 -y \
     && apt-get install --no-install-recommends -y \
         libpq-dev=15.12-0+deb12u2 \
         postgresql-client=15+248 \
+    && apt-get -t trixie install -y zlib1g=1:1.3.dfsg+really1.3.1-1+b1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/apt/sources.list.d/trixie.list \
     && addgroup --gid ${GID} langflow \
     && useradd langflow --uid ${UID} --gid ${GID} --no-create-home --home-dir /app/data \
     && mkdir -p /app/data \
@@ -107,6 +112,8 @@ LABEL org.opencontainers.image.url=https://github.com/langflow-ai/langflow
 LABEL org.opencontainers.image.source=https://github.com/langflow-ai/langflow
 
 USER langflow
+
+VOLUME [ "/app/data" ]
 
 EXPOSE ${DEFAULT_BACKEND_PORT}
 
