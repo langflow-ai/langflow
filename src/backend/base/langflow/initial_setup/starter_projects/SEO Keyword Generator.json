@@ -2,11 +2,12 @@
   "data": {
     "edges": [
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-a6SIY",
+            "id": "Prompt-KlZxj",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -14,26 +15,27 @@
           },
           "targetHandle": {
             "fieldName": "system_message",
-            "id": "OpenAIModel-brPVM",
+            "id": "OpenAIModel-xbTZw",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-a6SIY{œdataTypeœ:œPromptœ,œidœ:œPrompt-a6SIYœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-brPVM{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-brPVMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-KlZxj{œdataTypeœ:œPromptœ,œidœ:œPrompt-KlZxjœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-xbTZw{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-xbTZwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-a6SIY",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-a6SIYœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-brPVM",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-brPVMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-KlZxj",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KlZxjœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-xbTZw",
+        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œOpenAIModel-xbTZwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-jkCpO",
+            "id": "Prompt-KHvO6",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -41,26 +43,27 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "OpenAIModel-brPVM",
+            "id": "OpenAIModel-xbTZw",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-jkCpO{œdataTypeœ:œPromptœ,œidœ:œPrompt-jkCpOœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-brPVM{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-brPVMœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-KHvO6{œdataTypeœ:œPromptœ,œidœ:œPrompt-KHvO6œ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-xbTZw{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-xbTZwœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-jkCpO",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-jkCpOœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "OpenAIModel-brPVM",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-brPVMœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-KHvO6",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-KHvO6œ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "OpenAIModel-xbTZw",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œOpenAIModel-xbTZwœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
         "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "OpenAIModel",
-            "id": "OpenAIModel-brPVM",
+            "id": "OpenAIModel-xbTZw",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -68,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-oE2ic",
+            "id": "ChatOutput-iMyF9",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -77,12 +80,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-OpenAIModel-brPVM{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-brPVMœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-oE2ic{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-oE2icœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-OpenAIModel-xbTZw{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-xbTZwœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-iMyF9{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-iMyF9œ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "OpenAIModel-brPVM",
-        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-brPVMœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-oE2ic",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-oE2icœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "OpenAIModel-xbTZw",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-xbTZwœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-iMyF9",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-iMyF9œ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
@@ -90,7 +93,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-jkCpO",
+          "id": "Prompt-KHvO6",
           "node": {
             "base_classes": [
               "Message"
@@ -341,26 +344,26 @@
         },
         "dragging": false,
         "height": 779,
-        "id": "Prompt-jkCpO",
+        "id": "Prompt-KHvO6",
         "measured": {
           "height": 779,
           "width": 320
         },
         "position": {
-          "x": 816.9328565352126,
-          "y": 189.70442453076902
+          "x": 815.644070953848,
+          "y": 116.56584278832369
         },
         "positionAbsolute": {
           "x": 816.9328565352126,
           "y": 189.70442453076902
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode",
         "width": 320
       },
       {
         "data": {
-          "id": "note-nssRq",
+          "id": "note-UCQVH",
           "node": {
             "description": "# SEO Keyword Generator\nWelcome to the SEO Keywords Generator - an AI tool to create strategic keywords based on your product and audience profile!\n\n## Instructions\n\n1. **Fill Product Information**\n   - Enter your product name and description\n   - Keep it clear and specific\n   - Highlight unique features and benefits\n\n2. **Define Pain Points**\n   - List customer problems and challenges\n   - Be specific about what frustrations they face\n   - Include both practical and emotional pain points\n\n3. **Set Goals & Solutions**\n   - Specify customer objectives\n   - Detail how they currently solve problems\n   - Outline desired outcomes\n\n4. **Target Audience Details**\n   - Define demographics and characteristics\n   - Include expertise level\n   - Describe behavior patterns and preferences\n\n5. **Review Output**\n   - Examine generated keywords\n   - Check relevance and search intent\n   - Use insights for SEO strategy planning\n\nRemember: The more detailed your input, the more targeted and effective your keywords will be! 🎯🔍✨",
             "display_name": "",
@@ -371,10 +374,10 @@
         },
         "dragging": false,
         "height": 607,
-        "id": "note-nssRq",
+        "id": "note-UCQVH",
         "measured": {
-          "height": 608,
-          "width": 324
+          "height": 607,
+          "width": 325
         },
         "position": {
           "x": 221.74248905040588,
@@ -397,7 +400,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-a6SIY",
+          "id": "Prompt-KlZxj",
           "node": {
             "base_classes": [
               "Message"
@@ -503,7 +506,7 @@
         },
         "dragging": false,
         "height": 260,
-        "id": "Prompt-a6SIY",
+        "id": "Prompt-KlZxj",
         "measured": {
           "height": 260,
           "width": 320
@@ -524,7 +527,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-oE2ic",
+          "id": "ChatOutput-iMyF9",
           "node": {
             "base_classes": [
               "Message"
@@ -806,7 +809,7 @@
         },
         "dragging": false,
         "height": 234,
-        "id": "ChatOutput-oE2ic",
+        "id": "ChatOutput-iMyF9",
         "measured": {
           "height": 234,
           "width": 320
@@ -825,7 +828,7 @@
       },
       {
         "data": {
-          "id": "note-aLkdy",
+          "id": "note-wwutt",
           "node": {
             "description": "## Make sure to add your OpenAI API key from [platform.openai.com](https://platform.openai.com). ",
             "display_name": "",
@@ -836,7 +839,7 @@
         },
         "dragging": false,
         "height": 325,
-        "id": "note-aLkdy",
+        "id": "note-wwutt",
         "measured": {
           "height": 325,
           "width": 326
@@ -855,7 +858,7 @@
       },
       {
         "data": {
-          "id": "OpenAIModel-brPVM",
+          "id": "OpenAIModel-xbTZw",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1223,9 +1226,9 @@
           "type": "OpenAIModel"
         },
         "dragging": false,
-        "id": "OpenAIModel-brPVM",
+        "id": "OpenAIModel-xbTZw",
         "measured": {
-          "height": 653,
+          "height": 525,
           "width": 320
         },
         "position": {
@@ -1237,18 +1240,16 @@
       }
     ],
     "viewport": {
-      "x": -34.95262355945238,
-      "y": -104.978464862529,
-      "zoom": 0.7683067619311971
+      "x": -111.23719516361678,
+      "y": -172.21601486484758,
+      "zoom": 0.7759242611491008
     }
   },
   "description": "Generates targeted SEO keywords based on product information, pain points, and customer profiles for strategic marketing.",
   "endpoint_name": null,
-  "gradient": "2",
-  "icon": "List",
-  "id": "3432cbdf-c4af-43b2-96ef-5f8155cf24d1",
+  "id": "0908c10f-b941-4e96-89be-1c65337bbfbd",
   "is_component": false,
-  "last_tested_version": "1.0.19.post2",
+  "last_tested_version": "1.2.0",
   "name": "SEO Keyword Generator",
   "tags": [
     "chatbots",
