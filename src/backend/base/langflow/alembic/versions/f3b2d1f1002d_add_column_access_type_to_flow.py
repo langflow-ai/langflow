@@ -21,13 +21,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
+    access_type_enum = sa.Enum('PRIVATE', 'PUBLIC', name='access_type_enum')
+    access_type_enum.create(conn, checkfirst=True)
     with op.batch_alter_table('flow', schema=None) as batch_op:
         if not migration.column_exists(table_name='flow', column_name='access_type', conn=conn):
-            batch_op.add_column(sa.Column('access_type', sa.Enum('PRIVATE', 'PUBLIC', name='access_type_enum'), server_default='private', nullable=False))
-
+            batch_op.add_column(sa.Column('access_type', access_type_enum, server_default=sa.text("'PRIVATE'"), nullable=False))
 
 def downgrade() -> None:
     conn = op.get_bind()
     with op.batch_alter_table('flow', schema=None) as batch_op:
         if migration.column_exists(table_name='flow', column_name='access_type', conn=conn):
             batch_op.drop_column('access_type')
+
+    access_type_enum = sa.EnuM('PRIVATE', 'PUBLIC', name='access_type_enum')
+    access_type_enum.drop(conn, checkfirst=True)
