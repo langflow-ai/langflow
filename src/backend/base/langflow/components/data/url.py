@@ -139,7 +139,6 @@ class URLComponent(Component):
             logger.exception(msg)
             raise ValueError(msg) from e
 
-
     def fetch_content_text(self) -> Message:
         """Load documents and return their text content."""
         data = self.fetch_content()
