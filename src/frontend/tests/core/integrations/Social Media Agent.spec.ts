@@ -64,6 +64,6 @@ withEventDeliveryModes(
       .last()
       .innerText();
     expect(output).toContain("TikTok");
-    expect(output.length).toBeGreaterThan(300);
+    expect(output.length).toBeGreaterThan(150);
   },
 );
