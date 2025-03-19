@@ -46,7 +46,7 @@ def test_get_message_channel_slack_error_exception(mocker, slack_conversation_hi
     mock_requests = mocker.patch("requests.request")
     mock_requests.return_value.json.return_value = mock_response
 
-    with pytest.raises(ValueError, match="Slack Error: some_slack_error") as err:
+    with pytest.raises(ValueError, match="Slack Error: some_slack_error"):
         slack_conversation_history.fetch_messages()
 
     mock_requests.assert_called_once_with(
