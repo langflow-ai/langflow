@@ -21,7 +21,7 @@ LANGFLOW_AUTO_LOGIN=False
 LANGFLOW_SUPERUSER=admin
 LANGFLOW_SUPERUSER_PASSWORD=securepassword
 LANGFLOW_SECRET_KEY=randomly_generated_secure_key
-LANGFLOW_NEW_USER_IS_ACTIVE=False
+LANGFLOW_NEW_USER_IS_ACTIVE=true
 ```
 
 For more information, see [Authentication configuration values](#values).
