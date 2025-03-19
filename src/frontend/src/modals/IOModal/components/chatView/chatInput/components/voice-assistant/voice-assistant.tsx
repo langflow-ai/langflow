@@ -343,7 +343,7 @@ export function VoiceAssistant({
 
   const handleToggleRecording = () => {
     if (isRecording) {
-      if (microphoneRef.current && microphoneRef.current.mediaStream) {
+      if (microphoneRef?.current && microphoneRef?.current?.mediaStream) {
         microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
           track.enabled = false;
         });
@@ -351,7 +351,7 @@ export function VoiceAssistant({
       setBarHeights(Array(30).fill(20));
       setIsRecording(false);
     } else {
-      if (microphoneRef.current && microphoneRef.current.mediaStream) {
+      if (microphoneRef?.current && microphoneRef?.current?.mediaStream) {
         microphoneRef.current.mediaStream.getAudioTracks().forEach((track) => {
           track.enabled = true;
         });
