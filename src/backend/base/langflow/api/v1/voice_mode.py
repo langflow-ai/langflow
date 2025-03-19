@@ -10,7 +10,7 @@ import traceback
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, DefaultDict, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -854,8 +854,7 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
 
 
 # Global dictionary to track the last sender for each session (identified by queue_key)
-last_sender_by_session: DefaultDict[str, Optional[str]] = defaultdict(lambda: None)
-
+last_sender_by_session: defaultdict[str, str | None] = defaultdict(lambda: None)
 
 
 async def wait_for_sender_change(queue_key, current_sender, timeout=5):
