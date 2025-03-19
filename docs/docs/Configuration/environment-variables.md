@@ -59,8 +59,34 @@ If it detects a supported environment variable, then it automatically adopts the
 2. Add your environment variables to the file:
 
     ```text title=".env"
-    VARIABLE_NAME='VALUE'
-    VARIABLE_NAME='VALUE'
+    DO_NOT_TRACK=true
+    LANGFLOW_AUTO_LOGIN=false
+    LANGFLOW_AUTO_SAVING=true
+    LANGFLOW_AUTO_SAVING_INTERVAL=1000
+    LANGFLOW_BACKEND_ONLY=false
+    LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
+    LANGFLOW_CACHE_TYPE=async
+    LANGFLOW_COMPONENTS_PATH=/path/to/components/
+    LANGFLOW_CONFIG_DIR=/path/to/config/
+    LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
+    LANGFLOW_DEV=false
+    LANGFLOW_FALLBACK_TO_ENV_VAR=false
+    LANGFLOW_HEALTH_CHECK_MAX_RETRIES=5
+    LANGFLOW_HOST=127.0.0.1
+    LANGFLOW_LANGCHAIN_CACHE=InMemoryCache
+    LANGFLOW_MAX_FILE_SIZE_UPLOAD=10000
+    LANGFLOW_LOG_LEVEL=error
+    LANGFLOW_OPEN_BROWSER=false
+    LANGFLOW_PORT=7860
+    LANGFLOW_REMOVE_API_KEYS=false
+    LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true
+    LANGFLOW_SECRET_KEY=somesecretkey
+    LANGFLOW_STORE=true
+    LANGFLOW_STORE_ENVIRONMENT_VARIABLES=true
+    LANGFLOW_SUPERUSER=adminuser
+    LANGFLOW_SUPERUSER_PASSWORD=adminpass
+    LANGFLOW_WORKER_TIMEOUT=60000
+    LANGFLOW_WORKERS=3
     ```
 
     :::tip
@@ -106,16 +132,17 @@ That means, if you happen to set the same environment variable in both your term
 
 The following table lists the environment variables supported by Langflow.
 
-| Variable | Format / Values | Default | Description |
+| Variable | Format | Default | Description |
 |----------|---------------|---------|-------------|
 | <Link id="DO_NOT_TRACK"/>`DO_NOT_TRACK` | Boolean | `false` | If enabled, Langflow will not track telemetry. |
 | <Link id="LANGFLOW_AUTO_LOGIN"/>`LANGFLOW_AUTO_LOGIN` | Boolean | `true` | Enable automatic login for Langflow. Set to `false` to disable automatic login and require the login form to log into the Langflow UI. Setting to `false` requires [`LANGFLOW_SUPERUSER`](#LANGFLOW_SUPERUSER) and [`LANGFLOW_SUPERUSER_PASSWORD`](environment-variables.md#LANGFLOW_SUPERUSER_PASSWORD) to be set. |
 | <Link id="LANGFLOW_AUTO_SAVING"/>`LANGFLOW_AUTO_SAVING` | Boolean | `true` | Enable flow auto-saving.<br/>See [`--auto-saving` option](./configuration-cli.md#run-auto-saving). |
 | <Link id="LANGFLOW_AUTO_SAVING_INTERVAL"/>`LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the interval for flow auto-saving in milliseconds.<br/>See [`--auto-saving-interval` option](./configuration-cli.md#run-auto-saving-interval). |
 | <Link id="LANGFLOW_BACKEND_ONLY"/>`LANGFLOW_BACKEND_ONLY` | Boolean | `false` | Only run Langflow's backend server (no frontend).<br/>See [`--backend-only` option](./configuration-cli.md#run-backend-only). |
+| <Link id="LANGFLOW_BUNDLE_URLS"/>`LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load component bundles and flows. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN` is enabled, flows from these bundles will be loaded into the database. |
 | <Link id="LANGFLOW_CACHE_TYPE"/>`LANGFLOW_CACHE_TYPE` | `async`<br/>`redis`<br/>`memory`<br/>`disk`<br/>`critical` | `async` | Set the cache type for Langflow.<br/>If you set the type to `redis`, then you must also set the following environment variables: [`LANGFLOW_REDIS_HOST`](#LANGFLOW_REDIS_HOST), [`LANGFLOW_REDIS_PORT`](#LANGFLOW_REDIS_PORT), [`LANGFLOW_REDIS_DB`](#LANGFLOW_REDIS_DB), and [`LANGFLOW_REDIS_CACHE_EXPIRE`](#LANGFLOW_REDIS_CACHE_EXPIRE). |
 | <Link id="LANGFLOW_COMPONENTS_PATH"/>`LANGFLOW_COMPONENTS_PATH` | String | `langflow/components` | Path to the directory containing custom components.<br/>See [`--components-path` option](./configuration-cli.md#run-components-path). |
-| <Link id="LANGFLOW_CONFIG_DIR"/>`LANGFLOW_CONFIG_DIR` | String | **Linux/WSL**: `~/.cache/langflow/`<br/>**macOS**: `/Users/<username>/Library/Caches/langflow/`<br/>**Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache` | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. |
+| <Link id="LANGFLOW_CONFIG_DIR"/>`LANGFLOW_CONFIG_DIR` | String | See description | Set the Langflow configuration directory where files, logs, and the Langflow database are stored. Defaults: **Linux/WSL**: `~/.cache/langflow/`<br/>**macOS**: `/Users/<username>/Library/Caches/langflow/`<br/>**Windows**: `%LOCALAPPDATA%\langflow\langflow\Cache`|
 | <Link id="LANGFLOW_DATABASE_URL"/>`LANGFLOW_DATABASE_URL` | String | Not set | Set the database URL for Langflow. If not provided, Langflow will use a SQLite database. |
 | <Link id="LANGFLOW_DATABASE_CONNECTION_RETRY"/>`LANGFLOW_DATABASE_CONNECTION_RETRY` | Boolean | `false` | If True, Langflow will retry to connect to the database if it fails. |
 | <Link id="LANGFLOW_DB_POOL_SIZE"/>`LANGFLOW_DB_POOL_SIZE` | Integer | `10` | **DEPRECATED:** Use `LANGFLOW_DB_CONNECTION_SETTINGS` instead. The number of connections to keep open in the connection pool. |
@@ -147,6 +174,7 @@ The following table lists the environment variables supported by Langflow.
 | <Link id="LANGFLOW_SECRET_KEY"/>`LANGFLOW_SECRET_KEY` | String | Auto-generated | Key used for encrypting sensitive data like API keys. If not provided, a secure key will be auto-generated. For production environments with multiple instances, you should explicitly set this to ensure consistent encryption across instances. |
 | <Link id="LANGFLOW_STORE"/>`LANGFLOW_STORE` | Boolean | `true` | Enable the Langflow Store.<br/>See [`--store` option](./configuration-cli.md#run-store). |
 | <Link id="LANGFLOW_STORE_ENVIRONMENT_VARIABLES"/>`LANGFLOW_STORE_ENVIRONMENT_VARIABLES` | Boolean | `true` | Store environment variables as [global variables](../Configuration/configuration-global-variables.md) in the database. |
+| <Link id="LANGFLOW_UPDATE_STARTER_PROJECTS"/>`LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | `true` | If enabled, Langflow will update starter projects with the latest component versions when initializing. |
 | <Link id="LANGFLOW_SUPERUSER"/>`LANGFLOW_SUPERUSER` | String | `langflow` | Set the name for the superuser. Required if [`LANGFLOW_AUTO_LOGIN`](#LANGFLOW_AUTO_LOGIN) is set to `false`.<br/>See [`superuser --username` option](./configuration-cli.md#superuser-username). |
 | <Link id="LANGFLOW_SUPERUSER_PASSWORD"/>`LANGFLOW_SUPERUSER_PASSWORD` | String | `langflow` | Set the password for the superuser. Required if [`LANGFLOW_AUTO_LOGIN`](#LANGFLOW_AUTO_LOGIN) is set to `false`.<br/>See [`superuser --password` option](./configuration-cli.md#superuser-password). |
 | <Link id="LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT"/>`LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` | String | Not set | Comma-separated list of environment variables to get from the environment and store as [global variables](../Configuration/configuration-global-variables.md). |
@@ -171,6 +199,7 @@ LANGFLOW_AUTO_LOGIN=false
 LANGFLOW_AUTO_SAVING=true
 LANGFLOW_AUTO_SAVING_INTERVAL=1000
 LANGFLOW_BACKEND_ONLY=false
+LANGFLOW_BUNDLE_URLS=["https://github.com/user/repo/commit/hash"]
 LANGFLOW_CACHE_TYPE=async
 LANGFLOW_COMPONENTS_PATH=/path/to/components/
 LANGFLOW_CONFIG_DIR=/path/to/config/
@@ -209,6 +238,7 @@ Environment="LANGFLOW_AUTO_LOGIN=false"
 Environment="LANGFLOW_AUTO_SAVING=true"
 Environment="LANGFLOW_AUTO_SAVING_INTERVAL=1000"
 Environment="LANGFLOW_BACKEND_ONLY=false"
+Environment="LANGFLOW_BUNDLE_URLS=[\"https://github.com/user/repo/commit/hash\"]"
 Environment="LANGFLOW_CACHE_TYPE=async"
 Environment="LANGFLOW_COMPONENTS_PATH=/path/to/components/"
 Environment="LANGFLOW_CONFIG_DIR=/path/to/config"
@@ -254,6 +284,7 @@ Create or edit the `.vscode/tasks.json` file in your project root:
             "LANGFLOW_AUTO_SAVING": "true",
             "LANGFLOW_AUTO_SAVING_INTERVAL": "1000",
             "LANGFLOW_BACKEND_ONLY": "false",
+            "LANGFLOW_BUNDLE_URLS": "[\"https://github.com/user/repo/commit/hash\"]",
             "LANGFLOW_CACHE_TYPE": "async",
             "LANGFLOW_COMPONENTS_PATH": "D:/path/to/components/",
             "LANGFLOW_CONFIG_DIR": "D:/path/to/config/",
