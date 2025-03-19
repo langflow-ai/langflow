@@ -23,18 +23,18 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = inspect(conn)
     columns = [column['name'] for column in inspector.get_columns('user')]
-    
+
     # Add email field to user table if it doesn't exist
     if 'email' not in columns:
         op.add_column("user", sa.Column("email", sa.String(), nullable=True))
-    
+
     # Add is_keycloak_user field to user table if it doesn't exist
     if 'is_keycloak_user' not in columns:
         op.add_column("user", sa.Column("is_keycloak_user", sa.Boolean(), default=False, nullable=True))
-        
+
         # Update existing rows to set is_keycloak_user to false
-        op.execute("UPDATE user SET is_keycloak_user = false")
-        
+        op.execute('UPDATE "user" SET is_keycloak_user = false')
+
         # Make is_keycloak_user non-nullable after setting default values
         op.alter_column("user", "is_keycloak_user", nullable=False)
 
@@ -45,7 +45,7 @@ def downgrade() -> None:
     conn = op.get_bind()
     inspector = inspect(conn)
     columns = [column['name'] for column in inspector.get_columns('user')]
-    
+
     # Remove the columns if they exist
     if 'is_keycloak_user' in columns:
         op.drop_column("user", "is_keycloak_user")

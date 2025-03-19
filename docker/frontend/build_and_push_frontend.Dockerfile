@@ -60,7 +60,7 @@ RUN chmod +x /start-nginx.sh && \
 USER ${UID}
 
 # Define the volume for the cache and temp directories
-VOLUME [ "/tmp"]
+VOLUME [ "/tmp", "/nginx-access-log" ]
 
 EXPOSE ${DEFAULT_FRONTEND_PORT}
 ENTRYPOINT ["/start-nginx.sh"]
