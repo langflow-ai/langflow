@@ -532,7 +532,7 @@ class APIRequestComponent(Component):
         urls = [self.add_query_params(url, query_params) for url in urls]
 
         async with httpx.AsyncClient() as client:
-            results = await asyncio.gather(
+            return await asyncio.gather(
                 *[
                     self.make_request(
                         client,
@@ -548,7 +548,6 @@ class APIRequestComponent(Component):
                     for u, rec in zip(urls, bodies, strict=False)
                 ]
             )
-        return results
 
     async def _response_info(
         self, response: httpx.Response, *, with_file_path: bool = False
