@@ -33,6 +33,9 @@ class SupabaseVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> SupabaseVectorStore:
         supabase: Client = create_client(self.supabase_url, supabase_key=self.supabase_service_key)
 
+        # Convert DataFrame to Data if needed using parent's method
+        self.ingest_data = self._prepare_ingest_data()
+
         documents = []
         for _input in self.ingest_data or []:
             if isinstance(_input, Data):
