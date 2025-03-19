@@ -757,15 +757,11 @@ async def flow_as_tool_websocket(
                 # Store the task reference to prevent it from being garbage collected
                 vad_task = asyncio.create_task(process_vad_audio())
 
-            try:
-                await asyncio.gather(
-                    forward_to_openai(),
-                    forward_to_client(),
-                )
-            finally:
-                # Make sure to clean up the task
-                if vad_task and not vad_task.done():
-                    vad_task.cancel()
+            await asyncio.gather(
+                forward_to_openai(),
+                forward_to_client(),
+            )
+
     except Exception as e:  # noqa: BLE001
         logger.error(f"Value error: {e}")
         logger.error(traceback.format_exc())
@@ -774,9 +770,11 @@ async def flow_as_tool_websocket(
         try:
             await client_websocket.close()
         except Exception as e:  # noqa: BLE001
-            logger.error(f"Error closing client websocket : {e}")
-            logger.error(traceback.format_exc())
+            logger.debug(f"{e} ")
         logger.info("Client websocket cleanup complete.")
+        # Make sure to clean up the task
+        if vad_task and not vad_task.done():
+            vad_task.cancel()
 
 
 @router.get("/elevenlabs/voice_ids")
