@@ -7,23 +7,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-WRaed",
+            "id": "Prompt-jqHUa",
             "name": "prompt",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "system_prompt",
-            "id": "Agent-IDDA1",
-            "inputTypes": ["Message"],
+            "id": "Agent-YDpm0",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-WRaed{œdataTypeœ:œPromptœ,œidœ:œPrompt-WRaedœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-jqHUa{œdataTypeœ:œPromptœ,œidœ:œPrompt-jqHUaœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-YDpm0{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-WRaed",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WRaedœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-jqHUa",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-jqHUaœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-YDpm0",
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -31,23 +35,27 @@
         "data": {
           "sourceHandle": {
             "dataType": "needle",
-            "id": "needle-nk3Lq",
+            "id": "needle-jWdIc",
             "name": "component_as_tool",
-            "output_types": ["Tool"]
+            "output_types": [
+              "Tool"
+            ]
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-IDDA1",
-            "inputTypes": ["Tool"],
+            "id": "Agent-YDpm0",
+            "inputTypes": [
+              "Tool"
+            ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-needle-nk3Lq{œdataTypeœ:œneedleœ,œidœ:œneedle-nk3Lqœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-IDDA1{œfieldNameœ:œtoolsœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-needle-jWdIc{œdataTypeœ:œneedleœ,œidœ:œneedle-jWdIcœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-YDpm0{œfieldNameœ:œtoolsœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "needle-nk3Lq",
-        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-nk3Lqœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "source": "needle-jWdIc",
+        "sourceHandle": "{œdataTypeœ: œneedleœ, œidœ: œneedle-jWdIcœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-YDpm0",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -55,50 +63,63 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-V0cjZ",
+            "id": "ChatInput-r9vuH",
             "name": "message",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-IDDA1",
-            "inputTypes": ["Message"],
+            "id": "Agent-YDpm0",
+            "inputTypes": [
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-V0cjZ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-V0cjZœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-IDDA1{œfieldNameœ:œinput_valueœ,œidœ:œAgent-IDDA1œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-r9vuH{œdataTypeœ:œChatInputœ,œidœ:œChatInput-r9vuHœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-YDpm0{œfieldNameœ:œinput_valueœ,œidœ:œAgent-YDpm0œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-V0cjZ",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-V0cjZœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-IDDA1",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-IDDA1œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-r9vuH",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-r9vuHœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-YDpm0",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-YDpm0œ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
+        "animated": false,
+        "className": "",
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-IDDA1",
+            "id": "Agent-YDpm0",
             "name": "response",
-            "output_types": ["Message"]
+            "output_types": [
+              "Message"
+            ]
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-Ftr5v",
-            "inputTypes": ["Data", "DataFrame", "Message"],
+            "id": "ChatOutput-O7uUo",
+            "inputTypes": [
+              "Data",
+              "DataFrame",
+              "Message"
+            ],
             "type": "str"
           }
         },
-        "id": "xy-edge__Agent-IDDA1{œdataTypeœ:œAgentœ,œidœ:œAgent-IDDA1œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-Ftr5v{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-Ftr5vœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
-        "source": "Agent-IDDA1",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-IDDA1œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-Ftr5v",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-Ftr5vœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-Agent-YDpm0{œdataTypeœ:œAgentœ,œidœ:œAgent-YDpm0œ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-O7uUo{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-O7uUoœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "Agent-YDpm0",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-YDpm0œ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-O7uUo",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-O7uUoœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "note-JlPa7",
+          "id": "note-gpQ5H",
           "node": {
             "description": "# Invoice Summarizer\n\nLeverage the **Needle Search API** and an **Agent** to gather and summarize your invoice data quickly and accurately.\n\n## Prerequisites\n\n* A **Collection** and an **API Key** from your [Needle.ai](https://needle-ai.com) deployment\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quickstart\n\n1. Load your invoices into your Needle Collection. \n\n2. In the **Needle Search** tool, add your **Needle Collection ID** and **Needle API Key**.\n\n3. In the **Agent** component, add your **OpenAI Key**.\n\n4. Open the **Playground** and query your invoices. The **Agent** component determines the correct query and search size for data retrieval.\n",
             "display_name": "",
@@ -111,7 +132,7 @@
         },
         "dragging": false,
         "height": 632,
-        "id": "note-JlPa7",
+        "id": "note-gpQ5H",
         "measured": {
           "height": 632,
           "width": 583
@@ -127,9 +148,11 @@
       },
       {
         "data": {
-          "id": "Prompt-WRaed",
+          "id": "Prompt-jqHUa",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {
@@ -140,7 +163,10 @@
             "documentation": "",
             "edited": false,
             "error": null,
-            "field_order": ["template", "tool_placeholder"],
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
             "frozen": false,
             "full_path": null,
             "icon": "prompts",
@@ -161,7 +187,9 @@
                 "name": "prompt",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -210,7 +238,9 @@
                 "display_name": "Tool Placeholder",
                 "dynamic": false,
                 "info": "A placeholder input for tool mode.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -232,23 +262,25 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-WRaed",
+        "id": "Prompt-jqHUa",
         "measured": {
-          "height": 256,
+          "height": 330,
           "width": 320
         },
         "position": {
-          "x": 531.8828954152592,
-          "y": -476.0431839408612
+          "x": 538.822113660558,
+          "y": -560.1812051651086
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "ChatOutput-Ftr5v",
+          "id": "ChatOutput-O7uUo",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
@@ -283,7 +315,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -296,7 +330,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -317,7 +353,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -374,7 +412,9 @@
                 "display_name": "Data Template",
                 "dynamic": false,
                 "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -395,7 +435,11 @@
                 "display_name": "Text",
                 "dynamic": false,
                 "info": "Message to be passed as output.",
-                "input_types": ["Data", "DataFrame", "Message"],
+                "input_types": [
+                  "Data",
+                  "DataFrame",
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -419,7 +463,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -436,7 +483,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -457,7 +506,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -496,7 +547,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -518,7 +571,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-Ftr5v",
+        "id": "ChatOutput-O7uUo",
         "measured": {
           "height": 66,
           "width": 192
@@ -532,7 +585,7 @@
       },
       {
         "data": {
-          "id": "note-TRZfV",
+          "id": "note-owux5",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -544,7 +597,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-TRZfV",
+        "id": "note-owux5",
         "measured": {
           "height": 324,
           "width": 324
@@ -558,7 +611,7 @@
       },
       {
         "data": {
-          "id": "note-P7KNw",
+          "id": "note-b3LuQ",
           "node": {
             "description": "### 💡 Add your Needle Search API key here 👇",
             "display_name": "",
@@ -571,7 +624,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-P7KNw",
+        "id": "note-b3LuQ",
         "measured": {
           "height": 324,
           "width": 401
@@ -587,9 +640,11 @@
       },
       {
         "data": {
-          "id": "needle-nk3Lq",
+          "id": "needle-jWdIc",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "needle",
             "conditional_paths": [],
@@ -619,10 +674,13 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
-                "types": ["Tool"],
+                "types": [
+                  "Tool"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -654,7 +712,9 @@
                 "display_name": "Collection ID",
                 "dynamic": false,
                 "info": "The ID of the Needle collection.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -675,8 +735,10 @@
                 "display_name": "Needle API Key",
                 "dynamic": false,
                 "info": "Your Needle API key.",
-                "input_types": ["Message"],
-                "load_from_db": false,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
                 "name": "needle_api_key",
                 "password": true,
                 "placeholder": "",
@@ -684,7 +746,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "NEEDLE_API_KEY"
               },
               "query": {
                 "_input_type": "MessageTextInput",
@@ -692,7 +754,9 @@
                 "display_name": "User Query",
                 "dynamic": false,
                 "info": "Enter your question here. In tool mode, you can also specify top_k parameter (min: 20).",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -732,7 +796,10 @@
                   "description": "Modify tool names and descriptions to help agents understand when to use each tool.",
                   "field_parsers": {
                     "commands": "commands",
-                    "name": ["snake_case", "no_blank"]
+                    "name": [
+                      "snake_case",
+                      "no_blank"
+                    ]
                   },
                   "hide_options": true
                 },
@@ -802,7 +869,9 @@
                   {
                     "description": "run(collection_id: Message, needle_api_key: Message, query: Message, top_k: FieldTypes.INTEGER) - A retriever that uses the Needle API to search collections.",
                     "name": "needle-run",
-                    "tags": ["needle-run"]
+                    "tags": [
+                      "needle-run"
+                    ]
                   }
                 ]
               },
@@ -830,7 +899,7 @@
           "showNode": true,
           "type": "needle"
         },
-        "id": "needle-nk3Lq",
+        "id": "needle-jWdIc",
         "measured": {
           "height": 582,
           "width": 320
@@ -844,9 +913,11 @@
       },
       {
         "data": {
-          "id": "ChatInput-V0cjZ",
+          "id": "ChatInput-r9vuH",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "inputs",
             "conditional_paths": [],
@@ -882,7 +953,9 @@
                 "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -896,7 +969,9 @@
                 "display_name": "Background Color",
                 "dynamic": false,
                 "info": "The background color of the icon.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -917,7 +992,9 @@
                 "display_name": "Icon",
                 "dynamic": false,
                 "info": "The icon of the message.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1025,7 +1102,10 @@
                 "dynamic": false,
                 "info": "Type of sender.",
                 "name": "sender",
-                "options": ["Machine", "User"],
+                "options": [
+                  "Machine",
+                  "User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1042,7 +1122,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Name of the sender.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1063,7 +1145,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1102,7 +1186,9 @@
                 "display_name": "Text Color",
                 "dynamic": false,
                 "info": "The text color of the name",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1124,7 +1210,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-V0cjZ",
+        "id": "ChatInput-r9vuH",
         "measured": {
           "height": 230,
           "width": 320
@@ -1138,9 +1224,11 @@
       },
       {
         "data": {
-          "id": "Agent-IDDA1",
+          "id": "Agent-YDpm0",
           "node": {
-            "base_classes": ["Message"],
+            "base_classes": [
+              "Message"
+            ],
             "beta": false,
             "category": "agents",
             "conditional_paths": [],
@@ -1193,7 +1281,9 @@
                 "name": "response",
                 "selected": "Message",
                 "tool_mode": true,
-                "types": ["Message"],
+                "types": [
+                  "Message"
+                ],
                 "value": "__UNDEFINED__"
               }
             ],
@@ -1226,7 +1316,9 @@
                 "display_name": "Agent Description [Deprecated]",
                 "dynamic": false,
                 "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1308,8 +1400,10 @@
                 "display_name": "OpenAI API Key",
                 "dynamic": false,
                 "info": "The OpenAI API Key to use for the OpenAI model.",
-                "input_types": ["Message"],
-                "load_from_db": false,
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -1317,7 +1411,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -1361,7 +1455,9 @@
                 "display_name": "Input",
                 "dynamic": false,
                 "info": "The input provided by the user for the agent to process.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1460,7 +1556,9 @@
                 "display_name": "External Memory",
                 "dynamic": false,
                 "info": "Retrieve messages from an external memory. If empty, it will use the Langflow tables.",
-                "input_types": ["Memory"],
+                "input_types": [
+                  "Memory"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "memory",
@@ -1565,7 +1663,10 @@
                 "dynamic": false,
                 "info": "Order of the messages.",
                 "name": "order",
-                "options": ["Ascending", "Descending"],
+                "options": [
+                  "Ascending",
+                  "Descending"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1603,7 +1704,11 @@
                 "dynamic": false,
                 "info": "Filter by sender type.",
                 "name": "sender",
-                "options": ["Machine", "User", "Machine and User"],
+                "options": [
+                  "Machine",
+                  "User",
+                  "Machine and User"
+                ],
                 "options_metadata": [],
                 "placeholder": "",
                 "required": false,
@@ -1620,7 +1725,9 @@
                 "display_name": "Sender Name",
                 "dynamic": false,
                 "info": "Filter by sender name.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1641,7 +1748,9 @@
                 "display_name": "Session ID",
                 "dynamic": false,
                 "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1663,7 +1772,9 @@
                 "display_name": "Agent Instructions",
                 "dynamic": false,
                 "info": "System Prompt: Initial instructions and context provided to guide the agent's behavior.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1714,7 +1825,9 @@
                 "display_name": "Template",
                 "dynamic": false,
                 "info": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
-                "input_types": ["Message"],
+                "input_types": [
+                  "Message"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
@@ -1754,7 +1867,9 @@
                 "display_name": "Tools",
                 "dynamic": false,
                 "info": "These are the tools that the agent can use to help with tasks.",
-                "input_types": ["Tool"],
+                "input_types": [
+                  "Tool"
+                ],
                 "list": true,
                 "list_add_label": "Add More",
                 "name": "tools",
@@ -1790,7 +1905,7 @@
           "showNode": true,
           "type": "Agent"
         },
-        "id": "Agent-IDDA1",
+        "id": "Agent-YDpm0",
         "measured": {
           "height": 624,
           "width": 320
@@ -1804,16 +1919,22 @@
       }
     ],
     "viewport": {
-      "x": 220.76849981202122,
-      "y": 353.4961393018069,
-      "zoom": 0.6618875325223841
+      "x": 176.17345116464503,
+      "y": 410.5061991131597,
+      "zoom": 0.7205422604177993
     }
   },
   "description": "Your AI Agent Accountant - Leverage Needle with Langflows Agent.",
   "endpoint_name": null,
-  "id": "94da35d5-a43e-4260-b205-9d0df477cb69",
+  "id": "58b6fe7e-22f9-47d8-b0aa-d7a9c752d423",
   "is_component": false,
   "last_tested_version": "1.2.0",
   "name": "Invoice Summarizer",
-  "tags": ["chatbots", "content-generation", "agent", "assistants", "agents"]
+  "tags": [
+    "chatbots",
+    "content-generation",
+    "agent",
+    "assistants",
+    "agents"
+  ]
 }
