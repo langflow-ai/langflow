@@ -3,7 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
-  "NestedComponent",
+  "user should be able to use nested component",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
@@ -14,6 +14,16 @@ test(
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("alter metadata");
+
+    await page.getByTestId("sidebar-options-trigger").click();
+    await page
+      .getByTestId("sidebar-legacy-switch")
+      .isVisible({ timeout: 5000 });
+    await page.getByTestId("sidebar-legacy-switch").click();
+    await expect(page.getByTestId("sidebar-legacy-switch")).toBeChecked();
+    await page.getByTestId("sidebar-options-trigger").click();
+
+    await page.waitForTimeout(500);
 
     await page.waitForSelector('[data-testid="processingAlter Metadata"]', {
       timeout: 3000,
@@ -29,33 +39,22 @@ test(
     await adjustScreenView(page);
 
     await page.getByTestId("dict_nesteddict_metadata").first().click();
+    await page.getByText("{}").last().clear();
+
     await page
-      .getByText("{")
+      .getByRole("textbox")
       .last()
-      .hover()
-      .then(async () => {
-        await page.locator(".json-view--edit").first().click();
-        await page.locator(".json-view--input").first().fill("keytest");
-        await page.locator(".json-view--edit").first().click();
+      .fill(
+        '{"keytest": "proptest", "keytest1": "proptest1", "keytest2": "proptest2"}',
+      );
 
-        await page.locator(".json-view--edit").first().click();
-        await page.locator(".json-view--input").first().fill("keytest1");
-        await page.locator(".json-view--edit").first().click();
-
-        await page.locator(".json-view--edit").first().click();
-        await page.locator(".json-view--input").first().fill("keytest2");
-        await page.locator(".json-view--edit").first().click();
-      });
-
-    await page
-      .locator(".json-view--pair")
-      .first()
-      .hover()
-      .then(async () => {
-        await page.locator(".json-view--edit").nth(2).click();
-        await page.locator(".json-view--null").first().fill("proptest1");
-        await page.locator(".json-view--edit").nth(2).click();
-      });
+    await page.getByTitle("Switch to tree mode (current mode: text)").click();
+    expect(await page.getByText("keytest", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("keytest1", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("keytest2", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest1", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest2", { exact: true }).count()).toBe(1);
 
     await page.getByText("Save").last().click();
 
@@ -65,22 +64,25 @@ test(
     await page.getByTestId("advanced-button-modal").click();
 
     await page.getByTestId("edit_dict_nesteddict_edit_metadata").last().click();
+    await page.getByTitle("Switch to tree mode (current mode: text)").click();
+    await page.waitForSelector(".jse-bracket", {
+      timeout: 3000,
+    });
 
     expect(await page.getByText("keytest", { exact: true }).count()).toBe(1);
     expect(await page.getByText("keytest1", { exact: true }).count()).toBe(1);
     expect(await page.getByText("keytest2", { exact: true }).count()).toBe(1);
-    expect(await page.getByText("proptest1").count()).toBe(1);
+    expect(await page.getByText("proptest", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest1", { exact: true }).count()).toBe(1);
+    expect(await page.getByText("proptest2", { exact: true }).count()).toBe(1);
 
     await page
-      .locator(".json-view--pair")
-      .first()
-      .hover()
-      .then(async () => {
-        await page.locator(".json-view--edit").nth(3).click();
-        await page.locator(".json-view--edit").nth(2).click();
-      });
+      .getByText("proptest", { exact: true })
+      .last()
+      .click({ button: "right" });
+    await page.getByText("Remove").last().click();
 
     expect(await page.getByText("keytest", { exact: true }).count()).toBe(0);
-    expect(await page.getByText("proptest1").count()).toBe(0);
+    expect(await page.getByText("proptest", { exact: true }).count()).toBe(0);
   },
 );

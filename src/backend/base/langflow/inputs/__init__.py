@@ -24,6 +24,7 @@ from .inputs import (
     SliderInput,
     SortableListInput,
     StrInput,
+    TabInput,
     TableInput,
 )
 
@@ -55,5 +56,6 @@ __all__ = [
     "SliderInput",
     "SortableListInput",
     "StrInput",
+    "TabInput",
     "TableInput",
 ]

@@ -1,7 +1,7 @@
 import { getChangesType } from "@/modals/apiModal/utils/get-changes-types";
 import { getNodesWithDefaultValue } from "@/modals/apiModal/utils/get-nodes-with-default-value";
 import { createTabsArray } from "@/modals/apiModal/utils/tabs-array";
-import { FlowType, NodeDataType } from "@/types/flow";
+import { AllNodeType, FlowType, NodeDataType } from "@/types/flow";
 import { GetCodesType } from "@/types/tweaks";
 import { customStringify } from "@/utils/reactflowUtils";
 import { create } from "zustand";
@@ -10,6 +10,7 @@ import useFlowStore from "./flowStore";
 
 export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
   activeTweaks: false,
+  tweaks: {},
   setActiveTweaks: (activeTweaks: boolean) => {
     set({ activeTweaks }), get().refreshTabs();
   },
@@ -21,6 +22,7 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
       nodes: newChange,
     });
     get().refreshTabs();
+    get().updateTweaks();
   },
   setNode: (id, change) => {
     let newChange =
@@ -58,6 +60,13 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
       getCodes,
     });
     get().refreshTabs();
+  },
+  newInitialSetup: (nodes: AllNodeType[]) => {
+    useFlowStore.getState().unselectAll();
+    set({
+      nodes: getNodesWithDefaultValue(nodes),
+    });
+    get().updateTweaks();
   },
   tabs: [],
   refreshTabs: () => {
@@ -124,6 +133,36 @@ export const useTweaksStore = create<TweaksStoreType>((set, get) => ({
 
     set({
       tabs: createTabsArray(codesObj, nodes.length > 0),
+    });
+  },
+  updateTweaks: () => {
+    const nodes = get().nodes;
+    const originalNodes = useFlowStore.getState().nodes;
+    const tweak = {};
+    nodes.forEach((node) => {
+      const originalNodeTemplate = originalNodes?.find((n) => n.id === node.id)
+        ?.data?.node?.template;
+      const nodeTemplate = node.data?.node?.template;
+      if (originalNodeTemplate && nodeTemplate && node.type === "genericNode") {
+        const currentTweak = {};
+        Object.keys(nodeTemplate).forEach((name) => {
+          if (
+            customStringify(nodeTemplate[name]) !==
+            customStringify(originalNodeTemplate[name])
+          ) {
+            currentTweak[name] = getChangesType(
+              nodeTemplate[name].value,
+              nodeTemplate[name],
+            );
+          }
+        });
+        if (Object.keys(currentTweak).length > 0) {
+          tweak[node.id] = currentTweak;
+        }
+      }
+    });
+    set({
+      tweaks: tweak,
     });
   },
 }));
