@@ -39,7 +39,7 @@ export default function PublishDropdown() {
     mutateAsync(
       {
         id: flowId ?? "",
-        access_type: checked ? "PRIVATE" : "PUBLIC",
+        access_type: checked ? "PUBLIC" : "PRIVATE",
       },
       {
         onSuccess: (updatedFlow) => {
