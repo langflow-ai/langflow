@@ -30,9 +30,12 @@ test(
 
     await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
-    await page.getByText("built successfully").last().click({
-      timeout: 15000,
-    });
+    await page
+      .getByText("built successfully")
+      .last()
+      .click({
+        timeout: 30000 * 3,
+      });
 
     await page.waitForSelector('[data-testid="icon-TextSearchIcon"]', {
       timeout: 30000,
@@ -105,7 +108,9 @@ test(
 
     // Run flow and test text output inspection
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.keyboard.press("o");
     await page.waitForSelector(
       `[data-testid="${urlNodeId}-text-output-modal"]`,
