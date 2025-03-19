@@ -749,7 +749,7 @@ class GooglecalendarAPIComponent(LCToolComponent):
         try:
             action_key = self._display_to_enum_map.get(self.action)
 
-            enum_name = getattr(Action, action_key)
+            enum_name = getattr(Action, action_key)  # type: ignore[arg-type]
             params = {}
             if action_key in self._actions_data:
                 for field in self._actions_data[action_key]["parameters"]:
