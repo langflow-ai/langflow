@@ -175,6 +175,6 @@ class DataFrame(pandas_DataFrame):
             return False
         if isinstance(other, list) and not other:  # Empty list case
             return False
-        if not isinstance(other, (DataFrame, pd.DataFrame)):  # Non-DataFrame case
+        if not isinstance(other, DataFrame | pd.DataFrame):  # Non-DataFrame case
             return False
         return super().__eq__(other)

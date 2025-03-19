@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ScrapeGraphSearchApi",
-            "id": "ScrapeGraphSearchApi-4qF2k",
+            "id": "ScrapeGraphSearchApi-bLGp9",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -15,18 +15,19 @@
           },
           "targetHandle": {
             "fieldName": "tools",
-            "id": "Agent-CBAEF",
+            "id": "Agent-F0B6L",
             "inputTypes": [
               "Tool"
             ],
             "type": "other"
           }
         },
-        "id": "reactflow__edge-ScrapeGraphSearchApi-4qF2k{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-4qF2kœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-CBAEF{œfieldNameœ:œtoolsœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
-        "source": "ScrapeGraphSearchApi-4qF2k",
-        "sourceHandle": "{œdataTypeœ: œScrapeGraphSearchApiœ, œidœ: œScrapeGraphSearchApi-4qF2kœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
-        "target": "Agent-CBAEF",
-        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-ScrapeGraphSearchApi-bLGp9{œdataTypeœ:œScrapeGraphSearchApiœ,œidœ:œScrapeGraphSearchApi-bLGp9œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-F0B6L{œfieldNameœ:œtoolsœ,œidœ:œAgent-F0B6Lœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "ScrapeGraphSearchApi-bLGp9",
+        "sourceHandle": "{œdataTypeœ: œScrapeGraphSearchApiœ, œidœ: œScrapeGraphSearchApi-bLGp9œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
+        "target": "Agent-F0B6L",
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-F0B6Lœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -34,7 +35,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-8hLIp",
+            "id": "ChatInput-04UDQ",
             "name": "message",
             "output_types": [
               "Message"
@@ -42,18 +43,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "Agent-CBAEF",
+            "id": "Agent-F0B6L",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-8hLIp{œdataTypeœ:œChatInputœ,œidœ:œChatInput-8hLIpœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-CBAEF{œfieldNameœ:œinput_valueœ,œidœ:œAgent-CBAEFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "ChatInput-8hLIp",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-8hLIpœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Agent-CBAEF",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-CBAEFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "id": "reactflow__edge-ChatInput-04UDQ{œdataTypeœ:œChatInputœ,œidœ:œChatInput-04UDQœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-F0B6L{œfieldNameœ:œinput_valueœ,œidœ:œAgent-F0B6Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "ChatInput-04UDQ",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-04UDQœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "Agent-F0B6L",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-F0B6Lœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -61,7 +63,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Agent",
-            "id": "Agent-CBAEF",
+            "id": "Agent-F0B6L",
             "name": "response",
             "output_types": [
               "Message"
@@ -69,7 +71,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-9EKQJ",
+            "id": "ChatOutput-bZGEh",
             "inputTypes": [
               "Data",
               "DataFrame",
@@ -78,17 +80,18 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-Agent-CBAEF{œdataTypeœ:œAgentœ,œidœ:œAgent-CBAEFœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-9EKQJ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-9EKQJœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
-        "source": "Agent-CBAEF",
-        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-CBAEFœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-9EKQJ",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-9EKQJœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
+        "id": "reactflow__edge-Agent-F0B6L{œdataTypeœ:œAgentœ,œidœ:œAgent-F0B6Lœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-bZGEh{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-bZGEhœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "source": "Agent-F0B6L",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-F0B6Lœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
+        "target": "ChatOutput-bZGEh",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-bZGEhœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
       {
         "data": {
-          "id": "ScrapeGraphSearchApi-4qF2k",
+          "id": "ScrapeGraphSearchApi-bLGp9",
           "node": {
             "base_classes": [
               "Data"
@@ -119,6 +122,7 @@
                 "hidden": null,
                 "method": "to_toolkit",
                 "name": "component_as_tool",
+                "options": null,
                 "required_inputs": null,
                 "selected": "Tool",
                 "tool_mode": true,
@@ -140,7 +144,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -148,7 +152,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "SCRAPEGRAPH_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -203,6 +207,7 @@
                 "table_schema": {
                   "columns": [
                     {
+                      "default": "None",
                       "description": "Specify the name of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Name",
@@ -212,9 +217,10 @@
                       "hidden": false,
                       "name": "name",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "Describe the purpose of the tool.",
                       "disable_edit": false,
                       "display_name": "Tool Description",
@@ -224,9 +230,10 @@
                       "hidden": false,
                       "name": "description",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
                     },
                     {
+                      "default": "None",
                       "description": "The default identifiers for the tools and cannot be changed.",
                       "disable_edit": true,
                       "display_name": "Tool Identifiers",
@@ -236,7 +243,20 @@
                       "hidden": true,
                       "name": "tags",
                       "sortable": false,
-                      "type": "text"
+                      "type": "str"
+                    },
+                    {
+                      "default": true,
+                      "description": "Indicates whether the tool is currently active. Set to True to activate this tool.",
+                      "disable_edit": false,
+                      "display_name": "Enable",
+                      "edit_mode": "popover",
+                      "filterable": true,
+                      "formatter": "boolean",
+                      "hidden": false,
+                      "name": "status",
+                      "sortable": true,
+                      "type": "boolean"
                     }
                   ]
                 },
@@ -286,21 +306,21 @@
           "type": "ScrapeGraphSearchApi"
         },
         "dragging": false,
-        "id": "ScrapeGraphSearchApi-4qF2k",
+        "id": "ScrapeGraphSearchApi-bLGp9",
         "measured": {
           "height": 497,
           "width": 320
         },
         "position": {
-          "x": 42.512465889820305,
-          "y": 172.783808513074
+          "x": 44.524524067370976,
+          "y": 148.63911038246573
         },
         "selected": false,
         "type": "genericNode"
       },
       {
         "data": {
-          "id": "Agent-CBAEF",
+          "id": "Agent-F0B6L",
           "node": {
             "base_classes": [
               "Message"
@@ -448,7 +468,7 @@
                 "input_types": [
                   "Message"
                 ],
-                "load_from_db": false,
+                "load_from_db": true,
                 "name": "api_key",
                 "password": true,
                 "placeholder": "",
@@ -456,7 +476,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "str",
-                "value": ""
+                "value": "OPENAI_API_KEY"
               },
               "code": {
                 "advanced": true,
@@ -949,7 +969,7 @@
           "type": "Agent"
         },
         "dragging": false,
-        "id": "Agent-CBAEF",
+        "id": "Agent-F0B6L",
         "measured": {
           "height": 624,
           "width": 320
@@ -963,7 +983,7 @@
       },
       {
         "data": {
-          "id": "ChatInput-8hLIp",
+          "id": "ChatInput-04UDQ",
           "node": {
             "base_classes": [
               "Message"
@@ -1073,7 +1093,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
+                "value": "from langflow.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom langflow.schema.message import Message\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        background_color = self.background_color\n        text_color = self.text_color\n        icon = self.chat_icon\n\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=self.session_id,\n            files=self.files,\n            properties={\n                \"background_color\": background_color,\n                \"text_color\": text_color,\n                \"icon\": icon,\n            },\n        )\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
               "files": {
                 "_input_type": "FileInput",
@@ -1113,6 +1133,7 @@
                 "placeholder": "",
                 "required": false,
                 "show": true,
+                "temp_file": true,
                 "title_case": false,
                 "trace_as_metadata": true,
                 "type": "file",
@@ -1257,7 +1278,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-8hLIp",
+        "id": "ChatInput-04UDQ",
         "measured": {
           "height": 66,
           "width": 192
@@ -1271,7 +1292,7 @@
       },
       {
         "data": {
-          "id": "ChatOutput-9EKQJ",
+          "id": "ChatOutput-bZGEh",
           "node": {
             "base_classes": [
               "Message"
@@ -1564,7 +1585,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-9EKQJ",
+        "id": "ChatOutput-bZGEh",
         "measured": {
           "height": 66,
           "width": 192
@@ -1578,7 +1599,7 @@
       },
       {
         "data": {
-          "id": "note-d88zH",
+          "id": "note-YWlY3",
           "node": {
             "description": "## 🚀 ScrapeGraphAI Template 🔍\n\nThis template connects the **Search Point** endpoint from [ScrapeGraphAI](https://scrapegraphai.com) to an **Agent** component.\n\n## Prerequisites\n\n* [OpenAI API key](https://platform.openai.com/docs/overview)\n* [ScrapeGraphAI API key](https://dashboard.scrapegraphai.com)\n\n## Quickstart\n\n1. Add your **ScrapeGraphAI API key**  to the **ScrapeGraphSearchApi** component.\n\n2. Add your **OpenAI API key** to the **Agent** component.\n\n3. Open the **Playground** and ask your Agent a question. The Agent uses ScrapeGraph as a tool to answer you.",
             "display_name": "",
@@ -1589,7 +1610,7 @@
         },
         "dragging": false,
         "height": 584,
-        "id": "note-d88zH",
+        "id": "note-YWlY3",
         "measured": {
           "height": 584,
           "width": 346
@@ -1605,7 +1626,7 @@
       },
       {
         "data": {
-          "id": "note-K97PH",
+          "id": "note-Ey3jA",
           "node": {
             "description": "### 💡 Add your OpenAI API key here 👇",
             "display_name": "",
@@ -1617,7 +1638,7 @@
           "type": "note"
         },
         "dragging": false,
-        "id": "note-K97PH",
+        "id": "note-Ey3jA",
         "measured": {
           "height": 324,
           "width": 324
@@ -1631,7 +1652,7 @@
       },
       {
         "data": {
-          "id": "note-Q9gWp",
+          "id": "note-CKc8o",
           "node": {
             "description": "### 💡 Add your ScrapeGraphAI API key here 👇",
             "display_name": "",
@@ -1644,34 +1665,32 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-Q9gWp",
+        "id": "note-CKc8o",
         "measured": {
           "height": 324,
           "width": 389
         },
         "position": {
-          "x": 8.432436918410303,
-          "y": 130.15072721938364
+          "x": 14.468611451062372,
+          "y": 102.98794182244934
         },
         "resizing": false,
-        "selected": false,
+        "selected": true,
         "type": "noteNode",
         "width": 390
       }
     ],
     "viewport": {
-      "x": 386.73940143606825,
-      "y": 27.399081408903214,
+      "x": 387.7394014360682,
+      "y": 3.672068787097828,
       "zoom": 0.9940070432926703
     }
   },
   "description": "Search the web for information.",
   "endpoint_name": null,
-  "gradient": "3",
-  "icon": "search",
-  "id": "99aa93b0-8c09-4608-b6ca-b7edc07c5cc3",
+  "id": "fc111550-57fe-429f-b648-61f1b8abbbb2",
   "is_component": false,
-  "last_tested_version": "1.1.5",
+  "last_tested_version": "1.2.0",
   "name": "Search agent",
   "tags": [
     "web-scraping",

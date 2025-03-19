@@ -1,12 +1,12 @@
 from abc import abstractmethod
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langflow.custom import Component
 from langflow.field_typing import Text, VectorStore
 from langflow.helpers.data import docs_to_data
 from langflow.inputs.inputs import BoolInput
-from langflow.io import DataInput, MultilineInput, Output
+from langflow.io import HandleInput, MultilineInput, Output
 from langflow.schema import Data, DataFrame
 
 if TYPE_CHECKING:
@@ -56,9 +56,11 @@ class LCVectorStoreComponent(Component):
     trace_type = "retriever"
 
     inputs = [
-        DataInput(
+        HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
+            input_types=["Data", "DataFrame"],
+            is_list=True,
         ),
         MultilineInput(
             name="search_query",
@@ -98,6 +100,24 @@ class LCVectorStoreComponent(Component):
             if not hasattr(self, method_name):
                 msg = f"Method '{method_name}' must be defined."
                 raise ValueError(msg)
+
+    def _prepare_ingest_data(self) -> list[Any]:
+        """Prepares ingest_data by converting DataFrame to Data if needed."""
+        ingest_data: list | Data | DataFrame = self.ingest_data
+        if not ingest_data:
+            return []
+
+        if not isinstance(ingest_data, list):
+            ingest_data = [ingest_data]
+
+        result = []
+
+        for _input in ingest_data:
+            if isinstance(_input, DataFrame):
+                result.extend(_input.to_data_list())
+            else:
+                result.append(_input)
+        return result
 
     def search_with_vector_store(
         self,
