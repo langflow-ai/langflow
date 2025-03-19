@@ -75,9 +75,34 @@ This component recursively loads files from a directory, with options for file t
 
 ## File
 
-The File component loads and parses text files of various supported formats, converting the content into a [Data](/concepts-objects) object. It supports multiple file types and provides options for parallel processing and error handling.
+This component loads and parses files of various supported formats and converts the content into a [Data](/concepts-objects) object. It supports multiple file types and provides options for parallel processing and error handling.
+
+To select a document to load, click the **Select files** button. Select a local file or a file loaded with [File management](/concepts-file-management), and then click **Select file**. The loaded file name appears in the component.
 
 The maximum supported file size is 100 MB.
+
+### Inputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| path | Files | Path to file(s) to load. Supports individual files or bundled archives. |
+| file_path | Server File Path | Data object with a `file_path` property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports the same file types. |
+| separator | Separator | Specify the separator to use between multiple outputs in Message format. |
+| silent_errors | Silent Errors | If true, errors do not raise an exception. |
+| delete_server_file_after_processing | Delete Server File After Processing | If true, the Server File Path is deleted after processing. |
+| ignore_unsupported_extensions | Ignore Unsupported Extensions | If true, files with unsupported extensions are not processed. |
+| ignore_unspecified_files | Ignore Unspecified Files | If true, `Data` with no `file_path` property is ignored. |
+| use_multithreading | [Deprecated] Use Multithreading | Set 'Processing Concurrency' greater than `1` to enable multithreading. This option is deprecated. |
+| concurrency_multithreading | Processing Concurrency | When multiple files are being processed, the number of files to process concurrently. Default is 1. Values greater than 1 enable parallel processing for 2 or more files. |
+
+### Outputs
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| data | Data | Parsed content of the file as a [Data](/concepts-objects) object. |
+| dataframe | DataFrame | File content as a [DataFrame](/concepts-objects#dataframe-object) object. |
+| message | Message | File content as a [Message](/concepts-objects#message-object) object. |
+
 
 ### Supported File Types
 
@@ -103,28 +128,6 @@ Archive formats (for bundling multiple files):
 - `.tgz` - Gzipped TAR archives
 - `.bz2` - Bzip2 compressed files
 - `.gz` - Gzip compressed files
-
-### Inputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| path | Files | Path to file(s) to load. Supports individual files or bundled archives. |
-| file_path | Server File Path | Data object with a `file_path` property pointing to server file or a Message object with a path to the file. Supercedes 'Path' but supports same file types. |
-| separator | Separator | Specify the separator to use between multiple outputs in Message format. |
-| silent_errors | Silent Errors | If true, errors do not raise an exception. |
-| delete_server_file_after_processing | Delete Server File After Processing | If true, the Server File Path is deleted after processing. |
-| ignore_unsupported_extensions | Ignore Unsupported Extensions | If true, files with unsupported extensions are not processed. |
-| ignore_unspecified_files | Ignore Unspecified Files | If true, `Data` with no `file_path` property is ignored. |
-| use_multithreading | [Deprecated] Use Multithreading | Set 'Processing Concurrency' greater than `1` to enable multithreading. |
-| concurrency_multithreading | Processing Concurrency | When multiple files are being processed, the number of files to process concurrently. |
-
-### Outputs
-
-| Name | Display Name | Info |
-|------|--------------|------|
-| data | Data | Parsed content of the file as a [Data](/concepts-objects) object. |
-| dataframe | DataFrame | File content as a [DataFrame](/concepts-objects#dataframe-object) object. |
-| message | Message | File content as a Message object. |
 
 ## Gmail Loader
 
