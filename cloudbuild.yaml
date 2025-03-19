@@ -70,6 +70,8 @@ images:
     - "${_IMAGE_FRONTEND}:latest"
     - "${_IMAGE_BACKEND}:${SHORT_SHA}"
     - "${_IMAGE_BACKEND}:latest"
+    - "${_IMAGE_BACKEND}-network-tools:${SHORT_SHA}"
+    - "${_IMAGE_BACKEND}-network-tools:latest"
 options:
     logging: CLOUD_LOGGING_ONLY
     env:
