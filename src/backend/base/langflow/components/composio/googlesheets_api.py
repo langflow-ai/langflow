@@ -21,7 +21,7 @@ from langflow.schema.message import Message
 
 class GooglesheetsAPIComponent(LCToolComponent):
     display_name: str = "Google sheets"
-    description: str = "Googlesheets API"
+    description: str = "Google Sheets API"
     name = "GooglesheetsAPI"
     icon = "Googlesheets"
     documentation: str = "https://docs.composio.dev"
