@@ -853,10 +853,36 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
     return await ElevenLabsClientManager.get_client(user_id, session)
 
 
+# Global dictionary to track the last sender for each session (identified by queue_key)
+last_sender_by_session = defaultdict(lambda: None)
+
+
+async def wait_for_sender_change(queue_key, current_sender, timeout=5):
+    """Wait until the last sender for this session is not the same as current_sender.
+
+    or until the timeout expires.
+    """
+    waited = 0
+    interval = 0.05
+    while last_sender_by_session[queue_key] == current_sender and waited < timeout:
+        await asyncio.sleep(interval)
+        waited += interval
+
+
 async def add_message_to_db(message, session, flow_id, session_id, sender, sender_name):
-    """Add a message to the database using a queue to ensure ordered processing."""
+    """Enforce alternating sequence by checking the last sender.
+
+    If two consecutive messages come from the same party (e.g. AI/AI), wait briefly.
+    """
     queue_key = f"{flow_id}:{session_id}"
 
+    # If the incoming sender is the same as the last recorded sender,
+    # wait for a change (with a timeout as a fallback).
+    if last_sender_by_session[queue_key] == sender:
+        await wait_for_sender_change(queue_key, sender, timeout=5)
+    last_sender_by_session[queue_key] = sender
+
+    # Now proceed to create the message
     message_obj = MessageTable(
         text=message,
         sender=sender,
@@ -870,6 +896,7 @@ async def add_message_to_db(message, session, flow_id, session_id, sender, sende
     )
 
     await message_queues[queue_key].put(message_obj)
+    # Update last sender for this session
 
     if queue_key not in message_tasks or message_tasks[queue_key].done():
         message_tasks[queue_key] = asyncio.create_task(process_message_queue(queue_key, session))
