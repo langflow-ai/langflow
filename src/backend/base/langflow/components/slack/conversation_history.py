@@ -96,9 +96,7 @@ class SlackConversationsHistoryComponent(Component):
             "limit": self.limit,
         }
 
-        http_response = requests.request(
-            "POST", url, json=payload, headers=headers, timeout=60
-        )
+        http_response = requests.request("POST", url, json=payload, headers=headers, timeout=60)
         json_response = http_response.json()
 
         if not json_response.get("ok"):

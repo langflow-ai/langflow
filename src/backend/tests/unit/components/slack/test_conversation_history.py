@@ -29,11 +29,7 @@ def test_get_message_successful_execution(mocker, slack_conversation_history):
     slack_conversation_history.fetch_messages()
 
     mock_requests.assert_called_once_with(
-        "POST",
-        "https://slack.com/api/conversations.history",
-        json=mocker.ANY,
-        headers=mocker.ANY,
-        timeout=mocker.ANY
+        "POST", "https://slack.com/api/conversations.history", json=mocker.ANY, headers=mocker.ANY, timeout=mocker.ANY
     )
 
 
@@ -50,11 +46,7 @@ def test_get_message_channel_slack_error_exception(mocker, slack_conversation_hi
         slack_conversation_history.fetch_messages()
 
     mock_requests.assert_called_once_with(
-        "POST",
-        "https://slack.com/api/conversations.history",
-        json=mocker.ANY,
-        headers=mocker.ANY,
-        timeout=mocker.ANY
+        "POST", "https://slack.com/api/conversations.history", json=mocker.ANY, headers=mocker.ANY, timeout=mocker.ANY
     )
 
 
