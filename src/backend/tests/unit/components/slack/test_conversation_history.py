@@ -13,10 +13,7 @@ def slack_conversation_history():
 
 def test_deepseek_initialization(slack_conversation_history):
     assert slack_conversation_history.display_name == "Fetch Slack Messages"
-    assert (
-        slack_conversation_history.description
-        == "Fetches a conversation's history of messages and events."
-    )
+    assert slack_conversation_history.description == "Fetches a conversation's history of messages and events."
     assert slack_conversation_history.icon == "SlackDirectoryLoader"
 
 

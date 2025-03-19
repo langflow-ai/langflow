@@ -109,7 +109,7 @@ class SlackConversationsHistoryComponent(Component):
 
     def build_slack_response(self) -> Data:
         """Build the output object containing the Slack API response."""
-        return Data(
+        data = Data(
             data=self.fetch_messages(),
             text_key="messages",
             default_value="No content available",
@@ -117,9 +117,6 @@ class SlackConversationsHistoryComponent(Component):
 
     def build_messages(self) -> DataFrame:
         """Build the output object containing messages returned from the Slack API."""
-        data = [
-            Data(data=message, text_key="text")
-            for message in self.response.value.messages
-        ]
+        data = [Data(data=message, text_key="text") for message in self.response.value.messages]
 
         return DataFrame(data)
