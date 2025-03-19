@@ -173,7 +173,8 @@ class ComposioAPIComponent(LCToolComponent):
                     "icon": app.name,
                     "link": "",
                 }
-                for app in sorted(all_apps, key=lambda x: x.name) if app.name in relevant_apps
+                for app in sorted(all_apps, key=lambda x: x.name)
+                if app.name in relevant_apps
             ]
 
         # Handle the click of the Tool Name connect button
@@ -185,9 +186,7 @@ class ComposioAPIComponent(LCToolComponent):
             entity = toolset.get_entity(id="default")
 
             # Initiate a GitHub connection and get the redirect URL
-            connection_request = entity.initiate_connection(
-                app_name=getattr(App, field_value.upper())
-            )
+            connection_request = entity.initiate_connection(app_name=getattr(App, field_value.upper()))
 
             # Get the index of the selected tool in the list of options
             selected_tool_index = next(
