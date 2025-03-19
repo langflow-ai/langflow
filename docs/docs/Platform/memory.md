@@ -13,14 +13,9 @@ To replace the default Langflow SQLite database with another database, modify th
 LANGFLOW_DATABASE_URL=postgresql://user:password@localhost:5432/langflow
 ```
 
+For an example, see [Configure an external PostgreSQL database](/configuration-custom-database).
+
 ## Configure the external database connection
-
-The `LANGFLOW_SAVE_DB_IN_CONFIG_DIR` option, when set to `true`, will save the database in the Langflow configuration directory defined by `LANGFLOW_CONFIG_DIR`. This means the database will persist across installations and allow you to share the database across reinstalls and between virtual environments.
-
-```
-LANGFLOW_DATABASE_CONNECTION_RETRY=false
-LANGFLOW_SAVE_DB_IN_CONFIG_DIR=false
-```
 
 The following settings allow you to fine-tune your database connection pool and timeout settings:
 

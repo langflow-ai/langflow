@@ -35,13 +35,13 @@ The `Dockerfile` controls how your image is built. This file copies your flows a
 
 ### Package management
 
-The base Docker image handles the Langflow core dependencies by using `langflowai/langflow:latest` as the parent image.
+The base Docker image includes the Langflow core dependencies by using `langflowai/langflow:latest` as the parent image.
 
 If your application requires additional dependencies, create a `pyproject.toml` file and add the dependencies to the file. For more information, see [Install custom dependencies](/install-custom-dependencies).
 
 To deploy the application with the additional dependencies to Docker, copy the `pyproject.toml` and `uv.lock` files to the Docker image by adding the following to the Dockerfile.
 
-```bash
+```text
 COPY pyproject.toml uv.lock /app/
 ```
 
@@ -54,8 +54,8 @@ This example `docker.env` defines auto-login behavior and which port to expose. 
 ```text
 LANGFLOW_AUTO_LOGIN=true
 LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true
-OPENAI_API_KEY=sk-...
 LANGFLOW_BASE_URL=http://0.0.0.0:7860
+OPENAI_API_KEY=sk-...
 ```
 
 ## Add flows and components
@@ -116,12 +116,12 @@ docker build -t langflow-pokedex:1.2.0 .
 docker run -p 7860:7860 langflow-pokedex:1.2.0
 ```
 
-:::note 
+:::note
 For instructions on building and pushing your image to Docker Hub, see [Docker](/deployment-docker).
 :::
 
 5. Confirm the server is serving your flows.
-Open a `.JSON` file in your `/flows` folder and find the file's `id` value. It's the first value in the a flow document. 
+Open a `.JSON` file in your `/flows` folder and find the file's `id` value. It's the first value in the flow document.
 
 ```json
 "id": "e4167236-938f-4aca-845b-21de3f399858",

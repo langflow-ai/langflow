@@ -20,7 +20,7 @@ source YOUR_LANGFLOW_VENV/bin/activate
 uv pip install langflow matplotlib
 ```
 
-If you're working within a cloned Langflow repository, you can use `uv add` because there is already a `pyproject.toml` file for uv to reference.
+If you're working within a cloned Langflow repository, add dependencies with `uv add` because there is already a `pyproject.toml` file for uv to reference.
 ```bash
 uv add langflow matplotlib
 ```
