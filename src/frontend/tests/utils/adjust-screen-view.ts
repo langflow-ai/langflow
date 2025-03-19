@@ -11,6 +11,12 @@ export async function adjustScreenView(
   await page.getByTestId("fit_view").click();
 
   for (let i = 0; i < numberOfZoomOut; i++) {
-    await page.getByTestId("zoom_out").click();
+    const zoomOutButton = page.getByTestId("zoom_out");
+
+    if (await zoomOutButton.isDisabled()) {
+      break;
+    } else {
+      await zoomOutButton.click();
+    }
   }
 }
