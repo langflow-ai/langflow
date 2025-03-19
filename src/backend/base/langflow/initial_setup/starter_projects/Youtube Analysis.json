@@ -25,9 +25,9 @@
         "id": "reactflow__edge-YouTubeCommentsComponent-1B3Fv{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-1B3Fvœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}-BatchRunComponent-gNH2h{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-gNH2hœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "YouTubeCommentsComponent-1B3Fv",
-        "sourceHandle": "{œdataTypeœ:œYouTubeCommentsComponentœ,œidœ:œYouTubeCommentsComponent-1B3Fvœ,œnameœ:œcommentsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œYouTubeCommentsComponentœ, œidœ: œYouTubeCommentsComponent-1B3Fvœ, œnameœ: œcommentsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "BatchRunComponent-gNH2h",
-        "targetHandle": "{œfieldNameœ:œdfœ,œidœ:œBatchRunComponent-gNH2hœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œBatchRunComponent-gNH2hœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-OpenAIModel-05xLQ{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-05xLQœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}-BatchRunComponent-gNH2h{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-gNH2hœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "OpenAIModel-05xLQ",
-        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-05xLQœ,œnameœ:œmodel_outputœ,œoutput_typesœ:[œLanguageModelœ]}",
+        "sourceHandle": "{œdataTypeœ: œOpenAIModelœ, œidœ: œOpenAIModel-05xLQœ, œnameœ: œmodel_outputœ, œoutput_typesœ: [œLanguageModelœ]}",
         "target": "BatchRunComponent-gNH2h",
-        "targetHandle": "{œfieldNameœ:œmodelœ,œidœ:œBatchRunComponent-gNH2hœ,œinputTypesœ:[œLanguageModelœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œmodelœ, œidœ: œBatchRunComponent-gNH2hœ, œinputTypesœ: [œLanguageModelœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -81,9 +81,9 @@
         "id": "reactflow__edge-BatchRunComponent-gNH2h{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-gNH2hœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}-ParseDataFrame-OIHSx{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-OIHSxœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "BatchRunComponent-gNH2h",
-        "sourceHandle": "{œdataTypeœ:œBatchRunComponentœ,œidœ:œBatchRunComponent-gNH2hœ,œnameœ:œbatch_resultsœ,œoutput_typesœ:[œDataFrameœ]}",
+        "sourceHandle": "{œdataTypeœ: œBatchRunComponentœ, œidœ: œBatchRunComponent-gNH2hœ, œnameœ: œbatch_resultsœ, œoutput_typesœ: [œDataFrameœ]}",
         "target": "ParseDataFrame-OIHSx",
-        "targetHandle": "{œfieldNameœ:œdfœ,œidœ:œParseDataFrame-OIHSxœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œdfœ, œidœ: œParseDataFrame-OIHSxœ, œinputTypesœ: [œDataFrameœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -109,9 +109,9 @@
         "id": "reactflow__edge-ParseDataFrame-OIHSx{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-OIHSxœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Prompt-aWbxe{œfieldNameœ:œanalysisœ,œidœ:œPrompt-aWbxeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ParseDataFrame-OIHSx",
-        "sourceHandle": "{œdataTypeœ:œParseDataFrameœ,œidœ:œParseDataFrame-OIHSxœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œParseDataFrameœ, œidœ: œParseDataFrame-OIHSxœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aWbxe",
-        "targetHandle": "{œfieldNameœ:œanalysisœ,œidœ:œPrompt-aWbxeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œanalysisœ, œidœ: œPrompt-aWbxeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -137,9 +137,9 @@
         "id": "reactflow__edge-Prompt-aWbxe{œdataTypeœ:œPromptœ,œidœ:œPrompt-aWbxeœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-3FPSt{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3FPStœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-aWbxe",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-aWbxeœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-aWbxeœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-3FPSt",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-3FPStœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-3FPStœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -167,9 +167,9 @@
         "id": "reactflow__edge-Agent-3FPSt{œdataTypeœ:œAgentœ,œidœ:œAgent-3FPStœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-i5hlZ{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-i5hlZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-3FPSt",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-3FPStœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-3FPStœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-i5hlZ",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-i5hlZœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-i5hlZœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "reactflow__edge-YouTubeTranscripts-nSvJC{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-nSvJCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-3FPSt{œfieldNameœ:œtoolsœ,œidœ:œAgent-3FPStœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "YouTubeTranscripts-nSvJC",
-        "sourceHandle": "{œdataTypeœ:œYouTubeTranscriptsœ,œidœ:œYouTubeTranscripts-nSvJCœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œYouTubeTranscriptsœ, œidœ: œYouTubeTranscripts-nSvJCœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-3FPSt",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-3FPStœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-3FPStœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -223,9 +223,9 @@
         "id": "reactflow__edge-ChatInput-aeyrx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aeyrxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-DNDns{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-DNDnsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-aeyrx",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aeyrxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aeyrxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ConditionalRouter-DNDns",
-        "targetHandle": "{œfieldNameœ:œinput_textœ,œidœ:œConditionalRouter-DNDnsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_textœ, œidœ: œConditionalRouter-DNDnsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -251,9 +251,9 @@
         "id": "reactflow__edge-ChatInput-aeyrx{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aeyrxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-ConditionalRouter-DNDns{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-DNDnsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-aeyrx",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-aeyrxœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-aeyrxœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ConditionalRouter-DNDns",
-        "targetHandle": "{œfieldNameœ:œmessageœ,œidœ:œConditionalRouter-DNDnsœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œmessageœ, œidœ: œConditionalRouter-DNDnsœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -279,9 +279,9 @@
         "id": "reactflow__edge-ConditionalRouter-DNDns{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-DNDnsœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-YouTubeCommentsComponent-1B3Fv{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-1B3Fvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ConditionalRouter-DNDns",
-        "sourceHandle": "{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-DNDnsœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-DNDnsœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
         "target": "YouTubeCommentsComponent-1B3Fv",
-        "targetHandle": "{œfieldNameœ:œvideo_urlœ,œidœ:œYouTubeCommentsComponent-1B3Fvœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œvideo_urlœ, œidœ: œYouTubeCommentsComponent-1B3Fvœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -307,9 +307,9 @@
         "id": "reactflow__edge-ConditionalRouter-DNDns{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-DNDnsœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}-Prompt-aWbxe{œfieldNameœ:œurlœ,œidœ:œPrompt-aWbxeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ConditionalRouter-DNDns",
-        "sourceHandle": "{œdataTypeœ:œConditionalRouterœ,œidœ:œConditionalRouter-DNDnsœ,œnameœ:œtrue_resultœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œConditionalRouterœ, œidœ: œConditionalRouter-DNDnsœ, œnameœ: œtrue_resultœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-aWbxe",
-        "targetHandle": "{œfieldNameœ:œurlœ,œidœ:œPrompt-aWbxeœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œurlœ, œidœ: œPrompt-aWbxeœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       }
     ],
     "nodes": [

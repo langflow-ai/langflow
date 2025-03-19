@@ -25,9 +25,9 @@
         "id": "reactflow__edge-Prompt-WNOHC{œdataTypeœ:œPromptœ,œidœ:œPrompt-WNOHCœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-INg7A{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-INg7Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-WNOHC",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-WNOHCœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-WNOHCœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-INg7A",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-INg7Aœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-INg7Aœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -53,9 +53,9 @@
         "id": "reactflow__edge-Prompt-d1yBl{œdataTypeœ:œPromptœ,œidœ:œPrompt-d1yBlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-xzdFp{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-d1yBl",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-d1yBlœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-d1yBlœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-xzdFp",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-xzdFpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -82,9 +82,9 @@
         "id": "reactflow__edge-Agent-xzdFp{œdataTypeœ:œAgentœ,œidœ:œAgent-xzdFpœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-WNOHC{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-WNOHCœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-xzdFp",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-xzdFpœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-xzdFpœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-WNOHC",
-        "targetHandle": "{œfieldNameœ:œfinance_agent_outputœ,œidœ:œPrompt-WNOHCœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œfinance_agent_outputœ, œidœ: œPrompt-WNOHCœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -110,9 +110,9 @@
         "id": "reactflow__edge-ChatInput-EXrQ4{œdataTypeœ:œChatInputœ,œidœ:œChatInput-EXrQ4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Agent-mYTzY{œfieldNameœ:œinput_valueœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "ChatInput-EXrQ4",
-        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-EXrQ4œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-EXrQ4œ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-mYTzY",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-mYTzYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -138,9 +138,9 @@
         "id": "reactflow__edge-Prompt-f7d7X{œdataTypeœ:œPromptœ,œidœ:œPrompt-f7d7Xœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-Agent-mYTzY{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Prompt-f7d7X",
-        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-f7d7Xœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-f7d7Xœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-mYTzY",
-        "targetHandle": "{œfieldNameœ:œsystem_promptœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œsystem_promptœ, œidœ: œAgent-mYTzYœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -166,9 +166,9 @@
         "id": "reactflow__edge-Agent-mYTzY{œdataTypeœ:œAgentœ,œidœ:œAgent-mYTzYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Agent-xzdFp{œfieldNameœ:œinput_valueœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-mYTzY",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-mYTzYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-mYTzYœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Agent-xzdFp",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œAgent-xzdFpœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -195,9 +195,9 @@
         "id": "reactflow__edge-Agent-mYTzY{œdataTypeœ:œAgentœ,œidœ:œAgent-mYTzYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-Prompt-WNOHC{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-WNOHCœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
         "source": "Agent-mYTzY",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-mYTzYœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-mYTzYœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Prompt-WNOHC",
-        "targetHandle": "{œfieldNameœ:œresearch_agent_outputœ,œidœ:œPrompt-WNOHCœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
+        "targetHandle": "{œfieldNameœ: œresearch_agent_outputœ, œidœ: œPrompt-WNOHCœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
       },
       {
         "animated": false,
@@ -223,9 +223,9 @@
         "id": "reactflow__edge-CalculatorComponent-9O7Ap{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-9O7Apœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-INg7A{œfieldNameœ:œtoolsœ,œidœ:œAgent-INg7Aœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "CalculatorComponent-9O7Ap",
-        "sourceHandle": "{œdataTypeœ:œCalculatorComponentœ,œidœ:œCalculatorComponent-9O7Apœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œCalculatorComponentœ, œidœ: œCalculatorComponent-9O7Apœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-INg7A",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-INg7Aœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-INg7Aœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -251,9 +251,9 @@
         "id": "reactflow__edge-YfinanceComponent-Adjq6{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-Adjq6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-xzdFp{œfieldNameœ:œtoolsœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "YfinanceComponent-Adjq6",
-        "sourceHandle": "{œdataTypeœ:œYfinanceComponentœ,œidœ:œYfinanceComponent-Adjq6œ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œYfinanceComponentœ, œidœ: œYfinanceComponent-Adjq6œ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-xzdFp",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-xzdFpœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-xzdFpœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -279,9 +279,9 @@
         "id": "reactflow__edge-TavilySearchComponent-6ezaX{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-6ezaXœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-mYTzY{œfieldNameœ:œtoolsœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "TavilySearchComponent-6ezaX",
-        "sourceHandle": "{œdataTypeœ:œTavilySearchComponentœ,œidœ:œTavilySearchComponent-6ezaXœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "sourceHandle": "{œdataTypeœ: œTavilySearchComponentœ, œidœ: œTavilySearchComponent-6ezaXœ, œnameœ: œcomponent_as_toolœ, œoutput_typesœ: [œToolœ]}",
         "target": "Agent-mYTzY",
-        "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-mYTzYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œtoolsœ, œidœ: œAgent-mYTzYœ, œinputTypesœ: [œToolœ], œtypeœ: œotherœ}"
       },
       {
         "animated": false,
@@ -309,9 +309,9 @@
         "id": "reactflow__edge-Agent-INg7A{œdataTypeœ:œAgentœ,œidœ:œAgent-INg7Aœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-rF4Qx{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rF4Qxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}",
         "selected": false,
         "source": "Agent-INg7A",
-        "sourceHandle": "{œdataTypeœ:œAgentœ,œidœ:œAgent-INg7Aœ,œnameœ:œresponseœ,œoutput_typesœ:[œMessageœ]}",
+        "sourceHandle": "{œdataTypeœ: œAgentœ, œidœ: œAgent-INg7Aœ, œnameœ: œresponseœ, œoutput_typesœ: [œMessageœ]}",
         "target": "ChatOutput-rF4Qx",
-        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-rF4Qxœ,œinputTypesœ:[œDataœ,œDataFrameœ,œMessageœ],œtypeœ:œotherœ}"
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-rF4Qxœ, œinputTypesœ: [œDataœ, œDataFrameœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "nodes": [
