@@ -1,3 +1,4 @@
+import { GooglemeetIcon } from "../icons/Googlemeet";
 import { AIMLIcon } from "@/icons/AIML";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { BWPythonIcon } from "@/icons/BW python";
@@ -561,6 +562,7 @@ export const SIDEBAR_CATEGORIES = [
 ];
 
 export const SIDEBAR_BUNDLES = [
+  { display_name: "Googlemeet", name: "googlemeet", icon: "Googlemeet" },
   { display_name: "Googlesheets", name: "googlesheets", icon: "Googlesheets" },
   {
     display_name: "Googlecalendar",
@@ -653,6 +655,7 @@ export const nodeIconsLucide: iconsType = {
   ChatInput: MessagesSquare,
   ChatOutput: MessagesSquare,
   //Integration Icons
+  Googlemeet: GooglemeetIcon,
   Googlesheets: GooglesheetsIcon,
   Googlecalendar: GooglecalendarIcon,
   Gmail: GmailIcon,
