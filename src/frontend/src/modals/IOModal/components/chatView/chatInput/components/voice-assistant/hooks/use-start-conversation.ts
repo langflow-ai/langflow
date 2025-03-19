@@ -32,7 +32,10 @@ export const useStartConversation = (
           JSON.stringify({
             type: "langflow.elevenlabs.config",
             enabled: audioSettings.provider === "elevenlabs",
-            voice_id: audioSettings.provider === "elevenlabs" ? audioSettings.voice : "",
+            voice_id:
+              audioSettings.provider === "elevenlabs"
+                ? audioSettings.voice
+                : "",
           }),
         );
         if (audioSettings.provider !== "elevenlabs") {
@@ -52,7 +55,8 @@ export const useStartConversation = (
     wsRef.current.onmessage = handleWebSocketMessage;
 
     wsRef.current.onclose = (event) => {
-      if (event.code !== 1000) { // 1000 is normal closure
+      if (event.code !== 1000) {
+        // 1000 is normal closure
         console.warn(`WebSocket closed with code ${event.code}`);
       }
       setStatus(`Disconnected (${event.code})`);
