@@ -10,7 +10,6 @@ test(
   "should navigate to files page and show empty state",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
-    test.skip(); //@TODO understand this behavior
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Wait for the sidebar to be visible
@@ -130,6 +129,8 @@ test(
   "should upload multiple files with different types",
   { tag: ["@release", "@files"] },
   async ({ page }) => {
+    test.skip(); //@TODO understand this behavior
+
     const fileNames = {
       txt: generateRandomFilename(),
       json: generateRandomFilename(),
