@@ -1,4 +1,3 @@
-import { GooglemeetIcon } from "../icons/Googlemeet";
 import { AIMLIcon } from "@/icons/AIML";
 import { AWSInvertedIcon } from "@/icons/AWSInverted";
 import { BWPythonIcon } from "@/icons/BW python";
@@ -286,6 +285,7 @@ import { GitLoaderIcon } from "../icons/GitLoader";
 import { GoogleIcon } from "../icons/Google";
 import { GoogleGenerativeAIIcon } from "../icons/GoogleGenerativeAI";
 import { GooglecalendarIcon } from "../icons/Googlecalendar";
+import { GooglemeetIcon } from "../icons/Googlemeet";
 import { GooglesheetsIcon } from "../icons/Googlesheets";
 import {
   GradientInfinity,
