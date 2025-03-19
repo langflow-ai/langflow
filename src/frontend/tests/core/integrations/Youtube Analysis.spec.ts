@@ -1,11 +1,8 @@
 import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
-import { readFileSync } from "fs";
 import path from "path";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(

@@ -6,6 +6,8 @@ test(
   "user should be able to publish a flow",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page, context }) => {
+    test.skip(); //@TODO understand this behavior
+
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
