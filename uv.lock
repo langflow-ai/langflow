@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -10,8 +11,8 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "langflow",
-    "langflow-base",
+    "langflow-base-nightly",
+    "langflow-nightly",
 ]
 
 [[package]]
@@ -4374,345 +4375,8 @@ wheels = [
 ]
 
 [[package]]
-name = "langflow"
-version = "1.2.0"
-source = { editable = "." }
-dependencies = [
-    { name = "ag2" },
-    { name = "aiofile" },
-    { name = "apify-client" },
-    { name = "arize-phoenix-otel" },
-    { name = "assemblyai" },
-    { name = "astra-assistants", extra = ["tools"] },
-    { name = "atlassian-python-api" },
-    { name = "beautifulsoup4" },
-    { name = "boto3" },
-    { name = "certifi" },
-    { name = "chromadb" },
-    { name = "composio-core" },
-    { name = "composio-langchain" },
-    { name = "crewai" },
-    { name = "dspy-ai" },
-    { name = "duckduckgo-search" },
-    { name = "elasticsearch" },
-    { name = "faiss-cpu" },
-    { name = "fake-useragent" },
-    { name = "fastavro" },
-    { name = "gitpython" },
-    { name = "google-api-python-client" },
-    { name = "google-search-results" },
-    { name = "graph-retriever" },
-    { name = "huggingface-hub", extra = ["inference"] },
-    { name = "jq" },
-    { name = "json-repair" },
-    { name = "kubernetes" },
-    { name = "langchain" },
-    { name = "langchain-anthropic" },
-    { name = "langchain-astradb" },
-    { name = "langchain-aws" },
-    { name = "langchain-chroma" },
-    { name = "langchain-cohere" },
-    { name = "langchain-community" },
-    { name = "langchain-elasticsearch" },
-    { name = "langchain-google-calendar-tools" },
-    { name = "langchain-google-community" },
-    { name = "langchain-google-genai" },
-    { name = "langchain-google-vertexai" },
-    { name = "langchain-graph-retriever" },
-    { name = "langchain-groq" },
-    { name = "langchain-milvus" },
-    { name = "langchain-mistralai" },
-    { name = "langchain-mongodb" },
-    { name = "langchain-nvidia-ai-endpoints" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
-    { name = "langchain-pinecone" },
-    { name = "langchain-sambanova" },
-    { name = "langchain-unstructured" },
-    { name = "langflow-base" },
-    { name = "langfuse" },
-    { name = "langsmith" },
-    { name = "langwatch" },
-    { name = "lark" },
-    { name = "litellm" },
-    { name = "markdown" },
-    { name = "markupsafe" },
-    { name = "mcp" },
-    { name = "mem0ai" },
-    { name = "metal-sdk" },
-    { name = "metaphor-python" },
-    { name = "needle-python" },
-    { name = "networkx" },
-    { name = "nltk" },
-    { name = "numexpr" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "opensearch-py" },
-    { name = "pgvector" },
-    { name = "pyarrow" },
-    { name = "pydantic-ai" },
-    { name = "pydantic-settings" },
-    { name = "pylint" },
-    { name = "pymongo" },
-    { name = "pytube" },
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "qdrant-client" },
-    { name = "qianfan" },
-    { name = "ragstack-ai-knowledge-store" },
-    { name = "redis" },
-    { name = "ruff" },
-    { name = "scrapegraph-py" },
-    { name = "smolagents" },
-    { name = "spider-client" },
-    { name = "sqlalchemy", extra = ["aiosqlite"] },
-    { name = "sseclient-py" },
-    { name = "supabase" },
-    { name = "types-cachetools" },
-    { name = "upstash-vector" },
-    { name = "uv" },
-    { name = "weaviate-client" },
-    { name = "wikipedia" },
-    { name = "wolframalpha" },
-    { name = "yfinance" },
-    { name = "youtube-transcript-api" },
-    { name = "zep-python" },
-]
-
-[package.optional-dependencies]
-cassio = [
-    { name = "cassio" },
-]
-clickhouse-connect = [
-    { name = "clickhouse-connect" },
-]
-couchbase = [
-    { name = "couchbase" },
-]
-deploy = [
-    { name = "celery", extra = ["redis"] },
-    { name = "flower" },
-]
-local = [
-    { name = "ctransformers" },
-    { name = "llama-cpp-python" },
-    { name = "sentence-transformers" },
-]
-nv-ingest = [
-    { name = "llama-index-embeddings-nvidia" },
-    { name = "nv-ingest-client" },
-    { name = "pymilvus", extra = ["bulk-writer", "model"] },
-    { name = "python-pptx" },
-]
-postgresql = [
-    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "asgi-lifespan" },
-    { name = "blockbuster" },
-    { name = "codeflash" },
-    { name = "dictdiffer" },
-    { name = "faker" },
-    { name = "httpx" },
-    { name = "hypothesis" },
-    { name = "ipykernel" },
-    { name = "locust" },
-    { name = "mypy" },
-    { name = "packaging" },
-    { name = "pandas-stubs" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-codspeed" },
-    { name = "pytest-cov" },
-    { name = "pytest-flakefinder" },
-    { name = "pytest-github-actions-annotate-failures" },
-    { name = "pytest-instafail" },
-    { name = "pytest-mock" },
-    { name = "pytest-profiling" },
-    { name = "pytest-rerunfailures" },
-    { name = "pytest-split" },
-    { name = "pytest-sugar" },
-    { name = "pytest-xdist" },
-    { name = "requests" },
-    { name = "respx" },
-    { name = "ruff" },
-    { name = "types-aiofiles" },
-    { name = "types-google-cloud-ndb" },
-    { name = "types-markdown" },
-    { name = "types-passlib" },
-    { name = "types-pillow" },
-    { name = "types-python-jose" },
-    { name = "types-pywin32" },
-    { name = "types-pyyaml" },
-    { name = "types-redis" },
-    { name = "types-requests" },
-    { name = "vulture" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "ag2", specifier = ">=0.1.0" },
-    { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
-    { name = "apify-client", specifier = ">=1.8.1" },
-    { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
-    { name = "assemblyai", specifier = "==0.35.1" },
-    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.11" },
-    { name = "atlassian-python-api", specifier = "==3.41.16" },
-    { name = "beautifulsoup4", specifier = "==4.12.3" },
-    { name = "boto3", specifier = "==1.34.162" },
-    { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
-    { name = "celery", extras = ["redis"], marker = "extra == 'deploy'", specifier = ">=5.3.6" },
-    { name = "certifi", specifier = "==2024.8.30" },
-    { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
-    { name = "chromadb", specifier = "==0.5.23" },
-    { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
-    { name = "composio-core", specifier = "==0.7.1" },
-    { name = "composio-langchain", specifier = "==0.7.1" },
-    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
-    { name = "crewai", specifier = "==0.102.0" },
-    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "dspy-ai", specifier = "==2.5.41" },
-    { name = "duckduckgo-search", specifier = "==7.2.1" },
-    { name = "elasticsearch", specifier = "==8.16.0" },
-    { name = "faiss-cpu", specifier = "==1.9.0.post1" },
-    { name = "fake-useragent", specifier = "==1.5.1" },
-    { name = "fastavro", specifier = "==1.9.7" },
-    { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
-    { name = "gitpython", specifier = "==3.1.43" },
-    { name = "google-api-python-client", specifier = "==2.154.0" },
-    { name = "google-search-results", specifier = ">=2.4.1,<3.0.0" },
-    { name = "graph-retriever", specifier = "==0.6.1" },
-    { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2,<1.0.0" },
-    { name = "jq", specifier = "==1.8.0" },
-    { name = "json-repair", specifier = "==0.30.3" },
-    { name = "kubernetes", specifier = "==31.0.0" },
-    { name = "langchain", specifier = "==0.3.10" },
-    { name = "langchain-anthropic", specifier = "==0.3.0" },
-    { name = "langchain-astradb", specifier = "==0.5.2" },
-    { name = "langchain-aws", specifier = "==0.2.7" },
-    { name = "langchain-chroma", specifier = "==0.1.4" },
-    { name = "langchain-cohere", specifier = "==0.3.3" },
-    { name = "langchain-community", specifier = "~=0.3.10" },
-    { name = "langchain-elasticsearch", specifier = "==0.3.0" },
-    { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
-    { name = "langchain-google-community", specifier = "==2.0.3" },
-    { name = "langchain-google-genai", specifier = "==2.0.6" },
-    { name = "langchain-google-vertexai", specifier = "==2.0.7" },
-    { name = "langchain-graph-retriever", specifier = "==0.6.1" },
-    { name = "langchain-groq", specifier = "==0.2.1" },
-    { name = "langchain-milvus", specifier = "==0.1.7" },
-    { name = "langchain-mistralai", specifier = "==0.2.3" },
-    { name = "langchain-mongodb", specifier = "==0.2.0" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = "==0.3.8" },
-    { name = "langchain-ollama", specifier = "==0.2.1" },
-    { name = "langchain-openai", specifier = "==0.2.12" },
-    { name = "langchain-pinecone", specifier = "==0.2.2" },
-    { name = "langchain-sambanova", specifier = "==0.1.0" },
-    { name = "langchain-unstructured", specifier = "==0.1.5" },
-    { name = "langflow-base", editable = "src/backend/base" },
-    { name = "langfuse", specifier = "==2.53.9" },
-    { name = "langsmith", specifier = "==0.1.147" },
-    { name = "langwatch", specifier = "==0.1.16" },
-    { name = "lark", specifier = "==1.2.2" },
-    { name = "litellm", specifier = "==1.60.2" },
-    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
-    { name = "llama-index-embeddings-nvidia", marker = "extra == 'nv-ingest'", specifier = "==0.1.5" },
-    { name = "markdown", specifier = "==3.7" },
-    { name = "markupsafe", specifier = "==3.0.2" },
-    { name = "mcp", specifier = ">=0.9.1" },
-    { name = "mem0ai", specifier = "==0.1.34" },
-    { name = "metal-sdk", specifier = "==2.5.1" },
-    { name = "metaphor-python", specifier = "==0.1.23" },
-    { name = "needle-python", specifier = ">=0.4.0" },
-    { name = "networkx", specifier = "==3.4.2" },
-    { name = "nltk", specifier = "==3.9.1" },
-    { name = "numexpr", specifier = "==2.10.2" },
-    { name = "nv-ingest-client", marker = "extra == 'nv-ingest'", specifier = "==2025.2.7.dev0" },
-    { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
-    { name = "opensearch-py", specifier = "==2.8.0" },
-    { name = "pgvector", specifier = "==0.3.6" },
-    { name = "pyarrow", specifier = "==19.0.0" },
-    { name = "pydantic-ai", specifier = ">=0.0.19" },
-    { name = "pydantic-settings", specifier = "==2.4.0" },
-    { name = "pylint", specifier = ">=3.3.4" },
-    { name = "pymilvus", extras = ["bulk-writer", "model"], marker = "extra == 'nv-ingest'", specifier = "==2.5.0" },
-    { name = "pymongo", specifier = "==4.10.1" },
-    { name = "python-pptx", marker = "extra == 'nv-ingest'", specifier = "==0.6.23" },
-    { name = "pytube", specifier = "==15.0.0" },
-    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
-    { name = "qdrant-client", specifier = "==1.9.2" },
-    { name = "qianfan", specifier = "==0.3.5" },
-    { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
-    { name = "redis", specifier = "==5.2.1" },
-    { name = "ruff", specifier = ">=0.9.7" },
-    { name = "scrapegraph-py", specifier = ">=1.12.0" },
-    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
-    { name = "smolagents", specifier = ">=1.8.0" },
-    { name = "spider-client", specifier = "==0.1.24" },
-    { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'" },
-    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'" },
-    { name = "sseclient-py", specifier = "==1.8.0" },
-    { name = "supabase", specifier = "==2.6.0" },
-    { name = "types-cachetools", specifier = "==5.5.0.20240820" },
-    { name = "upstash-vector", specifier = "==0.6.0" },
-    { name = "uv", specifier = ">=0.5.7" },
-    { name = "weaviate-client", specifier = "==4.10.2" },
-    { name = "wikipedia", specifier = "==1.4.0" },
-    { name = "wolframalpha", specifier = "==5.1.3" },
-    { name = "yfinance", specifier = "==0.2.50" },
-    { name = "youtube-transcript-api", specifier = "==0.6.3" },
-    { name = "zep-python", specifier = "==2.0.2" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "asgi-lifespan", specifier = ">=2.1.0" },
-    { name = "blockbuster", specifier = ">=1.5.20,<1.6" },
-    { name = "codeflash", specifier = ">=0.8.4" },
-    { name = "dictdiffer", specifier = ">=0.9.0" },
-    { name = "faker", specifier = ">=37.0.0" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "hypothesis", specifier = ">=6.123.17" },
-    { name = "ipykernel", specifier = ">=6.29.0" },
-    { name = "locust", specifier = ">=2.32.9" },
-    { name = "mypy", specifier = ">=1.11.0" },
-    { name = "packaging", specifier = ">=24.1,<25.0" },
-    { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
-    { name = "pre-commit", specifier = ">=3.7.0" },
-    { name = "pytest", specifier = ">=8.2.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.0" },
-    { name = "pytest-codspeed", specifier = ">=3.0.0" },
-    { name = "pytest-cov", specifier = ">=5.0.0" },
-    { name = "pytest-flakefinder", specifier = ">=1.1.0" },
-    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
-    { name = "pytest-instafail", specifier = ">=0.5.0" },
-    { name = "pytest-mock", specifier = ">=3.14.0" },
-    { name = "pytest-profiling", specifier = ">=1.7.0" },
-    { name = "pytest-rerunfailures", specifier = ">=15.0" },
-    { name = "pytest-split", specifier = ">=0.9.0" },
-    { name = "pytest-sugar", specifier = ">=1.0.0" },
-    { name = "pytest-xdist", specifier = ">=3.6.0" },
-    { name = "requests", specifier = ">=2.32.0" },
-    { name = "respx", specifier = ">=0.21.1" },
-    { name = "ruff", specifier = ">=0.9.7,<0.10" },
-    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
-    { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
-    { name = "types-markdown", specifier = ">=3.7.0.20240822" },
-    { name = "types-passlib", specifier = ">=1.7.7.13" },
-    { name = "types-pillow", specifier = ">=10.2.0.20240213" },
-    { name = "types-python-jose", specifier = ">=3.3.4.8" },
-    { name = "types-pywin32", specifier = ">=306.0.0.4" },
-    { name = "types-pyyaml", specifier = ">=6.0.12.8" },
-    { name = "types-redis", specifier = ">=4.6.0.5" },
-    { name = "types-requests", specifier = ">=2.32.0" },
-    { name = "vulture", specifier = ">=2.11" },
-]
-
-[[package]]
-name = "langflow-base"
-version = "0.2.0"
+name = "langflow-base-nightly"
+version = "0.2.0.dev22"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile" },
@@ -4926,6 +4590,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "validators", specifier = ">=0.34.0" },
 ]
+provides-extras = ["postgresql", "deploy", "local", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -4953,6 +4618,344 @@ dev = [
     { name = "requests", specifier = ">=2.32.0" },
     { name = "respx", specifier = ">=0.21.1" },
     { name = "ruff", specifier = ">=0.6.2" },
+    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
+    { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
+    { name = "types-markdown", specifier = ">=3.7.0.20240822" },
+    { name = "types-passlib", specifier = ">=1.7.7.13" },
+    { name = "types-pillow", specifier = ">=10.2.0.20240213" },
+    { name = "types-python-jose", specifier = ">=3.3.4.8" },
+    { name = "types-pywin32", specifier = ">=306.0.0.4" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.8" },
+    { name = "types-redis", specifier = ">=4.6.0.5" },
+    { name = "types-requests", specifier = ">=2.32.0" },
+    { name = "vulture", specifier = ">=2.11" },
+]
+
+[[package]]
+name = "langflow-nightly"
+version = "1.2.0.dev22"
+source = { editable = "." }
+dependencies = [
+    { name = "ag2" },
+    { name = "aiofile" },
+    { name = "apify-client" },
+    { name = "arize-phoenix-otel" },
+    { name = "assemblyai" },
+    { name = "astra-assistants", extra = ["tools"] },
+    { name = "atlassian-python-api" },
+    { name = "beautifulsoup4" },
+    { name = "boto3" },
+    { name = "certifi" },
+    { name = "chromadb" },
+    { name = "composio-core" },
+    { name = "composio-langchain" },
+    { name = "crewai" },
+    { name = "dspy-ai" },
+    { name = "duckduckgo-search" },
+    { name = "elasticsearch" },
+    { name = "faiss-cpu" },
+    { name = "fake-useragent" },
+    { name = "fastavro" },
+    { name = "gitpython" },
+    { name = "google-api-python-client" },
+    { name = "google-search-results" },
+    { name = "graph-retriever" },
+    { name = "huggingface-hub", extra = ["inference"] },
+    { name = "jq" },
+    { name = "json-repair" },
+    { name = "kubernetes" },
+    { name = "langchain" },
+    { name = "langchain-anthropic" },
+    { name = "langchain-astradb" },
+    { name = "langchain-aws" },
+    { name = "langchain-chroma" },
+    { name = "langchain-cohere" },
+    { name = "langchain-community" },
+    { name = "langchain-elasticsearch" },
+    { name = "langchain-google-calendar-tools" },
+    { name = "langchain-google-community" },
+    { name = "langchain-google-genai" },
+    { name = "langchain-google-vertexai" },
+    { name = "langchain-graph-retriever" },
+    { name = "langchain-groq" },
+    { name = "langchain-milvus" },
+    { name = "langchain-mistralai" },
+    { name = "langchain-mongodb" },
+    { name = "langchain-nvidia-ai-endpoints" },
+    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
+    { name = "langchain-pinecone" },
+    { name = "langchain-sambanova" },
+    { name = "langchain-unstructured" },
+    { name = "langflow-base-nightly" },
+    { name = "langfuse" },
+    { name = "langsmith" },
+    { name = "langwatch" },
+    { name = "lark" },
+    { name = "litellm" },
+    { name = "markdown" },
+    { name = "markupsafe" },
+    { name = "mcp" },
+    { name = "mem0ai" },
+    { name = "metal-sdk" },
+    { name = "metaphor-python" },
+    { name = "needle-python" },
+    { name = "networkx" },
+    { name = "nltk" },
+    { name = "numexpr" },
+    { name = "openinference-instrumentation-langchain" },
+    { name = "opensearch-py" },
+    { name = "pgvector" },
+    { name = "pyarrow" },
+    { name = "pydantic-ai" },
+    { name = "pydantic-settings" },
+    { name = "pylint" },
+    { name = "pymongo" },
+    { name = "pytube" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "qdrant-client" },
+    { name = "qianfan" },
+    { name = "ragstack-ai-knowledge-store" },
+    { name = "redis" },
+    { name = "ruff" },
+    { name = "scrapegraph-py" },
+    { name = "smolagents" },
+    { name = "spider-client" },
+    { name = "sqlalchemy", extra = ["aiosqlite"] },
+    { name = "sseclient-py" },
+    { name = "supabase" },
+    { name = "types-cachetools" },
+    { name = "upstash-vector" },
+    { name = "uv" },
+    { name = "weaviate-client" },
+    { name = "wikipedia" },
+    { name = "wolframalpha" },
+    { name = "yfinance" },
+    { name = "youtube-transcript-api" },
+    { name = "zep-python" },
+]
+
+[package.optional-dependencies]
+cassio = [
+    { name = "cassio" },
+]
+clickhouse-connect = [
+    { name = "clickhouse-connect" },
+]
+couchbase = [
+    { name = "couchbase" },
+]
+deploy = [
+    { name = "celery", extra = ["redis"] },
+    { name = "flower" },
+]
+local = [
+    { name = "ctransformers" },
+    { name = "llama-cpp-python" },
+    { name = "sentence-transformers" },
+]
+nv-ingest = [
+    { name = "llama-index-embeddings-nvidia" },
+    { name = "nv-ingest-client" },
+    { name = "pymilvus", extra = ["bulk-writer", "model"] },
+    { name = "python-pptx" },
+]
+postgresql = [
+    { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "asgi-lifespan" },
+    { name = "blockbuster" },
+    { name = "codeflash" },
+    { name = "dictdiffer" },
+    { name = "faker" },
+    { name = "httpx" },
+    { name = "hypothesis" },
+    { name = "ipykernel" },
+    { name = "locust" },
+    { name = "mypy" },
+    { name = "packaging" },
+    { name = "pandas-stubs" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-codspeed" },
+    { name = "pytest-cov" },
+    { name = "pytest-flakefinder" },
+    { name = "pytest-github-actions-annotate-failures" },
+    { name = "pytest-instafail" },
+    { name = "pytest-mock" },
+    { name = "pytest-profiling" },
+    { name = "pytest-rerunfailures" },
+    { name = "pytest-split" },
+    { name = "pytest-sugar" },
+    { name = "pytest-xdist" },
+    { name = "requests" },
+    { name = "respx" },
+    { name = "ruff" },
+    { name = "types-aiofiles" },
+    { name = "types-google-cloud-ndb" },
+    { name = "types-markdown" },
+    { name = "types-passlib" },
+    { name = "types-pillow" },
+    { name = "types-python-jose" },
+    { name = "types-pywin32" },
+    { name = "types-pyyaml" },
+    { name = "types-redis" },
+    { name = "types-requests" },
+    { name = "vulture" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ag2", specifier = ">=0.1.0" },
+    { name = "aiofile", specifier = ">=3.9.0,<4.0.0" },
+    { name = "apify-client", specifier = ">=1.8.1" },
+    { name = "arize-phoenix-otel", specifier = ">=0.6.1" },
+    { name = "assemblyai", specifier = "==0.35.1" },
+    { name = "astra-assistants", extras = ["tools"], specifier = "~=2.2.11" },
+    { name = "atlassian-python-api", specifier = "==3.41.16" },
+    { name = "beautifulsoup4", specifier = "==4.12.3" },
+    { name = "boto3", specifier = "==1.34.162" },
+    { name = "cassio", marker = "extra == 'cassio'", specifier = ">=0.1.7" },
+    { name = "celery", extras = ["redis"], marker = "extra == 'deploy'", specifier = ">=5.3.6" },
+    { name = "certifi", specifier = "==2024.8.30" },
+    { name = "certifi", specifier = ">=2023.11.17,<2025.0.0" },
+    { name = "chromadb", specifier = "==0.5.23" },
+    { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
+    { name = "composio-core", specifier = "==0.7.1" },
+    { name = "composio-langchain", specifier = "==0.7.1" },
+    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
+    { name = "crewai", specifier = "==0.102.0" },
+    { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
+    { name = "dspy-ai", specifier = "==2.5.41" },
+    { name = "duckduckgo-search", specifier = "==7.2.1" },
+    { name = "elasticsearch", specifier = "==8.16.0" },
+    { name = "faiss-cpu", specifier = "==1.9.0.post1" },
+    { name = "fake-useragent", specifier = "==1.5.1" },
+    { name = "fastavro", specifier = "==1.9.7" },
+    { name = "flower", marker = "extra == 'deploy'", specifier = ">=2.0.0" },
+    { name = "gitpython", specifier = "==3.1.43" },
+    { name = "google-api-python-client", specifier = "==2.154.0" },
+    { name = "google-search-results", specifier = ">=2.4.1,<3.0.0" },
+    { name = "graph-retriever", specifier = "==0.6.1" },
+    { name = "huggingface-hub", extras = ["inference"], specifier = ">=0.23.2,<1.0.0" },
+    { name = "jq", specifier = "==1.8.0" },
+    { name = "json-repair", specifier = "==0.30.3" },
+    { name = "kubernetes", specifier = "==31.0.0" },
+    { name = "langchain", specifier = "==0.3.10" },
+    { name = "langchain-anthropic", specifier = "==0.3.0" },
+    { name = "langchain-astradb", specifier = "==0.5.2" },
+    { name = "langchain-aws", specifier = "==0.2.7" },
+    { name = "langchain-chroma", specifier = "==0.1.4" },
+    { name = "langchain-cohere", specifier = "==0.3.3" },
+    { name = "langchain-community", specifier = "~=0.3.10" },
+    { name = "langchain-elasticsearch", specifier = "==0.3.0" },
+    { name = "langchain-google-calendar-tools", specifier = "==0.0.1" },
+    { name = "langchain-google-community", specifier = "==2.0.3" },
+    { name = "langchain-google-genai", specifier = "==2.0.6" },
+    { name = "langchain-google-vertexai", specifier = "==2.0.7" },
+    { name = "langchain-graph-retriever", specifier = "==0.6.1" },
+    { name = "langchain-groq", specifier = "==0.2.1" },
+    { name = "langchain-milvus", specifier = "==0.1.7" },
+    { name = "langchain-mistralai", specifier = "==0.2.3" },
+    { name = "langchain-mongodb", specifier = "==0.2.0" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = "==0.3.8" },
+    { name = "langchain-ollama", specifier = "==0.2.1" },
+    { name = "langchain-openai", specifier = "==0.2.12" },
+    { name = "langchain-pinecone", specifier = "==0.2.2" },
+    { name = "langchain-sambanova", specifier = "==0.1.0" },
+    { name = "langchain-unstructured", specifier = "==0.1.5" },
+    { name = "langflow-base-nightly", editable = "src/backend/base" },
+    { name = "langfuse", specifier = "==2.53.9" },
+    { name = "langsmith", specifier = "==0.1.147" },
+    { name = "langwatch", specifier = "==0.1.16" },
+    { name = "lark", specifier = "==1.2.2" },
+    { name = "litellm", specifier = "==1.60.2" },
+    { name = "llama-cpp-python", marker = "extra == 'local'", specifier = "~=0.2.0" },
+    { name = "llama-index-embeddings-nvidia", marker = "extra == 'nv-ingest'", specifier = "==0.1.5" },
+    { name = "markdown", specifier = "==3.7" },
+    { name = "markupsafe", specifier = "==3.0.2" },
+    { name = "mcp", specifier = ">=0.9.1" },
+    { name = "mem0ai", specifier = "==0.1.34" },
+    { name = "metal-sdk", specifier = "==2.5.1" },
+    { name = "metaphor-python", specifier = "==0.1.23" },
+    { name = "needle-python", specifier = ">=0.4.0" },
+    { name = "networkx", specifier = "==3.4.2" },
+    { name = "nltk", specifier = "==3.9.1" },
+    { name = "numexpr", specifier = "==2.10.2" },
+    { name = "nv-ingest-client", marker = "extra == 'nv-ingest'", specifier = "==2025.2.7.dev0" },
+    { name = "openinference-instrumentation-langchain", specifier = ">=0.1.29" },
+    { name = "opensearch-py", specifier = "==2.8.0" },
+    { name = "pgvector", specifier = "==0.3.6" },
+    { name = "pyarrow", specifier = "==19.0.0" },
+    { name = "pydantic-ai", specifier = ">=0.0.19" },
+    { name = "pydantic-settings", specifier = "==2.4.0" },
+    { name = "pylint", specifier = ">=3.3.4" },
+    { name = "pymilvus", extras = ["bulk-writer", "model"], marker = "extra == 'nv-ingest'", specifier = "==2.5.0" },
+    { name = "pymongo", specifier = "==4.10.1" },
+    { name = "python-pptx", marker = "extra == 'nv-ingest'", specifier = "==0.6.23" },
+    { name = "pytube", specifier = "==15.0.0" },
+    { name = "pywin32", marker = "sys_platform == 'win32'", specifier = "==307" },
+    { name = "qdrant-client", specifier = "==1.9.2" },
+    { name = "qianfan", specifier = "==0.3.5" },
+    { name = "ragstack-ai-knowledge-store", specifier = "==0.2.1" },
+    { name = "redis", specifier = "==5.2.1" },
+    { name = "ruff", specifier = ">=0.9.7" },
+    { name = "scrapegraph-py", specifier = ">=1.12.0" },
+    { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
+    { name = "smolagents", specifier = ">=1.8.0" },
+    { name = "spider-client", specifier = "==0.1.24" },
+    { name = "sqlalchemy", extras = ["aiosqlite"], specifier = ">=2.0.38,<3.0.0" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'" },
+    { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'" },
+    { name = "sseclient-py", specifier = "==1.8.0" },
+    { name = "supabase", specifier = "==2.6.0" },
+    { name = "types-cachetools", specifier = "==5.5.0.20240820" },
+    { name = "upstash-vector", specifier = "==0.6.0" },
+    { name = "uv", specifier = ">=0.5.7" },
+    { name = "weaviate-client", specifier = "==4.10.2" },
+    { name = "wikipedia", specifier = "==1.4.0" },
+    { name = "wolframalpha", specifier = "==5.1.3" },
+    { name = "yfinance", specifier = "==0.2.50" },
+    { name = "youtube-transcript-api", specifier = "==0.6.3" },
+    { name = "zep-python", specifier = "==2.0.2" },
+]
+provides-extras = ["deploy", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "asgi-lifespan", specifier = ">=2.1.0" },
+    { name = "blockbuster", specifier = ">=1.5.20,<1.6" },
+    { name = "codeflash", specifier = ">=0.8.4" },
+    { name = "dictdiffer", specifier = ">=0.9.0" },
+    { name = "faker", specifier = ">=37.0.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "hypothesis", specifier = ">=6.123.17" },
+    { name = "ipykernel", specifier = ">=6.29.0" },
+    { name = "locust", specifier = ">=2.32.9" },
+    { name = "mypy", specifier = ">=1.11.0" },
+    { name = "packaging", specifier = ">=24.1,<25.0" },
+    { name = "pandas-stubs", specifier = ">=2.1.4.231227" },
+    { name = "pre-commit", specifier = ">=3.7.0" },
+    { name = "pytest", specifier = ">=8.2.0" },
+    { name = "pytest-asyncio", specifier = ">=0.23.0" },
+    { name = "pytest-codspeed", specifier = ">=3.0.0" },
+    { name = "pytest-cov", specifier = ">=5.0.0" },
+    { name = "pytest-flakefinder", specifier = ">=1.1.0" },
+    { name = "pytest-github-actions-annotate-failures", specifier = ">=0.2.0" },
+    { name = "pytest-instafail", specifier = ">=0.5.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-profiling", specifier = ">=1.7.0" },
+    { name = "pytest-rerunfailures", specifier = ">=15.0" },
+    { name = "pytest-split", specifier = ">=0.9.0" },
+    { name = "pytest-sugar", specifier = ">=1.0.0" },
+    { name = "pytest-xdist", specifier = ">=3.6.0" },
+    { name = "requests", specifier = ">=2.32.0" },
+    { name = "respx", specifier = ">=0.21.1" },
+    { name = "ruff", specifier = ">=0.9.7,<0.10" },
     { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
     { name = "types-google-cloud-ndb", specifier = ">=2.2.0.0" },
     { name = "types-markdown", specifier = ">=3.7.0.20240822" },
@@ -6060,7 +6063,6 @@ name = "nvidia-cublas-cu12"
 version = "12.4.5.8"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/7f/7fbae15a3982dc9595e49ce0f19332423b260045d0a6afe93cdbe2f1f624/nvidia_cublas_cu12-12.4.5.8-py3-none-manylinux2014_aarch64.whl", hash = "sha256:0f8aa1706812e00b9f19dfe0cdb3999b092ccb8ca168c0db5b8ea712456fd9b3", size = 363333771 },
     { url = "https://files.pythonhosted.org/packages/ae/71/1c91302526c45ab494c23f61c7a84aa568b8c1f9d196efa5993957faf906/nvidia_cublas_cu12-12.4.5.8-py3-none-manylinux2014_x86_64.whl", hash = "sha256:2fc8da60df463fdefa81e323eef2e36489e1c94335b5358bcb38360adf75ac9b", size = 363438805 },
 ]
 
@@ -6069,7 +6071,6 @@ name = "nvidia-cuda-cupti-cu12"
 version = "12.4.127"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/b5/9fb3d00386d3361b03874246190dfec7b206fd74e6e287b26a8fcb359d95/nvidia_cuda_cupti_cu12-12.4.127-py3-none-manylinux2014_aarch64.whl", hash = "sha256:79279b35cf6f91da114182a5ce1864997fd52294a87a16179ce275773799458a", size = 12354556 },
     { url = "https://files.pythonhosted.org/packages/67/42/f4f60238e8194a3106d06a058d494b18e006c10bb2b915655bd9f6ea4cb1/nvidia_cuda_cupti_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:9dec60f5ac126f7bb551c055072b69d85392b13311fcc1bcda2202d172df30fb", size = 13813957 },
 ]
 
@@ -6078,7 +6079,6 @@ name = "nvidia-cuda-nvrtc-cu12"
 version = "12.4.127"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/77/aa/083b01c427e963ad0b314040565ea396f914349914c298556484f799e61b/nvidia_cuda_nvrtc_cu12-12.4.127-py3-none-manylinux2014_aarch64.whl", hash = "sha256:0eedf14185e04b76aa05b1fea04133e59f465b6f960c0cbf4e37c3cb6b0ea198", size = 24133372 },
     { url = "https://files.pythonhosted.org/packages/2c/14/91ae57cd4db3f9ef7aa99f4019cfa8d54cb4caa7e00975df6467e9725a9f/nvidia_cuda_nvrtc_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:a178759ebb095827bd30ef56598ec182b85547f1508941a3d560eb7ea1fbf338", size = 24640306 },
 ]
 
@@ -6087,7 +6087,6 @@ name = "nvidia-cuda-runtime-cu12"
 version = "12.4.127"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/aa/b656d755f474e2084971e9a297def515938d56b466ab39624012070cb773/nvidia_cuda_runtime_cu12-12.4.127-py3-none-manylinux2014_aarch64.whl", hash = "sha256:961fe0e2e716a2a1d967aab7caee97512f71767f852f67432d572e36cb3a11f3", size = 894177 },
     { url = "https://files.pythonhosted.org/packages/ea/27/1795d86fe88ef397885f2e580ac37628ed058a92ed2c39dc8eac3adf0619/nvidia_cuda_runtime_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:64403288fa2136ee8e467cdc9c9427e0434110899d07c779f25b5c068934faa5", size = 883737 },
 ]
 
@@ -6110,7 +6109,6 @@ dependencies = [
     { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7a/8a/0e728f749baca3fbeffad762738276e5df60851958be7783af121a7221e7/nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_aarch64.whl", hash = "sha256:5dad8008fc7f92f5ddfa2101430917ce2ffacd86824914c82e28990ad7f00399", size = 211422548 },
     { url = "https://files.pythonhosted.org/packages/27/94/3266821f65b92b3138631e9c8e7fe1fb513804ac934485a8d05776e1dd43/nvidia_cufft_cu12-11.2.1.3-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f083fc24912aa410be21fa16d157fed2055dab1cc4b6934a0e03cba69eb242b9", size = 211459117 },
 ]
 
@@ -6119,7 +6117,6 @@ name = "nvidia-curand-cu12"
 version = "10.3.5.147"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/80/9c/a79180e4d70995fdf030c6946991d0171555c6edf95c265c6b2bf7011112/nvidia_curand_cu12-10.3.5.147-py3-none-manylinux2014_aarch64.whl", hash = "sha256:1f173f09e3e3c76ab084aba0de819c49e56614feae5c12f69883f4ae9bb5fad9", size = 56314811 },
     { url = "https://files.pythonhosted.org/packages/8a/6d/44ad094874c6f1b9c654f8ed939590bdc408349f137f9b98a3a23ccec411/nvidia_curand_cu12-10.3.5.147-py3-none-manylinux2014_x86_64.whl", hash = "sha256:a88f583d4e0bb643c49743469964103aa59f7f708d862c3ddb0fc07f851e3b8b", size = 56305206 },
 ]
 
@@ -6133,7 +6130,6 @@ dependencies = [
     { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/6b/a5c33cf16af09166845345275c34ad2190944bcc6026797a39f8e0a282e0/nvidia_cusolver_cu12-11.6.1.9-py3-none-manylinux2014_aarch64.whl", hash = "sha256:d338f155f174f90724bbde3758b7ac375a70ce8e706d70b018dd3375545fc84e", size = 127634111 },
     { url = "https://files.pythonhosted.org/packages/3a/e1/5b9089a4b2a4790dfdea8b3a006052cfecff58139d5a4e34cb1a51df8d6f/nvidia_cusolver_cu12-11.6.1.9-py3-none-manylinux2014_x86_64.whl", hash = "sha256:19e33fa442bcfd085b3086c4ebf7e8debc07cfe01e11513cc6d332fd918ac260", size = 127936057 },
 ]
 
@@ -6145,7 +6141,6 @@ dependencies = [
     { name = "nvidia-nvjitlink-cu12" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/a9/c0d2f83a53d40a4a41be14cea6a0bf9e668ffcf8b004bd65633f433050c0/nvidia_cusparse_cu12-12.3.1.170-py3-none-manylinux2014_aarch64.whl", hash = "sha256:9d32f62896231ebe0480efd8a7f702e143c98cfaa0e8a76df3386c1ba2b54df3", size = 207381987 },
     { url = "https://files.pythonhosted.org/packages/db/f7/97a9ea26ed4bbbfc2d470994b8b4f338ef663be97b8f677519ac195e113d/nvidia_cusparse_cu12-12.3.1.170-py3-none-manylinux2014_x86_64.whl", hash = "sha256:ea4f11a2904e2a8dc4b1833cc1b5181cde564edd0d5cd33e3c168eff2d1863f1", size = 207454763 },
 ]
 
@@ -6154,7 +6149,6 @@ name = "nvidia-cusparselt-cu12"
 version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/8e/675498726c605c9441cf46653bd29cb1b8666da1fb1469ffa25f67f20c58/nvidia_cusparselt_cu12-0.6.2-py3-none-manylinux2014_aarch64.whl", hash = "sha256:067a7f6d03ea0d4841c85f0c6f1991c5dda98211f6302cb83a4ab234ee95bef8", size = 149422781 },
     { url = "https://files.pythonhosted.org/packages/78/a8/bcbb63b53a4b1234feeafb65544ee55495e1bb37ec31b999b963cbccfd1d/nvidia_cusparselt_cu12-0.6.2-py3-none-manylinux2014_x86_64.whl", hash = "sha256:df2c24502fd76ebafe7457dbc4716b2fec071aabaed4fb7691a201cde03704d9", size = 150057751 },
 ]
 
@@ -6171,7 +6165,6 @@ name = "nvidia-nvjitlink-cu12"
 version = "12.4.127"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/45/239d52c05074898a80a900f49b1615d81c07fceadd5ad6c4f86a987c0bc4/nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_aarch64.whl", hash = "sha256:4abe7fef64914ccfa909bc2ba39739670ecc9e820c83ccc7a6ed414122599b83", size = 20552510 },
     { url = "https://files.pythonhosted.org/packages/ff/ff/847841bacfbefc97a00036e0fce5a0f086b640756dc38caea5e1bb002655/nvidia_nvjitlink_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:06b3b9b25bf3f8af351d664978ca26a16d2c5127dbd53c0497e28d1fb9611d57", size = 21066810 },
 ]
 
@@ -6180,7 +6173,6 @@ name = "nvidia-nvtx-cu12"
 version = "12.4.127"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/39/471f581edbb7804b39e8063d92fc8305bdc7a80ae5c07dbe6ea5c50d14a5/nvidia_nvtx_cu12-12.4.127-py3-none-manylinux2014_aarch64.whl", hash = "sha256:7959ad635db13edf4fc65c06a6e9f9e55fc2f92596db928d169c0bb031e88ef3", size = 100417 },
     { url = "https://files.pythonhosted.org/packages/87/20/199b8713428322a2f22b722c62b8cc278cc53dffa9705d744484b5035ee9/nvidia_nvtx_cu12-12.4.127-py3-none-manylinux2014_x86_64.whl", hash = "sha256:781e950d9b9f60d8241ccea575b32f5105a5baf4c2351cab5256a24869f12a1a", size = 99144 },
 ]
 
@@ -7315,8 +7307,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b8/2a/25e0be2b509c28375c7f75c7e8d8d060773f2cce4856a1654276e3202339/pycryptodome-3.22.0-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:d21c1eda2f42211f18a25db4eaf8056c94a8563cd39da3683f89fe0d881fb772", size = 2262255 },
     { url = "https://files.pythonhosted.org/packages/41/58/60917bc4bbd91712e53ce04daf237a74a0ad731383a01288130672994328/pycryptodome-3.22.0-cp37-abi3-win32.whl", hash = "sha256:f02baa9f5e35934c6e8dcec91fcde96612bdefef6e442813b8ea34e82c84bbfb", size = 1763403 },
     { url = "https://files.pythonhosted.org/packages/55/f4/244c621afcf7867e23f63cfd7a9630f14cfe946c9be7e566af6c3915bcde/pycryptodome-3.22.0-cp37-abi3-win_amd64.whl", hash = "sha256:d086aed307e96d40c23c42418cbbca22ecc0ab4a8a0e24f87932eeab26c08627", size = 1794568 },
-    { url = "https://files.pythonhosted.org/packages/cd/13/16d3a83b07f949a686f6cfd7cfc60e57a769ff502151ea140ad67b118e26/pycryptodome-3.22.0-pp27-pypy_73-manylinux2010_x86_64.whl", hash = "sha256:98fd9da809d5675f3a65dcd9ed384b9dc67edab6a4cda150c5870a8122ec961d", size = 1700779 },
-    { url = "https://files.pythonhosted.org/packages/13/af/16d26f7dfc5fd7696ea2c91448f937b51b55312b5bed44f777563e32a4fe/pycryptodome-3.22.0-pp27-pypy_73-win32.whl", hash = "sha256:37ddcd18284e6b36b0a71ea495a4c4dca35bb09ccc9bfd5b91bfaf2321f131c1", size = 1775230 },
     { url = "https://files.pythonhosted.org/packages/37/c3/e3423e72669ca09f141aae493e1feaa8b8475859898b04f57078280a61c4/pycryptodome-3.22.0-pp310-pypy310_pp73-macosx_10_15_x86_64.whl", hash = "sha256:b4bdce34af16c1dcc7f8c66185684be15f5818afd2a82b75a4ce6b55f9783e13", size = 1618698 },
     { url = "https://files.pythonhosted.org/packages/f9/b7/35eec0b3919cafea362dcb68bb0654d9cb3cde6da6b7a9d8480ce0bf203a/pycryptodome-3.22.0-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2988ffcd5137dc2d27eb51cd18c0f0f68e5b009d5fec56fbccb638f90934f333", size = 1666957 },
     { url = "https://files.pythonhosted.org/packages/b0/1f/f49bccdd8d61f1da4278eb0d6aee7f988f1a6ec4056b0c2dc51eda45ae27/pycryptodome-3.22.0-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e653519dedcd1532788547f00eeb6108cc7ce9efdf5cc9996abce0d53f95d5a9", size = 1659242 },
