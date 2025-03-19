@@ -27,7 +27,7 @@ export const useRefreshAccessToken: useMutationFunctionType<
 
   const mutation = mutate(["useRefreshAccessToken"], refreshAccess, {
     ...options,
-    retry: IS_AUTO_LOGIN ? 0 : 3,
+    retry: 0,
   });
 
   return mutation;
