@@ -39,6 +39,27 @@ def upgrade() -> None:
         op.alter_column("user", "is_keycloak_user", nullable=False)
 
 
+    # Add is_deleted field to user table if it doesn't exist
+    if 'is_deleted' not in columns:
+        op.add_column("user", sa.Column("is_deleted", sa.Boolean(), default=False, nullable=True))
+
+        # Update existing rows to set is_deleted to false
+        op.execute('UPDATE "user" SET is_deleted = false')
+
+        # Make is_deleted non-nullable after setting default values
+        op.alter_column("user", "is_deleted", nullable=False)
+
+    # Add deleted_at field to user table if it doesn't exist
+    if 'deleted_at' not in columns:
+        op.add_column("user", sa.Column("deleted_at", sa.DateTime(), nullable=True))
+
+        # Update existing rows to set deleted_at to NULL
+        op.execute('UPDATE "user" SET deleted_at = NULL')
+
+        # Make deleted_at nullable after setting default values
+        op.alter_column("user", "deleted_at", nullable=False)
+
+
 def downgrade() -> None:
     # Check if columns exist before trying to drop them
     from sqlalchemy import inspect
@@ -51,3 +72,7 @@ def downgrade() -> None:
         op.drop_column("user", "is_keycloak_user")
     if 'email' in columns:
         op.drop_column("user", "email")
+    if 'is_deleted' in columns:
+        op.drop_column("user", "is_deleted")
+    if 'deleted_at' in columns:
+        op.drop_column("user", "deleted_at")
