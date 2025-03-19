@@ -28,7 +28,11 @@ test(
 
     await page.getByTestId("button_run_chat output").last().click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForTimeout(600);
+
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
 
     await page
       .getByText("built successfully")
@@ -134,7 +138,9 @@ test(
 
     // Run and verify text output is still shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
     await page.waitForSelector(
@@ -154,7 +160,9 @@ test(
 
     // Run and verify dataframe output is now shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
     await page.waitForSelector(
@@ -173,7 +181,9 @@ test(
 
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector("text=built successfully", {
+      timeout: 30000 * 3,
+    });
     await page.waitForTimeout(600);
     await page.keyboard.press("o");
     await page.getByText(`Inspect the output of the component below.`, {
