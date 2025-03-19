@@ -126,6 +126,12 @@ Projects, folders, and flows are exchanged as JSON objects.
 
 * To move a flow or component, drag and drop it into the desired folder.
 
+## File management
+
+Upload, store, and manage files in Langflow's **File management** system.
+
+For more on managing your files, see [File management](/concepts-file-management).
+
 ## Options menu
 
 The dropdown menu labeled with the project name offers several management and customization options for the current flow in the Langflow workspace.
