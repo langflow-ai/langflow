@@ -10,7 +10,14 @@ export const useStartConversation = (
   sessionId: string,
 ) => {
   try {
-    // const url = `ws://${targetUrl}/api/v1/voice/ws/${flowId}`;
+    if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      return; // Don't create new connection if one is already trying to connect
+    }
+
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.close(); // Close existing connection before creating new one
+    }
+
     const url = `ws://${window.location.hostname}:7860/api/v1/voice/ws/flow_as_tool/${flowId}/${sessionId}`;
     const audioSettings = JSON.parse(
       getLocalStorage("lf_audio_settings_playground") || "{}",
@@ -20,21 +27,34 @@ export const useStartConversation = (
 
     wsRef.current.onopen = () => {
       setStatus("Connected");
-      if (wsRef.current) {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
             type: "langflow.elevenlabs.config",
             enabled: audioSettings.provider === "elevenlabs",
-            voice_id: audioSettings.voice,
+            voice_id: audioSettings.provider === "elevenlabs" ? audioSettings.voice : "",
           }),
         );
+        if (audioSettings.provider !== "elevenlabs") {
+          wsRef.current.send(
+            JSON.stringify({
+              type: "session.update",
+              session: {
+                voice: audioSettings.voice,
+              },
+            }),
+          );
+        }
+        startRecording();
       }
-      startRecording();
     };
 
     wsRef.current.onmessage = handleWebSocketMessage;
 
     wsRef.current.onclose = (event) => {
+      if (event.code !== 1000) { // 1000 is normal closure
+        console.warn(`WebSocket closed with code ${event.code}`);
+      }
       setStatus(`Disconnected (${event.code})`);
       stopRecording();
     };
@@ -42,9 +62,11 @@ export const useStartConversation = (
     wsRef.current.onerror = (error) => {
       console.error("WebSocket Error:", error);
       setStatus("Connection error");
+      stopRecording();
     };
   } catch (error) {
     console.error("Failed to create WebSocket:", error);
     setStatus("Connection failed");
+    stopRecording();
   }
 };
