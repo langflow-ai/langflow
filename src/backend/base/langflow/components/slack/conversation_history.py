@@ -27,7 +27,7 @@ class SlackConversationsHistoryComponent(Component):
         MessageTextInput(
             name="cursor",
             display_name="Cursor",
-            info="Paginate through requests. Usually set with the next_cursor attribute from a previous request's response_metadata.",
+            info="Paginate through requests. Usually set with the next_cursor attribute from a previous request.",
             advanced=True,
             value="",
         ),
@@ -109,7 +109,7 @@ class SlackConversationsHistoryComponent(Component):
 
     def build_slack_response(self) -> Data:
         """Build the output object containing the Slack API response."""
-        data = Data(
+        return Data(
             data=self.fetch_messages(),
             text_key="messages",
             default_value="No content available",
