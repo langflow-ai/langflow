@@ -54,6 +54,7 @@ steps:
     args:
       [
         "build",
+        "--target", "network-tools",
         "--build-arg", "PYTHON_IMAGE=python@sha256:aaa3f8cb64dd64e5f8cb6e58346bdcfa410a108324b0f28f1a7cc5964355b211",
         "--platform", "linux/amd64",
         "--tag", "${_IMAGE_BACKEND}-network-tools:${SHORT_SHA}",
